@@ -1,0 +1,116 @@
+package com.byeonggon.cameramanager.camera
+
+import android.app.Notification
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import android.os.IBinder
+import com.byeonggon.cameramanager.Notifications
+import com.byeonggon.cameramanager.R
+import com.byeonggon.cameramanager.appContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/** Keeps the process alive while a sync runs, so long video transfers survive leaving the app. */
+class SyncService : Service() {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var job: Job? = null
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val engine = appContainer.syncEngine
+        if (intent?.action == ACTION_CANCEL) {
+            if (job?.isActive == true) engine.requestCancel() else stopSelf()
+            return START_NOT_STICKY
+        }
+
+        startForeground(
+            Notifications.ID_SYNC,
+            notification(SyncState.Scanning(0)),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+        )
+        if (job?.isActive == true) return START_NOT_STICKY
+        val device = intent?.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+        if (device == null) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        job = scope.launch {
+            val progress = launch {
+                engine.state.collect { state ->
+                    getSystemService(NotificationManager::class.java).notify(Notifications.ID_SYNC, notification(state))
+                    delay(NOTIFICATION_INTERVAL_MS)
+                }
+            }
+            try {
+                engine.run(MtpCameraSource(getSystemService(UsbManager::class.java), device))
+            } finally {
+                progress.cancel()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    // dataSync services are time-limited by the system; wind down instead of being killed.
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        appContainer.syncEngine.requestCancel()
+        stopSelf()
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
+
+    private fun notification(state: SyncState): Notification {
+        val cancel = PendingIntent.getService(
+            this,
+            0,
+            Intent(this, SyncService::class.java).setAction(ACTION_CANCEL),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+        val builder = Notification.Builder(this, Notifications.CHANNEL_SYNC)
+            .setSmallIcon(R.drawable.ic_stat_camera)
+            .setContentTitle("카메라 동기화 중")
+            .setContentIntent(Notifications.openApp(this))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .addAction(Notification.Action.Builder(null, "취소", cancel).build())
+        if (state is SyncState.Transferring) {
+            val percent = if (state.totalBytes > 0) (state.transferredBytes * 100 / state.totalBytes).toInt() else 0
+            builder.setContentText("${state.index} / ${state.total} · ${state.fileName}")
+            builder.setProgress(100, percent, false)
+        } else {
+            builder.setContentText("카메라의 파일 목록을 읽는 중")
+            builder.setProgress(0, 0, true)
+        }
+        return builder.build()
+    }
+
+    companion object {
+        private const val ACTION_START = "com.byeonggon.cameramanager.action.START_SYNC"
+        private const val ACTION_CANCEL = "com.byeonggon.cameramanager.action.CANCEL_SYNC"
+        private const val NOTIFICATION_INTERVAL_MS = 500L
+
+        fun start(context: Context, device: UsbDevice) {
+            val intent = Intent(context, SyncService::class.java)
+                .setAction(ACTION_START)
+                .putExtra(UsbManager.EXTRA_DEVICE, device)
+            context.startForegroundService(intent)
+        }
+    }
+}
