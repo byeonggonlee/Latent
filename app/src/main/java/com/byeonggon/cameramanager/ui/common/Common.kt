@@ -31,12 +31,27 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import coil3.request.ImageRequest
+import com.byeonggon.cameramanager.data.db.MediaItemEntity
+import java.io.File
 
 @Composable
 fun CameraManagerTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val colors = if (isSystemInDarkTheme()) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     MaterialTheme(colorScheme = colors, content = content)
+}
+
+/** A request for a library file's picture that loads again once the file has been replaced in place. */
+@Composable
+fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
+    val context = LocalContext.current
+    return remember(item.path, item.sizeBytes) {
+        ImageRequest.Builder(context)
+            .data(File(item.path))
+            .memoryCacheKey("${item.path}#${item.sizeBytes}")
+            .build()
+    }
 }
 
 /** Whether the app may manage files on shared storage; re-checked whenever the screen resumes. */

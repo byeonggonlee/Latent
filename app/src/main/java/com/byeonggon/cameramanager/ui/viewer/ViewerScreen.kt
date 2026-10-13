@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
@@ -29,6 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -65,6 +68,7 @@ import com.byeonggon.cameramanager.R
 import com.byeonggon.cameramanager.data.db.GeoSource
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
+import com.byeonggon.cameramanager.ui.common.rememberMediaModel
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -106,11 +110,14 @@ fun ViewerScreen(itemId: Long, onClose: () -> Unit, viewModel: ViewerViewModel =
         bottomBar = {
             if (item != null) {
                 InfoPanel(
+                    state = state,
                     item = item,
-                    enhanced = state.enhanced != null,
-                    busy = state.busy,
-                    onToggleEnhance = viewModel::toggleEnhance,
-                    onSaveEnhanced = viewModel::saveEnhanced,
+                    onDevelop = viewModel::setDeveloped,
+                    onAutoEnhance = viewModel::setAutoEnhance,
+                    onLensCorrection = viewModel::setLensCorrection,
+                    onApply = viewModel::applyToPhoto,
+                    onRestore = viewModel::restoreOriginal,
+                    onExport = viewModel::exportRaw,
                     onShowMap = { context.showOnMap(item) },
                 )
             }
@@ -120,18 +127,18 @@ fun ViewerScreen(itemId: Long, onClose: () -> Unit, viewModel: ViewerViewModel =
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
             if (item != null) {
-                val enhanced = state.enhanced
+                val rendered = state.rendered
                 ZoomableBox(resetKey = item.id) {
-                    if (enhanced != null) {
+                    if (rendered != null) {
                         Image(
-                            bitmap = enhanced.asImageBitmap(),
+                            bitmap = rendered.asImageBitmap(),
                             contentDescription = item.fileName,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {
                         AsyncImage(
-                            model = File(item.path),
+                            model = rememberMediaModel(item),
                             contentDescription = item.fileName,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize(),
@@ -151,11 +158,14 @@ fun ViewerScreen(itemId: Long, onClose: () -> Unit, viewModel: ViewerViewModel =
 
 @Composable
 private fun InfoPanel(
+    state: ViewerUiState,
     item: MediaItemEntity,
-    enhanced: Boolean,
-    busy: Boolean,
-    onToggleEnhance: () -> Unit,
-    onSaveEnhanced: () -> Unit,
+    onDevelop: (Boolean) -> Unit,
+    onAutoEnhance: (Boolean) -> Unit,
+    onLensCorrection: (Boolean) -> Unit,
+    onApply: () -> Unit,
+    onRestore: () -> Unit,
+    onExport: () -> Unit,
     onShowMap: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -178,29 +188,54 @@ private fun InfoPanel(
                 )
                 if (item.geoSource != GeoSource.NONE) TextButton(onClick = onShowMap) { Text("지도에서 보기") }
             }
-            if (item.kind == MediaKind.PHOTO) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    FilterChip(
-                        selected = enhanced,
-                        onClick = onToggleEnhance,
-                        enabled = !busy,
-                        label = { Text("자동 보정") },
-                        leadingIcon = {
-                            Icon(
-                                painterResource(R.drawable.ic_auto_fix),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                    )
-                    Button(onClick = onSaveEnhanced, enabled = enhanced && !busy) { Text("보정본 저장") }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                when (item.kind) {
+                    MediaKind.PHOTO -> if (state.edited) {
+                        Text("자동 보정 적용됨", style = MaterialTheme.typography.bodyMedium)
+                        OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text("원본으로 되돌리기") }
+                    } else {
+                        AutoEnhanceChip(state, onAutoEnhance)
+                        Button(onClick = onApply, enabled = state.rendered != null && !state.busy) { Text("적용") }
+                    }
+                    MediaKind.RAW -> {
+                        // Off shows the camera's own preview; the other switches act on our development.
+                        FilterChip(
+                            selected = state.developed,
+                            onClick = { onDevelop(!state.developed) },
+                            enabled = !state.busy,
+                            label = { Text("RAW 현상") },
+                        )
+                        FilterChip(
+                            selected = state.lensCorrection,
+                            onClick = { onLensCorrection(!state.lensCorrection) },
+                            enabled = state.developed && !state.busy,
+                            label = { Text("렌즈 보정") },
+                        )
+                        AutoEnhanceChip(state, onAutoEnhance, enabled = state.developed)
+                        Button(onClick = onExport, enabled = state.developed && !state.busy) { Text("JPEG로 저장") }
+                    }
+                    MediaKind.VIDEO -> Unit
                 }
             }
         }
     }
+}
+
+@Composable
+private fun AutoEnhanceChip(state: ViewerUiState, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
+    FilterChip(
+        selected = state.autoEnhance,
+        onClick = { onChange(!state.autoEnhance) },
+        enabled = enabled && !state.busy,
+        label = { Text("자동 보정") },
+        leadingIcon = {
+            Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
+        },
+    )
 }
 
 /** Pinch to zoom, drag to pan, double-tap to toggle. Resets when [resetKey] changes. */

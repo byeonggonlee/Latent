@@ -11,6 +11,7 @@ import java.time.ZoneId
 class LibraryStorage(private val context: Context) {
     val root = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "CameraManager")
     private val incoming = File(root, ".incoming")
+    private val originals = File(root, ".originals")
 
     fun hasAccess(): Boolean = Environment.isExternalStorageManager()
 
@@ -33,9 +34,15 @@ class LibraryStorage(private val context: Context) {
         return uniqueFile(folder, fileName)
     }
 
-    /** A free file name next to [source], e.g. DSC0001_enhanced.jpg. */
+    /** A free file name next to [source], e.g. DSC0001_developed.jpg. */
     fun siblingFor(source: File, suffix: String, extension: String): File =
         uniqueFile(source.parentFile ?: root, "${source.nameWithoutExtension}$suffix.$extension")
+
+    /**
+     * Where the untouched original of an edited library file is kept: the same path under a hidden
+     * folder, so gallery apps only ever show the edited picture.
+     */
+    fun originalOf(file: File): File = File(originals, file.relativeTo(root).path)
 
     /** Makes the file show up in gallery apps. */
     fun publish(file: File) {

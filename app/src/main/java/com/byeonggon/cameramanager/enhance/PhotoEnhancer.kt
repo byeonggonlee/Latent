@@ -1,21 +1,24 @@
 package com.byeonggon.cameramanager.enhance
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Runs [AutoEnhance] over image files. All calls decode bitmaps and must run off the main thread. */
+/** Runs [AutoEnhance] over JPEG files. All calls decode bitmaps and must run off the main thread. */
 object PhotoEnhancer {
     private const val ANALYSIS_EDGE = 256
     private const val ROWS_PER_PASS = 64
-    private const val JPEG_QUALITY = 95
+    const val JPEG_QUALITY = 95
 
     private val COPIED_EXIF_TAGS = arrayOf(
+        ExifInterface.TAG_ORIENTATION,
         ExifInterface.TAG_DATETIME,
         ExifInterface.TAG_DATETIME_ORIGINAL,
         ExifInterface.TAG_DATETIME_DIGITIZED,
@@ -47,40 +50,74 @@ object PhotoEnhancer {
     )
 
     /** Decodes [source] no larger than [maxEdge] on its long side and returns the enhanced bitmap. */
-    fun preview(source: File, maxEdge: Int): Bitmap = decode(source, maxEdge).also(::enhanceInPlace)
-
-    /** Writes a full-resolution enhanced JPEG of [source] to [target], carrying over the key EXIF tags. */
-    fun export(source: File, target: File) {
-        val bitmap = decode(source, maxEdge = null)
-        try {
-            enhanceInPlace(bitmap)
-            target.outputStream().use { output ->
-                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)) {
-                    throw IOException("Cannot encode ${target.name}")
-                }
-            }
-        } finally {
-            bitmap.recycle()
-        }
-        copyExif(source, target)
-    }
-
-    // ImageDecoder applies the EXIF orientation, so the decoded pixels are already upright.
-    private fun decode(source: File, maxEdge: Int?): Bitmap =
+    fun preview(source: File, maxEdge: Int): Bitmap =
         ImageDecoder.decodeBitmap(ImageDecoder.createSource(source)) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             decoder.isMutableRequired = true
             val longEdge = max(info.size.width, info.size.height)
-            if (maxEdge != null && longEdge > maxEdge) {
+            if (longEdge > maxEdge) {
                 val scale = maxEdge.toFloat() / longEdge
                 decoder.setTargetSize(
                     max(1, (info.size.width * scale).roundToInt()),
                     max(1, (info.size.height * scale).roundToInt()),
                 )
             }
-        }
+        }.also(::enhance)
 
-    private fun enhanceInPlace(bitmap: Bitmap) {
+    /**
+     * Replaces [photo] with its enhanced version. The original moves to [backup], from where
+     * [restoreOriginal] brings it back; enhancing again starts over from that original.
+     */
+    @Throws(IOException::class)
+    fun enhanceInPlace(photo: File, backup: File) {
+        val original = if (backup.exists()) backup else photo
+        // Decoded as stored, without applying the Exif orientation, so the copied Exif block still fits.
+        val options = BitmapFactory.Options().apply { inMutable = true }
+        val bitmap = BitmapFactory.decodeFile(original.path, options) ?: throw IOException("Cannot decode ${photo.name}")
+        val encoded = ByteArrayOutputStream()
+        try {
+            enhance(bitmap)
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
+                throw IOException("Cannot encode ${photo.name}")
+            }
+        } finally {
+            bitmap.recycle()
+        }
+        val enhanced = File(photo.parentFile, ".${photo.name}.tmp")
+        enhanced.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray()))
+
+        if (!backup.exists()) {
+            backup.parentFile?.mkdirs()
+            if (!photo.renameTo(backup)) {
+                enhanced.delete()
+                throw IOException("Cannot keep the original of ${photo.name}")
+            }
+        }
+        if (!enhanced.renameTo(photo)) {
+            enhanced.delete()
+            backup.renameTo(photo)
+            throw IOException("Cannot replace ${photo.name}")
+        }
+    }
+
+    /** Puts the original kept at [backup] back in place of the enhanced [photo]. */
+    @Throws(IOException::class)
+    fun restoreOriginal(photo: File, backup: File) {
+        if (!backup.renameTo(photo)) throw IOException("Cannot restore the original of ${photo.name}")
+    }
+
+    /** Carries the camera settings and location of [source] over to a picture made from it. */
+    @Throws(IOException::class)
+    fun copyExif(source: File, target: File) {
+        val from = ExifInterface(source)
+        val to = ExifInterface(target)
+        for (tag in COPIED_EXIF_TAGS) {
+            from.getAttribute(tag)?.let { to.setAttribute(tag, it) }
+        }
+        to.saveAttributes()
+    }
+
+    private fun enhance(bitmap: Bitmap) {
         val transform = AutoEnhance.analyze(sample(bitmap))
         val width = bitmap.width
         // Strips keep the working memory small; a 24 MP frame would not fit twice.
@@ -109,14 +146,5 @@ object PhotoEnhancer {
         small.getPixels(pixels, 0, small.width, 0, 0, small.width, small.height)
         if (small !== bitmap) small.recycle()
         return pixels
-    }
-
-    private fun copyExif(source: File, target: File) {
-        val from = ExifInterface(source)
-        val to = ExifInterface(target)
-        for (tag in COPIED_EXIF_TAGS) {
-            from.getAttribute(tag)?.let { to.setAttribute(tag, it) }
-        }
-        to.saveAttributes()
     }
 }

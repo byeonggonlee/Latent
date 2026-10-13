@@ -36,6 +36,9 @@ interface MediaDao {
     )
     suspend fun setLocation(id: Long, latitude: Double, longitude: Double, altitude: Double?, source: GeoSource)
 
+    @Query("UPDATE media_items SET sizeBytes = :sizeBytes WHERE id = :id")
+    suspend fun setSize(id: Long, sizeBytes: Long)
+
     @Query("DELETE FROM media_items WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
 }

@@ -38,8 +38,8 @@ import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.ui.common.ChoiceRow
 import com.byeonggon.cameramanager.ui.common.StorageAccessCard
+import com.byeonggon.cameramanager.ui.common.rememberMediaModel
 import com.byeonggon.cameramanager.ui.common.rememberStorageAccess
-import java.io.File
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -122,7 +122,7 @@ private fun MediaCell(item: MediaItemEntity, onClick: () -> Unit) {
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
-            model = File(item.path),
+            model = rememberMediaModel(item),
             contentDescription = item.fileName,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
