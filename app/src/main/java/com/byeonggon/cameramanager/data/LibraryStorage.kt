@@ -14,6 +14,9 @@ class LibraryStorage(private val context: Context) {
 
     fun hasAccess(): Boolean = Environment.isExternalStorageManager()
 
+    /** Whether library files can be reached right now: access is granted and shared storage is mounted. */
+    fun isAvailable(): Boolean = hasAccess() && Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
+
     /** Creates the hidden staging folder and drops partial downloads left behind by an interrupted sync. */
     fun prepareIncoming() {
         incoming.mkdirs()

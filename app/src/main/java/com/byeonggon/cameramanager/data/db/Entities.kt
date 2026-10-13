@@ -41,6 +41,8 @@ data class MediaItemEntity(
     val longitude: Double? = null,
     val altitude: Double? = null,
     val geoSource: GeoSource = GeoSource.NONE,
+    /** Key of the [SyncRecordEntity] this file was imported under; null for files made on the phone. */
+    val sourceKey: String? = null,
 )
 
 /** Remembers every camera file ever imported, so removing it from the library does not re-import it. */

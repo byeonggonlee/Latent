@@ -2,9 +2,11 @@ package com.byeonggon.cameramanager.camera
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Environment
 import androidx.exifinterface.media.ExifInterface
 import androidx.room.Room
 import com.byeonggon.cameramanager.data.AppSettings
+import com.byeonggon.cameramanager.data.LibraryIndex
 import com.byeonggon.cameramanager.data.LibraryStorage
 import com.byeonggon.cameramanager.data.SettingsRepository
 import com.byeonggon.cameramanager.data.db.AppDatabase
@@ -13,6 +15,7 @@ import com.byeonggon.cameramanager.data.db.LocationPointEntity
 import com.byeonggon.cameramanager.data.db.LocationSource
 import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.location.Geotagger
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,6 +28,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -206,6 +210,33 @@ class SyncEngineTest {
 
         assertEquals(0, (engine.state.value as SyncState.Finished).imported)
         assertEquals(1, database.mediaDao().all().size)
+    }
+
+    @Test
+    fun importsAFileDeletedFromThePhoneAgainOnlyOnceItsHistoryIsForgotten() = runBlocking {
+        ShadowEnvironment.addExternalDir("shared")
+        ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
+        val library = LibraryIndex(storage, database)
+        val files = mapOf(
+            remote("DSC00070.ARW", MediaKind.RAW, RAW_BYTES) to RAW_BYTES,
+            remote("DSC00071.ARW", MediaKind.RAW, RAW_BYTES) to RAW_BYTES,
+        )
+        engine.run(FakeCameraSource(files))
+        File(database.mediaDao().all().first { it.fileName == "DSC00070.ARW" }.path).delete()
+
+        // Deleting a photo on the phone does not bring it back at the next sync by itself.
+        library.forgetMissingFiles()
+        engine.run(FakeCameraSource(files))
+        assertEquals(0, (engine.state.value as SyncState.Finished).imported)
+        assertEquals(1, library.deletedFromPhone.first())
+
+        assertEquals(1, library.allowReimportOfDeletedFiles())
+        engine.run(FakeCameraSource(files))
+
+        // Only the deleted file comes back; the one still in the library is not imported twice.
+        assertEquals(1, (engine.state.value as SyncState.Finished).imported)
+        assertEquals(listOf("DSC00070.ARW", "DSC00071.ARW"), database.mediaDao().all().map { it.fileName }.sorted())
+        assertEquals(0, library.deletedFromPhone.first())
     }
 
     @Test

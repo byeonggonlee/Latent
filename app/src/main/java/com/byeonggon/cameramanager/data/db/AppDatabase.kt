@@ -47,6 +47,17 @@ interface SyncRecordDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(record: SyncRecordEntity)
+
+    @Query("SELECT COUNT(*) FROM sync_records WHERE $NOT_IN_LIBRARY")
+    fun observeCountWithoutLibraryFile(): Flow<Int>
+
+    @Query("DELETE FROM sync_records WHERE $NOT_IN_LIBRARY")
+    suspend fun deleteWithoutLibraryFile(): Int
+
+    private companion object {
+        const val NOT_IN_LIBRARY =
+            "sourceKey NOT IN (SELECT sourceKey FROM media_items WHERE sourceKey IS NOT NULL)"
+    }
 }
 
 @Dao
@@ -59,6 +70,9 @@ interface SyncedFolderDao {
 
     @Query("DELETE FROM synced_folders WHERE cameraId = :cameraId AND path = :path")
     suspend fun delete(cameraId: String, path: String)
+
+    @Query("DELETE FROM synced_folders")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -87,7 +101,7 @@ interface LocationDao {
         SyncedFolderEntity::class,
         LocationPointEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -106,7 +120,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `sourceKey` TEXT")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3)
     }
 }

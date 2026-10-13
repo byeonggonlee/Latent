@@ -259,6 +259,7 @@ class SyncEngine(
                 "location $geoSource",
         )
         val now = System.currentTimeMillis()
+        val sourceKey = file.sourceKey(cameraId)
         database.withTransaction {
             database.mediaDao().insert(
                 MediaItemEntity(
@@ -272,9 +273,10 @@ class SyncEngine(
                     longitude = location?.longitude,
                     altitude = location?.altitude,
                     geoSource = geoSource,
+                    sourceKey = sourceKey,
                 ),
             )
-            database.syncRecordDao().insert(SyncRecordEntity(file.sourceKey(cameraId), now))
+            database.syncRecordDao().insert(SyncRecordEntity(sourceKey, now))
         }
         return matched != null
     }

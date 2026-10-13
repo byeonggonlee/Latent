@@ -26,6 +26,9 @@ class SyncViewModel(application: Application) : AndroidViewModel(application) {
     val settings: StateFlow<AppSettings> =
         container.settings.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
+    val deletedFromPhone: StateFlow<Int> =
+        container.libraryIndex.deletedFromPhone.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
     // Chosen per sync rather than saved: null imports every date.
     private val _dates = MutableStateFlow<SyncDates?>(null)
     val dates: StateFlow<SyncDates?> = _dates.asStateFlow()
@@ -39,6 +42,16 @@ class SyncViewModel(application: Application) : AndroidViewModel(application) {
     fun start(device: UsbDevice) = SyncService.start(getApplication(), device, _dates.value)
 
     fun cancel() = container.syncEngine.requestCancel()
+
+    /** Picks up files deleted with another app while this one was in the background. */
+    fun refreshLibrary() {
+        viewModelScope.launch { container.libraryIndex.forgetMissingFiles() }
+    }
+
+    fun allowReimportOfDeletedFiles() {
+        if (syncState.value.isRunning) return
+        viewModelScope.launch { container.libraryIndex.allowReimportOfDeletedFiles() }
+    }
 
     fun setKindEnabled(kind: MediaKind, enabled: Boolean) {
         viewModelScope.launch {

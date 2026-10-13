@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -52,20 +51,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
     init {
-        viewModelScope.launch(Dispatchers.IO) { forgetMissingFiles() }
+        viewModelScope.launch { container.libraryIndex.forgetMissingFiles() }
     }
 
     fun setFilter(value: LibraryFilter) {
         filter.value = value
-    }
-
-    /** Drops library entries whose files were removed outside the app, e.g. from a gallery app. */
-    private suspend fun forgetMissingFiles() {
-        // Without storage access every file looks missing, which must not empty the library.
-        val storage = container.storage
-        if (!storage.hasAccess() || !storage.root.isDirectory) return
-        val dao = container.database.mediaDao()
-        val missing = dao.all().filterNot { File(it.path).exists() }.map { it.id }
-        missing.chunked(500).forEach { dao.deleteByIds(it) }
     }
 }

@@ -101,6 +101,7 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
                 fileName = target.name,
                 sizeBytes = target.length(),
                 importedAt = System.currentTimeMillis(),
+                sourceKey = null,
             ),
         )
         return target

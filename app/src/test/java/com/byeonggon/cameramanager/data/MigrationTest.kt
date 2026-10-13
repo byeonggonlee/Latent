@@ -40,7 +40,9 @@ class MigrationTest {
             .addMigrations(*AppDatabase.MIGRATIONS)
             .build()
         try {
-            assertEquals(listOf("DSC00001.JPG"), database.mediaDao().all().map { it.fileName })
+            val item = database.mediaDao().all().single()
+            assertEquals("DSC00001.JPG", item.fileName)
+            assertEquals(null, item.sourceKey)
             assertEquals(listOf("camera|DSC00001.JPG|10|1"), database.syncRecordDao().allKeys())
             assertEquals(37.5, database.locationDao().lastAtOrBefore(5)!!.latitude, 0.0)
 

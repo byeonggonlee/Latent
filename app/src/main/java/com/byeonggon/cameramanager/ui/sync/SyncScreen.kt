@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
@@ -31,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byeonggon.cameramanager.camera.CameraConnection
@@ -50,8 +53,11 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val dates by viewModel.dates.collectAsStateWithLifecycle()
+    val deletedFromPhone by viewModel.deletedFromPhone.collectAsStateWithLifecycle()
     val storageGranted = rememberStorageAccess()
     var pickingDates by rememberSaveable { mutableStateOf(false) }
+    var confirmingReimport by rememberSaveable { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshLibrary() }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -108,7 +114,40 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
             Hint("이미 가져온 파일은 건너뜁니다. 카메라의 파일은 삭제하지 않습니다.")
         }
 
+        if (deletedFromPhone > 0) {
+            SectionCard("폰에서 지운 파일") {
+                Text("가져온 뒤 폰에서 지운 파일 ${deletedFromPhone}개는 동기화할 때 건너뜁니다.")
+                OutlinedButton(onClick = { confirmingReimport = true }, enabled = !syncState.isRunning) {
+                    Text("다시 가져올 수 있게 하기")
+                }
+            }
+        }
+
         SyncStatus(syncState, onCancel = viewModel::cancel)
+    }
+
+    if (confirmingReimport) {
+        AlertDialog(
+            onDismissRequest = { confirmingReimport = false },
+            title = { Text("가져온 기록 지우기") },
+            text = {
+                Text(
+                    "폰에서 지운 파일 ${deletedFromPhone}개의 가져온 기록을 지웁니다. 다음 동기화부터 다시 가져올 수 있고, " +
+                        "보관함에 남아 있는 파일은 영향을 받지 않습니다.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.allowReimportOfDeletedFiles()
+                        confirmingReimport = false
+                    },
+                ) {
+                    Text("지우기")
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmingReimport = false }) { Text("취소") } },
+        )
     }
 
     if (pickingDates) {

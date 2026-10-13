@@ -6,11 +6,15 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.byeonggon.cameramanager.data.db.SyncRecordEntity
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
@@ -20,11 +24,15 @@ import org.robolectric.shadows.ShadowEnvironment
 @Config(sdk = [35], qualifiers = "w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class AppSmokeTest {
-    // Robolectric starts without shared storage, which the storage-permission check cannot cope with.
+    // Runs before the activity starts. Robolectric has no shared storage by default, which the
+    // storage-permission check cannot cope with.
     @get:Rule(order = 0)
-    val sharedStorage = object : ExternalResource() {
+    val environment = object : ExternalResource() {
         override fun before() {
             ShadowEnvironment.addExternalDir("shared")
+            // A file that was imported once and is no longer in the library.
+            val records = RuntimeEnvironment.getApplication().appContainer.database.syncRecordDao()
+            runBlocking { records.insert(SyncRecordEntity("camera|DSC00001.JPG|10|1", importedAt = 2)) }
         }
     }
 
@@ -52,5 +60,23 @@ class AppSmokeTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("저장된 위치 0개", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun letsFilesDeletedFromThePhoneBeImportedAgain() {
+        val notice = "폰에서 지운 파일 1개"
+        compose.onNodeWithText("동기화").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText(notice, substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("다시 가져올 수 있게 하기").performScrollTo().performClick()
+        compose.onNodeWithText("지우기").performClick()
+
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText(notice, substring = true).fetchSemanticsNodes().isEmpty()
+        }
+        val records = RuntimeEnvironment.getApplication().appContainer.database.syncRecordDao()
+        assertEquals(emptyList<String>(), runBlocking { records.allKeys() })
     }
 }
