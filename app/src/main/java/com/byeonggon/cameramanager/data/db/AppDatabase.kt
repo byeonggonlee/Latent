@@ -6,6 +6,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -48,6 +50,18 @@ interface SyncRecordDao {
 }
 
 @Dao
+interface SyncedFolderDao {
+    @Query("SELECT * FROM synced_folders WHERE cameraId = :cameraId")
+    suspend fun forCamera(cameraId: String): List<SyncedFolderEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(folder: SyncedFolderEntity)
+
+    @Query("DELETE FROM synced_folders WHERE cameraId = :cameraId AND path = :path")
+    suspend fun delete(cameraId: String, path: String)
+}
+
+@Dao
 interface LocationDao {
     /** Returns one row id per point; -1 marks a point that already existed. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -67,12 +81,32 @@ interface LocationDao {
 }
 
 @Database(
-    entities = [MediaItemEntity::class, SyncRecordEntity::class, LocationPointEntity::class],
-    version = 1,
+    entities = [
+        MediaItemEntity::class,
+        SyncRecordEntity::class,
+        SyncedFolderEntity::class,
+        LocationPointEntity::class,
+    ],
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun mediaDao(): MediaDao
     abstract fun syncRecordDao(): SyncRecordDao
+    abstract fun syncedFolderDao(): SyncedFolderDao
     abstract fun locationDao(): LocationDao
+
+    companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `synced_folders` (`cameraId` TEXT NOT NULL, `path` TEXT NOT NULL, " +
+                        "`fingerprint` TEXT NOT NULL, `kinds` TEXT NOT NULL, PRIMARY KEY(`cameraId`, `path`))",
+                )
+            }
+        }
+
+        /** Every schema change since version 1. The library on the phone must survive app updates. */
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2)
+    }
 }

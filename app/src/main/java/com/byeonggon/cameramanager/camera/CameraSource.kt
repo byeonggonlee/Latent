@@ -4,6 +4,9 @@ import com.byeonggon.cameramanager.data.db.MediaKind
 import java.io.Closeable
 import java.io.File
 
+/** One logcat tag for everything a sync does: `adb logcat -s CameraSync`. */
+internal const val SYNC_LOG_TAG = "CameraSync"
+
 data class CameraInfo(val manufacturer: String, val model: String, val serial: String)
 
 data class RemoteFile(
@@ -12,6 +15,8 @@ data class RemoteFile(
     val sizeBytes: Long,
     val modifiedAt: Long,
     val kind: MediaKind,
+    /** Path of the camera folder holding the file, matching the keys of [Listing.folders]. */
+    val folder: String,
 ) {
     /** Identifies this file across sync runs. Camera file names wrap around, so size and date are included. */
     fun sourceKey(cameraId: String) = "$cameraId|$name|$sizeBytes|$modifiedAt"
@@ -20,6 +25,20 @@ data class RemoteFile(
         const val UNKNOWN_SIZE = 0L
     }
 }
+
+/** Narrows a listing down: cameras describe one object per round trip, so a full card takes minutes to read. */
+class ListingRequest(
+    /** Folders named after a date outside this range are not opened at all. */
+    val dates: SyncDates? = null,
+    /** Fingerprints, by path, of folders whose files were all imported; those still matching are skipped. */
+    val importedFolders: Map<String, String> = emptyMap(),
+)
+
+class Listing(
+    val files: List<RemoteFile>,
+    /** Fingerprint of every folder that was read in full, by path. */
+    val folders: Map<String, String>,
+)
 
 /**
  * A place to pull media from. MTP is the only implementation today; a Mass Storage reader can be added
@@ -30,8 +49,8 @@ data class RemoteFile(
 interface CameraSource : Closeable {
     fun open(): CameraInfo
 
-    /** Lists every media file on the camera. [onFound] receives the running count and may throw to abort. */
-    fun listFiles(onFound: (Int) -> Unit): List<RemoteFile>
+    /** Lists the media files on the camera. [onFound] receives the running count and may throw to abort. */
+    fun listFiles(request: ListingRequest, onFound: (Int) -> Unit): Listing
 
     fun download(file: RemoteFile, destination: File): Boolean
 }

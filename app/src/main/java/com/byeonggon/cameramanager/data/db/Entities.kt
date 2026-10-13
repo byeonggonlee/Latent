@@ -50,6 +50,19 @@ data class SyncRecordEntity(
     val importedAt: Long,
 )
 
+/**
+ * A camera folder whose files have all been imported. While its fingerprint still matches, a sync
+ * skips the folder instead of asking the camera about every file in it again.
+ */
+@Entity(tableName = "synced_folders", primaryKeys = ["cameraId", "path"])
+data class SyncedFolderEntity(
+    val cameraId: String,
+    val path: String,
+    val fingerprint: String,
+    /** Comma-separated [MediaKind] names that were being imported when the folder was completed. */
+    val kinds: String,
+)
+
 @Entity(
     tableName = "location_points",
     indices = [Index(value = ["timestamp", "source"], unique = true)],

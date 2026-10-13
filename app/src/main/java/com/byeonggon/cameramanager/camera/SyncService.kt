@@ -20,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /** Keeps the process alive while a sync runs, so long video transfers survive leaving the app. */
 class SyncService : Service() {
@@ -46,6 +47,7 @@ class SyncService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        val dates = intent.syncDates()
 
         job = scope.launch {
             val progress = launch {
@@ -55,7 +57,7 @@ class SyncService : Service() {
                 }
             }
             try {
-                engine.run(MtpCameraSource(getSystemService(UsbManager::class.java), device))
+                engine.run(MtpCameraSource(getSystemService(UsbManager::class.java), device), dates)
             } finally {
                 progress.cancel()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -74,6 +76,14 @@ class SyncService : Service() {
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
+    }
+
+    private fun Intent.syncDates(): SyncDates? {
+        if (!hasExtra(EXTRA_START_DAY) || !hasExtra(EXTRA_END_DAY)) return null
+        return SyncDates(
+            start = LocalDate.ofEpochDay(getLongExtra(EXTRA_START_DAY, 0)),
+            end = LocalDate.ofEpochDay(getLongExtra(EXTRA_END_DAY, 0)),
+        )
     }
 
     private fun notification(state: SyncState): Notification {
@@ -104,12 +114,18 @@ class SyncService : Service() {
     companion object {
         private const val ACTION_START = "com.byeonggon.cameramanager.action.START_SYNC"
         private const val ACTION_CANCEL = "com.byeonggon.cameramanager.action.CANCEL_SYNC"
+        private const val EXTRA_START_DAY = "start_day"
+        private const val EXTRA_END_DAY = "end_day"
         private const val NOTIFICATION_INTERVAL_MS = 500L
 
-        fun start(context: Context, device: UsbDevice) {
+        fun start(context: Context, device: UsbDevice, dates: SyncDates?) {
             val intent = Intent(context, SyncService::class.java)
                 .setAction(ACTION_START)
                 .putExtra(UsbManager.EXTRA_DEVICE, device)
+            if (dates != null) {
+                intent.putExtra(EXTRA_START_DAY, dates.start.toEpochDay())
+                intent.putExtra(EXTRA_END_DAY, dates.end.toEpochDay())
+            }
             context.startForegroundService(intent)
         }
     }

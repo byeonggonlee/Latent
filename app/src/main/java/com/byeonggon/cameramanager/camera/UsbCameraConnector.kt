@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,12 +50,17 @@ class UsbCameraConnector(private val context: Context) {
         val driveOnly = devices.firstOrNull {
             it.vendorId == SONY_VENDOR_ID && it.hasInterface(UsbConstants.USB_CLASS_MASS_STORAGE)
         }
-        _connection.value = when {
+        val next = when {
             camera != null && usbManager.hasPermission(camera) -> CameraConnection.Ready(camera)
             camera != null -> CameraConnection.NeedsPermission(camera)
             driveOnly != null -> CameraConnection.WrongMode(driveOnly)
             else -> CameraConnection.Disconnected
         }
+        if (next != _connection.value) {
+            val attached = devices.joinToString { it.describe() }.ifEmpty { "none" }
+            Log.i(SYNC_LOG_TAG, "USB devices: $attached -> ${next::class.simpleName}")
+        }
+        _connection.value = next
     }
 
     fun requestPermission(device: UsbDevice) {
@@ -66,6 +72,14 @@ class UsbCameraConnector(private val context: Context) {
 
     private fun UsbDevice.hasInterface(usbClass: Int) =
         (0 until interfaceCount).any { getInterface(it).interfaceClass == usbClass }
+
+    /** Vendor, product and the class/subclass/protocol of every interface, e.g. "054c:0d9f Camera [6/1/1]". */
+    private fun UsbDevice.describe(): String {
+        val interfaces = (0 until interfaceCount).joinToString(prefix = "[", postfix = "]") { index ->
+            getInterface(index).run { "$interfaceClass/$interfaceSubclass/$interfaceProtocol" }
+        }
+        return "%04x:%04x %s %s".format(vendorId, productId, productName.orEmpty(), interfaces)
+    }
 
     private companion object {
         const val ACTION_USB_PERMISSION = "com.byeonggon.cameramanager.action.USB_PERMISSION"

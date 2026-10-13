@@ -6,6 +6,7 @@ import android.mtp.MtpConstants
 import android.mtp.MtpDevice
 import android.mtp.MtpObjectInfo
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import com.byeonggon.cameramanager.data.db.MediaKind
 import java.io.File
 import java.io.IOException
@@ -25,6 +26,12 @@ class MtpCameraSource(
         }
         device = mtp
         val info = mtp.deviceInfo
+        Log.i(
+            SYNC_LOG_TAG,
+            "Opened ${info?.manufacturer} ${info?.model} (version ${info?.version}); partial transfers: " +
+                "32-bit=${info?.isOperationSupported(MtpConstants.OPERATION_GET_PARTIAL_OBJECT)}, " +
+                "64-bit=${info?.isOperationSupported(MtpConstants.OPERATION_GET_PARTIAL_OBJECT_64)}",
+        )
         return CameraInfo(
             manufacturer = info?.manufacturer.orEmpty(),
             model = info?.model ?: usbDevice.productName.orEmpty(),
@@ -32,33 +39,26 @@ class MtpCameraSource(
         )
     }
 
-    override fun listFiles(onFound: (Int) -> Unit): List<RemoteFile> {
+    override fun listFiles(request: ListingRequest, onFound: (Int) -> Unit): Listing {
         val mtp = requireDevice()
         val files = ArrayList<RemoteFile>()
-        for (storageId in mtp.storageIds ?: IntArray(0)) {
-            val pendingFolders = ArrayDeque<Int>().apply { add(ROOT_PARENT) }
-            while (pendingFolders.isNotEmpty()) {
-                val parent = pendingFolders.removeLast()
-                for (handle in mtp.getObjectHandles(storageId, ALL_FORMATS, parent) ?: IntArray(0)) {
-                    val info = mtp.getObjectInfo(handle) ?: continue
-                    if (info.format == MtpConstants.FORMAT_ASSOCIATION) {
-                        pendingFolders.add(handle)
-                        continue
-                    }
-                    val name = info.name ?: continue
-                    val kind = MediaKind.fromFileName(name) ?: continue
-                    files += RemoteFile(
-                        handle = handle,
-                        name = name,
-                        sizeBytes = sizeOf(info),
-                        modifiedAt = info.dateCreated.takeIf { it > 0 } ?: info.dateModified,
-                        kind = kind,
-                    )
-                    onFound(files.size)
-                }
+        val folders = HashMap<String, String>()
+        val storageIds = mtp.storageIds ?: IntArray(0)
+        if (storageIds.isEmpty()) Log.w(SYNC_LOG_TAG, "The camera reports no storage")
+        for (storageId in storageIds) {
+            val tree = object : RemoteTree {
+                override fun childrenOf(parent: Int): IntArray? = mtp.getObjectHandles(storageId, ALL_FORMATS, parent)
+
+                override fun objectOf(handle: Int): RemoteObject? = mtp.getObjectInfo(handle)?.toRemoteObject()
             }
+            val storage = listStorage(tree, ROOT_PARENT, Integer.toHexString(storageId), request) { found ->
+                onFound(files.size + found)
+            }
+            logStorage(mtp, storageId, storage)
+            files += storage.files
+            folders += storage.fingerprints
         }
-        return files
+        return Listing(files, folders)
     }
 
     override fun download(file: RemoteFile, destination: File): Boolean {
@@ -77,9 +77,25 @@ class MtpCameraSource(
 
     private fun requireDevice() = device ?: throw IOException("The camera is not open")
 
-    // Object info carries 32 bits, so files of 4 GB and more report an overflow marker instead of a size.
-    private fun sizeOf(info: MtpObjectInfo): Long =
-        info.compressedSizeLong.takeIf { it != SIZE_OVERFLOW } ?: RemoteFile.UNKNOWN_SIZE
+    private fun MtpObjectInfo.toRemoteObject() = RemoteObject(
+        name = name,
+        isFolder = format == MtpConstants.FORMAT_ASSOCIATION,
+        // Object info carries 32 bits, so files of 4 GB and more report an overflow marker instead of a size.
+        sizeBytes = compressedSizeLong.takeIf { it != SIZE_OVERFLOW } ?: RemoteFile.UNKNOWN_SIZE,
+        modifiedAt = dateCreated.takeIf { it > 0 } ?: dateModified,
+    )
+
+    private fun logStorage(mtp: MtpDevice, storageId: Int, storage: StorageListing) {
+        val description = mtp.getStorageInfo(storageId)?.description.orEmpty()
+        val kinds = MediaKind.entries.joinToString { kind -> "$kind=${storage.files.count { it.kind == kind }}" }
+        val oversized = storage.files.count { it.sizeBytes == RemoteFile.UNKNOWN_SIZE }
+        Log.i(
+            SYNC_LOG_TAG,
+            "Storage 0x${Integer.toHexString(storageId)} '$description': folders read=${storage.foldersRead}, " +
+                "unchanged=${storage.foldersUnchanged}, outside dates=${storage.foldersOutsideDates}; " +
+                "$kinds, of which 4 GB or larger=$oversized; skipped by extension: ${storage.skippedExtensions}",
+        )
+    }
 
     private companion object {
         const val ALL_FORMATS = 0

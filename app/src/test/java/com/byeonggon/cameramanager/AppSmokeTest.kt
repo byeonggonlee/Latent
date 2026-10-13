@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
@@ -42,6 +43,9 @@ class AppSmokeTest {
         compose.onNodeWithText("동기화").performClick()
         compose.onNodeWithText("카메라 동기화").assertIsDisplayed()
         compose.onNodeWithText("연결된 카메라가 없습니다.").assertIsDisplayed()
+        compose.onNodeWithText("기간 선택").performScrollTo().performClick()
+        compose.onNodeWithText("적용").assertIsDisplayed()
+        compose.onNodeWithText("취소").performClick()
 
         compose.onNodeWithText("위치").performClick()
         compose.onNodeWithText("위치 기록").assertIsDisplayed()

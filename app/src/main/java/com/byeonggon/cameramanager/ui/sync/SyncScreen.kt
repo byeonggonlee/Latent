@@ -11,13 +11,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,18 +34,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byeonggon.cameramanager.camera.CameraConnection
+import com.byeonggon.cameramanager.camera.SyncDates
 import com.byeonggon.cameramanager.camera.SyncState
 import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.ui.common.SectionCard
 import com.byeonggon.cameramanager.ui.common.StorageAccessCard
 import com.byeonggon.cameramanager.ui.common.rememberStorageAccess
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Composable
 fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
     val connection by viewModel.connection.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val dates by viewModel.dates.collectAsStateWithLifecycle()
     val storageGranted = rememberStorageAccess()
+    var pickingDates by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -75,10 +90,68 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
             KindSwitch("사진 (JPEG)", settings.syncPhotos) { viewModel.setKindEnabled(MediaKind.PHOTO, it) }
             KindSwitch("RAW (ARW)", settings.syncRaw) { viewModel.setKindEnabled(MediaKind.RAW, it) }
             KindSwitch("동영상", settings.syncVideos) { viewModel.setKindEnabled(MediaKind.VIDEO, it) }
+            HorizontalDivider()
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("촬영 기간")
+                    Hint(dates?.label() ?: "전체")
+                }
+                if (dates != null) {
+                    TextButton(onClick = { viewModel.setDates(null) }, enabled = !syncState.isRunning) {
+                        Text("전체로")
+                    }
+                }
+                OutlinedButton(onClick = { pickingDates = true }, enabled = !syncState.isRunning) {
+                    Text("기간 선택")
+                }
+            }
             Hint("이미 가져온 파일은 건너뜁니다. 카메라의 파일은 삭제하지 않습니다.")
         }
 
         SyncStatus(syncState, onCancel = viewModel::cancel)
+    }
+
+    if (pickingDates) {
+        SyncDatesDialog(
+            initial = dates,
+            onConfirm = {
+                viewModel.setDates(it)
+                pickingDates = false
+            },
+            onDismiss = { pickingDates = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SyncDatesDialog(initial: SyncDates?, onConfirm: (SyncDates) -> Unit, onDismiss: () -> Unit) {
+    val state = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initial?.start?.toPickerMillis(),
+        initialSelectedEndDateMillis = initial?.end?.toPickerMillis(),
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                enabled = state.selectedStartDateMillis != null,
+                onClick = {
+                    val start = state.selectedStartDateMillis?.toPickerDate() ?: return@TextButton
+                    // Tapping a single day leaves the end of the range open.
+                    onConfirm(SyncDates(start, state.selectedEndDateMillis?.toPickerDate() ?: start))
+                },
+            ) {
+                Text("적용")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    ) {
+        DateRangePicker(
+            state = state,
+            title = { Text("촬영 기간", modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
+            showModeToggle = false,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -147,3 +220,10 @@ private fun Hint(text: String) {
 }
 
 private fun UsbDevice.displayName(): String = productName ?: "USB 카메라"
+
+private fun SyncDates.label(): String = if (start == end) "$start" else "$start ~ $end"
+
+// The date picker works in UTC midnights, whatever the device's time zone.
+private fun LocalDate.toPickerMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toPickerDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()

@@ -34,7 +34,9 @@ class CameraManagerApp : Application(), SingletonImageLoader.Factory {
 /** App-wide singletons, wired by hand. */
 class AppContainer(context: Context) {
     val database: AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "camera-manager.db").build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "camera-manager.db")
+            .addMigrations(*AppDatabase.MIGRATIONS)
+            .build()
     val settings = SettingsRepository(context)
     val storage = LibraryStorage(context)
     val usb = UsbCameraConnector(context)
