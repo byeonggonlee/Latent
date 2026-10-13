@@ -103,7 +103,7 @@ class SyncEngine(
         val options = settings.settings.first()
         val cameraId = camera.serial.ifBlank { camera.model }
         val acceptedKinds = MediaKind.entries.filter(options::accepts)
-        val known = database.syncRecordDao().allKeys().toHashSet()
+        val alreadyImported = ImportedFiles(database.syncRecordDao().allKeys())
 
         val listingStartedAt = System.nanoTime()
         val request = ListingRequest(dates, importedFolders(cameraId, acceptedKinds))
@@ -114,7 +114,7 @@ class SyncEngine(
         // Dates are checked before anything is downloaded, so they go by the camera's file date, not EXIF.
         val zone = ZoneId.systemDefault()
         val pending = listing.files
-            .filter { options.accepts(it.kind) && it.sourceKey(cameraId) !in known }
+            .filter { options.accepts(it.kind) && !alreadyImported.contains(it, cameraId) }
             .filter { dates == null || Instant.ofEpochMilli(it.modifiedAt).atZone(zone).toLocalDate() in dates }
             .sortedBy { it.modifiedAt }
         Log.i(
@@ -154,14 +154,14 @@ class SyncEngine(
             }
             if (stored) {
                 imported++
-                known += file.sourceKey(cameraId)
+                alreadyImported.add(file.sourceKey(cameraId))
             } else {
                 part.delete()
                 failed += file.name
             }
             doneBytes += file.sizeBytes
         }
-        rememberImportedFolders(cameraId, acceptedKinds, listing, known)
+        rememberImportedFolders(cameraId, acceptedKinds, listing, alreadyImported)
         Log.i(
             SYNC_LOG_TAG,
             "Finished: imported=$imported, geotagged=$geotagged, failed=$failed, cancelled=$cancelRequested",
@@ -180,13 +180,13 @@ class SyncEngine(
         cameraId: String,
         acceptedKinds: List<MediaKind>,
         listing: Listing,
-        known: Set<String>,
+        alreadyImported: ImportedFiles,
     ) {
         val filesByFolder = listing.files.groupBy { it.folder }
         val dao = database.syncedFolderDao()
         for ((path, fingerprint) in listing.folders) {
             val nothingLeft = filesByFolder[path].orEmpty().all {
-                it.kind !in acceptedKinds || it.sourceKey(cameraId) in known
+                it.kind !in acceptedKinds || alreadyImported.contains(it, cameraId)
             }
             if (nothingLeft) {
                 dao.upsert(SyncedFolderEntity(cameraId, path, fingerprint, acceptedKinds.joinToString(",") { it.name }))

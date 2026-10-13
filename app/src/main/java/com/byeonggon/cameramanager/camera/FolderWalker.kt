@@ -108,11 +108,16 @@ private class Folder(val handle: Int, val path: String, val date: LocalDate?)
 /**
  * Describes a folder by its size and its first and last object. Cameras list files in shooting order, so
  * a new shot shows up as a different count or a different last object without reading everything between.
+ *
+ * Times only count by their position within a quarter hour: the rest shifts with the phone's time zone
+ * (see [ImportedFiles]), and a folder must not look changed just because the phone travelled.
  */
 private fun fingerprintOf(count: Int, first: RemoteObject?, last: RemoteObject?): String? {
     if (first == null || last == null || first.isFolder || last.isFolder) return null
     return listOf(
-        count, first.name, first.sizeBytes, first.modifiedAt, last.name, last.sizeBytes, last.modifiedAt,
+        count,
+        first.name, first.sizeBytes, first.modifiedAt.mod(ZONE_OFFSET_STEP_MS),
+        last.name, last.sizeBytes, last.modifiedAt.mod(ZONE_OFFSET_STEP_MS),
     ).joinToString("|")
 }
 

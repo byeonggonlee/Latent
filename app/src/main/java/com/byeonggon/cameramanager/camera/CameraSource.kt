@@ -18,8 +18,11 @@ data class RemoteFile(
     /** Path of the camera folder holding the file, matching the keys of [Listing.folders]. */
     val folder: String,
 ) {
-    /** Identifies this file across sync runs. Camera file names wrap around, so size and date are included. */
-    fun sourceKey(cameraId: String) = "$cameraId|$name|$sizeBytes|$modifiedAt"
+    /** What stays the same about a file wherever the phone is. Not unique: camera file names wrap around. */
+    fun identity(cameraId: String) = "$cameraId|$name|$sizeBytes"
+
+    /** Recorded once the file is imported; [ImportedFiles] recognises it again on later syncs. */
+    fun sourceKey(cameraId: String) = "${identity(cameraId)}|$modifiedAt"
 
     companion object {
         const val UNKNOWN_SIZE = 0L

@@ -85,6 +85,21 @@ class FolderWalkerTest {
     }
 
     @Test
+    fun keepsTheSameFingerprintWhenThePhoneReadsFileTimesInAnotherTimeZone() {
+        val hour = 60 * 60_000L
+        fun fingerprintWithTimesShiftedBy(shift: Long): Map<String, String> {
+            val shifted = FakeTree()
+            val day = shifted.folder(FakeTree.ROOT, "2024-12-08")
+            shifted.file(day, "DSC00001.JPG", modifiedAt = 1_733_600_000_000 + shift)
+            shifted.file(day, "DSC00002.JPG", modifiedAt = 1_733_600_090_000 + shift)
+            return listStorage(shifted, FakeTree.ROOT, "card", ListingRequest(), onFound = {}).fingerprints
+        }
+
+        assertEquals(fingerprintWithTimesShiftedBy(0), fingerprintWithTimesShiftedBy(-8 * hour))
+        assertEquals(fingerprintWithTimesShiftedBy(0), fingerprintWithTimesShiftedBy(5 * hour + 45 * 60_000))
+    }
+
+    @Test
     fun onlyFingerprintsPlainFoldersOfFiles() {
         val dcim = tree.folder(FakeTree.ROOT, "DCIM")
         tree.file(dcim, "DSC00001.JPG")

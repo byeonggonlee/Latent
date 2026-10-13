@@ -197,6 +197,18 @@ class SyncEngineTest {
     }
 
     @Test
+    fun doesNotImportAFileAgainAfterThePhoneChangesTimeZone() = runBlocking {
+        engine.run(FakeCameraSource(mapOf(remote("DSC00060.ARW", MediaKind.RAW, RAW_BYTES) to RAW_BYTES)))
+
+        // The camera reports the same wall-clock time, which the phone now reads eight hours apart.
+        val seenFromAnotherZone = remote("DSC00060.ARW", MediaKind.RAW, RAW_BYTES, capturedAt + 8 * 60 * minute)
+        engine.run(FakeCameraSource(mapOf(seenFromAnotherZone to RAW_BYTES)))
+
+        assertEquals(0, (engine.state.value as SyncState.Finished).imported)
+        assertEquals(1, database.mediaDao().all().size)
+    }
+
+    @Test
     fun reportsFilesThatFailToTransferAndRetriesThemLater() = runBlocking {
         val broken = remote("DSC00003.JPG", MediaKind.PHOTO, ByteArray(10))
 
