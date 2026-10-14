@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -17,9 +19,34 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // The upload key stays out of the repository: keystore.properties (storeFile, storePassword,
+    // keyAlias, keyPassword) next to this project's settings.gradle.kts turns signing on.
+    val keystoreProperties = Properties().apply {
+        rootProject.file("keystore.properties").takeIf { it.isFile }?.inputStream()?.use(::load)
+    }
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = when {
+                keystoreProperties.isNotEmpty() -> signingConfigs.getByName("release")
+                // For trying the release build on a phone that has the debug build: same key, so it installs over it.
+                // Play refuses a package signed like this, which is why it is not the default.
+                project.hasProperty("debugSignedRelease") -> signingConfigs.getByName("debug")
+                else -> null
+            }
         }
     }
 
