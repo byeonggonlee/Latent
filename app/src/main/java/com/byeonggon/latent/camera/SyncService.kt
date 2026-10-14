@@ -94,7 +94,7 @@ class SyncService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = Notification.Builder(this, Notifications.CHANNEL_SYNC)
-            .setSmallIcon(R.drawable.ic_stat_camera)
+            .setSmallIcon(R.drawable.ic_stat_latent)
             .setContentTitle(getString(R.string.sync_notification_title))
             .setContentIntent(Notifications.openApp(this))
             .setOngoing(true)

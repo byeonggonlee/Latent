@@ -149,7 +149,7 @@ class LocationRecorderService : Service() {
             getString(R.string.location_last_fix, TIME_FORMAT.format(Instant.ofEpochMilli(lastFixAt).atZone(ZoneId.systemDefault())))
         }
         return Notification.Builder(this, Notifications.CHANNEL_LOCATION)
-            .setSmallIcon(R.drawable.ic_stat_camera)
+            .setSmallIcon(R.drawable.ic_stat_latent)
             .setContentTitle(getString(R.string.location_recording))
             .setContentText(text)
             .setContentIntent(Notifications.openApp(this))
@@ -206,7 +206,7 @@ class LocationRecorderService : Service() {
                 PendingIntent.FLAG_IMMUTABLE,
             )
             val notification = Notification.Builder(context, Notifications.CHANNEL_LOCATION_STOPPED)
-                .setSmallIcon(R.drawable.ic_stat_camera)
+                .setSmallIcon(R.drawable.ic_stat_latent)
                 .setContentTitle(context.getString(R.string.location_stopped_title))
                 .setContentText(context.getString(R.string.location_stopped_text))
                 .setContentIntent(resume)
