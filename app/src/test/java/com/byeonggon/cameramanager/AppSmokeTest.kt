@@ -29,6 +29,7 @@ class AppSmokeTest {
     @get:Rule(order = 0)
     val environment = object : ExternalResource() {
         override fun before() {
+            forgetTheApplicationOfEarlierTests()
             ShadowEnvironment.addExternalDir("shared")
             // A file that was imported once and is no longer in the library.
             val records = RuntimeEnvironment.getApplication().appContainer.database.syncRecordDao()

@@ -4,7 +4,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import com.byeonggon.cameramanager.data.db.AppDatabase
+import com.byeonggon.cameramanager.data.db.FilterEntity
 import com.byeonggon.cameramanager.data.db.SyncedFolderEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -43,6 +45,16 @@ class MigrationTest {
             val item = database.mediaDao().all().single()
             assertEquals("DSC00001.JPG", item.fileName)
             assertEquals(null, item.sourceKey)
+            assertEquals(null, item.edit)
+            assertEquals(0, item.rating)
+            database.mediaDao().setRating(item.id, 4)
+            assertEquals(4, database.mediaDao().byId(item.id)!!.rating)
+            database.mediaDao().setEdit(item.id, "{}")
+            assertEquals("{}", database.mediaDao().byId(item.id)!!.edit)
+            val filterId = database.filterDao().insert(FilterEntity(name = "내 필터", look = "{}", createdAt = 7))
+            assertEquals(listOf("내 필터"), database.filterDao().observeAll().first().map { it.name })
+            database.filterDao().delete(filterId)
+            assertEquals(emptyList<FilterEntity>(), database.filterDao().observeAll().first())
             assertEquals(listOf("camera|DSC00001.JPG|10|1"), database.syncRecordDao().allKeys())
             assertEquals(37.5, database.locationDao().lastAtOrBefore(5)!!.latitude, 0.0)
 

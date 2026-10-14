@@ -1,5 +1,7 @@
 package com.byeonggon.cameramanager.raw
 
+import com.byeonggon.cameramanager.enhance.LinearImage
+import com.byeonggon.cameramanager.enhance.forRowBands
 import kotlin.math.hypot
 import kotlin.math.sqrt
 
@@ -23,29 +25,36 @@ class LensCorrection(private val profile: LensProfile, private val width: Int, p
     private val redStretch = table { distortionAt(it) * aberrationAt(profile.redAberration, it) * zoom }
     private val blueStretch = table { distortionAt(it) * aberrationAt(profile.blueAberration, it) * zoom }
 
-    /** Redraws [source] the way a distortion-free lens would have: every pixel is fetched from where the lens put it. */
-    fun straighten(source: DevelopedImage): DevelopedImage {
-        require(source.width == width && source.height == height) { "The correction was made for another size" }
-        val input = source.pixels
-        val output = IntArray(width * height)
-        for (y in 0 until height) {
-            val offsetY = y - centerY
-            val dy = offsetY / cornerDistance
-            for (x in 0 until width) {
-                val offsetX = x - centerX
-                val dx = offsetX / cornerDistance
-                val at = index(dx * dx + dy * dy)
-                val red = sample(input, centerX + offsetX * redStretch[at], centerY + offsetY * redStretch[at], 16)
-                val green = sample(input, centerX + offsetX * greenStretch[at], centerY + offsetY * greenStretch[at], 8)
-                val blue = sample(input, centerX + offsetX * blueStretch[at], centerY + offsetY * blueStretch[at], 0)
-                output[y * width + x] = OPAQUE or (red shl 16) or (green shl 8) or blue
-            }
-        }
-        return DevelopedImage(width, height, output)
+    /**
+     * Redraws [image] the way a distortion-free lens would have: every pixel is fetched from where the
+     * lens put it. Done in place, one colour at a time, as a second copy of a full-size picture would
+     * take more memory than the app can count on.
+     */
+    fun straighten(image: LinearImage) {
+        require(image.width == width && image.height == height) { "The correction was made for another size" }
+        straighten(image.red, redStretch)
+        straighten(image.green, greenStretch)
+        straighten(image.blue, blueStretch)
     }
 
-    /** One colour channel at a position between pixels, blended from the four around it. */
-    private fun sample(pixels: IntArray, x: Float, y: Float, shift: Int): Int {
+    private fun straighten(plane: ShortArray, stretch: FloatArray) {
+        val source = plane.copyOf()
+        forRowBands(height) { from, until ->
+            for (y in from until until) {
+                val offsetY = y - centerY
+                val dy = offsetY / cornerDistance
+                for (x in 0 until width) {
+                    val offsetX = x - centerX
+                    val dx = offsetX / cornerDistance
+                    val by = stretch[index(dx * dx + dy * dy)]
+                    plane[y * width + x] = sample(source, centerX + offsetX * by, centerY + offsetY * by)
+                }
+            }
+        }
+    }
+
+    /** One colour at a position between pixels, blended from the four around it. */
+    private fun sample(plane: ShortArray, x: Float, y: Float): Short {
         val fx = x.coerceIn(0f, width - 1f)
         val fy = y.coerceIn(0f, height - 1f)
         val left = fx.toInt().coerceAtMost(width - 2)
@@ -53,13 +62,9 @@ class LensCorrection(private val profile: LensProfile, private val width: Int, p
         val wx = fx - left
         val wy = fy - top
         val row = top * width + left
-        val a = (pixels[row] ushr shift) and 0xFF
-        val b = (pixels[row + 1] ushr shift) and 0xFF
-        val c = (pixels[row + width] ushr shift) and 0xFF
-        val d = (pixels[row + width + 1] ushr shift) and 0xFF
-        val upper = a + (b - a) * wx
-        val lower = c + (d - c) * wx
-        return (upper + (lower - upper) * wy + 0.5f).toInt()
+        val upper = plane[row] + (plane[row + 1] - plane[row]) * wx
+        val lower = plane[row + width] + (plane[row + width + 1] - plane[row + width]) * wx
+        return (upper + (lower - upper) * wy + 0.5f).toInt().toShort()
     }
 
     private fun distortionAt(radius: Float) = 1f + interpolate(profile.distortion, radius) / 16384f
@@ -104,6 +109,5 @@ class LensCorrection(private val profile: LensProfile, private val width: Int, p
         const val TABLE_SIZE = 8192
         const val MAX_SQUARED_RADIUS = 1.05f // a little beyond the corners
         const val BORDER_STEPS = 256
-        const val OPAQUE = 0xFF shl 24
     }
 }

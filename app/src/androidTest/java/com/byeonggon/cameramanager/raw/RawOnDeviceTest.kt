@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.byeonggon.cameramanager.enhance.Adjustments
+import com.byeonggon.cameramanager.enhance.PhotoEdit
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -27,7 +29,7 @@ class RawOnDeviceTest {
         assumeTrue(sample != null && sample.isFile)
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val target = File(context.cacheDir, "raw-on-device-test.jpg")
-        val options = RawOptions(lensCorrection = true, autoEnhance = true)
+        val options = PhotoEdit(Adjustments(exposure = 0.3f, shadows = 0.5f, vibrance = 0.3f), autoEnhance = true)
         try {
             val startedAt = System.nanoTime()
             val preview = RawRenderer.preview(RawRenderer.read(sample!!), options)

@@ -7,18 +7,16 @@ import androidx.lifecycle.viewModelScope
 import com.byeonggon.cameramanager.appContainer
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
-import com.byeonggon.cameramanager.enhance.PhotoEnhancer
-import com.byeonggon.cameramanager.location.GeoPoint
-import com.byeonggon.cameramanager.raw.ArwImage
-import com.byeonggon.cameramanager.raw.RawOptions
+import com.byeonggon.cameramanager.enhance.PhotoEdit
 import com.byeonggon.cameramanager.raw.RawRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -34,13 +32,13 @@ import java.io.IOException
 
 data class ViewerUiState(
     val item: MediaItemEntity? = null,
-    /** Whether the photo was enhanced in place and its original can be brought back. */
+    /** Whether the photo carries corrections that can be taken away again. */
     val edited: Boolean = false,
-    /** Raw files only: show our own development instead of the preview the camera embedded. */
-    val developed: Boolean = false,
-    val autoEnhance: Boolean = false,
-    val lensCorrection: Boolean = false,
-    /** Shown in place of the stored picture while corrections are being tried out. */
+    /** Whether tones and colours copied from another photo are waiting to be given to this one. */
+    val canPaste: Boolean = false,
+    /** How the photo was taken, as far as the file says. */
+    val details: String? = null,
+    /** A raw file as its corrections make it look, shown in place of the preview the camera embedded. */
     val rendered: Bitmap? = null,
     val busy: Boolean = false,
     val message: String? = null,
@@ -50,153 +48,116 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     private val container = application.appContainer
     private val mediaDao = container.database.mediaDao()
     private val storage = container.storage
+    private val edits = container.libraryEdits
     private val itemId = MutableStateFlow<Long?>(null)
-    private val edit = MutableStateFlow(ViewerUiState())
+    private val status = MutableStateFlow(ViewerUiState())
 
     // Renderings work on whole frames; running one at a time keeps memory use in check.
     private val renderLock = Mutex()
-    private var renderJob: Job? = null
-
-    // Decoding a raw file takes a moment, so the result is kept for as long as its photo is open.
-    private var decodedRaw: ArwImage? = null
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    private val item: StateFlow<MediaItemEntity?> = itemId
+        .flatMapLatest { id -> if (id == null) flowOf(null) else mediaDao.observeById(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // Read once for each file, not again whenever its library entry changes.
+    private val details = item.map { it?.takeIf { item -> item.kind != MediaKind.VIDEO }?.path }
+        .distinctUntilChanged()
+        .map { path -> path?.let { PhotoDetails.of(File(it)) } }
+        .flowOn(Dispatchers.IO)
+
     val state: StateFlow<ViewerUiState> = combine(
-        itemId
-            .flatMapLatest { id -> if (id == null) flowOf(null) else mediaDao.observeById(id) }
-            .map { item -> item to (item != null && storage.originalOf(File(item.path)).exists()) }
-            .flowOn(Dispatchers.IO),
-        edit,
-    ) { (item, edited), edit -> edit.copy(item = item, edited = edited) }
+        item.map { item -> item to (item != null && edits.isEdited(item)) }.flowOn(Dispatchers.IO),
+        status,
+        edits.copied,
+        details,
+    ) { (item, edited), status, copied, details ->
+        status.copy(item = item, edited = edited, canPaste = copied != null, details = details)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ViewerUiState())
 
-    fun open(id: Long) {
-        if (itemId.value == id) return
-        renderJob?.cancel()
-        decodedRaw = null
-        itemId.value = id
-        edit.value = ViewerUiState()
-    }
-
-    /**
-     * Switches a raw file between the camera's embedded preview and our development of it. Lens
-     * correction starts switched on, as the camera's preview has it too; that way this switch only
-     * changes the rendering, and the lens switch only the geometry.
-     */
-    fun setDeveloped(enabled: Boolean) {
-        edit.update { it.copy(developed = enabled, lensCorrection = enabled, autoEnhance = false) }
-        render()
-    }
-
-    fun setAutoEnhance(enabled: Boolean) {
-        edit.update { it.copy(autoEnhance = enabled) }
-        render()
-    }
-
-    fun setLensCorrection(enabled: Boolean) {
-        edit.update { it.copy(lensCorrection = enabled) }
-        render()
-    }
-
-    /** Replaces the photo with its enhanced version, keeping the original for [restoreOriginal]. */
-    fun applyToPhoto() {
-        val item = state.value.item?.takeIf { it.kind == MediaKind.PHOTO } ?: return
-        runTask(failure = "보정을 적용하지 못했습니다.") {
-            val photo = File(item.path)
-            PhotoEnhancer.enhanceInPlace(photo, storage.originalOf(photo))
-            storage.publish(photo)
-            mediaDao.setSize(item.id, photo.length())
-            edit.update { it.copy(autoEnhance = false, rendered = null) }
-            "보정을 적용했습니다. 원본은 보관되어 되돌릴 수 있습니다."
+    init {
+        viewModelScope.launch {
+            item.map { it?.takeIf { item -> item.kind == MediaKind.RAW } }
+                .distinctUntilChanged { old, new -> old?.path == new?.path && old?.edit == new?.edit }
+                .collectLatest { raw -> showCorrected(raw) }
         }
     }
 
+    fun open(id: Long) {
+        if (itemId.value == id) return
+        itemId.value = id
+        status.value = ViewerUiState()
+    }
+
+    /** Lets go of the photo and everything kept in memory for it. */
+    fun close() {
+        itemId.value = null
+        status.value = ViewerUiState()
+        container.rawCache.clear()
+    }
+
+    /** Gives the photo [rating] stars; the number it already has takes them away again. */
+    fun setRating(rating: Int) {
+        val item = state.value.item ?: return
+        viewModelScope.launch { mediaDao.setRating(item.id, if (rating == item.rating) 0 else rating) }
+    }
+
+    /** Takes the corrections away again. A JPEG gets back the original that was kept when it was edited. */
     fun restoreOriginal() {
-        val item = state.value.item?.takeIf { it.kind == MediaKind.PHOTO } ?: return
+        val item = state.value.item ?: return
         runTask(failure = "원본으로 되돌리지 못했습니다.") {
-            val photo = File(item.path)
-            PhotoEnhancer.restoreOriginal(photo, storage.originalOf(photo))
-            storage.publish(photo)
-            mediaDao.setSize(item.id, photo.length())
+            edits.remove(item)
             "원본으로 되돌렸습니다."
         }
     }
 
-    /** Develops the raw file at full resolution, the way it is shown, into a new JPEG. */
-    fun exportRaw() {
-        val item = state.value.item?.takeIf { it.kind == MediaKind.RAW && edit.value.developed } ?: return
-        val options = edit.value.options()
-        runTask(failure = "JPEG로 저장하지 못했습니다.") {
-            // The export decodes the file itself; holding a second copy would only cost memory.
-            decodedRaw = null
-            val source = File(item.path)
-            val target = storage.siblingFor(source, suffix = "_developed", extension = "jpg")
-            RawRenderer.export(source, target, options)
-            val latitude = item.latitude
-            val longitude = item.longitude
-            if (latitude != null && longitude != null) {
-                container.geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
-            }
-            storage.publish(target)
-            mediaDao.insert(
-                item.copy(
-                    id = 0,
-                    path = target.absolutePath,
-                    fileName = target.name,
-                    kind = MediaKind.PHOTO,
-                    sizeBytes = target.length(),
-                    importedAt = System.currentTimeMillis(),
-                    sourceKey = null,
-                ),
-            )
-            "JPEG로 저장했습니다: ${target.name}"
+    /** Gives this photo the tones and colours copied from another, keeping its own framing. */
+    fun pasteEdit() {
+        val item = state.value.item?.takeIf { it.kind != MediaKind.VIDEO } ?: return
+        val copied = edits.copied.value ?: return
+        runTask(failure = "보정 값을 붙여넣지 못했습니다.") {
+            val own = edits.editOf(item) ?: PhotoEdit()
+            edits.apply(item, own.withLookOf(copied))
+            "보정 값을 붙여넣었습니다."
         }
     }
 
-    fun consumeMessage() = edit.update { it.copy(message = null) }
+    /** Develops the raw file at full resolution, with its corrections, into a new JPEG. */
+    fun exportRaw() {
+        val item = state.value.item?.takeIf { it.kind == MediaKind.RAW } ?: return
+        runTask(failure = "JPEG로 저장하지 못했습니다.") { "JPEG로 저장했습니다: ${edits.exportRaw(item).name}" }
+    }
 
-    private fun render() {
-        val item = state.value.item ?: return
-        val current = edit.value
-        val options = current.options()
-        renderJob?.cancel()
-        val wanted = if (item.kind == MediaKind.RAW) current.developed else current.autoEnhance
-        if (!wanted) {
-            edit.update { it.copy(rendered = null, busy = false) }
+    fun consumeMessage() = status.update { it.copy(message = null) }
+
+    /** Renders [raw] with the corrections stored for it; without any, the camera's preview is all there is to show. */
+    private suspend fun showCorrected(raw: MediaItemEntity?) {
+        val edit = PhotoEdit.fromJson(raw?.edit)
+        if (raw == null || edit == null) {
+            status.update { it.copy(rendered = null) }
             return
         }
-        renderJob = viewModelScope.launch {
-            edit.update { it.copy(busy = true) }
-            val bitmap = try {
-                withContext(Dispatchers.Default) {
-                    renderLock.withLock {
-                        when (item.kind) {
-                            MediaKind.PHOTO -> PhotoEnhancer.preview(File(item.path), PREVIEW_EDGE)
-                            MediaKind.RAW -> RawRenderer.preview(decoded(item), options)
-                            MediaKind.VIDEO -> null
-                        }
-                    }
-                }
-            } catch (e: IOException) {
-                null
-            } catch (e: OutOfMemoryError) {
-                null
+        status.update { it.copy(busy = true) }
+        val bitmap = try {
+            withContext(Dispatchers.Default) {
+                renderLock.withLock { RawRenderer.preview(container.rawCache.read(File(raw.path)), edit) }
             }
-            edit.update {
-                it.copy(busy = false, rendered = bitmap, message = if (bitmap == null) "미리보기를 만들지 못했습니다." else null)
-            }
+        } catch (e: IOException) {
+            null
+        } catch (e: OutOfMemoryError) {
+            null
+        }
+        status.update {
+            it.copy(busy = false, rendered = bitmap, message = if (bitmap == null) "보정한 모습을 그리지 못했습니다." else null)
         }
     }
-
-    private fun decoded(item: MediaItemEntity): ArwImage =
-        decodedRaw ?: RawRenderer.read(File(item.path)).also { decodedRaw = it }
 
     /** Runs a slow file operation and reports its outcome, or [failure], as a message. */
     private fun runTask(failure: String, task: suspend () -> String) {
-        if (edit.value.busy) return
-        renderJob?.cancel()
+        if (status.value.busy) return
         viewModelScope.launch {
-            edit.update { it.copy(busy = true) }
+            status.update { it.copy(busy = true) }
             val message = try {
                 withContext(Dispatchers.Default) { renderLock.withLock { task() } }
             } catch (e: IOException) {
@@ -204,13 +165,7 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: OutOfMemoryError) {
                 "$failure 메모리가 부족합니다."
             }
-            edit.update { it.copy(busy = false, message = message) }
+            status.update { it.copy(busy = false, message = message) }
         }
-    }
-
-    private fun ViewerUiState.options() = RawOptions(lensCorrection = lensCorrection, autoEnhance = autoEnhance)
-
-    private companion object {
-        const val PREVIEW_EDGE = 2048
     }
 }

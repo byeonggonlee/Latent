@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -43,6 +44,10 @@ data class MediaItemEntity(
     val geoSource: GeoSource = GeoSource.NONE,
     /** Key of the [SyncRecordEntity] this file was imported under; null for files made on the phone. */
     val sourceKey: String? = null,
+    /** The corrections chosen for this file, as written by PhotoEdit.toJson; null while it is as the camera made it. */
+    val edit: String? = null,
+    /** Stars from 0 to 5, for picking out the photos worth keeping. */
+    @ColumnInfo(defaultValue = "0") val rating: Int = 0,
 )
 
 /** Remembers every camera file ever imported, so removing it from the library does not re-import it. */
@@ -77,4 +82,14 @@ data class LocationPointEntity(
     val altitude: Double? = null,
     val accuracy: Float? = null,
     val source: LocationSource,
+)
+
+/** A look the user saved under a name, to give to other photos: a filter of their own. */
+@Entity(tableName = "filters")
+data class FilterEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    /** The look, as written by PhotoEdit.toJson. */
+    val look: String,
+    val createdAt: Long,
 )

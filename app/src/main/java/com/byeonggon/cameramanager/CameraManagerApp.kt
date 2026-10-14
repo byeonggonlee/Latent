@@ -9,12 +9,14 @@ import coil3.SingletonImageLoader
 import coil3.video.VideoFrameDecoder
 import com.byeonggon.cameramanager.camera.SyncEngine
 import com.byeonggon.cameramanager.camera.UsbCameraConnector
+import com.byeonggon.cameramanager.data.LibraryEdits
 import com.byeonggon.cameramanager.data.LibraryIndex
 import com.byeonggon.cameramanager.data.LibraryStorage
 import com.byeonggon.cameramanager.data.SettingsRepository
 import com.byeonggon.cameramanager.data.db.AppDatabase
 import com.byeonggon.cameramanager.location.Geotagger
 import com.byeonggon.cameramanager.location.TimelineImporter
+import com.byeonggon.cameramanager.raw.RawCache
 
 class CameraManagerApp : Application(), SingletonImageLoader.Factory {
     lateinit var container: AppContainer
@@ -43,6 +45,8 @@ class AppContainer(context: Context) {
     val libraryIndex = LibraryIndex(storage, database)
     val usb = UsbCameraConnector(context)
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
+    val rawCache = RawCache()
+    val libraryEdits = LibraryEdits(storage, database.mediaDao(), database.filterDao(), geotagger, rawCache)
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())
 }

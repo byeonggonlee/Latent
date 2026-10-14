@@ -73,4 +73,37 @@ class JpegMetadataTest {
             JpegMetadata.withExifOf(image, startOfImage + bytes(0xFF, 0xE1, 0x40, 0x00, 1, 2, 3))
         }
     }
+
+    /** An Exif block whose first directory holds a make, an orientation of 6 and a link to a thumbnail directory. */
+    private fun exifBlock(littleEndian: Boolean): ByteArray {
+        fun int16(value: Int) = if (littleEndian) bytes(value and 0xFF, value shr 8) else bytes(value shr 8, value and 0xFF)
+        fun int32(value: Int) = if (littleEndian) int16(value and 0xFFFF) + int16(value shr 16) else int16(value shr 16) + int16(value and 0xFFFF)
+        val tiff = (if (littleEndian) "II" else "MM").toByteArray() + int16(42) + int32(8) +
+            int16(2) +
+            int16(0x010F) + int16(2) + int32(4) + "ab\u0000\u0000".toByteArray() +
+            int16(0x0112) + int16(3) + int32(1) + int16(6) + int16(0) +
+            int32(99)
+        return segment(0xE1, "Exif".toByteArray() + bytes(0, 0) + tiff)
+    }
+
+    @Test
+    fun tellsViewersNotToTurnAPictureThatWasTurnedAlready() {
+        for (littleEndian in listOf(true, false)) {
+            val block = exifBlock(littleEndian)
+            val original = startOfImage + block + pictureData
+            val image = startOfImage + quantization + pictureData
+
+            val untouched = JpegMetadata.withExifOf(original, image)
+            val upright = JpegMetadata.withExifOf(original, image, upright = true)
+
+            assertArrayEquals(block, untouched.copyOfRange(2, 2 + block.size))
+            val changed = block.indices.filter { upright[2 + it] != block[it] }
+            // The orientation's value, and the link from the first directory on to the thumbnail's.
+            val orientationValue = 4 + 6 + 8 + 2 + 12 + 8 + (if (littleEndian) 0 else 1)
+            val link = 4 + 6 + 8 + 2 + 24 + (if (littleEndian) 0 else 3)
+            assertEquals(listOf(orientationValue, link), changed)
+            assertEquals(1, upright[2 + orientationValue].toInt())
+            assertEquals(0, upright[2 + link].toInt())
+        }
+    }
 }

@@ -39,7 +39,16 @@ class ArwImage(
     val orientation: Int,
     /** One value per photosite, in rows, laid out as red/green over green/blue. */
     val sensor: ShortArray,
-)
+) {
+    /**
+     * The same file with only a part of its picture: [width] by [height] pixels, [left] across and
+     * [top] down the picture. All four have to be even, as the colours repeat every two photosites.
+     */
+    fun part(left: Int, top: Int, width: Int, height: Int) = ArwImage(
+        this.width, this.height, cropLeft + left, cropTop + top, width, height,
+        blackLevel, whiteLevel, whiteBalance, colorMatrix, lens, orientation, sensor,
+    )
+}
 
 /** Reads the compressed raw format written by Sony cameras such as the ZV-E10 (ARW 2.3). */
 object SonyArw {

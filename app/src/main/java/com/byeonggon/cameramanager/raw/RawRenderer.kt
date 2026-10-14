@@ -1,40 +1,59 @@
 package com.byeonggon.cameramanager.raw
 
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.util.Log
-import com.byeonggon.cameramanager.enhance.AutoEnhance
+import com.byeonggon.cameramanager.enhance.Framing
+import com.byeonggon.cameramanager.enhance.LinearImage
+import com.byeonggon.cameramanager.enhance.PhotoEdit
 import com.byeonggon.cameramanager.enhance.PhotoEnhancer
+import com.byeonggon.cameramanager.enhance.PictureRegion
+import com.byeonggon.cameramanager.enhance.framed
+import com.byeonggon.cameramanager.enhance.renderedBitmap
 import java.io.File
 import java.io.IOException
-import kotlin.math.max
-
-/** What to do to a raw file on its way to becoming a picture. */
-data class RawOptions(val lensCorrection: Boolean, val autoEnhance: Boolean)
 
 /** Develops raw files into bitmaps and JPEGs. All calls are slow and must run off the main thread. */
 object RawRenderer {
     private const val TAG = "RawDevelop"
-    private const val ANALYSIS_EDGE = 256
 
     @Throws(IOException::class)
     fun read(file: File): ArwImage = timed("decode ${file.name}") { SonyArw.read(file.readBytes()) }
 
-    /** A half-resolution rendering for the screen, turned the way the camera was held. */
-    fun preview(image: ArwImage, options: RawOptions): Bitmap {
-        val developed = timed("preview") { finish(RawDeveloper.developPreview(image), image.lens, options) }
-        val bitmap = Bitmap.createBitmap(developed.pixels, developed.width, developed.height, Bitmap.Config.ARGB_8888)
-        val degrees = rotationOf(image.orientation)
-        if (degrees == 0) return bitmap
-        val rotation = Matrix().apply { postRotate(degrees.toFloat()) }
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, rotation, true).also { bitmap.recycle() }
+    /**
+     * The picture in a size for the screen, turned the way the camera was held. [cells] sets the size
+     * as in [RawDeveloper.developPreview].
+     */
+    fun proxy(image: ArwImage, cells: Int, lensCorrection: Boolean): LinearImage = timed("proxy") {
+        val linear = RawDeveloper.developPreview(image, cells)
+        if (lensCorrection) straighten(linear, image.lens)
+        linear.turned(quarterTurnsOf(image.orientation))
+    }
+
+    /**
+     * A part of the picture at full size, at most [size] pixels each way, around a centre given as
+     * fractions of the upright picture. For judging detail; the lens is not corrected for here.
+     */
+    fun region(image: ArwImage, centreX: Float, centreY: Float, size: Int): PictureRegion {
+        val turns = quarterTurnsOf(image.orientation)
+        val sideways = turns % 2 == 1
+        val frameWidth = if (sideways) image.cropHeight else image.cropWidth
+        val frameHeight = if (sideways) image.cropWidth else image.cropHeight
+        val upright = PictureRegion.bounds(frameWidth, frameHeight, centreX, centreY, size)
+        val stored = PictureRegion.asStored(upright, turns, image.cropWidth, image.cropHeight)
+        // Starting on an even photosite, as the colours repeat every two.
+        val part = image.part(stored[0] and 1.inv(), stored[1] and 1.inv(), stored[2] and 1.inv(), stored[3] and 1.inv())
+        return PictureRegion(RawDeveloper.develop(part).turned(turns), upright[0], upright[1], frameWidth, frameHeight)
+    }
+
+    /** A half-resolution rendering for the screen. */
+    fun preview(image: ArwImage, edit: PhotoEdit): Bitmap = timed("render") {
+        renderedBitmap(edit, scale = 0.5f) { proxy(image, cells = 1, edit.lensCorrection).framed(edit.framing) }
     }
 
     /** Develops [source] at full resolution into a JPEG at [target], carrying over its camera settings. */
     @Throws(IOException::class)
-    fun export(source: File, target: File, options: RawOptions) {
-        val developed = timed("full development") { developFull(source, options) }
-        val bitmap = Bitmap.createBitmap(developed.pixels, developed.width, developed.height, Bitmap.Config.ARGB_8888)
+    fun export(source: File, target: File, edit: PhotoEdit) {
+        val bitmap = timed("full development") { renderedBitmap(edit, scale = 1f) { developFull(source, edit) } }
         try {
             timed("encode") {
                 target.outputStream().use { output ->
@@ -46,40 +65,41 @@ object RawRenderer {
         } finally {
             bitmap.recycle()
         }
-        // The pixels stay as the sensor recorded them; the copied orientation tells viewers how to turn them.
-        PhotoEnhancer.copyExif(source, target)
+        PhotoEnhancer.copyExif(source, target, upright = bakesOrientation(edit))
     }
 
-    // A function of its own so the decoded sensor data can be freed before the result is encoded.
-    private fun developFull(source: File, options: RawOptions): DevelopedImage {
+    /**
+     * Whether an export turns the pixels upright. A picture that is reframed is; so is one with masks,
+     * which are placed on the upright picture. (A picture taken upright is unaffected either way.)
+     */
+    private fun bakesOrientation(edit: PhotoEdit) = edit.framing != Framing() || edit.locals.isNotEmpty()
+
+    /**
+     * Unless the picture is reframed, its pixels stay as the sensor recorded them and the copied
+     * orientation tells viewers how to turn them. Reframing turns them upright on the way.
+     */
+    private fun developFull(source: File, edit: PhotoEdit): LinearImage {
+        val (linear, uprightTurns) = developStraight(source, edit.lensCorrection)
+        return if (bakesOrientation(edit)) linear.framed(edit.framing, uprightTurns) else linear
+    }
+
+    // A function of its own so the decoded sensor data can be freed before more copies of the picture are made.
+    private fun developStraight(source: File, lensCorrection: Boolean): Pair<LinearImage, Int> {
         val image = read(source)
-        return finish(RawDeveloper.develop(image), image.lens, options)
+        val linear = RawDeveloper.develop(image)
+        if (lensCorrection) straighten(linear, image.lens)
+        return linear to quarterTurnsOf(image.orientation)
     }
 
-    private fun finish(developed: DevelopedImage, lens: LensProfile?, options: RawOptions): DevelopedImage {
-        val straightened = if (options.lensCorrection && lens != null) {
-            LensCorrection(lens, developed.width, developed.height).straighten(developed)
-        } else {
-            developed
-        }
-        if (options.autoEnhance) AutoEnhance.analyze(sample(straightened)).apply(straightened.pixels)
-        return straightened
+    private fun straighten(linear: LinearImage, lens: LensProfile?) {
+        if (lens != null) LensCorrection(lens, linear.width, linear.height).straighten(linear)
     }
 
-    /** An evenly spread selection of pixels, enough to judge the picture's tones by. */
-    private fun sample(image: DevelopedImage): IntArray {
-        val step = max(1, max(image.width, image.height) / ANALYSIS_EDGE)
-        val columns = image.width / step
-        val rows = image.height / step
-        return IntArray(columns * rows) { index ->
-            image.pixels[(index / columns) * step * image.width + (index % columns) * step]
-        }
-    }
-
-    private fun rotationOf(orientation: Int): Int = when (orientation) {
-        3 -> 180
-        6 -> 90
-        8 -> 270
+    /** Clockwise quarter turns that bring a picture with this Exif orientation upright. */
+    private fun quarterTurnsOf(orientation: Int): Int = when (orientation) {
+        3 -> 2
+        6 -> 1
+        8 -> 3
         else -> 0
     }
 

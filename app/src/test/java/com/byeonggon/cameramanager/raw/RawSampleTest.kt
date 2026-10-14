@@ -1,5 +1,7 @@
 package com.byeonggon.cameramanager.raw
 
+import com.byeonggon.cameramanager.enhance.PhotoEdit
+import com.byeonggon.cameramanager.enhance.render
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -19,6 +21,8 @@ import kotlin.math.sqrt
  * Developed pictures are written to an "out" folder beside the samples for a look.
  */
 class RawSampleTest {
+    private class Picture(val width: Int, val height: Int, val pixels: IntArray)
+
     private val sampleDir = System.getenv("ARW_SAMPLE_DIR")?.let(::File)?.takeIf { it.isDirectory }
 
     @Test
@@ -27,13 +31,14 @@ class RawSampleTest {
         val out = File(sampleDir, "out").apply { mkdirs() }
         for (arw in sampleDir!!.listFiles { file -> file.extension.equals("ARW", ignoreCase = true) }!!.sorted()) {
             val image = SonyArw.read(arw.readBytes())
-            val preview = RawDeveloper.developPreview(image)
-            val straightened = LensCorrection(image.lens!!, preview.width, preview.height).straighten(preview)
+            val linear = RawDeveloper.developPreview(image)
+            LensCorrection(image.lens!!, linear.width, linear.height).straighten(linear)
+            val straightened = Picture(linear.width, linear.height, linear.render(PhotoEdit()))
             write(straightened, File(out, arw.nameWithoutExtension + ".png"))
 
             val jpeg = File(sampleDir, arw.nameWithoutExtension + ".JPG").takeIf { it.exists() }?.let(ImageIO::read) ?: continue
-            val camera = DevelopedImage(preview.width, preview.height, IntArray(preview.pixels.size) { index ->
-                jpeg.getRGB(index % preview.width * 2, index / preview.width * 2)
+            val camera = Picture(linear.width, linear.height, IntArray(linear.width * linear.height) { index ->
+                jpeg.getRGB(index % linear.width * 2, index / linear.width * 2)
             })
             val shifts = outwardShifts(straightened, camera)
             println("${arw.name}: off by " + shifts.joinToString { "%+.2f".format(it) } + " px from the centre outwards")
@@ -45,7 +50,7 @@ class RawSampleTest {
      * How far, outwards from the centre, patches of [camera] sit from the same detail in [ours]: the
      * median for each tenth of the way to the corners, to a fraction of a pixel.
      */
-    private fun outwardShifts(ours: DevelopedImage, camera: DevelopedImage): List<Float> {
+    private fun outwardShifts(ours: Picture, camera: Picture): List<Float> {
         val w = ours.width
         val h = ours.height
         val a = brightness(ours)
@@ -103,12 +108,12 @@ class RawSampleTest {
         return if (spread <= 0) -1.0 else (sumAB - sumA * sumB / count) / spread
     }
 
-    private fun brightness(image: DevelopedImage) = FloatArray(image.pixels.size) { index ->
+    private fun brightness(image: Picture) = FloatArray(image.pixels.size) { index ->
         val pixel = image.pixels[index]
         0.3f * ((pixel shr 16) and 0xFF) + 0.6f * ((pixel shr 8) and 0xFF) + 0.1f * (pixel and 0xFF)
     }
 
-    private fun write(image: DevelopedImage, file: File) {
+    private fun write(image: Picture, file: File) {
         val buffered = BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_RGB)
         buffered.setRGB(0, 0, image.width, image.height, image.pixels, 0, image.width)
         ImageIO.write(buffered, "png", file)

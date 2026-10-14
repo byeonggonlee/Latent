@@ -2,19 +2,17 @@ package com.byeonggon.cameramanager.enhance
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
-import androidx.core.graphics.scale
+import android.graphics.BitmapRegionDecoder
+import android.graphics.Rect
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import kotlin.math.max
-import kotlin.math.roundToInt
 
-/** Runs [AutoEnhance] over JPEG files. All calls decode bitmaps and must run off the main thread. */
+/** Edits JPEG files. All calls decode bitmaps and must run off the main thread. */
 object PhotoEnhancer {
-    private const val ANALYSIS_EDGE = 256
-    private const val ROWS_PER_PASS = 64
+    private const val ROWS_PER_PASS = 256
     const val JPEG_QUALITY = 95
 
     private val COPIED_EXIF_TAGS = arrayOf(
@@ -49,52 +47,43 @@ object PhotoEnhancer {
         ExifInterface.TAG_GPS_ALTITUDE_REF,
     )
 
-    /** Decodes [source] no larger than [maxEdge] on its long side and returns the enhanced bitmap. */
-    fun preview(source: File, maxEdge: Int): Bitmap =
-        ImageDecoder.decodeBitmap(ImageDecoder.createSource(source)) { decoder, info, _ ->
-            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-            decoder.isMutableRequired = true
-            val longEdge = max(info.size.width, info.size.height)
-            if (longEdge > maxEdge) {
-                val scale = maxEdge.toFloat() / longEdge
-                decoder.setTargetSize(
-                    max(1, (info.size.width * scale).roundToInt()),
-                    max(1, (info.size.height * scale).roundToInt()),
-                )
-            }
-        }.also(::enhance)
-
     /**
-     * Replaces [photo] with its enhanced version. The original moves to [backup], from where
-     * [restoreOriginal] brings it back; enhancing again starts over from that original.
+     * Decodes [source] upright and no larger than [maxEdge] on its long side, ready for editing.
+     * It may come out up to half that size, as it is only ever shrunk by whole factors.
      */
     @Throws(IOException::class)
-    fun enhanceInPlace(photo: File, backup: File) {
+    fun load(source: File, maxEdge: Int): LinearImage = shrunk(source, maxEdge).turned(uprightTurnsOf(source))
+
+    /**
+     * Replaces [photo] with its edited version. The original moves to [backup], from where
+     * [restoreOriginal] brings it back; editing again starts over from that original.
+     */
+    @Throws(IOException::class)
+    fun saveEdited(photo: File, backup: File, edit: PhotoEdit) {
         val original = if (backup.exists()) backup else photo
-        // Decoded as stored, without applying the Exif orientation, so the copied Exif block still fits.
-        val options = BitmapFactory.Options().apply { inMutable = true }
-        val bitmap = BitmapFactory.decodeFile(original.path, options) ?: throw IOException("Cannot decode ${photo.name}")
+        // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
+        val reframed = edit.framing != Framing() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+        val bitmap = if (reframed) reframed(original, edit) else retoned(original, edit)
         val encoded = ByteArrayOutputStream()
         try {
-            enhance(bitmap)
             if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
                 throw IOException("Cannot encode ${photo.name}")
             }
         } finally {
             bitmap.recycle()
         }
-        val enhanced = File(photo.parentFile, ".${photo.name}.tmp")
-        enhanced.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray()))
+        val edited = File(photo.parentFile, ".${photo.name}.tmp")
+        edited.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed))
 
         if (!backup.exists()) {
             backup.parentFile?.mkdirs()
             if (!photo.renameTo(backup)) {
-                enhanced.delete()
+                edited.delete()
                 throw IOException("Cannot keep the original of ${photo.name}")
             }
         }
-        if (!enhanced.renameTo(photo)) {
-            enhanced.delete()
+        if (!edited.renameTo(photo)) {
+            edited.delete()
             backup.renameTo(photo)
             throw IOException("Cannot replace ${photo.name}")
         }
@@ -106,45 +95,116 @@ object PhotoEnhancer {
         if (!backup.renameTo(photo)) throw IOException("Cannot restore the original of ${photo.name}")
     }
 
-    /** Carries the camera settings and location of [source] over to a picture made from it. */
+    /**
+     * Carries the camera settings and location of [source] over to a picture made from it. [upright]
+     * says that the picture's pixels are already turned the way the camera was held.
+     */
     @Throws(IOException::class)
-    fun copyExif(source: File, target: File) {
+    fun copyExif(source: File, target: File, upright: Boolean = false) {
         val from = ExifInterface(source)
         val to = ExifInterface(target)
         for (tag in COPIED_EXIF_TAGS) {
             from.getAttribute(tag)?.let { to.setAttribute(tag, it) }
         }
+        if (upright) to.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
         to.saveAttributes()
     }
 
-    private fun enhance(bitmap: Bitmap) {
-        val transform = AutoEnhance.analyze(sample(bitmap))
+    /**
+     * The picture with its tones edited and every pixel where it was: as stored, without applying
+     * the Exif orientation, so that the copied Exif block still fits.
+     */
+    private fun retoned(original: File, edit: PhotoEdit): Bitmap {
+        val options = BitmapFactory.Options().apply { inMutable = true }
+        val bitmap = BitmapFactory.decodeFile(original.path, options) ?: throw IOException("Cannot decode ${original.name}")
+        try {
+            render(bitmap, ToneRenderer(edit, shrunk(original, ToneRenderer.OVERVIEW_EDGE)))
+            DetailFilter(edit.adjustments, scale = 1f).applyTo(bitmap)
+        } catch (e: Throwable) {
+            bitmap.recycle()
+            throw e
+        }
+        return bitmap
+    }
+
+    /** The picture turned upright, cut and levelled as the edit says, with its tones edited. */
+    private fun reframed(original: File, edit: PhotoEdit): Bitmap {
+        val upright = uprightTurnsOf(original)
+        return renderedBitmap(edit, scale = 1f) {
+            val bitmap = BitmapFactory.decodeFile(original.path) ?: throw IOException("Cannot decode ${original.name}")
+            linear(bitmap).framed(edit.framing, upright)
+        }
+    }
+
+    /**
+     * A part of the picture in [file] at full size, at most [size] pixels each way, around a centre
+     * given as fractions of the upright picture. For judging detail.
+     */
+    @Throws(IOException::class)
+    fun region(file: File, centreX: Float, centreY: Float, size: Int): PictureRegion {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        val turns = uprightTurnsOf(file)
+        val sideways = turns % 2 == 1
+        val frameWidth = if (sideways) bounds.outHeight else bounds.outWidth
+        val frameHeight = if (sideways) bounds.outWidth else bounds.outHeight
+        val upright = PictureRegion.bounds(frameWidth, frameHeight, centreX, centreY, size)
+        val (left, top, width, height) = PictureRegion.asStored(upright, turns, bounds.outWidth, bounds.outHeight)
+        val decoder = BitmapRegionDecoder.newInstance(file.path)
+        try {
+            val bitmap = decoder.decodeRegion(Rect(left, top, left + width, top + height), null)
+                ?: throw IOException("Cannot decode ${file.name}")
+            return PictureRegion(linear(bitmap).turned(turns), upright[0], upright[1], frameWidth, frameHeight)
+        } finally {
+            decoder.recycle()
+        }
+    }
+
+    /** The longer side of the picture in [file], in pixels. */
+    fun longSideOf(file: File): Int {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        return max(bounds.outWidth, bounds.outHeight)
+    }
+
+    /** The quarter turns clockwise that show the picture the way the camera was held. */
+    private fun uprightTurnsOf(file: File): Int =
+        when (ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 1
+            ExifInterface.ORIENTATION_ROTATE_180 -> 2
+            ExifInterface.ORIENTATION_ROTATE_270 -> 3
+            else -> 0
+        }
+
+    private fun render(bitmap: Bitmap, renderer: ToneRenderer) {
         val width = bitmap.width
-        // Strips keep the working memory small; a 24 MP frame would not fit twice.
+        // Strips keep the working memory small; a 24 MP frame would not fit several times over.
         val buffer = IntArray(width * ROWS_PER_PASS)
         var y = 0
         while (y < bitmap.height) {
             val rows = minOf(ROWS_PER_PASS, bitmap.height - y)
             bitmap.getPixels(buffer, 0, width, 0, y, width, rows)
-            transform.apply(buffer, width * rows)
+            renderer.render(LinearImage.fromArgb(buffer, width, rows), buffer, top = y, frameHeight = bitmap.height)
             bitmap.setPixels(buffer, 0, width, 0, y, width, rows)
             y += rows
         }
     }
 
-    private fun sample(bitmap: Bitmap): IntArray {
-        val scale = ANALYSIS_EDGE.toFloat() / max(bitmap.width, bitmap.height)
-        val small = if (scale < 1f) {
-            bitmap.scale(
-                max(1, (bitmap.width * scale).roundToInt()),
-                max(1, (bitmap.height * scale).roundToInt()),
-            )
-        } else {
-            bitmap
+    /** The picture as it is stored, without regard to its Exif orientation, no larger than [maxEdge] on its long side. */
+    private fun shrunk(file: File, maxEdge: Int): LinearImage {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        val options = BitmapFactory.Options().apply {
+            // The decoder averages as it shrinks, in powers of two; the rest of the way is done here.
+            inSampleSize = Integer.highestOneBit(max(1, max(bounds.outWidth, bounds.outHeight) / maxEdge))
         }
-        val pixels = IntArray(small.width * small.height)
-        small.getPixels(pixels, 0, small.width, 0, 0, small.width, small.height)
-        if (small !== bitmap) small.recycle()
-        return pixels
+        val bitmap = BitmapFactory.decodeFile(file.path, options) ?: throw IOException("Cannot decode ${file.name}")
+        return linear(bitmap).downscaled(maxEdge)
+    }
+
+    private fun linear(bitmap: Bitmap): LinearImage {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return LinearImage.fromArgb(pixels, bitmap.width, bitmap.height).also { bitmap.recycle() }
     }
 }

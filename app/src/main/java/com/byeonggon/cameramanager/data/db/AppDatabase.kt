@@ -18,6 +18,12 @@ interface MediaDao {
     @Query("SELECT * FROM media_items WHERE id = :id")
     fun observeById(id: Long): Flow<MediaItemEntity?>
 
+    @Query("SELECT * FROM media_items WHERE id = :id")
+    suspend fun byId(id: Long): MediaItemEntity?
+
+    @Query("SELECT * FROM media_items WHERE id IN (:ids) ORDER BY capturedAt DESC, id DESC")
+    suspend fun byIds(ids: List<Long>): List<MediaItemEntity>
+
     @Query("SELECT * FROM media_items")
     suspend fun all(): List<MediaItemEntity>
 
@@ -38,6 +44,12 @@ interface MediaDao {
 
     @Query("UPDATE media_items SET sizeBytes = :sizeBytes WHERE id = :id")
     suspend fun setSize(id: Long, sizeBytes: Long)
+
+    @Query("UPDATE media_items SET edit = :edit WHERE id = :id")
+    suspend fun setEdit(id: Long, edit: String?)
+
+    @Query("UPDATE media_items SET rating = :rating WHERE id = :id")
+    suspend fun setRating(id: Long, rating: Int)
 
     @Query("DELETE FROM media_items WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
@@ -79,6 +91,18 @@ interface SyncedFolderDao {
 }
 
 @Dao
+interface FilterDao {
+    @Query("SELECT * FROM filters ORDER BY createdAt, id")
+    fun observeAll(): Flow<List<FilterEntity>>
+
+    @Insert
+    suspend fun insert(filter: FilterEntity): Long
+
+    @Query("DELETE FROM filters WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
 interface LocationDao {
     /** Returns one row id per point; -1 marks a point that already existed. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -103,8 +127,9 @@ interface LocationDao {
         SyncRecordEntity::class,
         SyncedFolderEntity::class,
         LocationPointEntity::class,
+        FilterEntity::class,
     ],
-    version = 3,
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -112,6 +137,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncRecordDao(): SyncRecordDao
     abstract fun syncedFolderDao(): SyncedFolderDao
     abstract fun locationDao(): LocationDao
+    abstract fun filterDao(): FilterDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -129,7 +155,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `edit` TEXT")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `filters` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `look` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)",
+                )
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `rating` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
     }
 }

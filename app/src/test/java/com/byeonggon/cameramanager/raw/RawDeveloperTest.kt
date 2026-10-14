@@ -1,14 +1,12 @@
 package com.byeonggon.cameramanager.raw
 
+import com.byeonggon.cameramanager.enhance.CameraCurve
+import com.byeonggon.cameramanager.enhance.LinearImage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RawDeveloperTest {
-    private fun red(pixel: Int) = (pixel shr 16) and 0xFF
-    private fun green(pixel: Int) = (pixel shr 8) and 0xFF
-    private fun blue(pixel: Int) = pixel and 0xFF
-
     private val curve = SonyArw.toneCurve(intArrayOf(8000, 10400, 12900, 14100))
 
     /** The stored value that the file's curve expands to (nearly) [sensorValue]. */
@@ -19,34 +17,41 @@ class RawDeveloperTest {
         SyntheticArw.file(red = stored(512 + level / 2), green = stored(512 + level), blue = stored(512 + level * 2 / 3)),
     )
 
+    /** How bright a level is shown, from 0 to 255. */
+    private fun shown(level: Short) = CameraCurve.displayOfLevel[level.toInt()] * 255.0
+
     @Test
-    fun developsTheCroppedAreaAtHalfAndAtFullSize() {
+    fun developsTheCroppedAreaAtAQuarterAtHalfAndAtFullSize() {
         val image = neutral(3000)
 
+        assertEquals(14 to 2, RawDeveloper.developPreview(image, cells = 2).let { it.width to it.height })
         assertEquals(28 to 4, RawDeveloper.developPreview(image).let { it.width to it.height })
         assertEquals(56 to 8, RawDeveloper.develop(image).let { it.width to it.height })
     }
 
     @Test
-    fun rendersAnEvenlyLitNeutralSceneAsOneShadeOfGray() {
+    fun developsAnEvenlyLitNeutralSceneAsOneShadeOfGray() {
         val image = neutral(3000)
 
-        for (developed in listOf(RawDeveloper.developPreview(image), RawDeveloper.develop(image))) {
-            val first = developed.pixels.first()
-            assertTrue(developed.pixels.all { it == first })
+        val developments = listOf(RawDeveloper.developPreview(image, cells = 2), RawDeveloper.developPreview(image), RawDeveloper.develop(image))
+        for (developed in developments) {
+            assertTrue(developed.red.all { it == developed.red.first() })
+            assertTrue(developed.green.all { it == developed.green.first() })
+            assertTrue(developed.blue.all { it == developed.blue.first() })
             // The stored values are coarse in the highlights, hence the small tolerance.
-            assertEquals(green(first).toDouble(), red(first).toDouble(), 3.0)
-            assertEquals(green(first).toDouble(), blue(first).toDouble(), 3.0)
-            assertTrue("a mid-tone, not ${green(first)}", green(first) in 60..230)
+            val gray = shown(developed.green.first())
+            assertEquals(gray, shown(developed.red.first()), 3.0)
+            assertEquals(gray, shown(developed.blue.first()), 3.0)
+            assertTrue("a mid-tone, not $gray", gray in 60.0..230.0)
         }
     }
 
     @Test
-    fun rendersABrighterSceneBrighter() {
-        val darker = RawDeveloper.develop(neutral(1500)).pixels.first()
-        val brighter = RawDeveloper.develop(neutral(6000)).pixels.first()
+    fun developsABrighterSceneBrighter() {
+        val darker = RawDeveloper.develop(neutral(1500)).green.first()
+        val brighter = RawDeveloper.develop(neutral(6000)).green.first()
 
-        assertTrue(green(brighter) > green(darker))
+        assertTrue(brighter > darker)
     }
 
     @Test
@@ -54,8 +59,9 @@ class RawDeveloperTest {
         // Every photosite at the top of its range, whatever its colour.
         val image = SonyArw.read(SyntheticArw.file(red = 2047, green = 2047, blue = 2047))
 
-        val pixel = RawDeveloper.develop(image).pixels.first()
+        val developed = RawDeveloper.develop(image)
 
-        assertEquals(listOf(255, 255, 255), listOf(red(pixel), green(pixel), blue(pixel)))
+        val white = LinearImage.MAX_LEVEL.toShort()
+        assertEquals(listOf(white, white, white), listOf(developed.red.first(), developed.green.first(), developed.blue.first()))
     }
 }
