@@ -121,6 +121,34 @@ class LibraryEdits(
         return target
     }
 
+    /**
+     * A copy of [item] to send to another app: a JPEG at its full size, or no larger than [longSide]
+     * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is.
+     */
+    @Throws(IOException::class)
+    suspend fun shareCopy(item: MediaItemEntity, longSide: Int?): File {
+        val source = File(item.path)
+        if (item.kind == MediaKind.PHOTO && longSide == null) return source
+        val target = storage.shareFile(source.nameWithoutExtension + ".jpg")
+        if (item.kind == MediaKind.RAW) {
+            val edit = editOf(item) ?: PhotoEdit()
+            if (longSide == null) {
+                rawCache.clear()
+                RawRenderer.export(source, target, edit)
+            } else {
+                // Half the sensor's resolution is as large as a reduced copy gets; it is turned upright on the way.
+                val bitmap = RawRenderer.preview(rawCache.read(source), edit)
+                PhotoEnhancer.writeSmaller(bitmap, target, longSide) { PhotoEnhancer.copyExif(source, target, upright = true) }
+            }
+        } else {
+            PhotoEnhancer.writeSmaller(source, target, longSide!!)
+        }
+        val latitude = item.latitude
+        val longitude = item.longitude
+        if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
+        return target
+    }
+
     /** Takes the edit of [item] away: a JPEG gets its original back. */
     @Throws(IOException::class)
     suspend fun remove(item: MediaItemEntity) {

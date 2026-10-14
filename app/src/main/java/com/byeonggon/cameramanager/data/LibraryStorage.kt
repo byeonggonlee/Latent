@@ -44,6 +44,17 @@ class LibraryStorage(private val context: Context) {
      */
     fun originalOf(file: File): File = File(originals, file.relativeTo(root).path)
 
+    /**
+     * A file to hand a copy of a photo to another app with, named [fileName]. Copies made for earlier
+     * shares are cleared away first: they only have to last until the other app has read them.
+     */
+    fun shareFile(fileName: String): File {
+        val folder = File(context.cacheDir, "share")
+        folder.deleteRecursively()
+        folder.mkdirs()
+        return File(folder, fileName)
+    }
+
     /** Makes the file show up in gallery apps. */
     fun publish(file: File) {
         MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)

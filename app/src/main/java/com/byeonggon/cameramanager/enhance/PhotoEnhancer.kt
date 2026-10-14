@@ -15,6 +15,9 @@ object PhotoEnhancer {
     private const val ROWS_PER_PASS = 256
     const val JPEG_QUALITY = 95
 
+    /** Copies made to be sent on are smaller to begin with; a little more compression is no loss there. */
+    private const val SHARE_QUALITY = 90
+
     private val COPIED_EXIF_TAGS = arrayOf(
         ExifInterface.TAG_ORIENTATION,
         ExifInterface.TAG_DATETIME,
@@ -159,6 +162,48 @@ object PhotoEnhancer {
         } finally {
             decoder.recycle()
         }
+    }
+
+    /**
+     * Writes a smaller copy of the JPEG [source] to [target], no larger than [longSide] pixels on its
+     * long side, with the camera settings and location of the original.
+     */
+    @Throws(IOException::class)
+    fun writeSmaller(source: File, target: File, longSide: Int) = writeSmaller(decodeFitting(source, longSide), target, longSide) {
+        copyExif(source, target)
+    }
+
+    /**
+     * Writes [bitmap] to [target] as a JPEG no larger than [longSide] pixels on its long side, and
+     * then lets [describe] add what the file should say about itself. The bitmap is recycled.
+     */
+    @Throws(IOException::class)
+    fun writeSmaller(bitmap: Bitmap, target: File, longSide: Int, describe: () -> Unit) {
+        val scale = minOf(1f, longSide.toFloat() / max(bitmap.width, bitmap.height))
+        val small = if (scale < 1f) {
+            Bitmap.createScaledBitmap(bitmap, max(1, (bitmap.width * scale).toInt()), max(1, (bitmap.height * scale).toInt()), true)
+        } else {
+            bitmap
+        }
+        try {
+            target.outputStream().use { output ->
+                if (!small.compress(Bitmap.CompressFormat.JPEG, SHARE_QUALITY, output)) throw IOException("Cannot encode ${target.name}")
+            }
+        } finally {
+            if (small !== bitmap) small.recycle()
+            bitmap.recycle()
+        }
+        describe()
+    }
+
+    /** The picture in [file] as stored, shrunk by the decoder no further than to [longSide] pixels. */
+    private fun decodeFitting(file: File, longSide: Int): Bitmap {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = Integer.highestOneBit(max(1, max(bounds.outWidth, bounds.outHeight) / longSide))
+        }
+        return BitmapFactory.decodeFile(file.path, options) ?: throw IOException("Cannot decode ${file.name}")
     }
 
     /** The longer side of the picture in [file], in pixels. */

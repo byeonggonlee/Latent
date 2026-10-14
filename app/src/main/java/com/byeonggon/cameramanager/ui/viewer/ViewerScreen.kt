@@ -29,6 +29,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -102,6 +104,12 @@ fun ViewerScreen(
     val item = state.item
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.shareFile) {
+        state.shareFile?.let {
+            context.share(it, MediaKind.PHOTO)
+            viewModel.consumeShareFile()
+        }
+    }
     LaunchedEffect(state.message) {
         state.message?.let {
             snackbar.showSnackbar(it)
@@ -147,7 +155,7 @@ fun ViewerScreen(
                     onRestore = viewModel::restoreOriginal,
                     onExport = viewModel::exportRaw,
                     onRate = viewModel::setRating,
-                    onShare = { context.share(item) },
+                    onShare = { longSide -> if (longSide == RAW_FILE) context.share(File(item.path), item.kind) else viewModel.share(longSide) },
                     onShowMap = { context.showOnMap(item) },
                 )
             }
@@ -199,7 +207,8 @@ private fun InfoPanel(
     onRestore: () -> Unit,
     onExport: () -> Unit,
     onRate: (Int) -> Unit,
-    onShare: () -> Unit,
+    /** Called with the long side the shared copy may have, null for full size, or [RAW_FILE] for the file as it is. */
+    onShare: (Int?) -> Unit,
     onShowMap: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -256,7 +265,7 @@ private fun InfoPanel(
                         OutlinedButton(onClick = { confirmingRestore = true }, enabled = !state.busy) { Text("원본으로 되돌리기") }
                     }
                 }
-                OutlinedButton(onClick = onShare, enabled = !state.busy) { Text("공유") }
+                ShareButton(item.kind, enabled = !state.busy, onShare = onShare)
             }
         }
     }
@@ -298,10 +307,37 @@ private fun Context.showOnMap(item: MediaItemEntity) {
     launch(Intent(Intent.ACTION_VIEW, uri))
 }
 
+/** Offers the sizes a photo can be shared at; a video is shared as it is. */
+@Composable
+private fun ShareButton(kind: MediaKind, enabled: Boolean, onShare: (Int?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { if (kind == MediaKind.VIDEO) onShare(RAW_FILE) else open = true }, enabled = enabled) { Text("공유") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            val choices = when (kind) {
+                MediaKind.RAW -> listOf("JPEG · 원본 크기" to null, "JPEG · 긴 변 2048px" to 2048, "JPEG · 긴 변 1080px" to 1080, "RAW 파일 그대로" to RAW_FILE)
+                else -> listOf("원본 그대로" to null, "긴 변 2048px로 줄여서" to 2048, "긴 변 1080px로 줄여서" to 1080)
+            }
+            for ((label, longSide) in choices) {
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        open = false
+                        onShare(longSide)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** What [onShare] is given to share a file just as it is stored. */
+private const val RAW_FILE = -1
+
 /** Hands the file to whichever app the user picks: a messenger, a cloud drive, another editor. */
-private fun Context.share(item: MediaItemEntity) {
-    val uri = FileProvider.getUriForFile(this, "$packageName.files", File(item.path))
-    val type = when (item.kind) {
+private fun Context.share(file: File, kind: MediaKind) {
+    val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+    val type = when (kind) {
         MediaKind.PHOTO -> "image/jpeg"
         MediaKind.RAW -> "image/x-sony-arw"
         MediaKind.VIDEO -> "video/*"
@@ -310,7 +346,7 @@ private fun Context.share(item: MediaItemEntity) {
         .setType(type)
         .putExtra(Intent.EXTRA_STREAM, uri)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    launch(Intent.createChooser(send, item.fileName))
+    launch(Intent.createChooser(send, file.name))
 }
 
 private fun Context.playVideo(item: MediaItemEntity) {
