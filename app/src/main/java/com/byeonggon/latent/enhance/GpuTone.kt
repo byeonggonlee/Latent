@@ -21,6 +21,9 @@ internal object GpuTone {
     private const val STAGE_INTS = 16
     private const val LOCAL_INTS = 16
 
+    /** What a picture comes as: the levels of its light, or finished pixels the camera rendered. */
+    private class Input(val width: Int, val height: Int, val levels: LinearImage?, val displayed: IntArray?)
+
     fun render(
         renderer: ToneRenderer,
         source: LinearImage,
@@ -29,11 +32,28 @@ internal object GpuTone {
         frameHeight: Int,
         left: Int,
         frameWidth: Int,
+    ): Boolean = render(renderer, Input(source.width, source.height, source, null), output, top, frameHeight, left, frameWidth)
+
+    /**
+     * Renders [pixels], [width] by [rows], as the camera made them, into themselves: the same as
+     * rendering [LinearImage.fromArgb] of them, without making it.
+     */
+    fun renderDisplayed(renderer: ToneRenderer, pixels: IntArray, width: Int, rows: Int, top: Int, frameHeight: Int): Boolean =
+        render(renderer, Input(width, rows, null, pixels), pixels, top, frameHeight, 0, width)
+
+    private fun render(
+        renderer: ToneRenderer,
+        input: Input,
+        output: IntArray,
+        top: Int,
+        frameHeight: Int,
+        left: Int,
+        frameWidth: Int,
     ): Boolean {
-        if (!Graphics.available || source.width > Graphics.maxSize) return false
+        if (!Graphics.available || input.width > Graphics.maxSize) return false
         return try {
             val tables = tablesFor(renderer, frameWidth, frameHeight)
-            Graphics.run { run(renderer, tables, source, output, top, frameHeight, left, frameWidth) }
+            Graphics.run { run(renderer, tables, input, output, top, frameHeight, left, frameWidth) }
             true
         } catch (e: Exception) {
             Log.w(TAG, "Tones on the graphics processor failed; the processor does them", e)
@@ -137,21 +157,22 @@ internal object GpuTone {
     private fun run(
         renderer: ToneRenderer,
         tables: Tables,
-        source: LinearImage,
+        input: Input,
         output: IntArray,
         top: Int,
         frameHeight: Int,
         left: Int,
         frameWidth: Int,
     ) {
-        val width = source.width
-        val height = source.height
+        val width = input.width
+        val height = input.height
+        val displayed = input.displayed
         val bandRows = min(BAND_ROWS, height)
-        val buffers = IntArray(3)
+        val buffers = IntArray(4)
         val planes = IntArray(3)
         val result = IntArray(1)
         val framebuffer = IntArray(1)
-        GLES31.glGenBuffers(3, buffers, 0)
+        GLES31.glGenBuffers(4, buffers, 0)
         GLES31.glGenTextures(3, planes, 0)
         GLES31.glGenTextures(1, result, 0)
         GLES31.glGenFramebuffers(1, framebuffer, 0)
@@ -159,10 +180,16 @@ internal object GpuTone {
             upload(buffers[0], tables.floats.capacity() * 4, tables.floats)
             upload(buffers[1], tables.stages.capacity() * 4, tables.stages)
             upload(buffers[2], tables.locals.capacity() * 4, tables.locals)
-            for (index in 0 until 3) GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, index, buffers[index])
-            for (plane in planes) {
+            if (displayed != null) {
+                val levels = IntArray(256) { CameraCurve.levelOfDisplay[it].toInt() }
+                upload(buffers[3], levels.size * 4, ByteBuffer.allocateDirect(levels.size * 4).order(ByteOrder.nativeOrder()).asIntBuffer().put(levels).also { it.position(0) })
+            }
+            for (index in 0 until 4) GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, index, buffers[index])
+            for ((index, plane) in planes.withIndex()) {
+                // Finished pixels need one texture, of bytes; levels of light three, one for each colour.
+                if (displayed != null && index > 0) continue
                 GLES31.glBindTexture(GLES31.GL_TEXTURE_2D, plane)
-                GLES31.glTexStorage2D(GLES31.GL_TEXTURE_2D, 1, GLES31.GL_R16UI, width, bandRows)
+                GLES31.glTexStorage2D(GLES31.GL_TEXTURE_2D, 1, if (displayed != null) GLES31.GL_RGBA8 else GLES31.GL_R16UI, width, bandRows)
                 GLES31.glTexParameteri(GLES31.GL_TEXTURE_2D, GLES31.GL_TEXTURE_MIN_FILTER, GLES31.GL_NEAREST)
                 GLES31.glTexParameteri(GLES31.GL_TEXTURE_2D, GLES31.GL_TEXTURE_MAG_FILTER, GLES31.GL_NEAREST)
             }
@@ -172,10 +199,15 @@ internal object GpuTone {
             GLES31.glFramebufferTexture2D(GLES31.GL_FRAMEBUFFER, GLES31.GL_COLOR_ATTACHMENT0, GLES31.GL_TEXTURE_2D, result[0], 0)
             Graphics.check("making room")
 
-            val program = Graphics.program("tone", ToneShader.SOURCE)
+            val program = if (displayed != null) {
+                Graphics.program("toneDisplayed", ToneShader.source(displayed = true))
+            } else {
+                Graphics.program("tone", ToneShader.source(displayed = false))
+            }
             GLES31.glUseProgram(program)
             fun location(name: String) = GLES31.glGetUniformLocation(program, name)
             listOf("redPlane", "greenPlane", "bluePlane").forEachIndexed { unit, name -> GLES31.glUniform1i(location(name), unit) }
+            GLES31.glUniform1i(location("displayed"), 0)
             GLES31.glUniform1i(location("frameTop"), top)
             GLES31.glUniform1i(location("frameHeight"), frameHeight)
             GLES31.glUniform1i(location("frameLeft"), left)
@@ -211,18 +243,26 @@ internal object GpuTone {
 
             // Rows of an odd number of 16-bit levels do not end on a four-byte boundary.
             GLES31.glPixelStorei(GLES31.GL_UNPACK_ALIGNMENT, 2)
-            val upload = ByteBuffer.allocateDirect(width * bandRows * 2).order(ByteOrder.nativeOrder())
+            val upload = ByteBuffer.allocateDirect(width * bandRows * if (displayed != null) 4 else 2).order(ByteOrder.nativeOrder())
             val download = ByteBuffer.allocateDirect(width * bandRows * 4).order(ByteOrder.nativeOrder())
-            val levels = listOf(source.red, source.green, source.blue)
+            val levels = input.levels?.let { listOf(it.red, it.green, it.blue) }
             var bandTop = 0
             while (bandTop < height) {
                 val rows = min(bandRows, height - bandTop)
-                for (index in 0 until 3) {
+                if (displayed != null) {
                     upload.clear()
-                    upload.asShortBuffer().put(levels[index], bandTop * width, rows * width)
-                    GLES31.glActiveTexture(GLES31.GL_TEXTURE0 + index)
-                    GLES31.glBindTexture(GLES31.GL_TEXTURE_2D, planes[index])
-                    GLES31.glTexSubImage2D(GLES31.GL_TEXTURE_2D, 0, 0, 0, width, rows, GLES31.GL_RED_INTEGER, GLES31.GL_UNSIGNED_SHORT, upload)
+                    upload.asIntBuffer().put(displayed, bandTop * width, rows * width)
+                    GLES31.glActiveTexture(GLES31.GL_TEXTURE0)
+                    GLES31.glBindTexture(GLES31.GL_TEXTURE_2D, planes[0])
+                    GLES31.glTexSubImage2D(GLES31.GL_TEXTURE_2D, 0, 0, 0, width, rows, GLES31.GL_RGBA, GLES31.GL_UNSIGNED_BYTE, upload)
+                } else if (levels != null) {
+                    for (index in 0 until 3) {
+                        upload.clear()
+                        upload.asShortBuffer().put(levels[index], bandTop * width, rows * width)
+                        GLES31.glActiveTexture(GLES31.GL_TEXTURE0 + index)
+                        GLES31.glBindTexture(GLES31.GL_TEXTURE_2D, planes[index])
+                        GLES31.glTexSubImage2D(GLES31.GL_TEXTURE_2D, 0, 0, 0, width, rows, GLES31.GL_RED_INTEGER, GLES31.GL_UNSIGNED_SHORT, upload)
+                    }
                 }
                 GLES31.glUniform2i(location("size"), width, rows)
                 GLES31.glUniform1i(location("bandTop"), bandTop)
@@ -239,7 +279,7 @@ internal object GpuTone {
             GLES31.glDeleteFramebuffers(1, framebuffer, 0)
             GLES31.glDeleteTextures(3, planes, 0)
             GLES31.glDeleteTextures(1, result, 0)
-            GLES31.glDeleteBuffers(3, buffers, 0)
+            GLES31.glDeleteBuffers(4, buffers, 0)
         }
     }
 

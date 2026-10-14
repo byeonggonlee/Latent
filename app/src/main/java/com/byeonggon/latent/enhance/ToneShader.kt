@@ -5,11 +5,15 @@ package com.byeonggon.latent.enhance
  * does it. The tables the steps look things up in are the processor's own, handed over as they are.
  */
 internal object ToneShader {
-    val SOURCE = """
+    /** The shader for a picture given as levels of light, or with [displayed], as finished pixels the camera rendered. */
+    fun source(displayed: Boolean): String = SOURCE.replaceFirst("#version 310 es\n", "#version 310 es\n" + if (displayed) "#define DISPLAYED 1\n" else "")
+
+    private val SOURCE = """
         #version 310 es
         precision highp float;
         precision highp int;
         precision highp usampler2D;
+        precision highp sampler2D;
         precision highp image2D;
         layout(local_size_x = 16, local_size_y = 16) in;
 
@@ -25,9 +29,15 @@ internal object ToneShader {
         };
         layout(std430, binding = 2) readonly buffer Locals { Local locals[]; };
 
+        #ifdef DISPLAYED
+        // Bytes B, G, R, A of an ARGB int; back to the light they were made from by the camera's curve, as LinearImage.fromArgb does.
+        uniform sampler2D displayed;
+        layout(std430, binding = 3) readonly buffer Levels { int levelOf[]; };
+        #else
         uniform usampler2D redPlane;
         uniform usampler2D greenPlane;
         uniform usampler2D bluePlane;
+        #endif
         layout(rgba8, binding = 0) writeonly uniform image2D result;
 
         uniform ivec2 size;
@@ -247,7 +257,16 @@ internal object ToneShader {
             if (p.x >= size.x || p.y >= size.y) return;
             int frameX = frameLeft + p.x;
             int frameY = frameTop + bandTop + p.y;
+            #ifdef DISPLAYED
+            vec4 shown = texelFetch(displayed, p, 0);
+            uvec3 level = uvec3(
+                uint(levelOf[int(shown.b * 255.0 + 0.5)]),
+                uint(levelOf[int(shown.g * 255.0 + 0.5)]),
+                uint(levelOf[int(shown.r * 255.0 + 0.5)])
+            );
+            #else
             uvec3 level = uvec3(texelFetch(redPlane, p, 0).r, texelFetch(greenPlane, p, 0).r, texelFetch(bluePlane, p, 0).r);
+            #endif
 
             float column = clamp((float(frameX) + 0.5) * float(mapWidth) / float(frameWidth) - 0.5, 0.0, float(mapWidth - 1));
             mapLeft = int(column);

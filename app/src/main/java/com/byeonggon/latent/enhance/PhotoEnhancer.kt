@@ -255,7 +255,9 @@ object PhotoEnhancer {
         while (y < bitmap.height) {
             val rows = minOf(ROWS_PER_PASS, bitmap.height - y)
             bitmap.getPixels(buffer, 0, width, 0, y, width, rows)
-            renderer.render(LinearImage.fromArgb(buffer, width, rows), buffer, top = y, frameHeight = bitmap.height)
+            if (!renderer.renderDisplayed(buffer, width, rows, top = y, frameHeight = bitmap.height)) {
+                renderer.render(LinearImage.fromArgb(buffer, width, rows), buffer, top = y, frameHeight = bitmap.height)
+            }
             bitmap.setPixels(buffer, 0, width, 0, y, width, rows)
             y += rows
         }

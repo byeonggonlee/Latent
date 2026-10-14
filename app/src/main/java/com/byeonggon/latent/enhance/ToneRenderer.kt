@@ -53,6 +53,15 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
         autoLevels.getOrPut(overview) { AutoEnhance.analyze(asTheCameraShowsIt(overview)) }
     }
 
+    /**
+     * Renders [pixels], [width] by [rows] and as the camera made them, into themselves on the graphics
+     * processor, rows from [top] of a picture [frameHeight] high: the same as rendering
+     * [LinearImage.fromArgb] of them, without the processor making it. Returns false if it could not.
+     */
+    internal fun renderDisplayed(pixels: IntArray, width: Int, rows: Int, top: Int, frameHeight: Int): Boolean =
+        useGraphicsProcessor && width * rows >= SMALLEST_FOR_GRAPHICS_PROCESSOR &&
+            GpuTone.renderDisplayed(this, pixels, width, rows, top, frameHeight)
+
     /** Renders all of [source]. */
     fun render(source: LinearImage): IntArray =
         IntArray(source.width * source.height).also { render(source, it) }

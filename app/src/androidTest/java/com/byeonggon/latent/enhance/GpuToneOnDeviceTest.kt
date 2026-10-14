@@ -99,6 +99,26 @@ class GpuToneOnDeviceTest {
         compare("levelled and tilted", proxy, everything.copy(framing = levelled))
         compare("turned", proxy, everything.copy(framing = Framing().turnedClockwise()))
 
+        // Finished pixels straight from the camera, turned back into light on the graphics processor.
+        val displayed = IntArray(proxy.width * proxy.height)
+        android.graphics.BitmapFactory.decodeFile(sample.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }).let { bitmap ->
+            val width = minOf(bitmap.width, proxy.width)
+            val rows = minOf(bitmap.height, proxy.height)
+            bitmap.getPixels(displayed, 0, width, 0, 0, width, rows)
+            val renderer = ToneRenderer(everything, LinearImage.fromArgb(displayed, width, rows).downscaled(ToneRenderer.OVERVIEW_EDGE))
+            ToneRenderer.useGraphicsProcessor = false
+            val cpu = renderer.render(LinearImage.fromArgb(displayed, width, rows))
+            ToneRenderer.useGraphicsProcessor = true
+            val gpu = displayed.copyOf(width * rows)
+            assertTrue("rendered on the graphics processor", renderer.renderDisplayed(gpu, width, rows, top = 0, frameHeight = rows))
+            var largest = 0
+            for (index in cpu.indices) for (shift in intArrayOf(0, 8, 16)) {
+                largest = max(largest, abs(((cpu[index] ushr shift) and 0xFF) - ((gpu[index] ushr shift) and 0xFF)))
+            }
+            Log.i(TAG, "on device: from finished pixels: at most $largest levels apart")
+            assertTrue("from finished pixels: largest difference $largest", largest <= 2)
+        }
+
         val full = PhotoEnhancer.load(sample, 8000)
         compare("everything at full size", full, everything)
     }
