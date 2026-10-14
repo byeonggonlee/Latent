@@ -134,9 +134,24 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
+    private var refreshing: Job? = null
+
     init {
-        viewModelScope.launch {
+        refresh()
+    }
+
+    /**
+     * Brings the library in line with its folder: forgets what was deleted elsewhere, adds what was put
+     * there, empties the trash of what is old enough, and makes the thumbnails. Done when the library
+     * opens and when storage access is given.
+     */
+    fun refresh() {
+        if (refreshing?.isActive == true) return
+        refreshing = viewModelScope.launch {
             container.libraryIndex.forgetMissingFiles()
+            // A file a sync is moving in is the sync's to add.
+            val added = if (container.syncEngine.state.value.isRunning) 0 else container.libraryIndex.adoptUnknownFiles()
+            if (added > 0) activity.update { it.copy(message = "폴더에 있던 ${added}개를 보관함에 추가했습니다.") }
             trash.emptyExpired()
             makeThumbnails()
         }

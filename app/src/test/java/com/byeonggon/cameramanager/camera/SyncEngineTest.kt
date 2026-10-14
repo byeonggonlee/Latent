@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -106,6 +107,31 @@ class SyncEngineTest {
 
         assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
         assertEquals(3, database.mediaDao().all().size)
+    }
+
+    @Test
+    fun takesCopiesAlreadyInTheLibraryForImported() = runBlocking {
+        // Copied over from another phone: the library holds it, without knowing which camera it came from.
+        val copy = File(storage.root, "2026/2026-10-01/DSC00060.ARW").apply {
+            parentFile!!.mkdirs()
+            writeBytes(RAW_BYTES)
+        }
+        database.mediaDao().insert(
+            MediaItemEntity(path = copy.absolutePath, fileName = copy.name, kind = MediaKind.RAW, sizeBytes = copy.length(), capturedAt = capturedAt, importedAt = 1),
+        )
+        val files = mapOf(
+            remote("DSC00060.ARW", MediaKind.RAW, RAW_BYTES) to RAW_BYTES,
+            remote("DSC00061.ARW", MediaKind.RAW, RAW_BYTES) to RAW_BYTES,
+        )
+
+        engine.run(FakeCameraSource(files))
+
+        assertEquals(1, (engine.state.value as SyncState.Finished).imported)
+        val library = database.mediaDao().all()
+        assertEquals(listOf("DSC00060.ARW", "DSC00061.ARW"), library.map { it.fileName }.sorted())
+        // From now on it counts as imported from this camera, and is not counted as deleted from the phone.
+        assertTrue(library.all { it.sourceKey != null })
+        assertEquals(0, database.syncRecordDao().observeCountWithoutLibraryFile().first())
     }
 
     @Test

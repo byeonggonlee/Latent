@@ -2,6 +2,11 @@ package com.byeonggon.cameramanager.data
 
 import com.byeonggon.cameramanager.grantLibraryAccess
 import android.content.Context
+import java.time.OffsetDateTime
+import com.byeonggon.cameramanager.raw.SyntheticArw
+import com.byeonggon.cameramanager.enhance.PhotoEdit
+import androidx.exifinterface.media.ExifInterface
+import android.graphics.Bitmap
 import android.os.Environment
 import androidx.room.Room
 import com.byeonggon.cameramanager.data.db.AppDatabase
@@ -73,6 +78,42 @@ class LibraryIndexTest {
         assertEquals(listOf("DSC00002.JPG"), database.mediaDao().all().map { it.fileName })
         assertFalse(storage.originalOf(deleted).exists())
         assertTrue(storage.originalOf(kept).exists())
+    }
+
+    @Test
+    fun takesInFilesPutInItsFolderFromElsewhere() = runBlocking {
+        val folder = File(storage.root, "2026/2026-10-09").apply { mkdirs() }
+        val photo = File(folder, "DSC01543.JPG")
+        photo.outputStream().use { Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        ExifInterface(photo).apply {
+            setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, "2026:10:09 15:42:00")
+            setAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL, "+09:00")
+            setLatLong(37.55, 126.92)
+            saveAttributes()
+        }
+        File(folder, "DSC01543.ARW").writeBytes(SyntheticArw.file(red = 600, green = 900, blue = 700))
+        val edited = File(folder, "DSC01544.JPG").apply { writeText("edited picture") }
+        storage.originalOf(edited).apply { parentFile!!.mkdirs() }.writeText("original picture")
+        // Not photos of the library: a sidecar, and a half-written edit.
+        File(folder, "DSC01543.xmp").writeText("<x/>")
+        File(folder, ".DSC01545-edited.JPG").writeText("partial")
+        addToLibrary("DSC00002.JPG", onDisk = true, edited = false)
+
+        assertEquals(3, index.adoptUnknownFiles())
+
+        val byName = database.mediaDao().all().associateBy { it.fileName }
+        assertEquals(setOf("DSC00002.JPG", "DSC01543.JPG", "DSC01543.ARW", "DSC01544.JPG"), byName.keys)
+        val adopted = byName.getValue("DSC01543.JPG")
+        assertEquals(OffsetDateTime.parse("2026-10-09T15:42:00+09:00").toInstant().toEpochMilli(), adopted.capturedAt)
+        assertEquals(37.55, adopted.latitude!!, 1e-4)
+        // The raw file was shot with the JPEG, at the same place.
+        assertEquals(37.55, byName.getValue("DSC01543.ARW").latitude!!, 1e-4)
+        assertEquals(MediaKind.RAW, byName.getValue("DSC01543.ARW").kind)
+        // An edited photo can be put back to its original, though how it was edited is not known.
+        assertEquals(PhotoEdit().toJson(), byName.getValue("DSC01544.JPG").edit)
+        assertEquals(null, adopted.edit)
+
+        assertEquals(0, index.adoptUnknownFiles())
     }
 
     @Test

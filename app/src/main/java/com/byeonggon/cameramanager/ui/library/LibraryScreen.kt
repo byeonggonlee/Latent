@@ -94,6 +94,8 @@ fun LibraryScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val storageGranted = rememberStorageAccess()
+    // Access given after the library opened: what is in the folder can be read now.
+    LaunchedEffect(storageGranted) { if (storageGranted) viewModel.refresh() }
     val selecting = state.selected.isNotEmpty()
     BackHandler(enabled = selecting, onBack = viewModel::clearSelection)
 

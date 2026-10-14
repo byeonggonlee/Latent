@@ -113,9 +113,10 @@ class SyncEngine(
         }
         // Dates are checked before anything is downloaded, so they go by the camera's file date, not EXIF.
         val zone = ZoneId.systemDefault()
-        val pending = listing.files
+        val listed = listing.files
             .filter { options.accepts(it.kind) && !alreadyImported.contains(it, cameraId) }
             .filter { dates == null || Instant.ofEpochMilli(it.modifiedAt).atZone(zone).toLocalDate() in dates }
+        val pending = withoutCopiesInLibrary(listed, cameraId, alreadyImported)
             .sortedBy { it.modifiedAt }
         Log.i(
             SYNC_LOG_TAG,
@@ -279,6 +280,38 @@ class SyncEngine(
             database.syncRecordDao().insert(SyncRecordEntity(sourceKey, now))
         }
         return matched != null
+    }
+
+    /**
+     * [files] less those the library holds already without knowing they came from this camera: copied
+     * from another phone, say. A copy has the camera file's name and size, or its kept original has,
+     * if it was edited. They are remembered as imported from now on, as if this sync had brought them.
+     */
+    private suspend fun withoutCopiesInLibrary(files: List<RemoteFile>, cameraId: String, imported: ImportedFiles): List<RemoteFile> {
+        val unclaimed = database.mediaDao().all().filter { it.sourceKey == null }
+        if (unclaimed.isEmpty()) return files
+        val copies = HashMap<String, MediaItemEntity>()
+        for (item in unclaimed) {
+            val file = File(item.path)
+            copies["${item.fileName}|${item.sizeBytes}"] = item
+            if (item.kind == MediaKind.PHOTO) {
+                storage.originalOf(file).takeIf { it.exists() }?.let { copies["${item.fileName}|${it.length()}"] = item }
+            }
+        }
+        val (copied, fresh) = files.partition { it.sizeBytes != RemoteFile.UNKNOWN_SIZE && "${it.name}|${it.sizeBytes}" in copies }
+        if (copied.isNotEmpty()) {
+            val now = System.currentTimeMillis()
+            database.withTransaction {
+                for (file in copied) {
+                    val key = file.sourceKey(cameraId)
+                    database.mediaDao().setSourceKey(copies.getValue("${file.name}|${file.sizeBytes}").id, key)
+                    database.syncRecordDao().insert(SyncRecordEntity(key, now))
+                    imported.add(key)
+                }
+            }
+            Log.i(SYNC_LOG_TAG, "${copied.size} files are in the library already, copied there")
+        }
+        return fresh
     }
 
     private class SyncCancelledException : RuntimeException()

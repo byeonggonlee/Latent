@@ -61,6 +61,13 @@ interface MediaDao {
     @Query("UPDATE media_items SET rating = :rating WHERE id = :id")
     suspend fun setRating(id: Long, rating: Int)
 
+    /** Adds [item] unless the library has its file already. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertUnlessKnown(item: MediaItemEntity): Long
+
+    @Query("UPDATE media_items SET sourceKey = :sourceKey WHERE id = :id")
+    suspend fun setSourceKey(id: Long, sourceKey: String)
+
     @Query("DELETE FROM media_items WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
 }
