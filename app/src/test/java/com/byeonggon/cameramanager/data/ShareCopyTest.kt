@@ -11,7 +11,9 @@ import com.byeonggon.cameramanager.raw.SyntheticArw
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,5 +77,17 @@ class ShareCopyTest {
         assertEquals(4 to 28, sizeOf(copy))
         assertEquals(ExifInterface.ORIENTATION_NORMAL, ExifInterface(copy).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0))
         assertEquals("DSC00002.jpg", copy.name)
+    }
+
+    @Test
+    fun keepsTheCopiesOfOneShareTogether() {
+        val first = runBlocking { container.libraryEdits.shareCopy(raw, 2048, alongsideOthers = true) }
+        val second = runBlocking { container.libraryEdits.shareCopy(photo, 1080, alongsideOthers = true) }
+
+        assertTrue(first.exists() && second.exists())
+        assertNotEquals(first.path, second.path)
+        // The next share on its own clears them away.
+        runBlocking { container.libraryEdits.shareCopy(photo, 1080) }
+        assertFalse(first.exists())
     }
 }

@@ -71,6 +71,8 @@ data class LibraryUiState(
     val canPaste: Boolean = false,
     val batch: BatchProgress? = null,
     val message: String? = null,
+    /** Files ready to be handed to another app together, until the screen has done so. */
+    val shareFiles: List<File> = emptyList(),
 )
 
 class LibraryViewModel(application: Application) : AndroidViewModel(application) {
@@ -110,6 +112,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 canPaste = copied != null,
                 batch = activity.batch,
                 message = activity.message,
+                shareFiles = activity.shareFiles,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
@@ -160,6 +163,25 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Gets the selected photos ready to be sent to another app together: JPEGs as they are, raw files
+     * developed with their edit, no larger than [RAW_SHARE_SIDE] pixels.
+     */
+    fun shareSelected() {
+        val ready = ArrayList<File>()
+        container.storage.clearShared()
+        runBatch(
+            label = "공유할 사진 준비 중",
+            wanted = { it.kind != MediaKind.VIDEO },
+            done = "공유할 사진을 준비했습니다",
+            whenDone = { activity.update { it.copy(shareFiles = ready.toList(), message = null) } },
+        ) { item ->
+            ready += edits.shareCopy(item, if (item.kind == MediaKind.RAW) RAW_SHARE_SIDE else null, alongsideOthers = true)
+        }
+    }
+
+    fun consumeShareFiles() = activity.update { it.copy(shareFiles = emptyList()) }
+
     /** Stops after the photo that is being worked on. */
     fun cancelBatch() {
         batch?.cancel()
@@ -172,7 +194,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun selectedItems(): List<MediaItemEntity> = mediaDao.byIds(activity.value.selected.toList())
 
     /** Does [work] to those of the selected photos that are [wanted], one at a time, off the main thread, showing how far it has got. */
-    private fun runBatch(label: String, wanted: (MediaItemEntity) -> Boolean, done: String, work: suspend (MediaItemEntity) -> Unit) {
+    private fun runBatch(
+        label: String,
+        wanted: (MediaItemEntity) -> Boolean,
+        done: String,
+        whenDone: () -> Unit = {},
+        work: suspend (MediaItemEntity) -> Unit,
+    ) {
         if (batch?.isActive == true) return
         batch = viewModelScope.launch {
             val items = selectedItems().filter(wanted)
@@ -200,6 +228,12 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             }
             val outcome = "${finished}장에 $done." + if (failed > 0) " ${failed}장은 실패했습니다." else ""
             activity.update { it.copy(batch = null, selected = emptySet(), message = outcome) }
+            whenDone()
         }
+    }
+
+    private companion object {
+        /** Raw files shared several at a time are sent at a size that messengers and mail take without trouble. */
+        const val RAW_SHARE_SIDE = 2048
     }
 }

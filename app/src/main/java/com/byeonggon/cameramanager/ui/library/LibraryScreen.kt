@@ -1,6 +1,9 @@
 package com.byeonggon.cameramanager.ui.library
 
 import androidx.compose.foundation.background
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
@@ -46,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.cameramanager.R
 import com.byeonggon.cameramanager.data.db.GeoSource
@@ -61,6 +66,7 @@ import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.ui.common.StorageAccessCard
 import com.byeonggon.cameramanager.ui.common.rememberMediaModel
 import com.byeonggon.cameramanager.ui.common.rememberStorageAccess
+import java.io.File
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -76,6 +82,14 @@ fun LibraryScreen(
     val storageGranted = rememberStorageAccess()
     val selecting = state.selected.isNotEmpty()
     BackHandler(enabled = selecting, onBack = viewModel::clearSelection)
+
+    val context = LocalContext.current
+    LaunchedEffect(state.shareFiles) {
+        if (state.shareFiles.isNotEmpty()) {
+            context.shareAll(state.shareFiles)
+            viewModel.consumeShareFiles()
+        }
+    }
 
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
@@ -184,6 +198,7 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
         }
         TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text("보정 값 붙여넣기") }
         TextButton(onClick = viewModel::exportSelected) { Text("RAW를 JPEG로") }
+        TextButton(onClick = viewModel::shareSelected) { Text("공유") }
     }
 }
 
@@ -316,5 +331,19 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(14.dp),
             )
         }
+    }
+}
+
+/** Hands several photos to whichever app the user picks. */
+private fun Context.shareAll(files: List<File>) {
+    val uris = ArrayList(files.map { FileProvider.getUriForFile(this, "$packageName.files", it) })
+    val send = Intent(Intent.ACTION_SEND_MULTIPLE)
+        .setType("image/*")
+        .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    try {
+        startActivity(Intent.createChooser(send, "사진 ${files.size}장"))
+    } catch (e: ActivityNotFoundException) {
+        // No app on the device takes photos; nothing useful to do.
     }
 }

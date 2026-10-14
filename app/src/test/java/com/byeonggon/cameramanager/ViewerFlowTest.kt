@@ -75,6 +75,15 @@ class ViewerFlowTest {
         compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
+    /**
+     * Waits for the second photo to have [stars]. Looking at the database alone does not let the app's
+     * main thread run, so the screen is let settle in between.
+     */
+    private fun waitForRating(stars: Int) = compose.waitUntil(timeoutMillis = 20_000) {
+        compose.waitForIdle()
+        runBlocking { mediaDao.byId(ids[1])!!.rating } == stars
+    }
+
     private fun open(fileName: String) {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription(fileName).fetchSemanticsNodes().isNotEmpty()
@@ -103,12 +112,12 @@ class ViewerFlowTest {
     fun givesAPhotoStarsAndNarrowsTheLibraryDownByThem() {
         open("DSC00002.JPG")
         compose.onNodeWithContentDescription("별점 4").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) { runBlocking { mediaDao.byId(ids[1])!!.rating } == 4 }
+        waitForRating(4)
         // The same star again takes the stars away; another one changes them.
         compose.onNodeWithContentDescription("별점 4").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) { runBlocking { mediaDao.byId(ids[1])!!.rating } == 0 }
+        waitForRating(0)
         compose.onNodeWithContentDescription("별점 3").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) { runBlocking { mediaDao.byId(ids[1])!!.rating } == 3 }
+        waitForRating(3)
         compose.onNodeWithContentDescription("닫기").performClick()
 
         compose.onNodeWithText("별점").performClick()

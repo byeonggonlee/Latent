@@ -49,11 +49,17 @@ class LibraryStorage(private val context: Context) {
      * shares are cleared away first: they only have to last until the other app has read them.
      */
     fun shareFile(fileName: String): File {
-        val folder = File(context.cacheDir, "share")
-        folder.deleteRecursively()
-        folder.mkdirs()
-        return File(folder, fileName)
+        clearShared()
+        return sharedFile(fileName)
     }
+
+    /** Clears away the copies made for earlier shares. */
+    fun clearShared() {
+        File(context.cacheDir, "share").deleteRecursively()
+    }
+
+    /** A file among the copies of one share, which may hold several. */
+    fun sharedFile(fileName: String): File = File(context.cacheDir, "share").apply { mkdirs() }.let { uniqueFile(it, fileName) }
 
     /** Makes the file show up in gallery apps. */
     fun publish(file: File) {

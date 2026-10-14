@@ -126,10 +126,12 @@ class LibraryEdits(
      * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is.
      */
     @Throws(IOException::class)
-    suspend fun shareCopy(item: MediaItemEntity, longSide: Int?): File {
+    suspend fun shareCopy(item: MediaItemEntity, longSide: Int?, alongsideOthers: Boolean = false): File {
         val source = File(item.path)
-        if (item.kind == MediaKind.PHOTO && longSide == null) return source
-        val target = storage.shareFile(source.nameWithoutExtension + ".jpg")
+        if (item.kind != MediaKind.RAW && longSide == null) return source
+        val name = source.nameWithoutExtension + ".jpg"
+        // One share at a time: copies made for an earlier one are cleared away, unless this is one of several.
+        val target = if (alongsideOthers) storage.sharedFile(name) else storage.shareFile(name)
         if (item.kind == MediaKind.RAW) {
             val edit = editOf(item) ?: PhotoEdit()
             if (longSide == null) {
