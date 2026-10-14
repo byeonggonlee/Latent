@@ -63,8 +63,9 @@ object PhotoEnhancer {
      * [restoreOriginal] brings it back; editing again starts over from that original.
      */
     @Throws(IOException::class)
-    fun saveEdited(photo: File, backup: File, edit: PhotoEdit) {
-        val original = if (backup.exists()) backup else photo
+    fun saveEdited(photo: File, backup: File, edit: PhotoEdit, files: PhotoFiles = PhotoFiles.Direct) {
+        val kept = files.exists(backup)
+        val original = if (kept) backup else photo
         // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
         // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
         val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
@@ -77,27 +78,36 @@ object PhotoEnhancer {
         } finally {
             bitmap.recycle()
         }
-        val edited = File(photo.parentFile, ".${photo.name}.tmp")
+        // Hidden, but still named as a photo: shared storage only takes photos and videos in DCIM.
+        val edited = File(photo.parentFile, ".${photo.nameWithoutExtension}-edited.${photo.extension}")
         edited.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed))
 
-        if (!backup.exists()) {
+        if (!kept) {
             backup.parentFile?.mkdirs()
-            if (!photo.renameTo(backup)) {
+            try {
+                files.replace(photo, backup)
+            } catch (e: IOException) {
                 edited.delete()
-                throw IOException("Cannot keep the original of ${photo.name}")
+                throw IOException("Cannot keep the original of ${photo.name}", e)
             }
         }
-        if (!edited.renameTo(photo)) {
+        try {
+            files.replace(edited, photo)
+        } catch (e: IOException) {
             edited.delete()
-            backup.renameTo(photo)
-            throw IOException("Cannot replace ${photo.name}")
+            runCatching { files.replace(backup, photo) }
+            throw IOException("Cannot replace ${photo.name}", e)
         }
     }
 
     /** Puts the original kept at [backup] back in place of the enhanced [photo]. */
     @Throws(IOException::class)
-    fun restoreOriginal(photo: File, backup: File) {
-        if (!backup.renameTo(photo)) throw IOException("Cannot restore the original of ${photo.name}")
+    fun restoreOriginal(photo: File, backup: File, files: PhotoFiles = PhotoFiles.Direct) {
+        try {
+            files.replace(backup, photo)
+        } catch (e: IOException) {
+            throw IOException("Cannot restore the original of ${photo.name}", e)
+        }
     }
 
     /**

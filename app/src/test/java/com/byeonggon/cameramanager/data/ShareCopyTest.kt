@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.data
 
+import com.byeonggon.cameramanager.grantLibraryAccess
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Environment
@@ -35,6 +36,7 @@ class ShareCopyTest {
     @Before
     fun writeLibrary() {
         ShadowEnvironment.addExternalDir("shared")
+        grantLibraryAccess()
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         val folder = File(container.storage.root, "2026/2026-10-08").apply { mkdirs() }
         val photoFile = File(folder, "DSC00001.JPG")

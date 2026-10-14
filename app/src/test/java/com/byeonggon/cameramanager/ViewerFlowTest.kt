@@ -44,6 +44,7 @@ class ViewerFlowTest {
         override fun before() {
             forgetTheApplicationOfEarlierTests()
             ShadowEnvironment.addExternalDir("shared")
+            grantLibraryAccess()
             val folder = File(container.storage.root, "2026/2026-10-08").apply { mkdirs() }
             for (number in 1..3) {
                 val photo = File(folder, "DSC0000$number.JPG")

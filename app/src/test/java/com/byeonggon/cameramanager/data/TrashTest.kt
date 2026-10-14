@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.data
 
+import com.byeonggon.cameramanager.grantLibraryAccess
 import android.os.Environment
 import com.byeonggon.cameramanager.appContainer
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
@@ -34,6 +35,7 @@ class TrashTest {
     @Before
     fun writeLibrary() {
         ShadowEnvironment.addExternalDir("shared")
+        grantLibraryAccess()
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         folder = File(container.storage.root, "2026/2026-10-08").apply { mkdirs() }
         raw = File(folder, "DSC00002.ARW").apply { writeText("raw") }
@@ -56,8 +58,8 @@ class TrashTest {
         assertTrue(File(kept.parentFile, "DSC00002.xmp").exists())
         assertEquals(emptyList<MediaItemEntity>(), runBlocking { mediaDao.observeAll().first() })
         assertEquals(listOf(rawId), runBlocking { trash.items.first() }.map { it.id })
-        // Gallery apps are told to keep out.
-        assertTrue(File(container.storage.root, ".trash/.nomedia").exists())
+        // Gallery apps keep out of folders whose names start with a dot.
+        assertTrue(kept.path.contains("/.trash/"))
     }
 
     @Test

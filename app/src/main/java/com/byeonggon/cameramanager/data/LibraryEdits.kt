@@ -85,7 +85,7 @@ class LibraryEdits(
             return
         }
         val photo = File(item.path)
-        PhotoEnhancer.saveEdited(photo, storage.originalOf(photo), edit)
+        PhotoEnhancer.saveEdited(photo, storage.originalOf(photo), edit, storage)
         storage.publish(photo)
         mediaDao.setSize(item.id, photo.length())
         mediaDao.setEdit(item.id, edit.toJson())
@@ -157,8 +157,8 @@ class LibraryEdits(
         if (item.kind == MediaKind.PHOTO) {
             val photo = File(item.path)
             val backup = storage.originalOf(photo)
-            if (backup.exists()) {
-                PhotoEnhancer.restoreOriginal(photo, backup)
+            if (storage.exists(backup)) {
+                PhotoEnhancer.restoreOriginal(photo, backup, storage)
                 storage.publish(photo)
                 mediaDao.setSize(item.id, photo.length())
             }

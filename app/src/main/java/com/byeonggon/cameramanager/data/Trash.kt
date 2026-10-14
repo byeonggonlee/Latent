@@ -24,9 +24,9 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
             val file = File(item.path)
             val folder = storage.trashFolder(item.id)
             val kept = File(folder, file.name)
-            move(file, kept)
-            sidecarOf(file).takeIf { it.exists() }?.let { move(it, sidecarOf(kept)) }
-            storage.originalOf(file).takeIf { it.exists() }?.let { move(it, File(folder, ORIGINAL + file.name)) }
+            storage.move(file, kept)
+            sidecarOf(file).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(kept)) }
+            storage.originalOf(file).takeIf(storage::exists)?.let { storage.move(it, File(folder, ORIGINAL + file.name)) }
             mediaDao.setPlace(item.id, kept.path, System.currentTimeMillis(), item.path)
             // Gallery apps see the file gone.
             storage.publish(file)
@@ -41,12 +41,12 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
             val kept = File(item.path)
             val folder = kept.parentFile ?: continue
             val target = storage.freeFileLike(File(from).also { it.parentFile?.mkdirs() })
-            move(kept, target)
-            sidecarOf(kept).takeIf { it.exists() }?.let { move(it, sidecarOf(target)) }
-            File(folder, ORIGINAL + kept.name).takeIf { it.exists() }?.let { original ->
-                storage.originalOf(target).also { it.parentFile?.mkdirs() }.let { move(original, it) }
+            storage.move(kept, target)
+            sidecarOf(kept).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(target)) }
+            File(folder, ORIGINAL + kept.name).takeIf(storage::exists)?.let { original ->
+                storage.originalOf(target).also { it.parentFile?.mkdirs() }.let { storage.move(original, it) }
             }
-            folder.delete()
+            storage.delete(folder)
             mediaDao.setPlace(item.id, target.path, null, null)
             storage.publish(target)
         }
@@ -59,7 +59,7 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
     suspend fun deleteForever(items: List<MediaItemEntity>) = withContext(Dispatchers.IO) {
         for (item in items) {
             if (item.trashedAt == null) continue
-            File(item.path).parentFile?.deleteRecursively()
+            File(item.path).parentFile?.let(storage::delete)
         }
         items.filter { it.trashedAt != null }.map { it.id }.chunked(500).forEach { mediaDao.deleteByIds(it) }
     }
@@ -72,10 +72,6 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
     }
 
     private fun sidecarOf(file: File) = File(file.parentFile, "${file.nameWithoutExtension}.xmp")
-
-    private fun move(from: File, to: File) {
-        if (!from.renameTo(to)) throw IOException("Cannot move ${from.name}")
-    }
 
     companion object {
         const val KEPT_DAYS = 30L

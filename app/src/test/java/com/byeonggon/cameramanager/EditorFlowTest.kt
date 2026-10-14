@@ -77,6 +77,7 @@ class EditorFlowTest {
         override fun before() {
             forgetTheApplicationOfEarlierTests()
             ShadowEnvironment.addExternalDir("shared")
+            grantLibraryAccess()
             val folder = File(container.storage.root, "2026/2026-10-08").apply { mkdirs() }
             photo = File(folder, "DSC00001.JPG")
             val bitmap = Bitmap.createBitmap(96, 64, Bitmap.Config.ARGB_8888)

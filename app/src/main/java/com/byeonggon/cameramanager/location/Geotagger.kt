@@ -29,22 +29,30 @@ class Geotagger(
     /** Writes GPS tags into a JPEG. Returns false when the format cannot be rewritten. */
     fun writeExif(file: File, point: GeoPoint): Boolean = try {
         val modifiedAt = file.lastModified()
-        val exif = ExifInterface(file)
-        exif.setLatLong(point.latitude, point.longitude)
-        point.altitude?.let { exif.setAltitude(it) }
-        exif.saveAttributes()
+        if (file.canWrite()) {
+            ExifInterface(file).tag(point)
+        } else {
+            // A photo another installation of the app made can only be changed through the granted folder.
+            storage.folder.openReadWrite(file).use { ExifInterface(it.fileDescriptor).tag(point) }
+        }
         file.setLastModified(modifiedAt)
         true
     } catch (e: IOException) {
         false
     }
 
+    private fun ExifInterface.tag(point: GeoPoint) {
+        setLatLong(point.latitude, point.longitude)
+        point.altitude?.let { setAltitude(it) }
+        saveAttributes()
+    }
+
     /** Writes an XMP sidecar next to a RAW file. An existing sidecar is left untouched. */
     fun writeSidecar(rawFile: File, point: GeoPoint): Boolean {
         val sidecar = File(rawFile.parentFile, "${rawFile.nameWithoutExtension}.xmp")
-        if (sidecar.exists()) return false
+        if (storage.exists(sidecar)) return false
         return try {
-            sidecar.writeText(XmpSidecar.build(point))
+            storage.writeNew(sidecar, XmpSidecar.build(point))
             true
         } catch (e: IOException) {
             false

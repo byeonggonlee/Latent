@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.camera
 
+import com.byeonggon.cameramanager.grantLibraryAccess
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
@@ -215,6 +216,7 @@ class SyncEngineTest {
     @Test
     fun importsAFileDeletedFromThePhoneAgainOnlyOnceItsHistoryIsForgotten() = runBlocking {
         ShadowEnvironment.addExternalDir("shared")
+        grantLibraryAccess()
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         val library = LibraryIndex(storage, database)
         val files = mapOf(

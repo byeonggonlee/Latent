@@ -17,9 +17,10 @@ class LibraryIndex(private val storage: LibraryStorage, private val database: Ap
         // While storage is unavailable every file looks missing, which must not empty the library.
         if (!storage.isAvailable()) return@withContext
         val dao = database.mediaDao()
-        val missing = dao.all().filterNot { File(it.path).exists() }
+        // A file the app cannot see by its path may still be there; the granted folder sees everything.
+        val missing = dao.all().filterNot { storage.exists(File(it.path)) }
         // The hidden original of an edited photo would otherwise stay behind, taking up space unseen.
-        missing.forEach { storage.originalOf(File(it.path)).delete() }
+        missing.forEach { storage.delete(storage.originalOf(File(it.path))) }
         missing.map { it.id }.chunked(500).forEach { dao.deleteByIds(it) }
     }
 

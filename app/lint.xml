@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Access to a few selected photos is no use to a library of imported photos, so the app asks for all of them. -->
+    <issue id="SelectedPhotoAccess" severity="ignore" />
+</lint>

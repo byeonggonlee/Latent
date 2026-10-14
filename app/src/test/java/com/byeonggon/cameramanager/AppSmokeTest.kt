@@ -31,6 +31,7 @@ class AppSmokeTest {
         override fun before() {
             forgetTheApplicationOfEarlierTests()
             ShadowEnvironment.addExternalDir("shared")
+            grantLibraryAccess()
             // A file that was imported once and is no longer in the library.
             val records = RuntimeEnvironment.getApplication().appContainer.database.syncRecordDao()
             runBlocking { records.insert(SyncRecordEntity("camera|DSC00001.JPG|10|1", importedAt = 2)) }

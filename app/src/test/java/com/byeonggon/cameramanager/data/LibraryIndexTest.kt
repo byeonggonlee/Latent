@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.data
 
+import com.byeonggon.cameramanager.grantLibraryAccess
 import android.content.Context
 import android.os.Environment
 import androidx.room.Room
@@ -31,6 +32,7 @@ class LibraryIndexTest {
     @Before
     fun setUp() {
         ShadowEnvironment.addExternalDir("shared")
+        grantLibraryAccess()
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         storage = LibraryStorage(context)

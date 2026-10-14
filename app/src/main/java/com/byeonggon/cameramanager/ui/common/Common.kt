@@ -1,8 +1,9 @@
 package com.byeonggon.cameramanager.ui.common
 
 import android.content.Intent
-import android.os.Environment
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -32,6 +34,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.request.ImageRequest
+import com.byeonggon.cameramanager.appContainer
+import com.byeonggon.cameramanager.data.LibraryStorage
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import java.io.File
 
@@ -54,39 +58,78 @@ fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
     }
 }
 
-/** Whether the app may manage files on shared storage; re-checked whenever the screen resumes. */
+/** Whether the app may manage the library on shared storage; re-checked whenever the screen resumes. */
 @Composable
 fun rememberStorageAccess(): Boolean {
-    var granted by remember { mutableStateOf(Environment.isExternalStorageManager()) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { granted = Environment.isExternalStorageManager() }
+    val storage = LocalContext.current.appContainer.storage
+    var granted by remember { mutableStateOf(storage.hasAccess()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { granted = storage.hasAccess() }
     return granted
 }
 
+/**
+ * Asks for what the library needs on shared storage, one step at a time: reading photos and videos,
+ * then the library folder itself.
+ */
 @Composable
 fun StorageAccessCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val storage = context.appContainer.storage
+    var canRead by remember { mutableStateOf(LibraryStorage.canReadMedia(context)) }
+    var refused by remember { mutableStateOf(false) }
+    var wrongFolder by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canRead = LibraryStorage.canReadMedia(context) }
+    val requestMedia = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        canRead = LibraryStorage.canReadMedia(context)
+        refused = !canRead
+    }
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        wrongFolder = tree != null && !storage.folder.accept(tree)
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("저장소 권한이 필요합니다", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "사진을 DCIM/CameraManager 폴더에 저장하고 위치 정보를 기록하려면 " +
-                    "'모든 파일에 대한 액세스'를 허용해주세요.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Button(
-                onClick = {
-                    context.startActivity(
-                        Intent(
-                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            "package:${context.packageName}".toUri(),
-                        ),
-                    )
-                },
-            ) {
-                Text("권한 설정 열기")
+            Text("저장소 접근이 필요합니다", style = MaterialTheme.typography.titleMedium)
+            if (!canRead) {
+                Text(
+                    "1/2 · 사진과 동영상, 그 위치 정보를 읽을 수 있게 '모두 허용'을 선택해주세요.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (refused) {
+                    Text("허용되지 않았습니다. 앱 설정의 권한에서 허용해주세요.", style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri()),
+                            )
+                        },
+                    ) {
+                        Text("앱 설정 열기")
+                    }
+                }
+                Button(onClick = { requestMedia.launch(LibraryStorage.MEDIA_PERMISSIONS) }) {
+                    Text("사진·동영상 접근 허용")
+                }
+            } else {
+                Text(
+                    "2/2 · 사진을 정리할 DCIM/CameraManager 폴더를 열어 '이 폴더 사용'을 눌러주세요.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (wrongFolder) {
+                    Text("다른 폴더입니다. DCIM/CameraManager 폴더를 골라주세요.", style = MaterialTheme.typography.bodySmall)
+                }
+                Button(
+                    onClick = {
+                        // The picker can only open on a folder that exists.
+                        storage.root.mkdirs()
+                        pickFolder.launch(storage.folder.pickerStart)
+                    },
+                ) {
+                    Text("폴더 선택")
+                }
             }
         }
     }
