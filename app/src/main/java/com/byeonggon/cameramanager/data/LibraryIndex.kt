@@ -8,7 +8,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Keeps what the database knows about the library and past imports in line with the files on the phone. */
-class LibraryIndex(private val storage: LibraryStorage, private val database: AppDatabase) {
+class LibraryIndex(
+    private val storage: LibraryStorage,
+    private val database: AppDatabase,
+    /** The entries whose edits are being saved: saving moves a photo aside for a moment. */
+    private val beingSaved: () -> Set<Long> = { emptySet() },
+) {
     /** How many imported camera files are no longer in the library. A sync skips them. */
     val deletedFromPhone: Flow<Int> = database.syncRecordDao().observeCountWithoutLibraryFile()
 
@@ -18,7 +23,8 @@ class LibraryIndex(private val storage: LibraryStorage, private val database: Ap
         if (!storage.isAvailable()) return@withContext
         val dao = database.mediaDao()
         // A file the app cannot see by its path may still be there; the granted folder sees everything.
-        val missing = dao.all().filterNot { storage.exists(File(it.path)) }
+        val saving = beingSaved()
+        val missing = dao.all().filterNot { it.id in saving || storage.exists(File(it.path)) }
         // The hidden original of an edited photo would otherwise stay behind, taking up space unseen.
         missing.forEach { storage.delete(storage.originalOf(File(it.path))) }
         missing.map { it.id }.chunked(500).forEach { dao.deleteByIds(it) }

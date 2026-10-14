@@ -314,22 +314,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** Hands the edit over to be saved in the background and closes the editor at once. */
     fun save() {
         val current = ui.value
         val item = current.item ?: return
         if (current.saving || !current.canSave) return
-        viewModelScope.launch {
-            ui.update { it.copy(saving = true) }
-            val failure = try {
-                withContext(Dispatchers.Default) { edits.apply(item, current.edit) }
-                null
-            } catch (e: IOException) {
-                "저장하지 못했습니다."
-            } catch (e: OutOfMemoryError) {
-                "저장하지 못했습니다. 메모리가 부족합니다."
-            }
-            ui.update { it.copy(saving = false, message = failure, finished = failure == null) }
-        }
+        container.editSaver.save(item, current.edit)
+        ui.update { it.copy(finished = true) }
     }
 
     fun consumeMessage() = ui.update { it.copy(message = null) }

@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
+import android.util.Log
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
@@ -69,18 +70,23 @@ object PhotoEnhancer {
         // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
         // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
         val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+        val started = System.nanoTime()
         val bitmap = if (reframed) reframed(original, edit) else retoned(original, edit)
         val encoded = ByteArrayOutputStream()
         try {
-            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
-                throw IOException("Cannot encode ${photo.name}")
+            timed("${photo.name}: encode") {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
+                    throw IOException("Cannot encode ${photo.name}")
+                }
             }
         } finally {
             bitmap.recycle()
         }
         // Hidden, but still named as a photo: shared storage only takes photos and videos in DCIM.
         val edited = File(photo.parentFile, ".${photo.nameWithoutExtension}-edited.${photo.extension}")
-        edited.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed))
+        timed("${photo.name}: write") {
+            edited.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed))
+        }
 
         if (!kept) {
             backup.parentFile?.mkdirs()
@@ -98,6 +104,7 @@ object PhotoEnhancer {
             runCatching { files.replace(backup, photo) }
             throw IOException("Cannot replace ${photo.name}", e)
         }
+        Log.i(SAVE_LOG_TAG, "${photo.name}: saved in ${(System.nanoTime() - started) / 1_000_000} ms")
     }
 
     /** Puts the original kept at [backup] back in place of the enhanced [photo]. */
@@ -131,10 +138,12 @@ object PhotoEnhancer {
      */
     private fun retoned(original: File, edit: PhotoEdit): Bitmap {
         val options = BitmapFactory.Options().apply { inMutable = true }
-        val bitmap = BitmapFactory.decodeFile(original.path, options) ?: throw IOException("Cannot decode ${original.name}")
+        val bitmap = timed("${original.name}: decode") {
+            BitmapFactory.decodeFile(original.path, options) ?: throw IOException("Cannot decode ${original.name}")
+        }
         try {
-            render(bitmap, ToneRenderer(edit, shrunk(original, ToneRenderer.OVERVIEW_EDGE)))
-            DetailFilter(edit.adjustments, scale = 1f).applyTo(bitmap)
+            timed("${original.name}: tones") { render(bitmap, ToneRenderer(edit, shrunk(original, ToneRenderer.OVERVIEW_EDGE))) }
+            timed("${original.name}: detail") { DetailFilter(edit.adjustments, scale = 1f).applyTo(bitmap) }
         } catch (e: Throwable) {
             bitmap.recycle()
             throw e
@@ -145,9 +154,14 @@ object PhotoEnhancer {
     /** The picture turned upright, cut and levelled as the edit says, with its tones edited. */
     private fun reframed(original: File, edit: PhotoEdit): Bitmap {
         val upright = uprightTurnsOf(original)
-        return renderedBitmap(edit, scale = 1f) {
-            val bitmap = BitmapFactory.decodeFile(original.path) ?: throw IOException("Cannot decode ${original.name}")
-            linear(bitmap).also { Healing.heal(it, edit.spots, upright) }.framed(edit.framing, upright)
+        return timed("${original.name}: reframe, tones and detail") {
+            renderedBitmap(edit, scale = 1f) {
+                val bitmap = timed("${original.name}: decode") {
+                    BitmapFactory.decodeFile(original.path) ?: throw IOException("Cannot decode ${original.name}")
+                }
+                val linear = timed("${original.name}: to linear") { linear(bitmap) }
+                timed("${original.name}: heal and reframe") { linear.also { Healing.heal(it, edit.spots, upright) }.framed(edit.framing, upright) }
+            }
         }
     }
 
@@ -264,4 +278,12 @@ object PhotoEnhancer {
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         return LinearImage.fromArgb(pixels, bitmap.width, bitmap.height).also { bitmap.recycle() }
     }
+}
+
+/** One logcat tag for how long saving an edit takes, step by step: `adb logcat -s EditSave`. */
+private const val SAVE_LOG_TAG = "EditSave"
+
+private inline fun <T> timed(what: String, block: () -> T): T {
+    val started = System.nanoTime()
+    return block().also { Log.i(SAVE_LOG_TAG, "$what in ${(System.nanoTime() - started) / 1_000_000} ms") }
 }

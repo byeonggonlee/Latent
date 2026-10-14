@@ -43,6 +43,8 @@ data class ViewerUiState(
     /** A raw file as its corrections make it look, shown in place of the preview the camera embedded. */
     val rendered: Bitmap? = null,
     val busy: Boolean = false,
+    /** Whether an edit of the photo is still being saved; until it is, the photo shows as it was. */
+    val saving: Boolean = false,
     val message: String? = null,
 )
 
@@ -71,14 +73,19 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     val state: StateFlow<ViewerUiState> = combine(
         item.map { item -> item to (item != null && edits.isEdited(item)) }.flowOn(Dispatchers.IO),
         status,
-        edits.copied,
+        combine(edits.copied, container.editSaver.saving) { copied, saving -> copied to saving },
         details,
-    ) { (item, edited), status, copied, details ->
-        status.copy(item = item, edited = edited, canPaste = copied != null, details = details)
+    ) { (item, edited), status, (copied, saving), details ->
+        val beingSaved = item != null && item.id in saving
+        // Nothing else is done to a photo while its edit is being saved.
+        status.copy(item = item, edited = edited, canPaste = copied != null, details = details, saving = beingSaved, busy = status.busy || beingSaved)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ViewerUiState())
 
     init {
+        viewModelScope.launch {
+            container.editSaver.failures.collect { failure -> status.update { it.copy(message = failure) } }
+        }
         viewModelScope.launch {
             item.map { it?.takeIf { item -> item.kind == MediaKind.RAW } }
                 .distinctUntilChanged { old, new -> old?.path == new?.path && old?.edit == new?.edit }

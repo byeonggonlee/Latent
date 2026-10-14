@@ -110,6 +110,12 @@ class EditorFlowTest {
         compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
     }
 
+    /** Edits are saved in the background after Done; the viewer leaves the photo alone until then. */
+    private fun waitForSaved() = compose.waitUntil(timeoutMillis = 10_000) {
+        compose.waitForIdle()
+        container.editSaver.saving.value.isEmpty()
+    }
+
     private fun openEditor(fileName: String) {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription(fileName).fetchSemanticsNodes().isNotEmpty()
@@ -215,6 +221,7 @@ class EditorFlowTest {
         compose.onNodeWithText("완료").performClick()
 
         waitForText("원본으로 되돌리기")
+        waitForSaved()
         compose.onNodeWithText("더 보기").performClick()
         compose.onNodeWithText("JPEG로 저장").assertIsDisplayed()
         assertArrayEquals(original, raw.readBytes())

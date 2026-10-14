@@ -76,6 +76,18 @@ class LibraryIndexTest {
     }
 
     @Test
+    fun leavesAPhotoAloneWhileItsEditIsBeingSaved() = runBlocking {
+        // Saving moves the photo aside for a moment, to keep its original.
+        val moment = addToLibrary("DSC00004.JPG", onDisk = false, edited = true)
+        val id = database.mediaDao().all().single().id
+
+        LibraryIndex(storage, database) { setOf(id) }.forgetMissingFiles()
+
+        assertEquals(listOf("DSC00004.JPG"), database.mediaDao().all().map { it.fileName })
+        assertTrue(storage.originalOf(moment).exists())
+    }
+
+    @Test
     fun touchesNothingWhileSharedStorageIsUnavailable() = runBlocking {
         val unreachable = addToLibrary("DSC00003.JPG", onDisk = false, edited = true)
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_UNMOUNTED)

@@ -291,6 +291,18 @@ fun ViewerScreen(
                     }
                 }
                 if (state.busy) CircularProgressIndicator()
+                if (state.saving) {
+                    Text(
+                        "보정 저장 중",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(12.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
             }
             // In a wide window the information goes beside the photo, where there is room for it.
             if (window.sidePanel && item != null) {
