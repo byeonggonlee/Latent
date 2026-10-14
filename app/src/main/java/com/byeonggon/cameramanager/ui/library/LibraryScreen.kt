@@ -115,6 +115,7 @@ private fun LibraryContent(
                 FilterChip(selected = filter == state.filter, onClick = { viewModel.setFilter(filter) }, label = { Text(filter.label) })
             }
             RatingFilter(state.leastRating, viewModel::setLeastRating)
+            FilterChip(selected = state.stacked, onClick = { viewModel.setStacked(!state.stacked) }, label = { Text("RAW+JPEG 묶기") })
         }
         if (state.loading) {
             // Nothing to show until the first query returns; it is too quick to warrant a spinner.
@@ -144,6 +145,8 @@ private fun LibraryContent(
                         // Holding a photo starts picking photos out; from then on a tap picks, too.
                         MediaCell(
                             item = item,
+                            // A JPEG that stands for its raw file as well says so.
+                            withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners,
                             selected = item.id in state.selected,
                             onClick = { if (selecting) viewModel.toggle(item.id) else onOpen(item.id) },
                             onHold = { viewModel.toggle(item.id) },
@@ -238,7 +241,7 @@ private fun EmptyLibrary(noItemsAtAll: Boolean) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MediaCell(item: MediaItemEntity, selected: Boolean, onClick: () -> Unit, onHold: () -> Unit) {
+private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean, onClick: () -> Unit, onHold: () -> Unit) {
     Box(
         Modifier
             .aspectRatio(1f)
@@ -253,8 +256,8 @@ private fun MediaCell(item: MediaItemEntity, selected: Boolean, onClick: () -> U
             modifier = Modifier.fillMaxSize(),
         )
         when (item.kind) {
-            MediaKind.RAW -> Text(
-                text = "RAW",
+            MediaKind.RAW, MediaKind.PHOTO -> if (item.kind == MediaKind.RAW || withRaw) Text(
+                text = if (withRaw) "RAW+J" else "RAW",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White,
                 modifier = Modifier
@@ -272,7 +275,6 @@ private fun MediaCell(item: MediaItemEntity, selected: Boolean, onClick: () -> U
                     .size(36.dp)
                     .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(18.dp)),
             )
-            MediaKind.PHOTO -> Unit
         }
         if (selected) {
             Text(

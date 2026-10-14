@@ -89,6 +89,8 @@ fun ViewerScreen(
     itemId: Long,
     items: List<MediaItemEntity>,
     onItemChange: (Long) -> Unit,
+    /** For each photo shot as raw and JPEG at once, the other file of the pair. */
+    partners: Map<Long, Long> = emptyMap(),
     onClose: () -> Unit,
     onEdit: () -> Unit,
     viewModel: ViewerViewModel = viewModel(),
@@ -157,6 +159,7 @@ fun ViewerScreen(
                     onRate = viewModel::setRating,
                     onShare = { longSide -> if (longSide == RAW_FILE) context.share(File(item.path), item.kind) else viewModel.share(longSide) },
                     onShowMap = { context.showOnMap(item) },
+                    onPartner = partners[item.id]?.let { partner -> { onItemChange(partner) } },
                 )
             }
         },
@@ -164,8 +167,9 @@ fun ViewerScreen(
         containerColor = Color.Black,
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-            HorizontalPager(state = pager, key = { pages[it].id }, modifier = Modifier.fillMaxSize()) { page ->
-                val shown = pages[page]
+            // While the list of pages changes, the pager can briefly ask for a page that is no longer there.
+            HorizontalPager(state = pager, key = { pages.getOrNull(it)?.id ?: -1L - it }, modifier = Modifier.fillMaxSize()) { page ->
+                val shown = pages.getOrNull(page) ?: return@HorizontalPager
                 // A raw file with corrections is drawn with them; that is only worked out for the photo in front.
                 val rendered = state.rendered.takeIf { shown.id == item?.id }
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -210,6 +214,8 @@ private fun InfoPanel(
     /** Called with the long side the shared copy may have, null for full size, or [RAW_FILE] for the file as it is. */
     onShare: (Int?) -> Unit,
     onShowMap: () -> Unit,
+    /** Shows the other file of a raw and JPEG pair; null for a photo that has none. */
+    onPartner: (() -> Unit)?,
 ) {
     val context = LocalContext.current
     var confirmingRestore by remember { mutableStateOf(false) }
@@ -266,6 +272,11 @@ private fun InfoPanel(
                     }
                 }
                 ShareButton(item.kind, enabled = !state.busy, onShare = onShare)
+                if (onPartner != null) {
+                    TextButton(onClick = onPartner, enabled = !state.busy) {
+                        Text(if (item.kind == MediaKind.RAW) "JPEG 보기" else "RAW 보기")
+                    }
+                }
             }
         }
     }

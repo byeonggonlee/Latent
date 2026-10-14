@@ -57,6 +57,7 @@ fun AppRoot(startOnSync: Boolean) {
             ViewerScreen(
                 itemId = openItemId,
                 items = shownInLibrary,
+                partners = libraryState.partners,
                 onItemChange = { viewerItemId = it },
                 onClose = { viewerItemId = null },
                 onEdit = { editing = true },

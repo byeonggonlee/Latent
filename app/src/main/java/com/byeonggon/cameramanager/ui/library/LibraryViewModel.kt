@@ -19,10 +19,28 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+
+/**
+ * Raw files and JPEGs that the camera wrote of the same shot: in the same folder, under the same name.
+ * Returns, for each file of such a pair, the other one's id.
+ */
+internal fun partnersOf(items: List<MediaItemEntity>): Map<Long, Long> {
+    fun shotOf(item: MediaItemEntity) = File(item.path).let { File(it.parentFile, it.nameWithoutExtension.lowercase()).path }
+    val jpegs = items.filter { it.kind == MediaKind.PHOTO }.associateBy(::shotOf)
+    val partners = HashMap<Long, Long>()
+    for (raw in items) {
+        if (raw.kind != MediaKind.RAW) continue
+        val jpeg = jpegs[shotOf(raw)] ?: continue
+        partners[raw.id] = jpeg.id
+        partners[jpeg.id] = raw.id
+    }
+    return partners
+}
 
 enum class LibraryFilter(val label: String, val kind: MediaKind?) {
     ALL("전체", null),
@@ -41,6 +59,10 @@ data class LibraryUiState(
     val filter: LibraryFilter = LibraryFilter.ALL,
     /** Only photos with at least this many stars are shown. */
     val leastRating: Int = 0,
+    /** A raw file taken together with a JPEG is shown as that JPEG only. */
+    val stacked: Boolean = true,
+    /** For each photo shot as raw and JPEG at once, the other file of the pair, both ways round. */
+    val partners: Map<Long, Long> = emptyMap(),
     val days: List<LibraryDay> = emptyList(),
     val libraryIsEmpty: Boolean = false,
     /** The photos picked out to have the same thing done to all of them. */
@@ -57,18 +79,26 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val edits = container.libraryEdits
     private val filter = MutableStateFlow(LibraryFilter.ALL)
     private val leastRating = MutableStateFlow(0)
+    private val stacked = MutableStateFlow(true)
 
     /** What is not read from the library itself: the selection, and what is being done with it. */
     private val activity = MutableStateFlow(LibraryUiState())
     private var batch: Job? = null
 
-    private val listed = combine(mediaDao.observeAll(), filter, leastRating) { items, filter, leastRating ->
+    private val listed = combine(mediaDao.observeAll(), filter, leastRating, stacked) { items, filter, leastRating, stacked ->
         val zone = ZoneId.systemDefault()
+        val partners = partnersOf(items)
+        // Only the JPEG of a pair is listed, unless raw files are what is asked for.
+        val hidden = if (stacked && filter != LibraryFilter.RAW) {
+            items.filter { it.kind == MediaKind.RAW && it.id in partners }.mapTo(HashSet()) { it.id }
+        } else {
+            emptySet()
+        }
         val days = items
-            .filter { (filter.kind == null || it.kind == filter.kind) && it.rating >= leastRating }
+            .filter { (filter.kind == null || it.kind == filter.kind) && it.rating >= leastRating && it.id !in hidden }
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
-        LibraryUiState(loading = false, filter, leastRating, days, libraryIsEmpty = items.isEmpty())
+        LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty())
     }.flowOn(Dispatchers.Default)
 
     val state: StateFlow<LibraryUiState> =
@@ -93,6 +123,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     fun setLeastRating(value: Int) {
         leastRating.value = value
+    }
+
+    fun setStacked(value: Boolean) {
+        stacked.value = value
     }
 
     /** Adds a photo to the selection, or takes it out again. */

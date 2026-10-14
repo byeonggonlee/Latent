@@ -126,4 +126,29 @@ class ViewerFlowTest {
         compose.onNodeWithContentDescription("DSC00002.JPG").performTouchInput { swipeLeft() }
         compose.onNodeWithText("DSC00002.JPG").assertIsDisplayed()
     }
+
+    @Test
+    fun showsARawFileAndItsJpegAsOneAndSwitchesBetweenThem() {
+        val folder = File(container.storage.root, "2026/2026-10-08")
+        val raw = File(folder, "DSC00001.ARW").apply { writeBytes(com.byeonggon.cameramanager.raw.SyntheticArw.file(red = 600, green = 900, blue = 700)) }
+        runBlocking {
+            mediaDao.insert(MediaItemEntity(path = raw.absolutePath, fileName = raw.name, kind = MediaKind.RAW, sizeBytes = raw.length(), capturedAt = 9_999, importedAt = 1))
+        }
+
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("RAW+J").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithContentDescription("DSC00001.ARW").assertCountEquals(0)
+        open("DSC00001.JPG")
+        compose.onNodeWithText("RAW 보기").performClick()
+        waitForText("JPEG 보기")
+        compose.onNodeWithText("DSC00001.ARW").assertIsDisplayed()
+        compose.onNodeWithText("JPEG 보기").performClick()
+        waitForText("RAW 보기")
+
+        // Unstacked, both are listed.
+        compose.onNodeWithContentDescription("닫기").performClick()
+        compose.onNodeWithText("RAW+JPEG 묶기").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("DSC00001.ARW").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
 }
