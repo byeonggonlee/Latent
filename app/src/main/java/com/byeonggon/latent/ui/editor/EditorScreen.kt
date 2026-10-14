@@ -5,6 +5,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -71,6 +72,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.pointerInput
@@ -102,15 +105,15 @@ import kotlin.math.roundToInt
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 
-private enum class EditorTab(@StringRes val label: Int, @DrawableRes val icon: Int, val controls: List<Control> = emptyList()) {
-    FILTERS(R.string.tool_filters, R.drawable.ic_tool_filters),
-    FRAMING(R.string.tool_crop, R.drawable.ic_tool_crop),
-    LIGHT(R.string.tool_light, R.drawable.ic_tool_light, listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
-    COLOR(R.string.tool_color, R.drawable.ic_tool_color, listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
-    EFFECTS(R.string.tool_effects, R.drawable.ic_tool_effects, listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
-    LOCAL(R.string.tool_local, R.drawable.ic_tool_local),
-    SPOTS(R.string.tool_spots, R.drawable.ic_tool_spots),
-    DETAIL(R.string.tool_detail, R.drawable.ic_tool_detail, listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
+private enum class EditorTab(@StringRes val label: Int, @DrawableRes val icon: Int, val key: Key, val controls: List<Control> = emptyList()) {
+    FILTERS(R.string.tool_filters, R.drawable.ic_tool_filters, Key.P),
+    FRAMING(R.string.tool_crop, R.drawable.ic_tool_crop, Key.R),
+    LIGHT(R.string.tool_light, R.drawable.ic_tool_light, Key.L, listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
+    COLOR(R.string.tool_color, R.drawable.ic_tool_color, Key.C, listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
+    EFFECTS(R.string.tool_effects, R.drawable.ic_tool_effects, Key.E, listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
+    LOCAL(R.string.tool_local, R.drawable.ic_tool_local, Key.M),
+    SPOTS(R.string.tool_spots, R.drawable.ic_tool_spots, Key.H),
+    DETAIL(R.string.tool_detail, R.drawable.ic_tool_detail, Key.D, listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
 
     /** What of the picture has to be on screen while this tab is open. */
     val view: EditorView
@@ -213,13 +216,19 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     }
     PhotoTheme {
     Scaffold(
-        // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes.
-        modifier = Modifier.keys { event ->
+        // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes;
+        // a letter for each tool, and the original shown while the backslash is held.
+        modifier = Modifier.keys(
+            onRelease = { event -> (event.key == Key.Backslash).also { if (it) viewModel.setComparing(false) } },
+        ) { event ->
+            val plain = !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed
             when {
                 event.isCtrlPressed && event.key == Key.Z && !event.isShiftPressed -> viewModel.undo().let { true }
                 event.isCtrlPressed && (event.key == Key.Y || (event.key == Key.Z && event.isShiftPressed)) -> viewModel.redo().let { true }
                 event.isCtrlPressed && event.key == Key.S -> viewModel.save().let { true }
                 event.key == Key.Escape -> closeUnlessChanged().let { true }
+                plain && event.key == Key.Backslash -> viewModel.setComparing(true).let { true }
+                plain -> EditorTab.entries.firstOrNull { it.key == event.key }?.let { tab = it } != null
                 else -> false
             }
         },
@@ -452,13 +461,13 @@ private fun ToolRail(tab: EditorTab, onTab: (EditorTab) -> Unit) {
                 .selectableGroup(),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            EditorTab.entries.forEach { entry -> ToolButton(entry, selected = entry == tab, onClick = { onTab(entry) }, width = 64.dp) }
+            EditorTab.entries.forEach { entry -> ToolButton(entry, selected = entry == tab, onClick = { onTab(entry) }, width = 64.dp, showKey = true) }
         }
     }
 }
 
 @Composable
-private fun ToolButton(tool: EditorTab, selected: Boolean, onClick: () -> Unit, width: Dp) {
+private fun ToolButton(tool: EditorTab, selected: Boolean, onClick: () -> Unit, width: Dp, showKey: Boolean = false) {
     val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier = Modifier
@@ -476,8 +485,32 @@ private fun ToolButton(tool: EditorTab, selected: Boolean, onClick: () -> Unit, 
             color = color,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
+        // Beside the picture, in a window wide enough for a keyboard, each tool shows its key.
+        if (showKey) {
+            Text(
+                tool.letter,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 5.dp),
+            )
+        }
     }
 }
+
+/** The letter printed on each tool's key. */
+private val EditorTab.letter: String
+    get() = when (key) {
+        Key.P -> "P"
+        Key.R -> "R"
+        Key.L -> "L"
+        Key.C -> "C"
+        Key.E -> "E"
+        Key.M -> "M"
+        Key.H -> "H"
+        else -> "D"
+    }
 
 /** A short text on a dark, rounded patch that stays readable on top of any picture. */
 @Composable

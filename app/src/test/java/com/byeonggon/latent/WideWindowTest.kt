@@ -111,6 +111,23 @@ class WideWindowTest {
     }
 
     @Test
+    fun picksToolsAndShowsTheOriginalWithTheKeyboard() {
+        open("DSC00001.JPG")
+        compose.onNodeWithText("편집").performClick()
+        waitForEditor()
+        // Each tool shows its key beside the picture.
+        compose.onNodeWithText("C").assertIsDisplayed()
+
+        compose.onAllNodes(isRoot())[0].performKeyInput { pressKey(Key.C) }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithContentDescription("색온도").fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onAllNodes(isRoot())[0].performKeyInput { keyDown(Key.Backslash) }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("원본").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(isRoot())[0].performKeyInput { keyUp(Key.Backslash) }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("원본").fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
     fun undoesWithTheKeyboardInTheEditor() {
         open("DSC00001.JPG")
         compose.onNodeWithText("편집").performClick()

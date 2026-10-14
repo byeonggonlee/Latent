@@ -14,16 +14,23 @@ import androidx.compose.ui.input.key.type
 
 /**
  * Lets a screen take keys from a keyboard, as on a laptop or a tablet with a keyboard attached:
- * [onKey] is given each key that is pressed, and says whether it did something with it.
+ * [onKey] is given each key that is pressed, and [onRelease] each that is let go of; each says
+ * whether it did something with it.
  */
 @Composable
-fun Modifier.keys(onKey: (KeyEvent) -> Boolean): Modifier {
+fun Modifier.keys(onRelease: (KeyEvent) -> Boolean = { false }, onKey: (KeyEvent) -> Boolean): Modifier {
     val focus = remember { FocusRequester() }
     // Without focus nothing receives keys; the screen takes it as it opens.
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     return this
         .focusRequester(focus)
-        .onKeyEvent { event -> event.type == KeyEventType.KeyDown && onKey(event) }
+        .onKeyEvent { event ->
+            when (event.type) {
+                KeyEventType.KeyDown -> onKey(event)
+                KeyEventType.KeyUp -> onRelease(event)
+                else -> false
+            }
+        }
         // A focus target, not a focusable: the latter would merge the whole screen into one element for TalkBack.
         .focusTarget()
 }
