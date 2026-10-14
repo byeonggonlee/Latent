@@ -148,8 +148,7 @@ fun ViewerScreen(
         }
     }
 
-    // A photo that the library does not list right now, filtered out perhaps, is shown on its own.
-    val pages = if (items.any { it.id == itemId }) items else listOfNotNull(item)
+    val pages = remember(items, partners, itemId, item) { pagesFor(items, partners, itemId, item) }
     val pager = rememberPagerState(initialPage = pages.indexOfFirst { it.id == itemId }.coerceAtLeast(0)) { pages.size }
     val shownId by rememberUpdatedState(itemId)
     val changeItem by rememberUpdatedState(onItemChange)
@@ -344,6 +343,22 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmingRestore = false }) { Text("취소") } },
         )
     }
+    }
+}
+
+/**
+ * What can be swiped through while [itemId] is shown: the library as listed. The other file of a listed
+ * pair takes its partner's place, so the pages around it, and the page number, stay as they were;
+ * a photo the library does not list right now, filtered out perhaps, is shown on its own.
+ */
+private fun pagesFor(items: List<MediaItemEntity>, partners: Map<Long, Long>, itemId: Long, item: MediaItemEntity?): List<MediaItemEntity> {
+    if (items.any { it.id == itemId }) return items
+    val place = items.indexOfFirst { it.id == partners[itemId] }
+    return when {
+        place < 0 -> listOfNotNull(item)
+        // Until the partner itself has been read, the listed file keeps its place.
+        item?.id != itemId -> items
+        else -> items.toMutableList().apply { this[place] = item }
     }
 }
 

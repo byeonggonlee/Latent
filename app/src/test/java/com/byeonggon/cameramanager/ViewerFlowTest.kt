@@ -143,26 +143,33 @@ class ViewerFlowTest {
 
     @Test
     fun showsARawFileAndItsJpegAsOneAndSwitchesBetweenThem() {
+        // The second photo: switching must not slide back to the first of the library.
         val folder = File(container.storage.root, "2026/2026-10-08")
-        val raw = File(folder, "DSC00001.ARW").apply { writeBytes(com.byeonggon.cameramanager.raw.SyntheticArw.file(red = 600, green = 900, blue = 700)) }
+        val raw = File(folder, "DSC00002.ARW").apply { writeBytes(com.byeonggon.cameramanager.raw.SyntheticArw.file(red = 600, green = 900, blue = 700)) }
         runBlocking {
-            mediaDao.insert(MediaItemEntity(path = raw.absolutePath, fileName = raw.name, kind = MediaKind.RAW, sizeBytes = raw.length(), capturedAt = 9_999, importedAt = 1))
+            mediaDao.insert(MediaItemEntity(path = raw.absolutePath, fileName = raw.name, kind = MediaKind.RAW, sizeBytes = raw.length(), capturedAt = 9_998, importedAt = 1))
         }
 
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("RAW+J").fetchSemanticsNodes().isNotEmpty() }
-        compose.onAllNodesWithContentDescription("DSC00001.ARW").assertCountEquals(0)
-        open("DSC00001.JPG")
+        compose.onAllNodesWithContentDescription("DSC00002.ARW").assertCountEquals(0)
+        open("DSC00002.JPG")
         compose.onNodeWithText("RAW").performClick()
-        waitForText("DSC00001.ARW")
+        waitForText("DSC00002.ARW")
+        // It stays on the raw file rather than going back to a JPEG.
+        compose.waitForIdle()
+        Thread.sleep(300)
+        compose.waitForIdle()
+        compose.onNodeWithText("DSC00002.ARW").assertIsDisplayed()
         compose.onNodeWithText("JPEG").performClick()
-        waitForText("DSC00001.JPG")
+        waitForText("DSC00002.JPG")
+        compose.onAllNodesWithText("DSC00001.JPG").assertCountEquals(0)
 
         // Unstacked, both are listed.
         compose.onNodeWithContentDescription("닫기").performClick()
         compose.onNodeWithContentDescription("보관함 메뉴").performClick()
         compose.onNodeWithText("RAW+JPEG 묶어 보기").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithContentDescription("DSC00001.ARW").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("DSC00002.ARW").fetchSemanticsNodes().isNotEmpty()
         }
     }
 
