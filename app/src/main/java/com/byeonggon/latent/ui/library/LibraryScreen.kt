@@ -157,53 +157,79 @@ private fun LibraryContent(
             }
             EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash)
         } else {
-            LazyVerticalGrid(
-                // Larger thumbnails where the window has room for them, as on a tablet or a laptop.
-                columns = GridCells.Adaptive(if (rememberWindowLayout().sideNavigation) 160.dp else 108.dp),
-                state = gridState,
-                contentPadding = PaddingValues(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                if (withTitle) {
-                    item(key = "title", span = { GridItemSpan(maxLineSpan) }, contentType = "title") { LargeTitle(state, viewModel) }
-                    item(key = "kinds", span = { GridItemSpan(maxLineSpan) }, contentType = "kinds") { KindFilters(state, viewModel) }
-                }
-                state.days.forEach { day ->
-                    item(
-                        key = "day-${day.date}",
-                        span = { GridItemSpan(maxLineSpan) },
-                        contentType = "header",
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(start = 18.dp, top = 16.dp, bottom = 8.dp),
-                            verticalAlignment = Alignment.Bottom,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Box(Modifier.fillMaxSize()) {
+                LazyVerticalGrid(
+                    // Larger thumbnails where the window has room for them, as on a tablet or a laptop.
+                    columns = GridCells.Adaptive(if (rememberWindowLayout().sideNavigation) 160.dp else 108.dp),
+                    state = gridState,
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    if (withTitle) {
+                        item(key = "title", span = { GridItemSpan(maxLineSpan) }, contentType = "title") { LargeTitle(state, viewModel) }
+                        item(key = "kinds", span = { GridItemSpan(maxLineSpan) }, contentType = "kinds") { KindFilters(state, viewModel) }
+                    }
+                    state.days.forEach { day ->
+                        item(
+                            key = "day-${day.date}",
+                            span = { GridItemSpan(maxLineSpan) },
+                            contentType = "header",
                         ) {
-                            Text(dayTitle(day.date), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "${day.items.size}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Row(
+                                modifier = Modifier.padding(start = 18.dp, top = 16.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.Bottom,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(dayTitle(day.date), style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "${day.items.size}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        items(day.items, key = { it.id }, contentType = { "media" }) { item ->
+                            // Holding a photo starts picking photos out; from then on a tap picks, too.
+                            MediaCell(
+                                item = item,
+                                // A JPEG that stands for its raw file as well says so.
+                                withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners,
+                                selected = item.id in state.selected,
+                                // In the trash a photo is only picked, to be put back or deleted.
+                                onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(item.id) },
+                                onHold = { viewModel.toggle(item.id) },
                             )
                         }
                     }
-                    items(day.items, key = { it.id }, contentType = { "media" }) { item ->
-                        // Holding a photo starts picking photos out; from then on a tap picks, too.
-                        MediaCell(
-                            item = item,
-                            // A JPEG that stands for its raw file as well says so.
-                            withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners,
-                            selected = item.id in state.selected,
-                            // In the trash a photo is only picked, to be put back or deleted.
-                            onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(item.id) },
-                            onHold = { viewModel.toggle(item.id) },
-                        )
-                    }
                 }
+                val months = remember(state.days, withTitle) { monthsAlongTheGrid(state.days, leading = if (withTitle) 2 else 0) }
+                FastScroller(gridState, labelAt = { index -> months.labelAt(index) })
             }
         }
     }
+}
+
+/** At which grid item each day begins, and so which month the grid is in at any item. */
+internal class MonthsAlongTheGrid(private val starts: IntArray, private val dates: List<LocalDate>) {
+    fun labelAt(index: Int): String? {
+        if (dates.isEmpty()) return null
+        var day = starts.binarySearch(index)
+        if (day < 0) day = (-day - 2).coerceAtLeast(0)
+        return dates[day].format(localFormat("yMMMM"))
+    }
+}
+
+/** [leading] grid items come before the first day: the title and the filters. */
+internal fun monthsAlongTheGrid(days: List<LibraryDay>, leading: Int): MonthsAlongTheGrid {
+    var next = leading
+    val starts = IntArray(days.size)
+    days.forEachIndexed { index, day ->
+        starts[index] = next
+        // The day's header, then a cell for each of its photos.
+        next += 1 + day.items.size
+    }
+    return MonthsAlongTheGrid(starts, days.map { it.date })
 }
 
 /** What can be done to all the selected photos at once. */
