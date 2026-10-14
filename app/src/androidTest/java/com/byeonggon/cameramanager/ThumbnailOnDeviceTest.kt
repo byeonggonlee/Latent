@@ -20,7 +20,7 @@ import java.io.File
 
 /**
  * Times the ways a library thumbnail can be made from real camera files, to see what scrolling the
- * library costs. Pass `-e jpegSample <path> -e arwSample <path>`; nothing is written.
+ * library costs. Pass `-e jpegSample <path> -e arwSample <path>`; only the app's thumbnail cache is written.
  */
 @RunWith(AndroidJUnit4::class)
 class ThumbnailOnDeviceTest {
@@ -56,6 +56,17 @@ class ThumbnailOnDeviceTest {
                 }
             }
             Log.i(TAG, "on device: ${file.name} coil gave ${(coil as? SuccessResult)?.image?.let { "${it.width}x${it.height}" } ?: coil}")
+
+            val thumbnails = com.byeonggon.cameramanager.data.Thumbnails(context)
+            thumbnails.fileFor(file.path, file.length()).delete()
+            val made = timed("${file.name} stored thumbnail made", runs = 1) { runBlocking { thumbnails.of(file, file.length()) } }
+            timed("${file.name} stored thumbnail again") { runBlocking { thumbnails.of(file, file.length()) } }
+            timed("${file.name} coil from stored thumbnail") {
+                runBlocking {
+                    loader.execute(ImageRequest.Builder(context).data(made).size(420).memoryCachePolicy(CachePolicy.DISABLED).build())
+                }
+            }
+            Log.i(TAG, "on device: ${file.name} stored thumbnail ${made?.length()} bytes")
 
             val sampled = timed("${file.name} BitmapFactory 1/16") {
                 BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = 16 })
