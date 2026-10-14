@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
+import android.content.Context
+import com.byeonggon.latent.R
 
 /**
  * Puts edits into effect in the background, so that the editor closes as soon as Done is tapped: a
@@ -23,6 +25,7 @@ import java.io.IOException
  * needs whole frames in memory; the screens show which photos are still being saved.
  */
 class EditSaver(
+    private val context: Context,
     private val edits: LibraryEdits,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
@@ -44,9 +47,9 @@ class EditSaver(
             try {
                 turn.withLock { edits.apply(item, edit) }
             } catch (e: IOException) {
-                _failures.tryEmit("${item.fileName}을(를) 저장하지 못했습니다.")
+                _failures.tryEmit(context.getString(R.string.edit_not_saved, item.fileName))
             } catch (e: OutOfMemoryError) {
-                _failures.tryEmit("${item.fileName}을(를) 저장하지 못했습니다. 메모리가 부족합니다.")
+                _failures.tryEmit(context.getString(R.string.edit_not_saved_memory, item.fileName))
             } finally {
                 _saving.update { it - item.id }
             }

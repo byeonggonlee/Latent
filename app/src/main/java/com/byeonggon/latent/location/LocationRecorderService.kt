@@ -144,18 +144,18 @@ class LocationRecorderService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         val text = if (lastFixAt == null) {
-            "위치를 기다리는 중"
+            getString(R.string.location_waiting)
         } else {
-            "마지막 기록 " + TIME_FORMAT.format(Instant.ofEpochMilli(lastFixAt).atZone(ZoneId.systemDefault()))
+            getString(R.string.location_last_fix, TIME_FORMAT.format(Instant.ofEpochMilli(lastFixAt).atZone(ZoneId.systemDefault())))
         }
         return Notification.Builder(this, Notifications.CHANNEL_LOCATION)
             .setSmallIcon(R.drawable.ic_stat_camera)
-            .setContentTitle("위치 기록 중")
+            .setContentTitle(getString(R.string.location_recording))
             .setContentText(text)
             .setContentIntent(Notifications.openApp(this))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(Notification.Action.Builder(null, "중지", stop).build())
+            .addAction(Notification.Action.Builder(null, getString(R.string.stop), stop).build())
             .build()
     }
 
@@ -207,8 +207,8 @@ class LocationRecorderService : Service() {
             )
             val notification = Notification.Builder(context, Notifications.CHANNEL_LOCATION_STOPPED)
                 .setSmallIcon(R.drawable.ic_stat_camera)
-                .setContentTitle("위치 기록이 멈췄습니다")
-                .setContentText("누르면 다시 기록합니다")
+                .setContentTitle(context.getString(R.string.location_stopped_title))
+                .setContentText(context.getString(R.string.location_stopped_text))
                 .setContentIntent(resume)
                 .setAutoCancel(true)
                 .build()

@@ -46,6 +46,10 @@ import com.byeonggon.latent.ui.common.rememberStorageAccess
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
+import com.byeonggon.latent.ui.common.localFormat
 
 @Composable
 fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
@@ -63,62 +67,62 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("카메라 동기화", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.camera_sync), style = MaterialTheme.typography.headlineMedium)
         if (!storageGranted) StorageAccessCard()
 
-        SectionCard("카메라") {
+        SectionCard(stringResource(R.string.camera)) {
             when (val current = connection) {
                 CameraConnection.Disconnected -> {
-                    Text("연결된 카메라가 없습니다.")
-                    Hint("USB-C 케이블로 카메라를 연결하고, 카메라 MENU → 설정 → USB 연결을 'MTP'로 맞춰주세요.")
+                    Text(stringResource(R.string.no_camera))
+                    Hint(stringResource(R.string.connect_camera_hint))
                 }
                 is CameraConnection.WrongMode -> {
-                    Text("${current.device.displayName()}이(가) 저장 장치(Mass Storage) 모드로 연결됐습니다.")
-                    Hint("카메라의 USB 연결 설정을 'MTP'로 바꾼 뒤 케이블을 다시 연결해주세요.")
+                    Text(stringResource(R.string.mass_storage_connected, current.device.displayName()))
+                    Hint(stringResource(R.string.mass_storage_hint))
                 }
                 is CameraConnection.NeedsPermission -> {
-                    Text("${current.device.displayName()} 연결됨")
-                    Button(onClick = { viewModel.requestPermission(current.device) }) { Text("USB 접근 허용") }
+                    Text(stringResource(R.string.camera_connected, current.device.displayName()))
+                    Button(onClick = { viewModel.requestPermission(current.device) }) { Text(stringResource(R.string.allow_usb)) }
                 }
                 is CameraConnection.Ready -> {
-                    Text("${current.device.displayName()} 연결됨")
+                    Text(stringResource(R.string.camera_connected, current.device.displayName()))
                     Button(
                         onClick = { viewModel.start(current.device) },
                         enabled = storageGranted && !syncState.isRunning,
                     ) {
-                        Text("동기화 시작")
+                        Text(stringResource(R.string.start_sync))
                     }
                 }
             }
         }
 
-        SectionCard("가져올 항목") {
-            KindSwitch("사진 (JPEG)", settings.syncPhotos) { viewModel.setKindEnabled(MediaKind.PHOTO, it) }
+        SectionCard(stringResource(R.string.what_to_import)) {
+            KindSwitch(stringResource(R.string.kind_photos_jpeg), settings.syncPhotos) { viewModel.setKindEnabled(MediaKind.PHOTO, it) }
             KindSwitch("RAW (ARW)", settings.syncRaw) { viewModel.setKindEnabled(MediaKind.RAW, it) }
-            KindSwitch("동영상", settings.syncVideos) { viewModel.setKindEnabled(MediaKind.VIDEO, it) }
+            KindSwitch(stringResource(R.string.kind_videos), settings.syncVideos) { viewModel.setKindEnabled(MediaKind.VIDEO, it) }
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("촬영 기간")
-                    Hint(dates?.label() ?: "전체")
+                    Text(stringResource(R.string.shooting_dates))
+                    Hint(dates?.label() ?: stringResource(R.string.all_dates))
                 }
                 if (dates != null) {
                     TextButton(onClick = { viewModel.setDates(null) }, enabled = !syncState.isRunning) {
-                        Text("전체로")
+                        Text(stringResource(R.string.all_dates_again))
                     }
                 }
                 OutlinedButton(onClick = { pickingDates = true }, enabled = !syncState.isRunning) {
-                    Text("기간 선택")
+                    Text(stringResource(R.string.pick_dates))
                 }
             }
-            Hint("이미 가져온 파일은 건너뜁니다. 카메라의 파일은 삭제하지 않습니다.")
+            Hint(stringResource(R.string.sync_skips_hint))
         }
 
         if (deletedFromPhone > 0) {
-            SectionCard("폰에서 지운 파일") {
-                Text("가져온 뒤 폰에서 지운 파일 ${deletedFromPhone}개는 동기화할 때 건너뜁니다.")
+            SectionCard(stringResource(R.string.deleted_from_phone)) {
+                Text(pluralStringResource(R.plurals.deleted_from_phone_detail, deletedFromPhone, deletedFromPhone))
                 OutlinedButton(onClick = { confirmingReimport = true }, enabled = !syncState.isRunning) {
-                    Text("다시 가져올 수 있게 하기")
+                    Text(stringResource(R.string.allow_reimport))
                 }
             }
         }
@@ -129,11 +133,10 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
     if (confirmingReimport) {
         AlertDialog(
             onDismissRequest = { confirmingReimport = false },
-            title = { Text("가져온 기록 지우기") },
+            title = { Text(stringResource(R.string.forget_imports)) },
             text = {
                 Text(
-                    "폰에서 지운 파일 ${deletedFromPhone}개의 가져온 기록을 지웁니다. 다음 동기화부터 다시 가져올 수 있고, " +
-                        "보관함에 남아 있는 파일은 영향을 받지 않습니다.",
+                    pluralStringResource(R.plurals.forget_imports_detail, deletedFromPhone, deletedFromPhone),
                 )
             },
             confirmButton = {
@@ -143,10 +146,10 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
                         confirmingReimport = false
                     },
                 ) {
-                    Text("지우기")
+                    Text(stringResource(R.string.forget))
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmingReimport = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { confirmingReimport = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -180,14 +183,14 @@ private fun SyncDatesDialog(initial: SyncDates?, onConfirm: (SyncDates) -> Unit,
                     onConfirm(SyncDates(start, state.selectedEndDateMillis?.toPickerDate() ?: start))
                 },
             ) {
-                Text("적용")
+                Text(stringResource(R.string.apply))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     ) {
         DateRangePicker(
             state = state,
-            title = { Text("촬영 기간", modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
+            title = { Text(stringResource(R.string.shooting_dates), modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
             showModeToggle = false,
             modifier = Modifier.weight(1f),
         )
@@ -198,12 +201,12 @@ private fun SyncDatesDialog(initial: SyncDates?, onConfirm: (SyncDates) -> Unit,
 private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
     when (state) {
         SyncState.Idle -> Unit
-        is SyncState.Scanning -> SectionCard("진행 상황") {
-            Text("카메라의 파일 목록을 읽는 중… (${state.found}개)")
+        is SyncState.Scanning -> SectionCard(stringResource(R.string.progress)) {
+            Text(pluralStringResource(R.plurals.reading_camera, state.found, state.found))
             LinearProgressIndicator(Modifier.fillMaxWidth())
-            OutlinedButton(onClick = onCancel) { Text("취소") }
+            OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
         }
-        is SyncState.Transferring -> SectionCard("진행 상황") {
+        is SyncState.Transferring -> SectionCard(stringResource(R.string.progress)) {
             val context = LocalContext.current
             Text("${state.index} / ${state.total} · ${state.fileName}")
             LinearProgressIndicator(
@@ -218,29 +221,35 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
             )
             if (state.cancelling) {
-                Hint("현재 파일 전송이 끝나면 중지합니다.")
+                Hint(stringResource(R.string.stops_after_file))
             } else {
-                OutlinedButton(onClick = onCancel) { Text("취소") }
+                OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
             }
         }
-        is SyncState.Finished -> SectionCard(if (state.cancelled) "동기화 중지됨" else "동기화 완료") {
+        is SyncState.Finished -> SectionCard(stringResource(if (state.cancelled) R.string.sync_stopped else R.string.sync_done)) {
             if (state.imported == 0 && state.failed.isEmpty()) {
-                Text(if (state.cancelled) "가져온 파일이 없습니다." else "새로 가져올 파일이 없습니다.")
+                Text(stringResource(if (state.cancelled) R.string.nothing_imported else R.string.nothing_new))
             } else {
-                Text("가져온 파일 ${state.imported}개 · 위치 삽입 ${state.geotagged}개")
+                Text(
+                    stringResource(
+                        R.string.imported_summary,
+                        pluralStringResource(R.plurals.imported_files, state.imported, state.imported),
+                        pluralStringResource(R.plurals.geotagged_files, state.geotagged, state.geotagged),
+                    ),
+                )
             }
             if (state.failed.isNotEmpty()) {
                 Text(
-                    "실패 ${state.failed.size}개: " + state.failed.take(5).joinToString() +
-                        if (state.failed.size > 5) " 외" else "",
+                    pluralStringResource(R.plurals.failed_files, state.failed.size, state.failed.size) + state.failed.take(5).joinToString() +
+                        if (state.failed.size > 5) stringResource(R.string.and_more) else "",
                     color = MaterialTheme.colorScheme.error,
                 )
-                Hint("실패한 파일은 다음 동기화 때 다시 시도합니다.")
+                Hint(stringResource(R.string.failed_retry_hint))
             }
         }
-        is SyncState.Failed -> SectionCard("동기화 실패") {
+        is SyncState.Failed -> SectionCard(stringResource(R.string.sync_failed)) {
             Text(state.message, color = MaterialTheme.colorScheme.error)
-            Hint("케이블 연결과 카메라의 USB 연결 설정(MTP)을 확인해주세요.")
+            Hint(stringResource(R.string.sync_failed_hint))
         }
     }
 }
@@ -258,9 +267,13 @@ private fun Hint(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-private fun UsbDevice.displayName(): String = productName ?: "USB 카메라"
+@Composable
+private fun UsbDevice.displayName(): String = productName ?: stringResource(R.string.usb_camera)
 
-private fun SyncDates.label(): String = if (start == end) "$start" else "$start ~ $end"
+private fun SyncDates.label(): String {
+    val format = localFormat("yMMMd")
+    return if (start == end) start.format(format) else start.format(format) + " – " + end.format(format)
+}
 
 // The date picker works in UTC midnights, whatever the device's time zone.
 private fun LocalDate.toPickerMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()

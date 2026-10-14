@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.enhance.Filter
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /**
  * The filters, each shown on the picture itself. Tapping one gives the photo its look, which can then
@@ -56,17 +58,19 @@ internal fun FilterPanel(
     onSave: (String) -> Unit,
     onDelete: (Filter) -> Unit,
 ) {
+    val listLabel = stringResource(R.string.filter_list)
+    val nameLabel = stringResource(R.string.filter_name)
     var naming by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<Filter?>(null) }
 
     LazyRow(
-        modifier = Modifier.semantics { contentDescription = "필터 목록" },
+        modifier = Modifier.semantics { contentDescription = listLabel },
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item(key = "none") {
             FilterTile(
-                name = "없음",
+                name = stringResource(R.string.no_filter),
                 selected = state.filter == null && !state.edit.changesColors,
                 modifier = Modifier.combinedClickable(enabled = enabled, role = Role.Button, onClick = { onApply(null) }),
             ) {
@@ -75,7 +79,7 @@ internal fun FilterPanel(
         }
         items(state.filters, key = { it.id }) { filter ->
             FilterTile(
-                name = filter.name,
+                name = filter.label,
                 selected = state.filter?.id == filter.id,
                 modifier = Modifier.combinedClickable(
                     enabled = enabled,
@@ -90,7 +94,7 @@ internal fun FilterPanel(
     }
     if (state.filter != null) {
         SettingSlider(
-            label = "강도",
+            label = stringResource(R.string.amount),
             value = state.filterAmount,
             range = 0f..MOST,
             valueText = (state.filterAmount * 100).roundToInt().toString(),
@@ -104,20 +108,20 @@ internal fun FilterPanel(
         onClick = { naming = true },
         enabled = enabled && state.edit.changesColors,
         modifier = Modifier.padding(horizontal = 8.dp),
-    ) { Text("지금 보정을 내 필터로 저장") }
+    ) { Text(stringResource(R.string.save_as_my_filter)) }
 
     if (naming) {
         var name by rememberSaveable { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { naming = false },
-            title = { Text("내 필터로 저장") },
+            title = { Text(stringResource(R.string.save_my_filter)) },
             text = {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(MOST_NAME_LENGTH) },
                     singleLine = true,
-                    label = { Text("필터 이름") },
-                    modifier = Modifier.semantics { contentDescription = "필터 이름" },
+                    label = { Text(stringResource(R.string.filter_name)) },
+                    modifier = Modifier.semantics { contentDescription = nameLabel },
                 )
             },
             confirmButton = {
@@ -127,25 +131,25 @@ internal fun FilterPanel(
                         naming = false
                         onSave(name)
                     },
-                ) { Text("저장하기") }
+                ) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton(onClick = { naming = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { naming = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     deleting?.let { filter ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("'${filter.name}' 필터를 지울까요?") },
-            text = { Text("이 필터로 이미 보정한 사진은 그대로 남습니다.") },
+            title = { Text(stringResource(R.string.delete_filter_question, filter.label)) },
+            text = { Text(stringResource(R.string.delete_filter_detail)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         deleting = null
                         onDelete(filter)
                     },
-                ) { Text("지우기") }
+                ) { Text(stringResource(R.string.forget)) }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -181,3 +185,7 @@ private fun FilterTile(name: String, selected: Boolean, modifier: Modifier, pict
 private val TILE = 76.dp
 private const val MOST = 1.5f
 private const val MOST_NAME_LENGTH = 20
+
+/** A built-in filter's name in the phone's language, or the name the user gave their own. */
+private val Filter.label: String
+    @Composable get() = if (builtInName != 0) stringResource(builtInName) else name

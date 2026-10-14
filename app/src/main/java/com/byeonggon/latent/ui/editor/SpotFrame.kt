@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.enhance.Spot
 import kotlin.math.max
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** The radius of a new spot, as a fraction of the picture's long side, unless another size is chosen. */
 internal const val DEFAULT_SPOT_RADIUS = 0.02f
@@ -53,6 +55,7 @@ internal fun SpotFrame(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val areaLabel = stringResource(R.string.spot_area)
     val current by rememberUpdatedState(spots)
     val chosen by rememberUpdatedState(selected)
     val select by rememberUpdatedState(onSelect)
@@ -63,7 +66,7 @@ internal fun SpotFrame(
     Canvas(
         modifier
             .fillMaxSize()
-            .semantics { contentDescription = "잡티 영역" }
+            .semantics { contentDescription = areaLabel }
             .pointerInput(picture.width, picture.height) {
                 fun layout() = MaskLayout(Size(size.width.toFloat(), size.height.toFloat()), MARGIN.toPx(), picture.width.toFloat(), picture.height.toFloat())
                 detectTapGestures { position ->
@@ -147,7 +150,7 @@ internal fun SpotPanel(
     onSelect: (Int) -> Unit,
 ) {
     SettingSlider(
-        label = "크기",
+        label = stringResource(R.string.size),
         value = radius,
         range = SMALLEST_SPOT..LARGEST_SPOT,
         valueText = (radius * 1000).roundToInt().toString(),
@@ -164,17 +167,17 @@ internal fun SpotPanel(
                 onSelect((selected - 1).coerceAtLeast(0))
             },
             enabled = enabled && selected in spots.indices,
-        ) { Text("선택한 잡티 되돌리기") }
+        ) { Text(stringResource(R.string.undo_spot)) }
         TextButton(
             onClick = {
                 onChange(emptyList())
                 onDone()
             },
             enabled = enabled && spots.isNotEmpty(),
-        ) { Text("모두 되돌리기") }
+        ) { Text(stringResource(R.string.undo_all_spots)) }
     }
     Text(
-        "사진에서 없앨 곳을 누르세요. 주변과 비슷한 곳을 찾아 덮습니다. 점선 원을 끌면 덮을 곳을 직접 고를 수 있습니다.",
+        stringResource(R.string.spots_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),

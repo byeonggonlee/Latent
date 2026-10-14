@@ -33,35 +33,38 @@ import com.byeonggon.latent.enhance.Adjustment
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** A slider for one of the settings: what it is called and how far it goes. */
 internal enum class Control(
-    val label: String,
+    @StringRes val label: Int,
     val setting: Adjustment,
     val limit: Float = 1f,
     val stepsPerUnit: Int = 100,
     /** Starts at zero instead of reaching as far below it as above. */
     val addsOnly: Boolean = false,
 ) {
-    EXPOSURE("노출", Adjustment.EXPOSURE, limit = 3f, stepsPerUnit = 20),
-    CONTRAST("대비", Adjustment.CONTRAST),
-    HIGHLIGHTS("밝은 영역", Adjustment.HIGHLIGHTS),
-    SHADOWS("어두운 영역", Adjustment.SHADOWS),
-    WHITES("흰색 계열", Adjustment.WHITES),
-    BLACKS("검정 계열", Adjustment.BLACKS),
-    TEMPERATURE("색온도", Adjustment.TEMPERATURE),
-    TINT("색조", Adjustment.TINT),
-    VIBRANCE("생동감", Adjustment.VIBRANCE),
-    SATURATION("채도", Adjustment.SATURATION),
-    TEXTURE("텍스처", Adjustment.TEXTURE),
-    CLARITY("부분 대비", Adjustment.CLARITY),
-    DEHAZE("디헤이즈", Adjustment.DEHAZE),
-    VIGNETTE("비네팅", Adjustment.VIGNETTE),
-    GRAIN("그레인", Adjustment.GRAIN, addsOnly = true),
-    GLOW("글로우", Adjustment.GLOW, addsOnly = true),
-    SHARPENING("선명하게", Adjustment.SHARPENING, addsOnly = true),
-    NOISE_REDUCTION("노이즈 감소", Adjustment.NOISE_REDUCTION, addsOnly = true),
-    COLOR_NOISE_REDUCTION("색상 노이즈 감소", Adjustment.COLOR_NOISE_REDUCTION, addsOnly = true);
+    EXPOSURE(R.string.control_exposure, Adjustment.EXPOSURE, limit = 3f, stepsPerUnit = 20),
+    CONTRAST(R.string.control_contrast, Adjustment.CONTRAST),
+    HIGHLIGHTS(R.string.control_highlights, Adjustment.HIGHLIGHTS),
+    SHADOWS(R.string.control_shadows, Adjustment.SHADOWS),
+    WHITES(R.string.control_whites, Adjustment.WHITES),
+    BLACKS(R.string.control_blacks, Adjustment.BLACKS),
+    TEMPERATURE(R.string.control_temperature, Adjustment.TEMPERATURE),
+    TINT(R.string.control_tint, Adjustment.TINT),
+    VIBRANCE(R.string.control_vibrance, Adjustment.VIBRANCE),
+    SATURATION(R.string.control_saturation, Adjustment.SATURATION),
+    TEXTURE(R.string.control_texture, Adjustment.TEXTURE),
+    CLARITY(R.string.control_clarity, Adjustment.CLARITY),
+    DEHAZE(R.string.control_dehaze, Adjustment.DEHAZE),
+    VIGNETTE(R.string.control_vignette, Adjustment.VIGNETTE),
+    GRAIN(R.string.control_grain, Adjustment.GRAIN, addsOnly = true),
+    GLOW(R.string.control_glow, Adjustment.GLOW, addsOnly = true),
+    SHARPENING(R.string.control_sharpening, Adjustment.SHARPENING, addsOnly = true),
+    NOISE_REDUCTION(R.string.control_noise_reduction, Adjustment.NOISE_REDUCTION, addsOnly = true),
+    COLOR_NOISE_REDUCTION(R.string.control_color_noise_reduction, Adjustment.COLOR_NOISE_REDUCTION, addsOnly = true);
 
     val range: ClosedFloatingPointRange<Float> get() = (if (addsOnly) 0f else -limit)..limit
 
@@ -111,7 +114,7 @@ internal fun SettingSlider(
                 color = if (value == untouched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .clickable(enabled = enabled && value != untouched, onClickLabel = "$label 되돌리기") {
+                    .clickable(enabled = enabled && value != untouched, onClickLabel = stringResource(R.string.reset_setting, label)) {
                         onChange(untouched)
                         onDone()
                     }

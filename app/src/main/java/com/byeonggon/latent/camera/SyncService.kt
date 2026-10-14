@@ -95,17 +95,17 @@ class SyncService : Service() {
         )
         val builder = Notification.Builder(this, Notifications.CHANNEL_SYNC)
             .setSmallIcon(R.drawable.ic_stat_camera)
-            .setContentTitle("카메라 동기화 중")
+            .setContentTitle(getString(R.string.sync_notification_title))
             .setContentIntent(Notifications.openApp(this))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(Notification.Action.Builder(null, "취소", cancel).build())
+            .addAction(Notification.Action.Builder(null, getString(R.string.cancel), cancel).build())
         if (state is SyncState.Transferring) {
             val percent = if (state.totalBytes > 0) (state.transferredBytes * 100 / state.totalBytes).toInt() else 0
             builder.setContentText("${state.index} / ${state.total} · ${state.fileName}")
             builder.setProgress(100, percent, false)
         } else {
-            builder.setContentText("카메라의 파일 목록을 읽는 중")
+            builder.setContentText(getString(R.string.sync_listing))
             builder.setProgress(0, 0, true)
         }
         return builder.build()

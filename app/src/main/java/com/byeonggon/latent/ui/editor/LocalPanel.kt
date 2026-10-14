@@ -18,6 +18,8 @@ import com.byeonggon.latent.enhance.LocalEdit
 import com.byeonggon.latent.enhance.Mask
 import com.byeonggon.latent.enhance.MaskShape
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** The settings a part of the picture can have of its own. */
 private val LOCAL_CONTROLS = listOf(
@@ -39,11 +41,15 @@ private fun newMask(shape: MaskShape) = when (shape) {
     MaskShape.BRUSH -> Mask(shape, startX = 0f, startY = 0f, endX = 0f, endY = 0f, feather = 0.5f)
 }
 
-private fun nameOf(local: LocalEdit, index: Int) = when (local.mask.shape) {
-    MaskShape.LINEAR -> "선형 "
-    MaskShape.RADIAL -> "원형 "
-    MaskShape.BRUSH -> "브러시 "
-} + (index + 1)
+@Composable
+private fun nameOf(local: LocalEdit, index: Int) = stringResource(
+    when (local.mask.shape) {
+        MaskShape.LINEAR -> R.string.mask_linear
+        MaskShape.RADIAL -> R.string.mask_radial
+        MaskShape.BRUSH -> R.string.mask_brush
+    },
+    index + 1,
+)
 
 /**
  * Settings for parts of the picture: the masks to choose from and to add to, and for the [selected]
@@ -73,7 +79,7 @@ internal fun LocalPanel(
         locals.forEachIndexed { index, local ->
             FilterChip(selected = index == selected, onClick = { onSelect(index) }, enabled = enabled, label = { Text(nameOf(local, index)) })
         }
-        for ((shape, label) in listOf(MaskShape.BRUSH to "+ 브러시", MaskShape.LINEAR to "+ 선형", MaskShape.RADIAL to "+ 원형")) {
+        for ((shape, label) in listOf(MaskShape.BRUSH to R.string.add_brush, MaskShape.LINEAR to R.string.add_linear, MaskShape.RADIAL to R.string.add_radial)) {
             OutlinedButton(
                 onClick = {
                     onChange(locals + LocalEdit(newMask(shape)))
@@ -81,12 +87,12 @@ internal fun LocalPanel(
                     onSelect(locals.size)
                 },
                 enabled = enabled && locals.size < MOST_MASKS,
-            ) { Text(label) }
+            ) { Text(stringResource(label)) }
         }
     }
     if (current == null) {
         Text(
-            "사진의 일부분만 보정하려면 마스크를 추가하세요. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에 씁니다.",
+            stringResource(R.string.masks_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -105,7 +111,7 @@ internal fun LocalPanel(
                 onDone()
             },
             enabled = enabled,
-            label = { Text("반전") },
+            label = { Text(stringResource(R.string.invert)) },
         )
         TextButton(
             onClick = {
@@ -114,18 +120,18 @@ internal fun LocalPanel(
                 onSelect((selected - 1).coerceAtLeast(0))
             },
             enabled = enabled,
-        ) { Text("마스크 삭제") }
+        ) { Text(stringResource(R.string.delete_mask)) }
     }
     if (current.mask.shape == MaskShape.BRUSH) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilterChip(selected = !erasing, onClick = { onErasing(false) }, enabled = enabled, label = { Text("칠하기") })
-            FilterChip(selected = erasing, onClick = { onErasing(true) }, enabled = enabled, label = { Text("지우개") })
+            FilterChip(selected = !erasing, onClick = { onErasing(false) }, enabled = enabled, label = { Text(stringResource(R.string.paint)) })
+            FilterChip(selected = erasing, onClick = { onErasing(true) }, enabled = enabled, label = { Text(stringResource(R.string.erase)) })
         }
         SettingSlider(
-            label = "브러시 크기",
+            label = stringResource(R.string.brush_size),
             value = brushRadius,
             range = 0.005f..0.15f,
             valueText = (brushRadius * 1000).roundToInt().toString(),
@@ -137,7 +143,7 @@ internal fun LocalPanel(
     }
     if (current.mask.shape != MaskShape.LINEAR) {
         SettingSlider(
-            label = "경계 흐림",
+            label = stringResource(R.string.feather),
             value = current.mask.feather,
             range = 0f..1f,
             valueText = (current.mask.feather * 100).roundToInt().toString(),
@@ -149,7 +155,7 @@ internal fun LocalPanel(
     }
     // The tones within the mask that the edit applies to: dragging these in keeps it off the darkest or brightest parts.
     SettingSlider(
-        label = "어두운 쪽 제외",
+        label = stringResource(R.string.leave_out_darks),
         value = current.darkest,
         range = 0f..1f,
         valueText = (current.darkest * 100).roundToInt().toString(),
@@ -158,7 +164,7 @@ internal fun LocalPanel(
         onDone = onDone,
     )
     SettingSlider(
-        label = "밝은 쪽 제외",
+        label = stringResource(R.string.leave_out_lights),
         value = 1f - current.brightest,
         range = 0f..1f,
         valueText = ((1f - current.brightest) * 100).roundToInt().toString(),
@@ -169,7 +175,7 @@ internal fun LocalPanel(
     LOCAL_CONTROLS.forEach { control ->
         val value = control.setting.get(current.adjustments)
         SettingSlider(
-            label = control.label,
+            label = stringResource(control.label),
             value = value,
             range = control.range,
             valueText = control.describe(value),

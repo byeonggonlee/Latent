@@ -31,7 +31,7 @@ import java.io.File
 
 /** Looks through the library the way a gallery is used: open a photo, swipe to the next, give it stars. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w411dp-h891dp-420dpi")
+@Config(sdk = [35], qualifiers = "ko-rKR-w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ViewerFlowTest {
     private val ids = LongArray(3)

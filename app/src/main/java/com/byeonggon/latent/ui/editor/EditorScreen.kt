@@ -99,16 +99,18 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
 
-private enum class EditorTab(val label: String, @DrawableRes val icon: Int, val controls: List<Control> = emptyList()) {
-    FILTERS("필터", R.drawable.ic_tool_filters),
-    FRAMING("자르기", R.drawable.ic_tool_crop),
-    LIGHT("밝기", R.drawable.ic_tool_light, listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
-    COLOR("색상", R.drawable.ic_tool_color, listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
-    EFFECTS("효과", R.drawable.ic_tool_effects, listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
-    LOCAL("부분", R.drawable.ic_tool_local),
-    SPOTS("잡티", R.drawable.ic_tool_spots),
-    DETAIL("세부", R.drawable.ic_tool_detail, listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
+private enum class EditorTab(@StringRes val label: Int, @DrawableRes val icon: Int, val controls: List<Control> = emptyList()) {
+    FILTERS(R.string.tool_filters, R.drawable.ic_tool_filters),
+    FRAMING(R.string.tool_crop, R.drawable.ic_tool_crop),
+    LIGHT(R.string.tool_light, R.drawable.ic_tool_light, listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
+    COLOR(R.string.tool_color, R.drawable.ic_tool_color, listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
+    EFFECTS(R.string.tool_effects, R.drawable.ic_tool_effects, listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
+    LOCAL(R.string.tool_local, R.drawable.ic_tool_local),
+    SPOTS(R.string.tool_spots, R.drawable.ic_tool_spots),
+    DETAIL(R.string.tool_detail, R.drawable.ic_tool_detail, listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
 
     /** What of the picture has to be on screen while this tab is open. */
     val view: EditorView
@@ -119,18 +121,22 @@ private enum class EditorTab(val label: String, @DrawableRes val icon: Int, val 
         }
 }
 
-private enum class LightTools(val label: String) { SLIDERS("기본"), CURVE("곡선") }
+private enum class LightTools(@StringRes val label: Int) { SLIDERS(R.string.tools_sliders), CURVE(R.string.tools_curve) }
 
-private enum class ColorTools(val label: String) { SLIDERS("기본"), MIXER("색상 혼합"), GRADING("색상 등급") }
+private enum class ColorTools(@StringRes val label: Int) { SLIDERS(R.string.tools_sliders), MIXER(R.string.tools_mixer), GRADING(R.string.tools_grading) }
 
 /** A shape the kept part of the picture can be held to. */
-private enum class CropShape(val label: String, private val longSide: Int, private val shortSide: Int) {
-    FREE("자유", 0, 0),
-    ORIGINAL("원본", 0, 0),
-    SQUARE("1:1", 1, 1),
-    FOUR_BY_THREE("4:3", 4, 3),
-    THREE_BY_TWO("3:2", 3, 2),
-    SIXTEEN_BY_NINE("16:9", 16, 9);
+private enum class CropShape(@StringRes private val named: Int?, private val longSide: Int, private val shortSide: Int) {
+    FREE(R.string.crop_free, 0, 0),
+    ORIGINAL(R.string.crop_original, 0, 0),
+    SQUARE(null, 1, 1),
+    FOUR_BY_THREE(null, 4, 3),
+    THREE_BY_TWO(null, 3, 2),
+    SIXTEEN_BY_NINE(null, 16, 9);
+
+    /** "Free" and "Original" in the phone's language, the others as their ratio, such as 4:3. */
+    val label: String
+        @Composable get() = named?.let { stringResource(it) } ?: "$longSide:$shortSide"
 
     /** Width over height of this shape for a picture of the given size, lying the way the picture does; null if any shape goes. */
     fun ratio(width: Float, height: Float): Float? = when {
@@ -221,14 +227,14 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = closeUnlessChanged) { Icon(Icons.Default.Close, contentDescription = "닫기") }
+                    IconButton(onClick = closeUnlessChanged) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close)) }
                 },
                 actions = {
                     IconButton(onClick = viewModel::undo, enabled = ready && state.canUndo) {
-                        Icon(painterResource(R.drawable.ic_undo), contentDescription = "실행 취소")
+                        Icon(painterResource(R.drawable.ic_undo), contentDescription = stringResource(R.string.undo))
                     }
                     IconButton(onClick = viewModel::redo, enabled = ready && state.canRedo) {
-                        Icon(painterResource(R.drawable.ic_redo), contentDescription = "다시 실행")
+                        Icon(painterResource(R.drawable.ic_redo), contentDescription = stringResource(R.string.redo))
                     }
                     MoreMenu(
                         enabled = ready,
@@ -249,7 +255,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         ),
                         contentPadding = PaddingValues(horizontal = 18.dp),
                         modifier = Modifier.padding(start = 4.dp, end = 8.dp).height(36.dp),
-                    ) { Text("완료") }
+                    ) { Text(stringResource(R.string.done)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PictureBackground),
             )
@@ -319,7 +325,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 if (state.edit.changesColors && tab.view == EditorView.PICTURE) {
                     CompareButton(onCompare = viewModel::setComparing, modifier = Modifier.align(Alignment.BottomEnd))
                 }
-                if (state.comparing) Pill("원본", Modifier.align(Alignment.TopCenter))
+                if (state.comparing) Pill(stringResource(R.string.original), Modifier.align(Alignment.TopCenter))
                 if (state.loading || state.saving) CircularProgressIndicator()
             }
             // In a wide window the controls go beside the picture, the full height of the window.
@@ -331,10 +337,10 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     if (confirmingDiscard) {
         AlertDialog(
             onDismissRequest = { confirmingDiscard = false },
-            title = { Text("저장하지 않고 닫을까요?") },
-            text = { Text("바꾼 보정 값이 사라집니다.") },
-            confirmButton = { TextButton(onClick = leave) { Text("닫기") } },
-            dismissButton = { TextButton(onClick = { confirmingDiscard = false }) { Text("계속 보정") } },
+            title = { Text(stringResource(R.string.discard_question)) },
+            text = { Text(stringResource(R.string.discard_detail)) },
+            confirmButton = { TextButton(onClick = leave) { Text(stringResource(R.string.close)) } },
+            dismissButton = { TextButton(onClick = { confirmingDiscard = false }) { Text(stringResource(R.string.keep_editing)) } },
         )
     }
 }
@@ -356,12 +362,12 @@ private fun MoreMenu(
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }, enabled = enabled) {
-            Icon(Icons.Default.MoreVert, contentDescription = "더 보기")
+            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             if (histogram != null) {
                 DropdownMenuItem(
-                    text = { Text(if (histogram) "히스토그램 숨기기" else "히스토그램 보기") },
+                    text = { Text(stringResource(if (histogram) R.string.histogram_hide else R.string.histogram_show)) },
                     onClick = {
                         open = false
                         onHistogram(!histogram)
@@ -369,9 +375,9 @@ private fun MoreMenu(
                 )
             }
             val items = listOf(
-                Triple("초기화", true, onReset),
-                Triple("보정 값 복사", true, onCopy),
-                Triple("보정 값 붙여넣기", canPaste, onPaste),
+                Triple(stringResource(R.string.reset), true, onReset),
+                Triple(stringResource(R.string.copy_edit), true, onCopy),
+                Triple(stringResource(R.string.paste_edit), canPaste, onPaste),
             )
             for ((text, available, action) in items) {
                 DropdownMenuItem(
@@ -390,6 +396,7 @@ private fun MoreMenu(
 /** Shows the picture without its corrections for as long as it is held down. */
 @Composable
 private fun CompareButton(onCompare: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val holdLabel = stringResource(R.string.hold_for_original)
     Surface(
         color = Color.Black.copy(alpha = 0.6f),
         contentColor = Color.White,
@@ -397,7 +404,7 @@ private fun CompareButton(onCompare: (Boolean) -> Unit, modifier: Modifier = Mod
         modifier = modifier
             .padding(12.dp)
             .size(44.dp)
-            .semantics { contentDescription = "누르고 있으면 원본" }
+            .semantics { contentDescription = holdLabel }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
@@ -464,7 +471,7 @@ private fun ToolButton(tool: EditorTab, selected: Boolean, onClick: () -> Unit, 
     ) {
         Icon(painterResource(tool.icon), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
         Text(
-            tool.label,
+            stringResource(tool.label),
             style = MaterialTheme.typography.labelMedium,
             color = color,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
@@ -503,8 +510,8 @@ private fun DetailView(part: ImageBitmap, onMove: (across: Float, down: Float) -
             },
         contentAlignment = Alignment.Center,
     ) {
-        Image(bitmap = part, contentDescription = "100% 보기", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-        Pill("100% · 끌어서 이동", Modifier.align(Alignment.TopCenter))
+        Image(bitmap = part, contentDescription = stringResource(R.string.full_size_view), contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        Pill(stringResource(R.string.full_size_hint), Modifier.align(Alignment.TopCenter))
     }
 }
 
@@ -580,10 +587,10 @@ private fun EditorPanel(
                     )
                     EditorTab.LIGHT -> {
                         ToolRow {
-                            Choices(LightTools.entries, lightTools, { it.label }, { lightTools = it })
+                            Choices(LightTools.entries, lightTools, { stringResource(it.label) }, { lightTools = it })
                             OutlinedButton(onClick = viewModel::autoAdjust, enabled = enabled) {
                                 Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
-                                Text("자동", modifier = Modifier.padding(start = 6.dp))
+                                Text(stringResource(R.string.auto), modifier = Modifier.padding(start = 6.dp))
                             }
                             // Edits made before auto set the sliders may still have the old correction switched on.
                             if (edit.autoEnhance) {
@@ -591,7 +598,7 @@ private fun EditorPanel(
                                     selected = true,
                                     onClick = { viewModel.setAutoEnhance(false) },
                                     enabled = enabled,
-                                    label = { Text("이전 자동 보정 끄기") },
+                                    label = { Text(stringResource(R.string.old_auto_off)) },
                                 )
                             }
                         }
@@ -602,12 +609,12 @@ private fun EditorPanel(
                     }
                     EditorTab.COLOR -> {
                         ToolRow {
-                            Choices(ColorTools.entries, colorTools, { it.label }, { colorTools = it })
+                            Choices(ColorTools.entries, colorTools, { stringResource(it.label) }, { colorTools = it })
                             FilterChip(
                                 selected = edit.monochrome,
                                 onClick = { viewModel.setMonochrome(!edit.monochrome) },
                                 enabled = enabled,
-                                label = { Text("흑백") },
+                                label = { Text(stringResource(R.string.monochrome)) },
                             )
                         }
                         when (colorTools) {
@@ -642,7 +649,7 @@ private fun EditorPanel(
                     EditorTab.DETAIL -> {
                         Sliders(tab.controls, edit.adjustments, enabled, viewModel)
                         Text(
-                            "위 사진은 100% 크기의 일부분입니다. 선명도와 노이즈는 이 크기에서 보입니다.",
+                            stringResource(R.string.detail_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -667,7 +674,7 @@ private fun Grabber(expanded: Boolean, onExpand: (Boolean) -> Unit) {
                     if (amount < -GRAB_THRESHOLD) onExpand(true) else if (amount > GRAB_THRESHOLD) onExpand(false)
                 }
             }
-            .clickable(onClickLabel = if (expanded) "패널 접기" else "패널 펼치기") { onExpand(!expanded) },
+            .clickable(onClickLabel = stringResource(if (expanded) R.string.panel_collapse else R.string.panel_expand)) { onExpand(!expanded) },
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.size(width = 36.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(50)))
@@ -688,7 +695,7 @@ private fun ToolRow(content: @Composable () -> Unit) {
 
 /** A pill of [options] side by side, of which one is [selected]; for use inside a [ToolRow]. */
 @Composable
-private fun <T> Choices(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit) {
+private fun <T> Choices(options: List<T>, selected: T, label: @Composable (T) -> String, onSelect: (T) -> Unit) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
@@ -717,7 +724,7 @@ private fun Sliders(controls: List<Control>, adjustments: Adjustments, enabled: 
     controls.forEach { control ->
         val value = control.setting.get(adjustments)
         SettingSlider(
-            label = control.label,
+            label = stringResource(control.label),
             value = value,
             range = control.range,
             valueText = control.describe(value),
@@ -754,7 +761,7 @@ private fun FramingControls(
     fun reframed(changed: Framing) = onFraming(changed.largestOf(kept, pictureWidth, pictureHeight))
 
     SettingSlider(
-        label = "수평",
+        label = stringResource(R.string.straighten),
         value = framing.angle,
         range = -MAX_ANGLE..MAX_ANGLE,
         valueText = if (framing.angle == 0f) "0" else String.format(Locale.US, "%+.1f°", framing.angle),
@@ -766,7 +773,7 @@ private fun FramingControls(
         onDone = onDone,
     )
     SettingSlider(
-        label = "수직 원근",
+        label = stringResource(R.string.vertical_perspective),
         value = framing.vertical,
         range = -1f..1f,
         valueText = if (framing.vertical == 0f) "0" else signed(framing.vertical * 100),
@@ -775,7 +782,7 @@ private fun FramingControls(
         onDone = onDone,
     )
     SettingSlider(
-        label = "수평 원근",
+        label = stringResource(R.string.horizontal_perspective),
         value = framing.horizontal,
         range = -1f..1f,
         valueText = if (framing.horizontal == 0f) "0" else signed(framing.horizontal * 100),
@@ -790,20 +797,20 @@ private fun FramingControls(
                 onDone()
             },
             enabled = enabled,
-        ) { Text("90° 회전") }
+        ) { Text(stringResource(R.string.rotate_90)) }
         OutlinedButton(
             onClick = {
                 onFraming(framing.mirrored())
                 onDone()
             },
             enabled = enabled,
-        ) { Text("좌우 반전") }
+        ) { Text(stringResource(R.string.flip_horizontal)) }
         if (lensCorrection != null) {
             FilterChip(
                 selected = lensCorrection,
                 onClick = { onLensCorrection(!lensCorrection) },
                 enabled = enabled,
-                label = { Text("렌즈 보정") },
+                label = { Text(stringResource(R.string.lens_correction)) },
             )
         }
     }

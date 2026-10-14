@@ -23,7 +23,7 @@ import org.robolectric.shadows.ShadowEnvironment
 
 /** The app asks for reading media first and the library folder second, and only that folder will do. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w411dp-h891dp-420dpi")
+@Config(sdk = [35], qualifiers = "ko-rKR-w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StorageAccessTest {
     @get:Rule(order = 0)

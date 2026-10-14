@@ -29,6 +29,9 @@ import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
+import com.byeonggon.latent.R
 
 /**
  * Raw files and JPEGs that the camera wrote of the same shot: in the same folder, under the same name.
@@ -47,11 +50,11 @@ internal fun partnersOf(items: List<MediaItemEntity>): Map<Long, Long> {
     return partners
 }
 
-enum class LibraryFilter(val label: String, val kind: MediaKind?) {
-    ALL("전체", null),
-    PHOTO("사진", MediaKind.PHOTO),
-    RAW("RAW", MediaKind.RAW),
-    VIDEO("동영상", MediaKind.VIDEO),
+enum class LibraryFilter(@StringRes val label: Int, val kind: MediaKind?) {
+    ALL(R.string.filter_all, null),
+    PHOTO(R.string.filter_photos, MediaKind.PHOTO),
+    RAW(R.string.filter_raw, MediaKind.RAW),
+    VIDEO(R.string.filter_videos, MediaKind.VIDEO),
 }
 
 data class LibraryDay(val date: LocalDate, val items: List<MediaItemEntity>)
@@ -151,7 +154,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             container.libraryIndex.forgetMissingFiles()
             // A file a sync is moving in is the sync's to add.
             val added = if (container.syncEngine.state.value.isRunning) 0 else container.libraryIndex.adoptUnknownFiles()
-            if (added > 0) activity.update { it.copy(message = "폴더에 있던 ${added}개를 보관함에 추가했습니다.") }
+            if (added > 0) activity.update { it.copy(message = plural(R.plurals.library_adopted, added)) }
             trash.emptyExpired()
             makeThumbnails()
         }
@@ -182,39 +185,39 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
      * Puts the selected photos in the trash. A JPEG that stands for its raw file as well, in the
      * stacked library, takes the raw file along.
      */
-    fun trashSelected() = whileBusy("휴지통으로 옮기지 못했습니다.") {
+    fun trashSelected() = whileBusy(R.string.trash_failed) {
         val current = state.value
         val chosen = selectedItems()
         val partners = if (current.stacked) mediaDao.byIds(chosen.mapNotNull { current.partners[it.id] }) else emptyList()
         trash.throwAway(chosen + partners.filter { partner -> chosen.none { it.id == partner.id } })
-        "${chosen.size}장을 휴지통으로 옮겼습니다."
+        plural(R.plurals.trashed_count, chosen.size)
     }
 
-    fun restoreSelected() = whileBusy("되돌리지 못했습니다.") {
+    fun restoreSelected() = whileBusy(R.string.restore_failed) {
         val chosen = selectedItems()
         trash.restore(chosen)
-        "${chosen.size}장을 되돌렸습니다."
+        plural(R.plurals.restored_count, chosen.size)
     }
 
-    fun deleteSelectedForever() = whileBusy("삭제하지 못했습니다.") {
+    fun deleteSelectedForever() = whileBusy(R.string.delete_failed) {
         val chosen = selectedItems()
         trash.deleteForever(chosen)
-        "${chosen.size}장을 완전히 삭제했습니다."
+        plural(R.plurals.deleted_count, chosen.size)
     }
 
-    fun emptyTrash() = whileBusy("휴지통을 비우지 못했습니다.") {
+    fun emptyTrash() = whileBusy(R.string.empty_trash_failed) {
         val all = trash.items.first()
         trash.deleteForever(all)
-        "${all.size}장을 완전히 삭제했습니다."
+        plural(R.plurals.deleted_count, all.size)
     }
 
     /** Runs [work] and reports what it says it did, or [failure]; the selection is cleared either way. */
-    private fun whileBusy(failure: String, work: suspend () -> String) {
+    private fun whileBusy(@StringRes failure: Int, work: suspend () -> String) {
         viewModelScope.launch {
             val message = try {
                 work()
             } catch (e: IOException) {
-                failure
+                text(failure)
             }
             activity.update { it.copy(selected = emptySet(), message = message) }
         }
@@ -244,21 +247,21 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val chosen = selectedItems()
             chosen.forEach { mediaDao.setRating(it.id, rating) }
-            activity.update { it.copy(selected = emptySet(), message = "${chosen.size}장에 별점을 매겼습니다.") }
+            activity.update { it.copy(selected = emptySet(), message = plural(R.plurals.rated_count, chosen.size)) }
         }
     }
 
     /** Gives every selected photo the tones and colours that were copied from another; each keeps its own framing. */
     fun pasteToSelected() {
         val copied = edits.copied.value ?: return
-        runBatch("보정 값 붙여넣는 중", { it.kind != MediaKind.VIDEO }, done = "보정 값을 붙여넣었습니다") { item ->
+        runBatch(R.string.batch_pasting, { it.kind != MediaKind.VIDEO }, done = R.plurals.batch_pasted) { item ->
             edits.apply(item, (edits.editOf(item) ?: PhotoEdit()).withLookOf(copied))
         }
     }
 
     /** Develops every selected raw file, with its edit, into a JPEG next to it. */
     fun exportSelected() {
-        runBatch("JPEG로 내보내는 중", { it.kind == MediaKind.RAW }, done = "JPEG로 내보냈습니다") { item ->
+        runBatch(R.string.batch_exporting, { it.kind == MediaKind.RAW }, done = R.plurals.batch_exported) { item ->
             edits.exportRaw(item)
         }
     }
@@ -271,9 +274,9 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         val ready = ArrayList<File>()
         container.storage.clearShared()
         runBatch(
-            label = "공유할 사진 준비 중",
+            label = R.string.batch_sharing,
             wanted = { it.kind != MediaKind.VIDEO },
-            done = "공유할 사진을 준비했습니다",
+            done = R.plurals.batch_shared,
             whenDone = { activity.update { it.copy(shareFiles = ready.toList(), message = null) } },
         ) { item ->
             ready += edits.shareCopy(item, if (item.kind == MediaKind.RAW) RAW_SHARE_SIDE else null, alongsideOthers = true)
@@ -295,9 +298,9 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     /** Does [work] to those of the selected photos that are [wanted], one at a time, off the main thread, showing how far it has got. */
     private fun runBatch(
-        label: String,
+        @StringRes label: Int,
         wanted: (MediaItemEntity) -> Boolean,
-        done: String,
+        @PluralsRes done: Int,
         whenDone: () -> Unit = {},
         work: suspend (MediaItemEntity) -> Unit,
     ) {
@@ -305,14 +308,14 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         batch = viewModelScope.launch {
             val items = selectedItems().filter(wanted)
             if (items.isEmpty()) {
-                activity.update { it.copy(message = "선택한 것 중에 해당하는 사진이 없습니다.") }
+                activity.update { it.copy(message = text(R.string.batch_nothing)) }
                 return@launch
             }
             var finished = 0
             var failed = 0
             try {
                 for (item in items) {
-                    activity.update { it.copy(batch = BatchProgress(label, finished + failed, items.size)) }
+                    activity.update { it.copy(batch = BatchProgress(text(label), finished + failed, items.size)) }
                     try {
                         withContext(Dispatchers.Default) { work(item) }
                         finished++
@@ -323,14 +326,19 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
             } catch (e: CancellationException) {
-                activity.update { it.copy(batch = null, message = "중단했습니다. ${finished}장은 끝났습니다.") }
+                activity.update { it.copy(batch = null, message = plural(R.plurals.batch_stopped, finished)) }
                 throw e
             }
-            val outcome = "${finished}장에 $done." + if (failed > 0) " ${failed}장은 실패했습니다." else ""
+            val outcome = plural(done, finished) + if (failed > 0) " " + plural(R.plurals.batch_failed, failed) else ""
             activity.update { it.copy(batch = null, selected = emptySet(), message = outcome) }
             whenDone()
         }
     }
+
+    private fun text(@StringRes id: Int): String = getApplication<Application>().getString(id)
+
+    private fun plural(@PluralsRes id: Int, count: Int): String =
+        getApplication<Application>().resources.getQuantityString(id, count, count)
 
     private companion object {
         /** Raw files shared several at a time are sent at a size that messengers and mail take without trouble. */

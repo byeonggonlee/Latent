@@ -33,18 +33,23 @@ import com.byeonggon.latent.enhance.ColorMixer
 import com.byeonggon.latent.enhance.MixerBand
 import com.byeonggon.latent.enhance.Tint
 import kotlin.math.roundToInt
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 private val MixerBand.label: String
-    get() = when (this) {
-        MixerBand.RED -> "빨강"
-        MixerBand.ORANGE -> "주황"
-        MixerBand.YELLOW -> "노랑"
-        MixerBand.GREEN -> "초록"
-        MixerBand.AQUA -> "청록"
-        MixerBand.BLUE -> "파랑"
-        MixerBand.PURPLE -> "보라"
-        MixerBand.MAGENTA -> "자홍"
-    }
+    @Composable get() = stringResource(
+        when (this) {
+            MixerBand.RED -> R.string.color_red
+            MixerBand.ORANGE -> R.string.color_orange
+            MixerBand.YELLOW -> R.string.color_yellow
+            MixerBand.GREEN -> R.string.color_green
+            MixerBand.AQUA -> R.string.color_aqua
+            MixerBand.BLUE -> R.string.color_blue
+            MixerBand.PURPLE -> R.string.color_purple
+            MixerBand.MAGENTA -> R.string.color_magenta
+        },
+    )
 
 /** Hue, vividness and brightness of one colour at a time, picked from a row of swatches. */
 @Composable
@@ -58,6 +63,7 @@ internal fun MixerPanel(mixer: ColorMixer, enabled: Boolean, onChange: (ColorMix
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             MixerBand.entries.forEach { entry ->
+                val name = entry.label
                 val touched = mixer.hue[entry.ordinal] != 0f || mixer.saturation[entry.ordinal] != 0f || mixer.luminance[entry.ordinal] != 0f
                 Box(
                     Modifier
@@ -70,12 +76,12 @@ internal fun MixerPanel(mixer: ColorMixer, enabled: Boolean, onChange: (ColorMix
                             shape = CircleShape,
                         )
                         .clickable(role = Role.RadioButton) { band = entry }
-                        .semantics { contentDescription = entry.label },
+                        .semantics { contentDescription = name },
                 )
             }
         }
         SettingSlider(
-            label = "${band.label} 색조",
+            label = stringResource(R.string.band_hue, band.label),
             value = mixer.hue[index],
             range = -1f..1f,
             valueText = describeBand(mixer.hue[index]),
@@ -84,7 +90,7 @@ internal fun MixerPanel(mixer: ColorMixer, enabled: Boolean, onChange: (ColorMix
             onDone = onDone,
         )
         SettingSlider(
-            label = "${band.label} 채도",
+            label = stringResource(R.string.band_saturation, band.label),
             value = mixer.saturation[index],
             range = -1f..1f,
             valueText = describeBand(mixer.saturation[index]),
@@ -93,7 +99,7 @@ internal fun MixerPanel(mixer: ColorMixer, enabled: Boolean, onChange: (ColorMix
             onDone = onDone,
         )
         SettingSlider(
-            label = "${band.label} 광도",
+            label = stringResource(R.string.band_luminance, band.label),
             value = mixer.luminance[index],
             range = -1f..1f,
             valueText = describeBand(mixer.luminance[index]),
@@ -107,10 +113,10 @@ internal fun MixerPanel(mixer: ColorMixer, enabled: Boolean, onChange: (ColorMix
 private fun describeBand(value: Float) = if (value == 0f) "0" else signed(value * 100)
 
 /** The tones a [ColorGrading] tints separately. */
-private enum class GradingRange(val label: String, val get: (ColorGrading) -> Tint, val set: (ColorGrading, Tint) -> ColorGrading) {
-    SHADOWS("어두운 영역", { it.shadows }, { grading, tint -> grading.copy(shadows = tint) }),
-    MIDTONES("중간 영역", { it.midtones }, { grading, tint -> grading.copy(midtones = tint) }),
-    HIGHLIGHTS("밝은 영역", { it.highlights }, { grading, tint -> grading.copy(highlights = tint) }),
+private enum class GradingRange(@StringRes val label: Int, val get: (ColorGrading) -> Tint, val set: (ColorGrading, Tint) -> ColorGrading) {
+    SHADOWS(R.string.range_shadows, { it.shadows }, { grading, tint -> grading.copy(shadows = tint) }),
+    MIDTONES(R.string.range_midtones, { it.midtones }, { grading, tint -> grading.copy(midtones = tint) }),
+    HIGHLIGHTS(R.string.range_highlights, { it.highlights }, { grading, tint -> grading.copy(highlights = tint) }),
 }
 
 /** A colour and how much of it for the dark, the middle or the bright tones, and where the three meet. */
@@ -124,11 +130,11 @@ internal fun GradingPanel(grading: ColorGrading, enabled: Boolean, onChange: (Co
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             GradingRange.entries.forEach { entry ->
-                FilterChip(selected = range == entry, onClick = { range = entry }, label = { Text(entry.label) })
+                FilterChip(selected = range == entry, onClick = { range = entry }, label = { Text(stringResource(entry.label)) })
             }
         }
         SettingSlider(
-            label = "색",
+            label = stringResource(R.string.grading_hue),
             value = tint.hue,
             range = 0f..360f,
             valueText = "${tint.hue.roundToInt()}°",
@@ -138,7 +144,7 @@ internal fun GradingPanel(grading: ColorGrading, enabled: Boolean, onChange: (Co
             hues = true,
         )
         SettingSlider(
-            label = "양",
+            label = stringResource(R.string.grading_amount),
             value = tint.amount,
             range = 0f..1f,
             valueText = (tint.amount * 100).roundToInt().toString(),
@@ -147,7 +153,7 @@ internal fun GradingPanel(grading: ColorGrading, enabled: Boolean, onChange: (Co
             onDone = onDone,
         )
         SettingSlider(
-            label = "균형",
+            label = stringResource(R.string.grading_balance),
             value = grading.balance,
             range = -1f..1f,
             valueText = describeBand(grading.balance),

@@ -39,6 +39,8 @@ import com.byeonggon.latent.data.LibraryStorage
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import java.io.File
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 @Composable
 fun LatentTheme(content: @Composable () -> Unit) {
@@ -108,14 +110,14 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("저장소 접근이 필요합니다", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.storage_needed), style = MaterialTheme.typography.titleMedium)
             if (!canRead) {
                 Text(
-                    "1/2 · 사진과 동영상, 그 위치 정보를 읽을 수 있게 '모두 허용'을 선택해주세요.",
+                    stringResource(R.string.storage_step_media),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (refused) {
-                    Text("허용되지 않았습니다. 앱 설정의 권한에서 허용해주세요.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.storage_refused), style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(
                         onClick = {
                             context.startActivity(
@@ -123,19 +125,19 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
                             )
                         },
                     ) {
-                        Text("앱 설정 열기")
+                        Text(stringResource(R.string.open_app_settings))
                     }
                 }
                 Button(onClick = { requestMedia.launch(LibraryStorage.MEDIA_PERMISSIONS) }) {
-                    Text("사진·동영상 접근 허용")
+                    Text(stringResource(R.string.allow_media))
                 }
             } else {
                 Text(
-                    "2/2 · 사진을 정리할 DCIM/Latent 폴더를 열어 '이 폴더 사용'을 눌러주세요.",
+                    stringResource(R.string.storage_step_folder),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (wrongFolder) {
-                    Text("다른 폴더입니다. DCIM/Latent 폴더를 골라주세요.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.storage_wrong_folder), style = MaterialTheme.typography.bodySmall)
                 }
                 Button(
                     onClick = {
@@ -144,7 +146,7 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
                         pickFolder.launch(storage.folder.pickerStart)
                     },
                 ) {
-                    Text("폴더 선택")
+                    Text(stringResource(R.string.choose_folder))
                 }
             }
         }
@@ -162,7 +164,7 @@ fun SectionCard(title: String, modifier: Modifier = Modifier, content: @Composab
 }
 
 @Composable
-fun <T> ChoiceRow(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit) {
+fun <T> ChoiceRow(options: List<T>, selected: T, label: @Composable (T) -> String, onSelect: (T) -> Unit) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -37,6 +37,8 @@ import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** What of a mask a finger has hold of. */
 internal enum class MaskGrip {
@@ -120,6 +122,7 @@ internal fun MaskFrame(
     brushRadius: Float = DEFAULT_BRUSH_RADIUS,
     erasing: Boolean = false,
 ) {
+    val areaLabel = stringResource(R.string.mask_area)
     val brush by rememberUpdatedState(brushRadius)
     val wiping by rememberUpdatedState(erasing)
     val aspect = picture.width.toFloat() / picture.height
@@ -137,7 +140,7 @@ internal fun MaskFrame(
     Canvas(
         modifier
             .fillMaxSize()
-            .semantics { contentDescription = "마스크 영역" }
+            .semantics { contentDescription = areaLabel }
             .pointerInput(picture.width, picture.height) {
                 fun layout() = MaskLayout(Size(size.width.toFloat(), size.height.toFloat()), MARGIN.toPx(), picture.width.toFloat(), picture.height.toFloat())
                 detectTapGestures { position ->

@@ -21,7 +21,7 @@ import org.robolectric.shadows.ShadowEnvironment
 
 /** Launches the real activity and walks through every tab, to catch wiring mistakes that only show at runtime. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w411dp-h891dp-420dpi")
+@Config(sdk = [35], qualifiers = "ko-rKR-w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class AppSmokeTest {
     // Runs before the activity starts. Robolectric has no shared storage by default, which the

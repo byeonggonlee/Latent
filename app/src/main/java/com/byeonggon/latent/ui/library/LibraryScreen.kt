@@ -82,9 +82,10 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.ui.common.localFormat
 
-private val DAY_FORMAT = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)
-private val DAY_FORMAT_WITH_YEAR = DateTimeFormatter.ofPattern("yyyy년 M월 d일 EEEE", Locale.KOREAN)
 
 @Composable
 fun LibraryScreen(
@@ -214,13 +215,13 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = viewModel::clearSelection) { Text("✕ ${state.selected.size}장 선택") }
+        TextButton(onClick = viewModel::clearSelection) { Text(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size)) }
         Box {
-            TextButton(onClick = { rating = true }) { Text("별점") }
+            TextButton(onClick = { rating = true }) { Text(stringResource(R.string.rating)) }
             DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
                 for (stars in 5 downTo 0) {
                     DropdownMenuItem(
-                        text = { Text(if (stars == 0) "별점 지우기" else "★".repeat(stars)) },
+                        text = { Text(if (stars == 0) stringResource(R.string.rating_clear) else "★".repeat(stars)) },
                         onClick = {
                             rating = false
                             viewModel.rateSelected(stars)
@@ -229,10 +230,10 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
                 }
             }
         }
-        TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text("보정 값 붙여넣기") }
-        TextButton(onClick = viewModel::exportSelected) { Text("RAW를 JPEG로") }
-        TextButton(onClick = viewModel::shareSelected) { Text("공유") }
-        TextButton(onClick = viewModel::trashSelected) { Text("삭제") }
+        TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text(stringResource(R.string.paste_edit)) }
+        TextButton(onClick = viewModel::exportSelected) { Text(stringResource(R.string.raw_to_jpeg)) }
+        TextButton(onClick = viewModel::shareSelected) { Text(stringResource(R.string.share)) }
+        TextButton(onClick = viewModel::trashSelected) { Text(stringResource(R.string.delete)) }
     }
 }
 
@@ -242,19 +243,23 @@ private fun TrashBar(state: LibraryUiState, viewModel: LibraryViewModel) {
     var confirming by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { viewModel.showTrash(false) }) { Text("← 보관함") }
-            Text("휴지통", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            TextButton(onClick = { confirming = true }, enabled = state.trashCount > 0) { Text("비우기") }
+            TextButton(onClick = { viewModel.showTrash(false) }) { Text(stringResource(R.string.back_to_library)) }
+            Text(stringResource(R.string.trash), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { confirming = true }, enabled = state.trashCount > 0) { Text(stringResource(R.string.empty_trash)) }
         }
         Text(
-            "${Trash.KEPT_DAYS}일이 지나면 완전히 삭제됩니다. 사진을 눌러 고른 뒤 되돌리거나 지울 수 있습니다.",
+            pluralStringResource(R.plurals.trash_explained, Trash.KEPT_DAYS.toInt(), Trash.KEPT_DAYS.toInt()),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
     }
     if (confirming) {
-        ConfirmDeletion("휴지통을 비울까요?", "${state.trashCount}장이 완전히 삭제되며 되돌릴 수 없습니다.", { confirming = false }) {
+        ConfirmDeletion(
+            stringResource(R.string.empty_trash_question),
+            pluralStringResource(R.plurals.empty_trash_detail, state.trashCount, state.trashCount),
+            { confirming = false },
+        ) {
             viewModel.emptyTrash()
         }
     }
@@ -265,12 +270,16 @@ private fun TrashBar(state: LibraryUiState, viewModel: LibraryViewModel) {
 private fun TrashSelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
     var confirming by remember { mutableStateOf(false) }
     Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = viewModel::clearSelection) { Text("✕ ${state.selected.size}장 선택") }
-        TextButton(onClick = viewModel::restoreSelected) { Text("되돌리기") }
-        TextButton(onClick = { confirming = true }) { Text("완전히 삭제") }
+        TextButton(onClick = viewModel::clearSelection) { Text(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size)) }
+        TextButton(onClick = viewModel::restoreSelected) { Text(stringResource(R.string.put_back)) }
+        TextButton(onClick = { confirming = true }) { Text(stringResource(R.string.delete_forever)) }
     }
     if (confirming) {
-        ConfirmDeletion("완전히 삭제할까요?", "${state.selected.size}장이 삭제되며 되돌릴 수 없습니다.", { confirming = false }) {
+        ConfirmDeletion(
+            stringResource(R.string.delete_forever_question),
+            pluralStringResource(R.plurals.delete_forever_detail, state.selected.size, state.selected.size),
+            { confirming = false },
+        ) {
             viewModel.deleteSelectedForever()
         }
     }
@@ -288,9 +297,9 @@ private fun ConfirmDeletion(title: String, text: String, onDismiss: () -> Unit, 
                     onDismiss()
                     onConfirm()
                 },
-            ) { Text("삭제") }
+            ) { Text(stringResource(R.string.delete)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -300,7 +309,7 @@ private fun BatchBar(batch: BatchProgress, onCancel: () -> Unit) {
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${batch.label} ${batch.done + 1}/${batch.total}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            TextButton(onClick = onCancel) { Text("중단") }
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.stop_batch)) }
         }
         LinearProgressIndicator(progress = { batch.done.toFloat() / batch.total }, modifier = Modifier.fillMaxWidth())
     }
@@ -310,7 +319,7 @@ private fun BatchBar(batch: BatchProgress, onCancel: () -> Unit) {
 @Composable
 private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel) {
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 40.dp)) {
-        Text("보관함", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.library), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 summaryOf(state),
@@ -327,20 +336,21 @@ private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel) {
 @Composable
 private fun CompactTitle(state: LibraryUiState, viewModel: LibraryViewModel) {
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("보관함", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.library), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         LibraryMenu(state, viewModel)
     }
 }
 
-/** How many photos and videos are shown, e.g. "사진 1,434 · 동영상 106". */
+/** How many photos and videos are shown, e.g. "1,434 photos · 106 videos". */
+@Composable
 private fun summaryOf(state: LibraryUiState): String {
     val shown = state.days.flatMap { it.items }
     val videos = shown.count { it.kind == MediaKind.VIDEO }
     val photos = shown.size - videos
-    val format = java.text.NumberFormat.getIntegerInstance(Locale.KOREAN)
+    val format = java.text.NumberFormat.getIntegerInstance()
     return listOfNotNull(
-        "사진 ${format.format(photos)}".takeIf { photos > 0 || videos == 0 },
-        "동영상 ${format.format(videos)}".takeIf { videos > 0 },
+        pluralStringResource(R.plurals.photo_count, photos, format.format(photos)).takeIf { photos > 0 || videos == 0 },
+        pluralStringResource(R.plurals.video_count, videos, format.format(videos)).takeIf { videos > 0 },
     ).joinToString(" · ")
 }
 
@@ -355,7 +365,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
             FilterChip(
                 selected = filter == state.filter,
                 onClick = { viewModel.setFilter(filter) },
-                label = { Text(filter.label) },
+                label = { Text(stringResource(filter.label)) },
                 shape = RoundedCornerShape(50),
                 border = null,
                 colors = FilterChipDefaults.filterChipColors(
@@ -370,8 +380,8 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
             InputChip(
                 selected = true,
                 onClick = { viewModel.setLeastRating(0) },
-                label = { Text("★ ${state.leastRating} 이상") },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "별점 조건 지우기", modifier = Modifier.size(16.dp)) },
+                label = { Text(stringResource(R.string.rating_at_least, state.leastRating)) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.rating_filter_clear), modifier = Modifier.size(16.dp)) },
                 shape = RoundedCornerShape(50),
             )
         }
@@ -384,17 +394,17 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     var open by remember { mutableStateOf(false) }
     var rating by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "보관함 메뉴") }
+        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text("별점으로 거르기") },
+                text = { Text(stringResource(R.string.filter_by_rating)) },
                 onClick = {
                     open = false
                     rating = true
                 },
             )
             DropdownMenuItem(
-                text = { Text("RAW+JPEG 묶어 보기") },
+                text = { Text(stringResource(R.string.stack_raw_jpeg)) },
                 trailingIcon = { Checkbox(checked = state.stacked, onCheckedChange = null) },
                 onClick = {
                     open = false
@@ -403,7 +413,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
             )
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text(if (state.trashCount > 0) "휴지통 ${state.trashCount}" else "휴지통") },
+                text = { Text(if (state.trashCount > 0) stringResource(R.string.trash_count, state.trashCount) else stringResource(R.string.trash)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_delete), contentDescription = null) },
                 onClick = {
                     open = false
@@ -414,7 +424,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
         DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
             for (stars in 0..5) {
                 DropdownMenuItem(
-                    text = { Text(if (stars == 0) "모두 보기" else "★".repeat(stars) + " 이상") },
+                    text = { Text(if (stars == 0) stringResource(R.string.show_all) else stringResource(R.string.stars_or_more, "★".repeat(stars))) },
                     onClick = {
                         rating = false
                         viewModel.setLeastRating(stars)
@@ -425,20 +435,20 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     }
 }
 
-/** A day as phones name it: "10월 9일 목요일", with the year only when it is not this one. */
+/** A day as the phone's language names it, "Thursday, October 9", with the year only when it is not this one. */
 private fun dayTitle(date: LocalDate): String =
-    date.format(if (date.year == LocalDate.now().year) DAY_FORMAT else DAY_FORMAT_WITH_YEAR)
+    date.format(localFormat(if (date.year == LocalDate.now().year) "MMMMdEEEE" else "yMMMMdEEEE"))
 
 @Composable
 private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Text(
             text = if (trash) {
-                "휴지통이 비어 있습니다."
+                stringResource(R.string.trash_is_empty)
             } else if (noItemsAtAll) {
-                "아직 가져온 사진이 없습니다.\n카메라 탭에서 카메라를 연결해 가져오세요."
+                stringResource(R.string.library_is_empty)
             } else {
-                "이 종류의 항목이 없습니다."
+                stringResource(R.string.nothing_of_kind)
             },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -476,7 +486,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
             )
             MediaKind.VIDEO -> Icon(
                 Icons.Default.PlayArrow,
-                contentDescription = "동영상",
+                contentDescription = stringResource(R.string.video),
                 tint = Color.White,
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -485,6 +495,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
             )
         }
         if (selected) {
+            val selectedLabel = stringResource(R.string.item_selected)
             Text(
                 text = "✓",
                 style = MaterialTheme.typography.titleMedium,
@@ -493,7 +504,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
                     .padding(horizontal = 10.dp, vertical = 2.dp)
-                    .semantics { contentDescription = "선택됨" },
+                    .semantics { contentDescription = selectedLabel },
             )
         }
         if (item.rating > 0) {
@@ -511,7 +522,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
         if (item.edit != null) {
             Icon(
                 painterResource(R.drawable.ic_edit),
-                contentDescription = "보정됨",
+                contentDescription = stringResource(R.string.edited),
                 tint = Color.White,
                 modifier = Modifier.align(Alignment.BottomStart).padding(4.dp).size(14.dp),
             )
@@ -519,7 +530,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
         if (item.geoSource != GeoSource.NONE) {
             Icon(
                 Icons.Default.LocationOn,
-                contentDescription = "위치 정보 있음",
+                contentDescription = stringResource(R.string.has_location),
                 tint = Color.White,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(14.dp),
             )
@@ -535,7 +546,7 @@ private fun Context.shareAll(files: List<File>) {
         .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     try {
-        startActivity(Intent.createChooser(send, "사진 ${files.size}장"))
+        startActivity(Intent.createChooser(send, resources.getQuantityString(R.plurals.share_photos, files.size, files.size)))
     } catch (e: ActivityNotFoundException) {
         // No app on the device takes photos; nothing useful to do.
     }

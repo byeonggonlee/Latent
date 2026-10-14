@@ -60,7 +60,7 @@ import java.io.File
 
 /** Edits photos through the real screens: open one from the library, move a slider, save, and take it back. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w411dp-h891dp-420dpi")
+@Config(sdk = [35], qualifiers = "ko-rKR-w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class EditorFlowTest {
     private lateinit var photo: File
@@ -385,7 +385,7 @@ class EditorFlowTest {
 
     @Test
     fun givesAPhotoTheLookOfAFilterAndDosesIt() {
-        val film = Filters.BUILT_IN.first { it.name == "필름" }
+        val film = Filters.BUILT_IN.first { it.id == "film" }
 
         openEditor("DSC00001.JPG")
         compose.onNodeWithText("필터").performClick()
@@ -514,7 +514,7 @@ class EditorFlowTest {
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("DSC00002.ARW").performClick()
         compose.onNodeWithText("RAW를 JPEG로").performClick()
-        waitForText("1장에 JPEG로 내보냈습니다.")
+        waitForText("1장을 JPEG로 내보냈습니다.")
         assertEquals(3, runBlocking { mediaDao.all() }.size)
         val developed = runBlocking { mediaDao.all() }.single { it.fileName == "DSC00002_developed.jpg" }
         assertEquals(MediaKind.PHOTO, developed.kind)

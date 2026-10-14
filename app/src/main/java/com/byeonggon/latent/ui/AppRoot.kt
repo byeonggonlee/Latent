@@ -33,11 +33,13 @@ import com.byeonggon.latent.ui.library.LibraryViewModel
 import com.byeonggon.latent.ui.location.LocationScreen
 import com.byeonggon.latent.ui.sync.SyncScreen
 import com.byeonggon.latent.ui.viewer.ViewerScreen
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
 
-private enum class Tab(val label: String) {
-    LIBRARY("보관함"),
-    SYNC("카메라"),
-    LOCATION("위치"),
+private enum class Tab(@StringRes val label: Int) {
+    LIBRARY(R.string.tab_library),
+    SYNC(R.string.tab_camera),
+    LOCATION(R.string.tab_location),
 }
 
 @Composable
@@ -91,7 +93,7 @@ fun AppRoot(startOnSync: Boolean) {
                             selected = tab == entry,
                             onClick = { tab = entry },
                             icon = { TabIcon(entry) },
-                            label = { Text(entry.label) },
+                            label = { Text(stringResource(entry.label)) },
                         )
                     }
                 }
@@ -108,7 +110,7 @@ fun AppRoot(startOnSync: Boolean) {
                         selected = tab == entry,
                         onClick = { tab = entry },
                         icon = { TabIcon(entry) },
-                        label = { Text(entry.label) },
+                        label = { Text(stringResource(entry.label)) },
                     )
                 }
             }

@@ -102,9 +102,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.ui.common.localFormat
+import androidx.compose.ui.res.pluralStringResource
 
 private val CAPTURE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-private val TITLE_FORMAT = DateTimeFormatter.ofPattern("M월 d일 a h:mm", Locale.KOREAN)
 
 /**
  * Shows one photo of [items], the library as it is listed, and lets the neighbouring ones be swiped to;
@@ -219,7 +221,7 @@ fun ViewerScreen(
                 title = {
                     Column {
                         Text(
-                            item?.let { TITLE_FORMAT.format(Instant.ofEpochMilli(it.capturedAt).atZone(ZoneId.systemDefault())) }.orEmpty(),
+                            item?.let { localFormat("MMMdjmm").format(Instant.ofEpochMilli(it.capturedAt).atZone(ZoneId.systemDefault())) }.orEmpty(),
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                         )
@@ -234,7 +236,7 @@ fun ViewerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = close) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "닫기")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close))
                     }
                 },
                 actions = {
@@ -284,7 +286,7 @@ fun ViewerScreen(
                         }
                         if (shown.kind == MediaKind.VIDEO) {
                             FilledIconButton(onClick = { context.playVideo(shown) }, modifier = Modifier.size(64.dp)) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "재생", modifier = Modifier.size(40.dp))
+                                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play), modifier = Modifier.size(40.dp))
                             }
                         }
                     }
@@ -292,7 +294,7 @@ fun ViewerScreen(
                 if (state.busy) CircularProgressIndicator()
                 if (state.saving) {
                     Text(
-                        "보정 저장 중",
+                        stringResource(R.string.saving_edit),
                         style = MaterialTheme.typography.labelLarge,
                         color = Color.White,
                         modifier = Modifier
@@ -330,17 +332,17 @@ fun ViewerScreen(
     if (confirmingRestore) {
         AlertDialog(
             onDismissRequest = { confirmingRestore = false },
-            title = { Text("원본으로 되돌릴까요?") },
-            text = { Text("이 사진에 저장한 보정 값이 지워집니다.") },
+            title = { Text(stringResource(R.string.restore_original_question)) },
+            text = { Text(stringResource(R.string.restore_original_detail)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         confirmingRestore = false
                         viewModel.restoreOriginal()
                     },
-                ) { Text("되돌리기") }
+                ) { Text(stringResource(R.string.put_back)) }
             },
-            dismissButton = { TextButton(onClick = { confirmingRestore = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { confirmingRestore = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     }
@@ -400,7 +402,7 @@ private fun Strip(state: ViewerUiState, item: MediaItemEntity, onRestore: () -> 
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (state.edited && item.kind != MediaKind.VIDEO) {
-            TextButton(onClick = onRestore, enabled = !state.busy) { Text("원본으로 되돌리기") }
+            TextButton(onClick = onRestore, enabled = !state.busy) { Text(stringResource(R.string.restore_original)) }
         }
     }
 }
@@ -411,7 +413,7 @@ private fun Stars(rating: Int, onRate: (Int) -> Unit, modifier: Modifier = Modif
         for (stars in 1..5) {
             Icon(
                 painterResource(if (stars <= rating) R.drawable.ic_star_filled else R.drawable.ic_star),
-                contentDescription = "별점 $stars",
+                contentDescription = pluralStringResource(R.plurals.stars, stars, stars),
                 tint = if (stars <= rating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .clip(CircleShape)
@@ -449,11 +451,11 @@ private fun Details(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            if (item.geoSource != GeoSource.NONE) TextButton(onClick = { context.showOnMap(item) }) { Text("지도에서 보기") }
+            if (item.geoSource != GeoSource.NONE) TextButton(onClick = { context.showOnMap(item) }) { Text(stringResource(R.string.show_on_map)) }
         }
         Stars(item.rating, onRate, Modifier.offset(x = (-10).dp))
         if (state.edited && item.kind != MediaKind.VIDEO) {
-            OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text("원본으로 되돌리기") }
+            OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text(stringResource(R.string.restore_original)) }
         }
     }
 }
@@ -480,20 +482,20 @@ private fun ActionBar(
     val photo = item.kind != MediaKind.VIDEO
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceAround) {
         if (onRating != null) {
-            ActionButton(if (item.rating > 0) R.drawable.ic_star_filled else R.drawable.ic_star, "별점", enabled, onRating)
+            ActionButton(if (item.rating > 0) R.drawable.ic_star_filled else R.drawable.ic_star, stringResource(R.string.rating), enabled, onRating)
         }
-        if (photo) ActionButton(R.drawable.ic_edit, "편집", enabled, onEdit)
+        if (photo) ActionButton(R.drawable.ic_edit, stringResource(R.string.edit), enabled, onEdit)
         Box {
             var open by remember { mutableStateOf(false) }
-            ActionButton(R.drawable.ic_share, "공유", enabled) { if (item.kind == MediaKind.VIDEO) onShare(RAW_FILE) else open = true }
+            ActionButton(R.drawable.ic_share, stringResource(R.string.share), enabled) { if (item.kind == MediaKind.VIDEO) onShare(RAW_FILE) else open = true }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 val choices = when (item.kind) {
-                    MediaKind.RAW -> listOf("JPEG · 원본 크기" to null, "JPEG · 긴 변 2048px" to 2048, "JPEG · 긴 변 1080px" to 1080, "RAW 파일 그대로" to RAW_FILE)
-                    else -> listOf("원본 그대로" to null, "긴 변 2048px로 줄여서" to 2048, "긴 변 1080px로 줄여서" to 1080)
+                    MediaKind.RAW -> listOf(R.string.share_jpeg_full to null, R.string.share_jpeg_2048 to 2048, R.string.share_jpeg_1080 to 1080, R.string.share_raw_file to RAW_FILE)
+                    else -> listOf(R.string.share_as_is to null, R.string.share_2048 to 2048, R.string.share_1080 to 1080)
                 }
                 for ((label, longSide) in choices) {
                     DropdownMenuItem(
-                        text = { Text(label) },
+                        text = { Text(stringResource(label)) },
                         onClick = {
                             open = false
                             onShare(longSide)
@@ -502,16 +504,16 @@ private fun ActionBar(
                 }
             }
         }
-        ActionButton(R.drawable.ic_delete, "삭제", enabled, onTrash)
+        ActionButton(R.drawable.ic_delete, stringResource(R.string.delete), enabled, onTrash)
         Box {
             var open by remember { mutableStateOf(false) }
-            ActionButton(R.drawable.ic_more_horiz, "더 보기", enabled) { open = true }
+            ActionButton(R.drawable.ic_more_horiz, stringResource(R.string.more), enabled) { open = true }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 val entries = listOfNotNull(
-                    onInfo?.let { Triple("정보", true, it) },
-                    Triple("보정 값 붙여넣기", state.canPaste, onPaste).takeIf { photo },
-                    Triple("JPEG로 저장", true, onExport).takeIf { item.kind == MediaKind.RAW },
-                    Triple("지도에서 보기", true, onShowMap).takeIf { item.geoSource != GeoSource.NONE },
+                    onInfo?.let { Triple(stringResource(R.string.info), true, it) },
+                    Triple(stringResource(R.string.paste_edit), state.canPaste, onPaste).takeIf { photo },
+                    Triple(stringResource(R.string.save_as_jpeg), true, onExport).takeIf { item.kind == MediaKind.RAW },
+                    Triple(stringResource(R.string.show_on_map), true, onShowMap).takeIf { item.geoSource != GeoSource.NONE },
                 )
                 for ((label, available, action) in entries) {
                     DropdownMenuItem(
@@ -546,13 +548,14 @@ private fun ActionButton(@DrawableRes icon: Int, label: String, enabled: Boolean
     }
 }
 
+@Composable
 private fun locationLabel(item: MediaItemEntity): String {
     val latitude = item.latitude
     val longitude = item.longitude
-    if (latitude == null || longitude == null) return "위치 정보 없음"
+    if (latitude == null || longitude == null) return stringResource(R.string.no_location)
     val source = when (item.geoSource) {
-        GeoSource.CAMERA -> "카메라"
-        GeoSource.TRACK -> if (item.kind == MediaKind.VIDEO) "위치 기록 · 앱에만 저장" else "위치 기록"
+        GeoSource.CAMERA -> stringResource(R.string.location_from_camera)
+        GeoSource.TRACK -> stringResource(if (item.kind == MediaKind.VIDEO) R.string.location_from_record_video else R.string.location_from_record)
         GeoSource.NONE -> ""
     }
     return String.format(Locale.US, "%.5f, %.5f (%s)", latitude, longitude, source)

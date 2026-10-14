@@ -17,9 +17,9 @@ object Notifications {
     fun createChannels(context: Context) {
         context.getSystemService(NotificationManager::class.java).createNotificationChannels(
             listOf(
-                NotificationChannel(CHANNEL_LOCATION, "위치 기록", NotificationManager.IMPORTANCE_LOW),
-                NotificationChannel(CHANNEL_SYNC, "카메라 동기화", NotificationManager.IMPORTANCE_LOW),
-                NotificationChannel(CHANNEL_LOCATION_STOPPED, "위치 기록 중단", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_LOCATION, context.getString(R.string.channel_location), NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(CHANNEL_SYNC, context.getString(R.string.channel_sync), NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(CHANNEL_LOCATION_STOPPED, context.getString(R.string.channel_location_stopped), NotificationManager.IMPORTANCE_DEFAULT),
             ),
         )
     }

@@ -1,15 +1,20 @@
 package com.byeonggon.latent.enhance
 
+import androidx.annotation.StringRes
+import com.byeonggon.latent.R
+
 /**
  * A look with a name: tones and colours that can be given to any photo in one tap, and then dosed.
  * Of [look], only what [PhotoEdit.withLookOf] carries over counts.
  */
 data class Filter(
     val id: String,
+    /** The name the user gave a filter of their own; a built-in one is named by [builtInName]. */
     val name: String,
     val look: PhotoEdit,
     /** Whether the filter was saved by the user, and can be deleted again. */
     val custom: Boolean = false,
+    @StringRes val builtInName: Int = 0,
 )
 
 /** The filters the app comes with. */
@@ -28,89 +33,91 @@ object Filters {
     /** Deeper shadows and brighter highlights around an unchanged middle. */
     private val punchy = curve(0f to 0f, 0.25f to 0.2f, 0.75f to 0.81f, 1f to 1f)
 
+    private fun builtIn(id: String, @StringRes name: Int, look: PhotoEdit) = Filter(id, "", look, builtInName = name)
+
     val BUILT_IN: List<Filter> = listOf(
-        Filter("vivid", "선명", PhotoEdit(Adjustments(contrast = 0.15f, vibrance = 0.35f, clarity = 0.15f))),
-        Filter(
-            "warm", "따뜻하게",
+        builtIn("vivid", R.string.look_vivid, PhotoEdit(Adjustments(contrast = 0.15f, vibrance = 0.35f, clarity = 0.15f))),
+        builtIn(
+            "warm", R.string.look_warm,
             PhotoEdit(
                 Adjustments(temperature = 0.22f, tint = 0.04f, vibrance = 0.1f),
                 grading = ColorGrading(highlights = Tint(42f, 0.2f)),
             ),
         ),
-        Filter(
-            "cool", "차갑게",
+        builtIn(
+            "cool", R.string.look_cool,
             PhotoEdit(Adjustments(temperature = -0.22f, contrast = 0.05f), grading = ColorGrading(shadows = Tint(215f, 0.25f))),
         ),
-        Filter(
-            "soft", "부드럽게",
+        builtIn(
+            "soft", R.string.look_soft,
             PhotoEdit(Adjustments(contrast = -0.1f, saturation = -0.08f, clarity = -0.1f), curves = ToneCurves(all = faded)),
         ),
-        Filter(
-            "landscape", "풍경",
+        builtIn(
+            "landscape", R.string.look_landscape,
             PhotoEdit(
                 Adjustments(highlights = -0.3f, shadows = 0.2f, vibrance = 0.3f, clarity = 0.25f, dehaze = 0.15f),
                 mixer = mixer(MixerBand.BLUE to Triple(0f, 0.2f, -0.15f), MixerBand.GREEN to Triple(0f, 0.15f, 0f), MixerBand.AQUA to Triple(0f, 0.1f, -0.1f)),
             ),
         ),
-        Filter(
-            "portrait", "인물",
+        builtIn(
+            "portrait", R.string.look_portrait,
             PhotoEdit(
                 Adjustments(shadows = 0.15f, vibrance = 0.1f, texture = -0.2f, clarity = -0.12f),
                 mixer = mixer(MixerBand.ORANGE to Triple(0f, -0.05f, 0.12f), MixerBand.RED to Triple(0f, -0.05f, 0.05f)),
             ),
         ),
-        Filter(
-            "food", "음식",
+        builtIn(
+            "food", R.string.look_food,
             PhotoEdit(Adjustments(contrast = 0.1f, shadows = 0.15f, temperature = 0.08f, vibrance = 0.3f, clarity = 0.1f)),
         ),
-        Filter(
-            "teal-orange", "틸 & 오렌지",
+        builtIn(
+            "teal-orange", R.string.look_teal_orange,
             PhotoEdit(
                 Adjustments(contrast = 0.1f, vibrance = 0.1f),
                 grading = ColorGrading(shadows = Tint(190f, 0.5f), highlights = Tint(35f, 0.45f)),
             ),
         ),
-        Filter(
-            "film", "필름",
+        builtIn(
+            "film", R.string.look_film,
             PhotoEdit(
                 Adjustments(saturation = -0.1f, vignette = -0.2f, grain = 0.35f),
                 curves = ToneCurves(all = faded),
                 grading = ColorGrading(shadows = Tint(170f, 0.18f), highlights = Tint(45f, 0.2f)),
             ),
         ),
-        Filter(
-            "vintage", "빈티지",
+        builtIn(
+            "vintage", R.string.look_vintage,
             PhotoEdit(
                 Adjustments(contrast = -0.05f, temperature = 0.18f, saturation = -0.25f, vignette = -0.3f, grain = 0.3f),
                 curves = ToneCurves(all = faded),
                 grading = ColorGrading(shadows = Tint(280f, 0.12f), highlights = Tint(50f, 0.25f)),
             ),
         ),
-        Filter(
-            "dramatic", "드라마틱",
+        builtIn(
+            "dramatic", R.string.look_dramatic,
             PhotoEdit(
                 Adjustments(contrast = 0.3f, highlights = -0.4f, shadows = 0.2f, saturation = -0.1f, clarity = 0.4f, dehaze = 0.2f, vignette = -0.25f),
             ),
         ),
-        Filter(
-            "cinema", "시네마",
+        builtIn(
+            "cinema", R.string.look_cinema,
             PhotoEdit(
                 Adjustments(contrast = 0.1f, saturation = -0.15f, vignette = -0.3f),
                 curves = ToneCurves(all = curve(0f to 0.03f, 0.3f to 0.25f, 0.7f to 0.74f, 1f to 0.93f)),
                 grading = ColorGrading(shadows = Tint(200f, 0.4f), midtones = Tint(30f, 0.1f), highlights = Tint(40f, 0.3f), balance = -0.1f),
             ),
         ),
-        Filter(
-            "hdr", "HDR",
+        builtIn(
+            "hdr", R.string.look_hdr,
             PhotoEdit(Adjustments(highlights = -0.6f, shadows = 0.55f, whites = 0.1f, blacks = -0.1f, vibrance = 0.25f, texture = 0.25f, clarity = 0.5f)),
         ),
-        Filter(
-            "glow", "글로우",
+        builtIn(
+            "glow", R.string.look_glow,
             PhotoEdit(Adjustments(contrast = -0.05f, highlights = -0.1f, vibrance = 0.15f, clarity = -0.2f, glow = 0.5f)),
         ),
-        Filter("mono", "흑백", PhotoEdit(Adjustments(contrast = 0.1f), monochrome = true)),
-        Filter(
-            "mono-contrast", "흑백 고대비",
+        builtIn("mono", R.string.look_mono, PhotoEdit(Adjustments(contrast = 0.1f), monochrome = true)),
+        builtIn(
+            "mono-contrast", R.string.look_mono_contrast,
             PhotoEdit(
                 Adjustments(contrast = 0.35f, blacks = -0.2f, clarity = 0.3f),
                 curves = ToneCurves(all = punchy),
@@ -118,20 +125,20 @@ object Filters {
                 monochrome = true,
             ),
         ),
-        Filter(
-            "mono-film", "흑백 필름",
+        builtIn(
+            "mono-film", R.string.look_mono_film,
             PhotoEdit(Adjustments(vignette = -0.2f, grain = 0.45f), curves = ToneCurves(all = faded), monochrome = true),
         ),
-        Filter(
-            "noir", "누아르",
+        builtIn(
+            "noir", R.string.look_noir,
             PhotoEdit(
                 Adjustments(contrast = 0.45f, blacks = -0.3f, shadows = -0.2f, clarity = 0.2f, vignette = -0.45f, grain = 0.25f),
                 mixer = ColorMixer(luminance = List(MixerBand.entries.size) { if (it == MixerBand.RED.ordinal || it == MixerBand.ORANGE.ordinal) 0.15f else -0.1f }),
                 monochrome = true,
             ),
         ),
-        Filter(
-            "sepia", "세피아",
+        builtIn(
+            "sepia", R.string.look_sepia,
             PhotoEdit(
                 Adjustments(contrast = 0.05f),
                 grading = ColorGrading(shadows = Tint(32f, 0.4f), midtones = Tint(36f, 0.25f), highlights = Tint(45f, 0.25f)),

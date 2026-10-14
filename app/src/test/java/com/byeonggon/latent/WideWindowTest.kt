@@ -35,7 +35,7 @@ import java.io.File
 
 /** The app in a laptop's window: tabs down the side, panels beside the picture, and a keyboard. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1280dp-h800dp-land-mdpi")
+@Config(sdk = [35], qualifiers = "ko-rKR-w1280dp-h800dp-land-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @OptIn(ExperimentalTestApi::class)
 class WideWindowTest {

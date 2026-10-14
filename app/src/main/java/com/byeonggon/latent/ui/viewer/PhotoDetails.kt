@@ -38,7 +38,7 @@ object PhotoDetails {
 
     /** Short exposures as a fraction of a second, the way cameras show them; long ones in seconds. */
     private fun shutter(seconds: Double): String =
-        if (seconds < 0.4) "1/${(1 / seconds).roundToInt()}초" else plain(seconds) + "초"
+        if (seconds < 0.4) "1/${(1 / seconds).roundToInt()} s" else plain(seconds) + " s"
 
     private fun plain(value: Double): String =
         if (value == Math.rint(value)) value.toInt().toString() else String.format(Locale.US, "%.1f", value)

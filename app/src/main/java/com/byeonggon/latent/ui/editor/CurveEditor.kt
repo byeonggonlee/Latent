@@ -36,6 +36,9 @@ import com.byeonggon.latent.enhance.CurvePoint
 import com.byeonggon.latent.enhance.ToneCurve
 import com.byeonggon.latent.enhance.ToneCurves
 import kotlin.math.abs
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** What a finger can do to a tone curve: take hold of a point, move it, put a new one down, or take one off. */
 internal object CurveEditing {
@@ -74,11 +77,11 @@ internal object CurveEditing {
 }
 
 /** Which of the [ToneCurves] is being edited. */
-private enum class CurveChannel(val label: String, val color: Color, val get: (ToneCurves) -> ToneCurve, val set: (ToneCurves, ToneCurve) -> ToneCurves) {
-    ALL("전체", Color.White, { it.all }, { curves, curve -> curves.copy(all = curve) }),
-    RED("빨강", Color(0xFFE05050), { it.red }, { curves, curve -> curves.copy(red = curve) }),
-    GREEN("초록", Color(0xFF50C060), { it.green }, { curves, curve -> curves.copy(green = curve) }),
-    BLUE("파랑", Color(0xFF5080F0), { it.blue }, { curves, curve -> curves.copy(blue = curve) }),
+private enum class CurveChannel(@StringRes val label: Int, val color: Color, val get: (ToneCurves) -> ToneCurve, val set: (ToneCurves, ToneCurve) -> ToneCurves) {
+    ALL(R.string.curve_all, Color.White, { it.all }, { curves, curve -> curves.copy(all = curve) }),
+    RED(R.string.color_red, Color(0xFFE05050), { it.red }, { curves, curve -> curves.copy(red = curve) }),
+    GREEN(R.string.color_green, Color(0xFF50C060), { it.green }, { curves, curve -> curves.copy(green = curve) }),
+    BLUE(R.string.color_blue, Color(0xFF5080F0), { it.blue }, { curves, curve -> curves.copy(blue = curve) }),
 }
 
 /**
@@ -96,7 +99,7 @@ internal fun CurveEditor(curves: ToneCurves, enabled: Boolean, onChange: (ToneCu
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CurveChannel.entries.forEach { entry ->
-                FilterChip(selected = channel == entry, onClick = { channel = entry }, label = { Text(entry.label) })
+                FilterChip(selected = channel == entry, onClick = { channel = entry }, label = { Text(stringResource(entry.label)) })
             }
             TextButton(
                 onClick = {
@@ -104,7 +107,7 @@ internal fun CurveEditor(curves: ToneCurves, enabled: Boolean, onChange: (ToneCu
                     onDone()
                 },
                 enabled = enabled && !curve.isStraight,
-            ) { Text("곡선 초기화") }
+            ) { Text(stringResource(R.string.curve_reset)) }
         }
         CurveCanvas(
             curve = curve,
@@ -118,6 +121,7 @@ internal fun CurveEditor(curves: ToneCurves, enabled: Boolean, onChange: (ToneCu
 
 @Composable
 private fun CurveCanvas(curve: ToneCurve, color: Color, enabled: Boolean, onChange: (ToneCurve) -> Unit, onDone: () -> Unit) {
+    val curveLabel = stringResource(R.string.tone_curve)
     val current by rememberUpdatedState(curve)
     val change by rememberUpdatedState(onChange)
     val done by rememberUpdatedState(onDone)
@@ -129,7 +133,7 @@ private fun CurveCanvas(curve: ToneCurve, color: Color, enabled: Boolean, onChan
             .fillMaxWidth()
             .height(164.dp)
             .padding(horizontal = 24.dp, vertical = 12.dp)
-            .semantics { contentDescription = "톤 곡선" }
+            .semantics { contentDescription = curveLabel }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 awaitEachGesture {

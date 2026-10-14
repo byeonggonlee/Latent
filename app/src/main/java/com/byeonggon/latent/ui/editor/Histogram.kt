@@ -18,10 +18,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.sqrt
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** How the picture's tones are spread from black on the left to white on the right, for each colour. */
 @Composable
 internal fun HistogramView(histogram: Histogram, modifier: Modifier = Modifier, docked: Boolean = false) {
+    val label = stringResource(R.string.histogram)
     Canvas(
         modifier
             .padding(12.dp)
@@ -29,7 +32,7 @@ internal fun HistogramView(histogram: Histogram, modifier: Modifier = Modifier, 
             .then(if (docked) Modifier.fillMaxWidth().height(84.dp) else Modifier.size(width = 96.dp, height = 52.dp))
             .clip(RoundedCornerShape(6.dp))
             .background(Color.Black.copy(alpha = 0.55f))
-            .semantics { contentDescription = "히스토그램" },
+            .semantics { contentDescription = label },
     ) {
         // The tallest bar, leaving out the ends: a blown sky would flatten everything else otherwise.
         val bins = histogram.red.size

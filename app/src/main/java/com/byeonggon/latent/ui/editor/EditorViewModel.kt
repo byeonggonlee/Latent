@@ -42,6 +42,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import androidx.annotation.StringRes
+import com.byeonggon.latent.R
 
 /** What the editor shows of the picture. */
 enum class EditorView {
@@ -152,7 +154,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     if (this@EditorViewModel.source.value !== source) return@collect
                     ui.update {
                         if (rendered == null) {
-                            it.copy(loading = false, message = "미리보기를 그리지 못했습니다.")
+                            it.copy(loading = false, message = text(R.string.preview_failed))
                         } else {
                             it.copy(
                                 preview = rendered.bitmap,
@@ -204,7 +206,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     /** Remembers this photo's tones and colours, to be given to other photos. */
     fun copyEdit() {
         edits.copied.value = ui.value.edit
-        ui.update { it.copy(message = "보정 값을 복사했습니다. 다른 사진에 붙여넣을 수 있습니다.") }
+        ui.update { it.copy(message = text(R.string.edit_copied)) }
     }
 
     /** Takes over the tones and colours copied from another photo; the framing stays this photo's own. */
@@ -283,7 +285,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         val edit = ui.value.edit
         viewModelScope.launch {
             edits.saveFilter(name.trim(), edit)
-            ui.update { it.copy(message = "필터로 저장했습니다.") }
+            ui.update { it.copy(message = text(R.string.filter_saved)) }
         }
     }
 
@@ -424,7 +426,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             null
         }
         if (loaded == null) {
-            ui.update { it.copy(loading = false, message = "사진을 열지 못했습니다.") }
+            ui.update { it.copy(loading = false, message = text(R.string.open_failed)) }
         } else {
             source.value = loaded
         }
@@ -524,6 +526,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             return Histogram(red, green, blue)
         }
     }
+
+    private fun text(@StringRes id: Int): String = getApplication<Application>().getString(id)
 
     companion object {
         /** The key of the picture without any filter among [EditorUiState.filterPreviews]. */

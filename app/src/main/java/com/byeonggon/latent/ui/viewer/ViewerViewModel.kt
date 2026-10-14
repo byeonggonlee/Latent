@@ -29,6 +29,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import androidx.annotation.StringRes
+import com.byeonggon.latent.R
 
 data class ViewerUiState(
     val item: MediaItemEntity? = null,
@@ -119,9 +121,9 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     /** Takes the corrections away again. A JPEG gets back the original that was kept when it was edited. */
     fun restoreOriginal() {
         val item = state.value.item ?: return
-        runTask(failure = "원본으로 되돌리지 못했습니다.") {
+        runTask(failure = R.string.restore_original_failed) {
             edits.remove(item)
-            "원본으로 되돌렸습니다."
+            text(R.string.restored_original)
         }
     }
 
@@ -129,17 +131,17 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     fun pasteEdit() {
         val item = state.value.item?.takeIf { it.kind != MediaKind.VIDEO } ?: return
         val copied = edits.copied.value ?: return
-        runTask(failure = "보정 값을 붙여넣지 못했습니다.") {
+        runTask(failure = R.string.paste_failed) {
             val own = edits.editOf(item) ?: PhotoEdit()
             edits.apply(item, own.withLookOf(copied))
-            "보정 값을 붙여넣었습니다."
+            text(R.string.pasted)
         }
     }
 
     /** Develops the raw file at full resolution, with its corrections, into a new JPEG. */
     fun exportRaw() {
         val item = state.value.item?.takeIf { it.kind == MediaKind.RAW } ?: return
-        runTask(failure = "JPEG로 저장하지 못했습니다.") { "JPEG로 저장했습니다: ${edits.exportRaw(item).name}" }
+        runTask(failure = R.string.save_as_jpeg_failed) { text(R.string.saved_as_jpeg, edits.exportRaw(item).name) }
     }
 
     /**
@@ -158,17 +160,17 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: OutOfMemoryError) {
                 null
             }
-            status.update { it.copy(busy = false, shareFile = file, message = if (file == null) "공유할 사진을 만들지 못했습니다." else null) }
+            status.update { it.copy(busy = false, shareFile = file, message = if (file == null) text(R.string.share_failed) else null) }
         }
     }
 
     /** Puts the photo in the trash, together with [alsoId], the other file of its pair if that goes along. */
     fun moveToTrash(alsoId: Long?) {
         val item = state.value.item ?: return
-        runTask(failure = "휴지통으로 옮기지 못했습니다.") {
+        runTask(failure = R.string.trash_failed) {
             val partner = alsoId?.let { mediaDao.byId(it) }
             container.trash.throwAway(listOfNotNull(item, partner))
-            "휴지통으로 옮겼습니다."
+            text(R.string.trashed)
         }
     }
 
@@ -194,23 +196,25 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
             null
         }
         status.update {
-            it.copy(busy = false, rendered = bitmap, message = if (bitmap == null) "보정한 모습을 그리지 못했습니다." else null)
+            it.copy(busy = false, rendered = bitmap, message = if (bitmap == null) text(R.string.render_failed) else null)
         }
     }
 
     /** Runs a slow file operation and reports its outcome, or [failure], as a message. */
-    private fun runTask(failure: String, task: suspend () -> String) {
+    private fun runTask(@StringRes failure: Int, task: suspend () -> String) {
         if (status.value.busy) return
         viewModelScope.launch {
             status.update { it.copy(busy = true) }
             val message = try {
                 withContext(Dispatchers.Default) { renderLock.withLock { task() } }
             } catch (e: IOException) {
-                failure
+                text(failure)
             } catch (e: OutOfMemoryError) {
-                "$failure 메모리가 부족합니다."
+                text(R.string.failed_memory, text(failure))
             }
             status.update { it.copy(busy = false, message = message) }
         }
     }
+
+    private fun text(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
 }

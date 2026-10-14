@@ -19,7 +19,10 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
+import com.byeonggon.latent.R
+import com.byeonggon.latent.ui.common.localFormat
 
 /** Progress and outcome of a one-off action on the location screen. */
 data class TaskState(val running: Boolean = false, val message: String? = null)
@@ -66,12 +69,12 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             val message = try {
                 describe(container.timelineImporter.import(uri))
             } catch (e: IOException) {
-                "파일을 읽지 못했습니다: ${e.message}"
+                text(R.string.timeline_read_failed, e.message.orEmpty())
             } catch (e: IllegalStateException) {
                 // Thrown by the JSON reader when the file is not shaped like a Timeline export.
-                "타임라인 내보내기 파일 형식이 아닙니다."
+                text(R.string.timeline_wrong_format)
             } catch (e: SecurityException) {
-                "파일에 접근할 수 없습니다."
+                text(R.string.timeline_no_access)
             }
             tasks.update { it.copy(first = TaskState(message = message)) }
         }
@@ -83,7 +86,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             tasks.update { it.copy(second = TaskState(running = true)) }
             val maxGapMs = container.settings.settings.first().geotagMaxGapMinutes * 60_000L
             val tagged = container.geotagger.tagPending(maxGapMs)
-            val message = if (tagged > 0) "${tagged}개 항목에 위치를 삽입했습니다." else "맞는 위치 기록을 찾지 못했습니다."
+            val message = if (tagged > 0) plural(R.plurals.tagged_count, tagged) else text(R.string.tag_none_matched)
             tasks.update { it.copy(second = TaskState(message = message)) }
         }
     }
@@ -92,15 +95,16 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         val from = result.from
         val to = result.to
         if (result.parsed == 0 || from == null || to == null) {
-            return "위치 기록을 찾지 못했습니다. 기기에서 내보낸 Timeline.json인지 확인해주세요."
+            return text(R.string.timeline_empty)
         }
         val zone = ZoneId.systemDefault()
-        val range = DATE_FORMAT.format(Instant.ofEpochMilli(from).atZone(zone)) + " ~ " +
-            DATE_FORMAT.format(Instant.ofEpochMilli(to).atZone(zone))
-        return "위치 ${result.parsed}개 중 ${result.added}개를 새로 추가했습니다. ($range)"
+        val format = localFormat("yMMMd")
+        val range = format.format(Instant.ofEpochMilli(from).atZone(zone)) + " – " + format.format(Instant.ofEpochMilli(to).atZone(zone))
+        return getApplication<Application>().resources.getQuantityString(R.plurals.timeline_added, result.added, result.added, result.parsed, range)
     }
 
-    private companion object {
-        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    }
+    private fun text(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+
+    private fun plural(@PluralsRes id: Int, count: Int): String =
+        getApplication<Application>().resources.getQuantityString(id, count, count)
 }

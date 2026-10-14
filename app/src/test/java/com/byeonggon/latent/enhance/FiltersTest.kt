@@ -22,7 +22,8 @@ class FiltersTest {
     @Test
     fun everyFilterCanBeToldFromTheOthers() {
         assertEquals(Filters.BUILT_IN.size, Filters.BUILT_IN.map { it.id }.toSet().size)
-        assertEquals(Filters.BUILT_IN.size, Filters.BUILT_IN.map { it.name }.toSet().size)
+        assertEquals(Filters.BUILT_IN.size, Filters.BUILT_IN.map { it.builtInName }.toSet().size)
+        assertEquals(Filters.BUILT_IN.size, Filters.BUILT_IN.map { it.id }.toSet().size)
         assertEquals(Filters.BUILT_IN.size, Filters.BUILT_IN.map { it.look }.toSet().size)
         assertTrue(Filters.BUILT_IN.none { it.custom })
     }
@@ -31,19 +32,19 @@ class FiltersTest {
     fun everyFilterChangesThePictureAndNothingButItsLook() {
         val original = picture.render(PhotoEdit())
         for (filter in Filters.BUILT_IN) {
-            assertTrue(filter.name, filter.look.changesColors)
-            assertEquals(filter.name, Framing(), filter.look.framing)
-            assertTrue(filter.name, filter.look.lensCorrection)
-            assertFalse(filter.name, picture.render(filter.look).contentEquals(original))
+            assertTrue(filter.id, filter.look.changesColors)
+            assertEquals(filter.id, Framing(), filter.look.framing)
+            assertTrue(filter.id, filter.look.lensCorrection)
+            assertFalse(filter.id, picture.render(filter.look).contentEquals(original))
         }
     }
 
     @Test
     fun everyFilterSurvivesBeingStoredAndFadesToNothing() {
         for (filter in Filters.BUILT_IN) {
-            assertEquals(filter.name, filter.look, PhotoEdit.fromJson(filter.look.toJson()))
-            assertEquals(filter.name, PhotoEdit(), filter.look.lookAt(0f))
-            assertEquals(filter.name, filter.look, filter.look.lookAt(1f))
+            assertEquals(filter.id, filter.look, PhotoEdit.fromJson(filter.look.toJson()))
+            assertEquals(filter.id, PhotoEdit(), filter.look.lookAt(0f))
+            assertEquals(filter.id, filter.look, filter.look.lookAt(1f))
         }
     }
 }

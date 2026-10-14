@@ -31,6 +31,8 @@ import com.byeonggon.latent.enhance.Framing
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import androidx.compose.ui.res.stringResource
+import com.byeonggon.latent.R
 
 /** Which sides of the kept rectangle a finger has hold of. All four move the rectangle as a whole. */
 internal data class Grip(val left: Boolean, val top: Boolean, val right: Boolean, val bottom: Boolean) {
@@ -164,6 +166,7 @@ internal fun CropFrame(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val areaLabel = stringResource(R.string.crop_area)
     val current by rememberUpdatedState(framing)
     val keep by rememberUpdatedState(keepShape)
     val change by rememberUpdatedState(onChange)
@@ -174,7 +177,7 @@ internal fun CropFrame(
     Canvas(
         modifier
             .fillMaxSize()
-            .semantics { contentDescription = "자를 영역" }
+            .semantics { contentDescription = areaLabel }
             .pointerInput(picture.width, picture.height) {
                 fun layout() = CropLayout(
                     Size(size.width.toFloat(), size.height.toFloat()),
