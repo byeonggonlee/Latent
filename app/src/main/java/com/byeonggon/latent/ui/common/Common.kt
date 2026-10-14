@@ -107,10 +107,11 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.storage_needed), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.storage_intro), style = MaterialTheme.typography.bodyMedium)
             if (!canRead) {
                 Text(
                     stringResource(R.string.storage_step_media),

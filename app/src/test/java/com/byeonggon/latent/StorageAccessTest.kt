@@ -49,7 +49,7 @@ class StorageAccessTest {
     @Test
     fun asksForMediaThenForTheFolder() {
         waitFor("사진·동영상 접근 허용")
-        compose.onNodeWithText("저장소 접근이 필요합니다").assertIsDisplayed()
+        compose.onNodeWithText("사진 보관함 설정").assertIsDisplayed()
 
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(*LibraryStorage.MEDIA_PERMISSIONS)
         // Coming back from the permission dialog.

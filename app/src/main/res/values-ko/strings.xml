@@ -361,7 +361,8 @@
     <plurals name="stored_points">
         <item quantity="other">저장된 위치 %d개</item>
     </plurals>
-    <string name="storage_needed">저장소 접근이 필요합니다</string>
+    <string name="storage_needed">사진 보관함 설정</string>
+    <string name="storage_intro">사진은 갤러리와 백업 앱에서도 보이는 DCIM/Latent 폴더에 보관됩니다. 사진을 다루려면 두 가지 권한이 필요합니다.</string>
     <string name="storage_step_media">1단계 · 사진과 동영상, 그 위치 정보를 읽을 수 있게 \'모두 허용\'을 선택해주세요.</string>
     <string name="storage_refused">허용되지 않았습니다. 앱 설정의 권한에서 허용해주세요.</string>
     <string name="open_app_settings">앱 설정 열기</string>
