@@ -23,7 +23,7 @@ work; raw development currently reads Sony ARW only.
 ## Privacy
 
 Everything stays on the phone. The app has no network access, no account and no analytics. Photos
-live as ordinary files in `DCIM/Latent`, where gallery and backup apps can see them.
+live as ordinary files in `DCIM/Latent`, where gallery and backup apps can see them. See the [privacy policy](PRIVACY.md).
 
 ## Building
 
