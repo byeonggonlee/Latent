@@ -1,17 +1,9 @@
 package com.byeonggon.latent.enhance
 
-import android.opengl.EGL14
-import android.opengl.EGLConfig
-import android.opengl.EGLContext
-import android.opengl.EGLDisplay
-import android.opengl.EGLSurface
 import android.opengl.GLES31
 import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import kotlin.math.min
 
 /**
@@ -19,16 +11,10 @@ import kotlin.math.min
  * same order, on bands of rows. The phone's processor takes seconds over a full-size picture; the
  * graphics processor a fraction of that.
  *
- * Graphics contexts belong to the thread that made them, so all of this runs on one thread of its
- * own. Where the device has no OpenGL ES 3.1, or anything goes wrong, [instance] is null or [apply]
- * returns false, and the processor does the work instead.
+ * It runs on the [Graphics] thread. Where the device has no OpenGL ES 3.1, or anything goes wrong,
+ * [instance] is null or [apply] returns false, and the processor does the work instead.
  */
 internal class GpuDetail private constructor() {
-    private lateinit var display: EGLDisplay
-    private lateinit var context: EGLContext
-    private lateinit var surface: EGLSurface
-    private var maxWidth = 0
-    private val programs = HashMap<String, Int>()
 
     /**
      * Applies [filter] to [pixels] and hands the result to [write] band by band, as
@@ -43,9 +29,9 @@ internal class GpuDetail private constructor() {
         afterBand: (band: IntArray, top: Int, rows: Int) -> Unit,
         write: (top: Int, rows: Int, band: IntArray) -> Unit,
     ): Boolean {
-        if (width > maxWidth) return false
+        if (width > Graphics.maxSize) return false
         return try {
-            thread.submit(Callable { run(filter, pixels, width, height, afterBand, write) }).get()
+            Graphics.run { run(filter, pixels, width, height, afterBand, write) }
         } catch (e: Exception) {
             Log.w(TAG, "Detail on the graphics processor failed; the processor does it", e)
             false
@@ -196,7 +182,7 @@ internal class GpuDetail private constructor() {
         images: List<Pair<Int, Int>>,
         setUp: () -> Unit = {},
     ) {
-        current = programs.getValue(name)
+        current = Graphics.program(name, DetailShaders.HEADER + DetailShaders.ALL.getValue(name))
         GLES31.glUseProgram(current)
         images.forEachIndexed { unit, (image, access) ->
             GLES31.glBindImageTexture(unit, image, 0, false, 0, access, GLES31.GL_RGBA32F)
@@ -228,70 +214,15 @@ internal class GpuDetail private constructor() {
         checkError("making room")
     }
 
-    private fun checkError(what: String) {
-        val error = GLES31.glGetError()
-        if (error != GLES31.GL_NO_ERROR) throw IllegalStateException("$what: GL error 0x${Integer.toHexString(error)}")
-    }
-
-    private fun start() {
-        display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
-        val version = IntArray(2)
-        check(EGL14.eglInitialize(display, version, 0, version, 1)) { "no display" }
-        val configs = arrayOfNulls<EGLConfig>(1)
-        val found = IntArray(1)
-        val wanted = intArrayOf(
-            EGL14.EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
-            EGL14.EGL_SURFACE_TYPE, EGL14.EGL_PBUFFER_BIT,
-            EGL14.EGL_NONE,
-        )
-        check(EGL14.eglChooseConfig(display, wanted, 0, configs, 0, 1, found, 0) && found[0] > 0) { "no configuration" }
-        context = EGL14.eglCreateContext(display, configs[0], EGL14.EGL_NO_CONTEXT, intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 3, EGL14.EGL_NONE), 0)
-        check(context != EGL14.EGL_NO_CONTEXT) { "no context" }
-        surface = EGL14.eglCreatePbufferSurface(display, configs[0], intArrayOf(EGL14.EGL_WIDTH, 1, EGL14.EGL_HEIGHT, 1, EGL14.EGL_NONE), 0)
-        check(EGL14.eglMakeCurrent(display, surface, surface, context)) { "cannot make the context current" }
-        val glVersion = GLES31.glGetString(GLES31.GL_VERSION).orEmpty()
-        check(Regex("""OpenGL ES 3\.[1-9]""").containsMatchIn(glVersion)) { "needs OpenGL ES 3.1, has $glVersion" }
-        val size = IntArray(1)
-        GLES31.glGetIntegerv(GLES31.GL_MAX_TEXTURE_SIZE, size, 0)
-        maxWidth = size[0]
-        for ((name, body) in DetailShaders.ALL) programs[name] = compile(name, body)
-    }
-
-    private fun compile(name: String, body: String): Int {
-        val shader = GLES31.glCreateShader(GLES31.GL_COMPUTE_SHADER)
-        GLES31.glShaderSource(shader, DetailShaders.HEADER + body)
-        GLES31.glCompileShader(shader)
-        val compiled = IntArray(1)
-        GLES31.glGetShaderiv(shader, GLES31.GL_COMPILE_STATUS, compiled, 0)
-        check(compiled[0] != 0) { "shader $name: ${GLES31.glGetShaderInfoLog(shader)}" }
-        val program = GLES31.glCreateProgram()
-        GLES31.glAttachShader(program, shader)
-        GLES31.glLinkProgram(program)
-        val linked = IntArray(1)
-        GLES31.glGetProgramiv(program, GLES31.GL_LINK_STATUS, linked, 0)
-        check(linked[0] != 0) { "program $name: ${GLES31.glGetProgramInfoLog(program)}" }
-        GLES31.glDeleteShader(shader)
-        return program
-    }
+    private fun checkError(what: String) = Graphics.check(what)
 
     companion object {
         private const val TAG = "GpuDetail"
-        private const val EGL_OPENGL_ES3_BIT = 0x40
         private const val IMAGES = 5
         private const val BAND_ROWS = 256
         private const val GROUP = 16
 
-        private val thread: ExecutorService = Executors.newSingleThreadExecutor { work -> Thread(work, "gpu-detail").apply { isDaemon = true } }
-
-        private val made: GpuDetail? by lazy {
-            try {
-                thread.submit(Callable { GpuDetail().also { it.start() } }).get()
-            } catch (e: Throwable) {
-                // No graphics processor to use: a device without OpenGL ES 3.1, or the JVM the tests run on.
-                Log.i(TAG, "Detail stays on the processor: ${e.message}")
-                null
-            }
-        }
+        private val made: GpuDetail? by lazy { if (Graphics.available) GpuDetail() else null }
 
         /** The graphics processor's way of working out detail, or null where there is none to use. */
         fun instance(): GpuDetail? = made

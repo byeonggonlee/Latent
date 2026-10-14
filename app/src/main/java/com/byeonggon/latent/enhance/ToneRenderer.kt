@@ -21,17 +21,17 @@ import kotlin.math.roundToInt
  * reads its tones, and areas are told apart by how bright their surroundings are in it. The picture
  * that is rendered has to be framed the way the edit says, as that is how masks find their place.
  */
-class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
-    private val adjustments = edit.adjustments
-    private val overviewWidth = overview.width
-    private val everywhere: Stage
-    private val locals: List<Stage>
-    private val masks = edit.locals.map { it.mask }
-    private val localEdits = edit.locals
-    private val monochrome = edit.monochrome
-    private val mixer = if (edit.mixer != ColorMixer()) MixerTable(edit.mixer) else null
-    private val grading = if (edit.grading.copy(balance = 0f) != ColorGrading()) GradingTable(edit.grading) else null
-    private val vignette = if (adjustments.vignette != 0f) Vignette(adjustments.vignette) else null
+class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
+    internal val adjustments = edit.adjustments
+    internal val overviewWidth = overview.width
+    internal val everywhere: Stage
+    internal val locals: List<Stage>
+    internal val masks = edit.locals.map { it.mask }
+    internal val localEdits = edit.locals
+    internal val monochrome = edit.monochrome
+    internal val mixer = if (edit.mixer != ColorMixer()) MixerTable(edit.mixer) else null
+    internal val grading = if (edit.grading.copy(balance = 0f) != ColorGrading()) GradingTable(edit.grading) else null
+    internal val vignette = if (adjustments.vignette != 0f) Vignette(adjustments.vignette) else null
 
     init {
         val auto = if (edit.autoEnhance) autoLevelsOf(overview) else null
@@ -70,6 +70,11 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
         left: Int = 0,
         frameWidth: Int = source.width,
     ) {
+        if (useGraphicsProcessor && source.width * source.height >= SMALLEST_FOR_GRAPHICS_PROCESSOR &&
+            GpuTone.render(this, source, output, top, frameHeight, left, frameWidth)
+        ) {
+            return
+        }
         val width = source.width
         // Everything the loop reads, held in locals: it runs for every pixel of the picture.
         val sourceRed = source.red
@@ -189,30 +194,30 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
      * What one set of settings makes of a pixel's light, as far as a part of the picture can have
      * settings of its own: tones, haze, the brightness of areas, and vividness.
      */
-    private class Stage(
+    internal class Stage(
         private val adjustments: Adjustments,
         curves: ToneCurves,
         auto: AutoLevels?,
         overview: LinearImage,
         monochrome: Boolean,
     ) {
-        private val red: FloatArray
-        private val green: FloatArray
-        private val blue: FloatArray
-        private val saturation = (1f + adjustments.saturation) * (auto?.saturation ?: 1f)
-        private val vibrance = adjustments.vibrance
+        internal val red: FloatArray
+        internal val green: FloatArray
+        internal val blue: FloatArray
+        internal val saturation = (1f + adjustments.saturation) * (auto?.saturation ?: 1f)
+        internal val vibrance = adjustments.vibrance
 
         // A picture without colours has none to make more vivid.
-        private val colorful = !monochrome && (saturation != 1f || vibrance != 0f)
+        internal val colorful = !monochrome && (saturation != 1f || vibrance != 0f)
 
         // Softening stops short of evening fine contrast out altogether; beyond that it would turn it over.
-        private val clarity = adjustments.clarity * (if (adjustments.clarity > 0f) CLARITY_AT_FULL else SOFTENING_AT_FULL)
-        private val haze: Haze?
-        private val clearness: GuidedMap?
-        private val evenHaze: Float
-        private val tones: ShadowsAndHighlights?
-        private val surroundings: GuidedMap?
-        private val nearSurroundings: GuidedMap?
+        internal val clarity = adjustments.clarity * (if (adjustments.clarity > 0f) CLARITY_AT_FULL else SOFTENING_AT_FULL)
+        internal val haze: Haze?
+        internal val clearness: GuidedMap?
+        internal val evenHaze: Float
+        internal val tones: ShadowsAndHighlights?
+        internal val surroundings: GuidedMap?
+        internal val nearSurroundings: GuidedMap?
 
         /** Whether [fill] has anything to do. */
         val usesSurroundings: Boolean
@@ -391,6 +396,16 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
     companion object {
         /** Long side of the small copy a picture's tones are judged by. */
         const val OVERVIEW_EDGE = 320
+
+        /**
+         * Whether tones may be rendered on the graphics processor where there is one. Off, the
+         * processor does it: for comparing the two.
+         */
+        @Volatile
+        internal var useGraphicsProcessor = true
+
+        /** Below this many pixels, handing a picture to the graphics processor and back costs more than it saves. */
+        private const val SMALLEST_FOR_GRAPHICS_PROCESSOR = 250_000
 
         /** Auto enhance's judgement of the pictures in use, by the picture itself rather than its pixels. */
         private val autoLevels = WeakHashMap<LinearImage, AutoLevels>()

@@ -132,11 +132,11 @@ data class Framing(
  * the picture's pixels, measured from the centre.
  */
 internal class FramedView(framing: Framing, turnedWidth: Float, turnedHeight: Float) {
-    private val cos = cos(Math.toRadians(framing.angle.toDouble())).toFloat()
-    private val sin = sin(Math.toRadians(framing.angle.toDouble())).toFloat()
-    private val tiltAcross = TILT_AT_FULL * framing.horizontal / (turnedWidth / 2)
-    private val tiltDown = TILT_AT_FULL * framing.vertical / (turnedHeight / 2)
-    private val mirror = if (framing.flipped) -1f else 1f
+    internal val cos = cos(Math.toRadians(framing.angle.toDouble())).toFloat()
+    internal val sin = sin(Math.toRadians(framing.angle.toDouble())).toFloat()
+    internal val tiltAcross = TILT_AT_FULL * framing.horizontal / (turnedWidth / 2)
+    internal val tiltDown = TILT_AT_FULL * framing.vertical / (turnedHeight / 2)
+    internal val mirror = if (framing.flipped) -1f else 1f
 
     /**
      * How large the picture comes out at a place in the view relative to its centre. Tilting makes

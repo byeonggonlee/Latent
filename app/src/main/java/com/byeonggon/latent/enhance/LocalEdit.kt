@@ -119,11 +119,11 @@ data class LocalEdit(
  * How a framed picture, [frameWidth] by [frameHeight] pixels, lies in the whole upright picture it was
  * cut from: for any of its pixels, where that is in the whole picture, as fractions of its width and height.
  */
-internal class Placement(private val framing: Framing, frameWidth: Int, frameHeight: Int) {
-    private val turns = framing.quarterTurns.mod(4)
-    private val turnedWidth = frameWidth / framing.width
-    private val turnedHeight = frameHeight / framing.height
-    private val view = FramedView(framing, turnedWidth, turnedHeight)
+internal class Placement(internal val framing: Framing, frameWidth: Int, frameHeight: Int) {
+    internal val turns = framing.quarterTurns.mod(4)
+    internal val turnedWidth = frameWidth / framing.width
+    internal val turnedHeight = frameHeight / framing.height
+    internal val view = FramedView(framing, turnedWidth, turnedHeight)
 
     /** The size of the whole picture, in the framed picture's pixels. */
     val wholeWidth: Float = if (turns % 2 == 1) turnedHeight else turnedWidth

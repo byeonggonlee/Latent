@@ -15,9 +15,9 @@ internal const val LUMA_BLUE = 0.0722f
  */
 internal class MixerTable(mixer: ColorMixer) {
     /** How far the hue moves, in sixths of the colour wheel. */
-    private val hueShift = FloatArray(STEPS + 1)
-    private val saturation = FloatArray(STEPS + 1)
-    private val luminance = FloatArray(STEPS + 1)
+    internal val hueShift = FloatArray(STEPS + 1)
+    internal val saturation = FloatArray(STEPS + 1)
+    internal val luminance = FloatArray(STEPS + 1)
 
     init {
         val bands = MixerBand.entries
@@ -164,7 +164,7 @@ internal class GradingTable(grading: ColorGrading) {
  * middles of the sides are at a distance of one. Looked up by the distance squared.
  */
 internal class Vignette(amount: Float) {
-    private val factor = FloatArray(STEPS + 1) { step ->
+    internal val factor = FloatArray(STEPS + 1) { step ->
         val distance = kotlin.math.sqrt(step * MAX_SQUARED_DISTANCE / STEPS)
         val reached = ((distance - ONSET) / (FULL - ONSET)).coerceIn(0f, 1f)
         val falloff = reached * reached * (3f - 2f * reached)
@@ -189,10 +189,10 @@ internal class Vignette(amount: Float) {
  * the whole picture, so a small preview shows the same grain as the full picture seen from afar.
  */
 internal class Grain(private val amount: Float, frameWidth: Int, frameHeight: Int) {
-    private val pixelsPerFleck = max(frameWidth, frameHeight) / FLECKS_ALONG_THE_LONG_SIDE
+    internal val pixelsPerFleck = max(frameWidth, frameHeight) / FLECKS_ALONG_THE_LONG_SIDE
 
     // A pixel that covers several flecks shows their average, which is fainter than a single fleck.
-    private val strength = amount * STRENGTH * min(1f, pixelsPerFleck)
+    internal val strength = amount * STRENGTH * min(1f, pixelsPerFleck)
 
     /** How much lighter or darker the pixel at ([x], [y]) of the whole picture becomes, given its brightness. */
     fun at(x: Int, y: Int, luma: Float): Float {

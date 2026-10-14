@@ -14,10 +14,10 @@ import kotlin.math.min
  * This is a guided filter, with the picture's brightness as the guide.
  */
 internal class GuidedMap private constructor(
-    private val width: Int,
-    private val height: Int,
-    private val slope: FloatArray,
-    private val offset: FloatArray,
+    internal val width: Int,
+    internal val height: Int,
+    internal val slope: FloatArray,
+    internal val offset: FloatArray,
 ) {
     /** Where each column of a full-size picture falls between the columns of the small copy. */
     class Columns(val left: IntArray, val right: IntArray, val weight: FloatArray)

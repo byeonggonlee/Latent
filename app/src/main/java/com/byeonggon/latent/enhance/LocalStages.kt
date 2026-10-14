@@ -11,13 +11,13 @@ import kotlin.math.pow
  */
 internal class ShadowsAndHighlights(shadows: Float, highlights: Float) {
     /** The factor for surroundings of every brightness, from black (first) to white (last). */
-    private val gain = FloatArray(STEPS + 1) { step ->
+    internal val gain = FloatArray(STEPS + 1) { step ->
         val level = step / STEPS.toFloat()
         if (step == 0) SHADOW_GAIN.pow(shadows) else adjusted(level, shadows, highlights) / level
     }
 
     /** How much of the factor applies to a pixel of every brightness: all of it, except close to white. */
-    private val share = FloatArray(STEPS + 1) { step ->
+    internal val share = FloatArray(STEPS + 1) { step ->
         val nearWhite = ((step / STEPS.toFloat() - WHITE_ONSET) / (1f - WHITE_ONSET)).coerceAtLeast(0f)
         1f - nearWhite * nearWhite
     }
@@ -79,7 +79,7 @@ internal class Haze(
     val clearness: GuidedMap?
 
     /** For every clearness, how far a colour has to be moved away from the veil's colour, as a multiple of their distance. */
-    private val stretch = FloatArray(STEPS + 1) { step ->
+    internal val stretch = FloatArray(STEPS + 1) { step ->
         val clear = max(step / STEPS.toFloat(), LEAST_CLEARNESS)
         if (amount >= 0f) 1f / (1f - amount * (1f - clear)) - 1f else 1f / (1f - amount * ADDED_HAZE) - 1f
     }
