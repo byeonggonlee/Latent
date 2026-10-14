@@ -43,6 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,12 +78,13 @@ private enum class EditorTab(val label: String, val controls: List<Control> = em
     COLOR("색상", listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
     EFFECTS("효과", listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN)),
     LOCAL("부분"),
+    SPOTS("잡티"),
     DETAIL("세부", listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
 
     /** What of the picture has to be on screen while this tab is open. */
     val view: EditorView
         get() = when (this) {
-            FRAMING, LOCAL -> EditorView.WHOLE
+            FRAMING, LOCAL, SPOTS -> EditorView.WHOLE
             DETAIL -> EditorView.DETAIL
             else -> EditorView.PICTURE
         }
@@ -135,6 +137,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     var tab by rememberSaveable { mutableStateOf(EditorTab.LIGHT) }
     var shape by rememberSaveable { mutableStateOf(CropShape.FREE) }
     var selectedLocal by rememberSaveable { mutableIntStateOf(0) }
+    var selectedSpot by rememberSaveable { mutableIntStateOf(-1) }
+    var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
     LaunchedEffect(tab) { viewModel.show(tab.view) }
 
     /** Changes the mask of the part that is selected, as dragging it on the picture does. */
@@ -181,6 +185,10 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 onShape = { shape = it },
                 selectedLocal = selectedLocal,
                 onSelectLocal = { selectedLocal = it },
+                selectedSpot = selectedSpot,
+                onSelectSpot = { selectedSpot = it },
+                spotRadius = spotRadius,
+                onSpotRadius = { spotRadius = it },
                 viewModel = viewModel,
             )
         },
@@ -204,6 +212,17 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         selected = selectedLocal,
                         onSelect = { selectedLocal = it },
                         onChange = ::setMask,
+                        onDone = viewModel::commit,
+                    )
+                    tab == EditorTab.SPOTS && state.previewView == EditorView.WHOLE -> SpotFrame(
+                        picture = preview.asImageBitmap(),
+                        spots = state.edit.spots,
+                        selected = selectedSpot,
+                        onSelect = { selectedSpot = it },
+                        onAdd = { x, y -> viewModel.addSpot(x, y, spotRadius) { selectedSpot = it } },
+                        onMoveSource = { spot ->
+                            viewModel.setSpots(state.edit.spots.toMutableList().apply { this[selectedSpot] = spot })
+                        },
                         onDone = viewModel::commit,
                     )
                     tab == EditorTab.DETAIL && state.previewView == EditorView.DETAIL ->
@@ -333,6 +352,10 @@ private fun EditorPanel(
     onShape: (CropShape) -> Unit,
     selectedLocal: Int,
     onSelectLocal: (Int) -> Unit,
+    selectedSpot: Int,
+    onSelectSpot: (Int) -> Unit,
+    spotRadius: Float,
+    onSpotRadius: (Float) -> Unit,
     viewModel: EditorViewModel,
 ) {
     var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
@@ -410,6 +433,16 @@ private fun EditorPanel(
                         onSelect = onSelectLocal,
                         onChange = viewModel::setLocals,
                         onDone = viewModel::commit,
+                    )
+                    EditorTab.SPOTS -> SpotPanel(
+                        spots = edit.spots,
+                        selected = selectedSpot,
+                        radius = spotRadius,
+                        enabled = enabled,
+                        onRadius = onSpotRadius,
+                        onChange = viewModel::setSpots,
+                        onDone = viewModel::commit,
+                        onSelect = onSelectSpot,
                     )
                     EditorTab.DETAIL -> {
                         Sliders(tab.controls, edit.adjustments, enabled, viewModel)

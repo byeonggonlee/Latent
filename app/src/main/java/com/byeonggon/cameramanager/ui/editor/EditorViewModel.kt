@@ -13,11 +13,13 @@ import com.byeonggon.cameramanager.enhance.ColorMixer
 import com.byeonggon.cameramanager.enhance.DetailFilter
 import com.byeonggon.cameramanager.enhance.Filter
 import com.byeonggon.cameramanager.enhance.Framing
+import com.byeonggon.cameramanager.enhance.Healing
 import com.byeonggon.cameramanager.enhance.LinearImage
 import com.byeonggon.cameramanager.enhance.LocalEdit
 import com.byeonggon.cameramanager.enhance.PhotoEdit
 import com.byeonggon.cameramanager.enhance.PhotoEnhancer
 import com.byeonggon.cameramanager.enhance.PictureRegion
+import com.byeonggon.cameramanager.enhance.Spot
 import com.byeonggon.cameramanager.enhance.ToneCurves
 import com.byeonggon.cameramanager.enhance.ToneRenderer
 import com.byeonggon.cameramanager.enhance.bitmapOf
@@ -214,6 +216,22 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setLocals(locals: List<LocalEdit>) = change { it.copy(locals = locals) }
 
+    fun setSpots(spots: List<Spot>) = change { it.copy(spots = spots) }
+
+    /**
+     * Takes out a blemish at ([x], [y]) of the whole picture, [radius] across, patched from wherever
+     * nearby looks most like what surrounds it. [onAdded] is told the new spot's place among the others.
+     */
+    fun addSpot(x: Float, y: Float, radius: Float, onAdded: (Int) -> Unit) {
+        val image = source.value?.image ?: return
+        viewModelScope.launch {
+            val (fromX, fromY) = withContext(Dispatchers.Default) { Healing.sourceFor(image, x, y, radius) }
+            val spots = ui.value.edit.spots
+            changeOnce { it.copy(spots = spots + Spot(x, y, radius, fromX, fromY)) }
+            onAdded(spots.size)
+        }
+    }
+
     fun setMonochrome(enabled: Boolean) = changeOnce { it.copy(monochrome = enabled) }
 
     fun setAutoEnhance(enabled: Boolean) = changeOnce { it.copy(autoEnhance = enabled) }
@@ -403,7 +421,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         private val scale: Float,
         private val region: (centreX: Float, centreY: Float) -> PictureRegion,
     ) {
-        private val wholeOverview = image.downscaled(ToneRenderer.OVERVIEW_EDGE)
+        private var spots = emptyList<Spot>()
+        private var healed = image
+        private var wholeOverview = image.downscaled(ToneRenderer.OVERVIEW_EDGE)
         private var framing = Framing()
         private var framed = image
         private var overview = wholeOverview
@@ -425,9 +445,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
         fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>): Rendered {
             if (view == EditorView.DETAIL) return renderDetail(edit, centre)
+            if (edit.spots != spots) {
+                spots = edit.spots
+                healed = if (spots.isEmpty()) image else image.copy().also { Healing.heal(it, spots) }
+                wholeOverview = healed.downscaled(ToneRenderer.OVERVIEW_EDGE)
+                // Framed anew below.
+                framing = Framing(left = -1f)
+            }
             if (edit.framing != framing) {
                 framing = edit.framing
-                framed = image.framed(framing)
+                framed = healed.framed(framing)
                 overview = if (framing == Framing()) wholeOverview else framed.downscaled(ToneRenderer.OVERVIEW_EDGE)
             }
             val pixels = ToneRenderer(edit, overview).render(framed)

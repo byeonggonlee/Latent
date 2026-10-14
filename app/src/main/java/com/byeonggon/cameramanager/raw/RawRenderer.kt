@@ -3,6 +3,7 @@ package com.byeonggon.cameramanager.raw
 import android.graphics.Bitmap
 import android.util.Log
 import com.byeonggon.cameramanager.enhance.Framing
+import com.byeonggon.cameramanager.enhance.Healing
 import com.byeonggon.cameramanager.enhance.LinearImage
 import com.byeonggon.cameramanager.enhance.PhotoEdit
 import com.byeonggon.cameramanager.enhance.PhotoEnhancer
@@ -47,7 +48,9 @@ object RawRenderer {
 
     /** A half-resolution rendering for the screen. */
     fun preview(image: ArwImage, edit: PhotoEdit): Bitmap = timed("render") {
-        renderedBitmap(edit, scale = 0.5f) { proxy(image, cells = 1, edit.lensCorrection).framed(edit.framing) }
+        renderedBitmap(edit, scale = 0.5f) {
+            proxy(image, cells = 1, edit.lensCorrection).also { Healing.heal(it, edit.spots) }.framed(edit.framing)
+        }
     }
 
     /** Develops [source] at full resolution into a JPEG at [target], carrying over its camera settings. */
@@ -80,6 +83,7 @@ object RawRenderer {
      */
     private fun developFull(source: File, edit: PhotoEdit): LinearImage {
         val (linear, uprightTurns) = developStraight(source, edit.lensCorrection)
+        Healing.heal(linear, edit.spots, uprightTurns)
         return if (bakesOrientation(edit)) linear.framed(edit.framing, uprightTurns) else linear
     }
 

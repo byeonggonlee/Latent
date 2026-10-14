@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -505,5 +506,29 @@ class EditorFlowTest {
         assertEquals(MediaKind.PHOTO, developed.kind)
         assertNull(developed.edit)
         assertTrue(File(developed.path).length() > 0)
+    }
+
+    @Test
+    fun takesOutABlemishWhereThePictureIsTouched() {
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("잡티").performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("잡티 영역").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val canvas = compose.onNodeWithContentDescription("잡티 영역").fetchSemanticsNode().size
+        val margin = with(compose.density) { 20.dp.toPx() }
+        val layout = MaskLayout(Size(canvas.width.toFloat(), canvas.height.toFloat()), margin, 96f, 64f)
+        compose.onNodeWithContentDescription("잡티 영역").performTouchInput { click(layout.onCanvas(0.4f, 0.5f)) }
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("선택한 잡티 되돌리기").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
+        }
+        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val spot = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.spots.single()
+        assertEquals(0.4f, spot.x, 0.02f)
+        assertEquals(0.5f, spot.y, 0.02f)
+        assertTrue(spot.fromX != spot.x || spot.fromY != spot.y)
     }
 }

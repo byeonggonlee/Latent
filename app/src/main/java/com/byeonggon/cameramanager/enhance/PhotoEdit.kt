@@ -120,6 +120,8 @@ data class PhotoEdit(
     val monochrome: Boolean = false,
     /** Settings for parts of the picture only. */
     val locals: List<LocalEdit> = emptyList(),
+    /** Blemishes taken out. */
+    val spots: List<Spot> = emptyList(),
 ) {
     /** Whether the picture's tones and colours come out any different from the original's. */
     val changesColors: Boolean get() = copy(lensCorrection = true, framing = Framing()) != PhotoEdit()
@@ -129,9 +131,10 @@ data class PhotoEdit(
 
     /**
      * This edit with the tones and colours of [other], its look. What belongs to this photo alone stays
-     * its own: framing, lens correction, and the settings for parts of the picture.
+     * its own: framing, lens correction, the settings for parts of the picture and the blemishes taken out.
      */
-    fun withLookOf(other: PhotoEdit): PhotoEdit = other.copy(lensCorrection = lensCorrection, framing = framing, locals = locals)
+    fun withLookOf(other: PhotoEdit): PhotoEdit =
+        other.copy(lensCorrection = lensCorrection, framing = framing, locals = locals, spots = spots)
 
     /**
      * The look of this edit at a strength of [amount]: nothing of it at 0, all of it at 1, and beyond
@@ -195,6 +198,11 @@ data class PhotoEdit(
             }
             add(LOCALS, stored)
         }
+        if (spots.isNotEmpty()) {
+            val stored = JsonArray()
+            for (spot in spots) stored.add(numbers(listOf(spot.x, spot.y, spot.radius, spot.fromX, spot.fromY)))
+            add(SPOTS, stored)
+        }
         if (grading != ColorGrading()) {
             val stored = JsonObject()
             stored.add(SHADOWS, numbers(listOf(grading.shadows.hue, grading.shadows.amount)))
@@ -229,6 +237,7 @@ data class PhotoEdit(
         private const val HIGHLIGHTS = "highlights"
         private const val BALANCE = "balance"
         private const val LOCALS = "locals"
+        private const val SPOTS = "spots"
         private const val SHAPE = "shape"
         private const val MASK = "mask"
         private const val INVERTED = "inverted"
@@ -295,6 +304,10 @@ data class PhotoEdit(
                         ),
                         Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.asFloat ?: 0f) },
                     )
+                } ?: emptyList(),
+                spots = stored.getAsJsonArray(SPOTS)?.map { each ->
+                    val values = each.asJsonArray.map { it.asFloat }
+                    Spot(values[0], values[1], values[2], values[3], values[4])
                 } ?: emptyList(),
             )
         }

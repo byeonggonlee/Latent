@@ -62,7 +62,8 @@ object PhotoEnhancer {
     fun saveEdited(photo: File, backup: File, edit: PhotoEdit) {
         val original = if (backup.exists()) backup else photo
         // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
-        val reframed = edit.framing != Framing() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+        // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
+        val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
         val bitmap = if (reframed) reframed(original, edit) else retoned(original, edit)
         val encoded = ByteArrayOutputStream()
         try {
@@ -132,7 +133,7 @@ object PhotoEnhancer {
         val upright = uprightTurnsOf(original)
         return renderedBitmap(edit, scale = 1f) {
             val bitmap = BitmapFactory.decodeFile(original.path) ?: throw IOException("Cannot decode ${original.name}")
-            linear(bitmap).framed(edit.framing, upright)
+            linear(bitmap).also { Healing.heal(it, edit.spots, upright) }.framed(edit.framing, upright)
         }
     }
 

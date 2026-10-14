@@ -19,6 +19,8 @@ class LinearImage(
     constructor(width: Int, height: Int) :
         this(width, height, ShortArray(width * height), ShortArray(width * height), ShortArray(width * height))
 
+    fun copy() = LinearImage(width, height, red.copyOf(), green.copyOf(), blue.copyOf())
+
     /** A copy no larger than [maxEdge] on its long side, each of its pixels the average of a block of this one's. */
     fun downscaled(maxEdge: Int): LinearImage {
         val block = (max(width, height) + maxEdge - 1) / maxEdge
