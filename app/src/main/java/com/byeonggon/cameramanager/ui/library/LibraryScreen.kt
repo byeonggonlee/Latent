@@ -142,7 +142,7 @@ private fun LibraryContent(
         } else if (state.showingTrash) {
             TrashBar(state, viewModel)
         } else {
-            // Once the large title has scrolled away, a small one stays at the top with the menu, as in One UI.
+            // Once the large title has scrolled away, a small one stays at the top with the menu.
             val titleGone by remember(gridState) { derivedStateOf { gridState.firstVisibleItemIndex > 0 } }
             if (titleGone && state.days.isNotEmpty()) CompactTitle(state, viewModel)
         }
@@ -306,7 +306,7 @@ private fun BatchBar(batch: BatchProgress, onCancel: () -> Unit) {
     }
 }
 
-/** The library's name in large type with what it holds, scrolling away with the photos as in One UI. */
+/** The library's name in large type with what it holds, scrolling away with the photos. */
 @Composable
 private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel) {
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 40.dp)) {
@@ -425,7 +425,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     }
 }
 
-/** A day as One UI names it: "10월 9일 목요일", with the year only when it is not this one. */
+/** A day as phones name it: "10월 9일 목요일", with the year only when it is not this one. */
 private fun dayTitle(date: LocalDate): String =
     date.format(if (date.year == LocalDate.now().year) DAY_FORMAT else DAY_FORMAT_WITH_YEAR)
 

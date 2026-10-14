@@ -6,7 +6,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Lightroom's way of auto: rather than a correction of its own, it sets the sliders, so that what it
+ * Auto that sets the sliders rather than making a correction of its own, so that what it
  * did can be seen and taken further. It judges the picture by [overview], a small copy of it, as the
  * camera renders it, and only moves what needs moving.
  */

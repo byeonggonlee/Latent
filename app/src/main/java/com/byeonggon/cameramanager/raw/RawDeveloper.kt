@@ -2,6 +2,9 @@ package com.byeonggon.cameramanager.raw
 
 import com.byeonggon.cameramanager.enhance.LinearImage
 import com.byeonggon.cameramanager.enhance.forRowBands
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -43,66 +46,156 @@ object RawDeveloper {
 
     /**
      * Develops at full resolution, reconstructing the two colours each photosite did not record with
-     * the Malvar-He-Cutler filters: a neighbourhood average of the wanted colour, sharpened by how
-     * much the photosite's own colour deviates from its surroundings.
+     * patterned pixel grouping (PPG): green first, along whichever of the row or the column changes
+     * least, then red and blue from their differences to green, which vary far less than the colours
+     * themselves. The few pixels along the edges, which lack the neighbours for it, average theirs.
      */
     fun develop(image: ArwImage): LinearImage {
         val width = image.cropWidth
-        val result = LinearImage(width, image.cropHeight)
+        val height = image.cropHeight
+        val result = LinearImage(width, height)
         val color = ColorStage(image, result)
-        val s = image.sensor
-        val w = image.width
-        val red = color.red
-        val green = color.green
-        val blue = color.blue
-        forRowBands(result.height) { from, until ->
+        // Until the colour stage at the end, the planes hold what the photosites recorded, white balanced.
+        val red = result.red
+        val green = result.green
+        val blue = result.blue
+        val sensor = image.sensor
+        forRowBands(height) { from, until ->
             for (y in from until until) {
-                val blueRow = y and 1 == 1
-                var i = (image.cropTop + y) * w + image.cropLeft
+                var at = (image.cropTop + y) * image.width + image.cropLeft
                 for (x in 0 until width) {
-                    val oddColumn = x and 1 == 1
-                    val r: Int
-                    val g: Int
-                    val b: Int
-                    if (blueRow == oddColumn) {
-                        // A red or blue photosite: `own` is its colour, `other` the one on its diagonals.
-                        val own = if (blueRow) blue else red
-                        val other = if (blueRow) red else blue
-                        val center = own[s[i].toInt()]
-                        val farOwn = own[s[i - 2].toInt()] + own[s[i + 2].toInt()] + own[s[i - 2 * w].toInt()] + own[s[i + 2 * w].toInt()]
-                        val nearGreen = green[s[i - 1].toInt()] + green[s[i + 1].toInt()] + green[s[i - w].toInt()] + green[s[i + w].toInt()]
-                        val diagonal = other[s[i - w - 1].toInt()] + other[s[i - w + 1].toInt()] + other[s[i + w - 1].toInt()] + other[s[i + w + 1].toInt()]
-                        g = (4 * center + 2 * nearGreen - farOwn) / 8
-                        val opposite = (12 * center + 4 * diagonal - 3 * farOwn) / 16
-                        r = if (blueRow) opposite else center
-                        b = if (blueRow) center else opposite
-                    } else {
-                        // A green photosite: one colour sits left and right of it, the other above and below.
-                        val center = green[s[i].toInt()]
-                        val diagonalGreen = green[s[i - w - 1].toInt()] + green[s[i - w + 1].toInt()] + green[s[i + w - 1].toInt()] + green[s[i + w + 1].toInt()]
-                        val farHorizontal = green[s[i - 2].toInt()] + green[s[i + 2].toInt()]
-                        val farVertical = green[s[i - 2 * w].toInt()] + green[s[i + 2 * w].toInt()]
-                        val beside = if (blueRow) blue else red
-                        val above = if (blueRow) red else blue
-                        val fromSides = (10 * center + 8 * (beside[s[i - 1].toInt()] + beside[s[i + 1].toInt()]) -
-                            2 * diagonalGreen - 2 * farHorizontal + farVertical) / 16
-                        val fromAbove = (10 * center + 8 * (above[s[i - w].toInt()] + above[s[i + w].toInt()]) -
-                            2 * diagonalGreen - 2 * farVertical + farHorizontal) / 16
-                        g = center
-                        r = if (blueRow) fromAbove else fromSides
-                        b = if (blueRow) fromSides else fromAbove
+                    val value = sensor[at++].toInt()
+                    val index = y * width + x
+                    when (siteOf(x, y)) {
+                        RED -> red[index] = color.red[value].toShort()
+                        BLUE -> blue[index] = color.blue[value].toShort()
+                        else -> green[index] = color.green[value].toShort()
                     }
-                    color.store(y * width + x, r, g, b)
-                    i++
                 }
+            }
+        }
+        val most = color.range
+
+        // Green where red or blue was recorded: the estimate along the smoother direction, kept between its two green neighbours.
+        forInterior(width, height) { x, y, i ->
+            val site = siteOf(x, y)
+            if (site == GREEN) return@forInterior
+            val own = if (site == RED) red else blue
+            val center = own[i].toInt()
+            val down = width
+            val acrossGuess = (green[i - 1] + center + green[i + 1]) * 2 - own[i - 2] - own[i + 2]
+            val acrossDiff = (abs(own[i - 2] - center) + abs(own[i + 2] - center) + abs(green[i - 1] - green[i + 1])) * 3 +
+                (abs(green[i + 3] - green[i + 1]) + abs(green[i - 3] - green[i - 1])) * 2
+            val downGuess = (green[i - down] + center + green[i + down]) * 2 - own[i - 2 * down] - own[i + 2 * down]
+            val downDiff = (abs(own[i - 2 * down] - center) + abs(own[i + 2 * down] - center) + abs(green[i - down] - green[i + down])) * 3 +
+                (abs(green[i + 3 * down] - green[i + down]) + abs(green[i - 3 * down] - green[i - down])) * 2
+            green[i] = if (downDiff < acrossDiff) {
+                between(downGuess shr 2, green[i - down].toInt(), green[i + down].toInt())
+            } else {
+                between(acrossGuess shr 2, green[i - 1].toInt(), green[i + 1].toInt())
+            }.toShort()
+        }
+        fillEdges(width, height, setOf(GREEN), red, green, blue)
+
+        // Red and blue where green was recorded: one colour sits left and right of it, the other above and below.
+        forInterior(width, height) { x, y, i ->
+            if (siteOf(x, y) != GREEN) return@forInterior
+            val beside = if (y and 1 == 0) red else blue
+            val above = if (y and 1 == 0) blue else red
+            val center = 2 * green[i]
+            beside[i] = ((beside[i - 1] + beside[i + 1] + center - green[i - 1] - green[i + 1]) shr 1).coerceIn(0, most).toShort()
+            above[i] = ((above[i - width] + above[i + width] + center - green[i - width] - green[i + width]) shr 1).coerceIn(0, most).toShort()
+        }
+
+        // Blue where red was recorded and red where blue was, along the diagonal that changes least.
+        forInterior(width, height) { x, y, i ->
+            val site = siteOf(x, y)
+            if (site == GREEN) return@forInterior
+            val other = if (site == RED) blue else red
+            val center = 2 * green[i]
+            val falling = width + 1
+            val rising = width - 1
+            val diffFalling = abs(other[i - falling] - other[i + falling]) + abs(green[i - falling] - green[i]) + abs(green[i + falling] - green[i])
+            val diffRising = abs(other[i - rising] - other[i + rising]) + abs(green[i - rising] - green[i]) + abs(green[i + rising] - green[i])
+            val guessFalling = other[i - falling] + other[i + falling] + center - green[i - falling] - green[i + falling]
+            val guessRising = other[i - rising] + other[i + rising] + center - green[i - rising] - green[i + rising]
+            val value = when {
+                diffFalling < diffRising -> guessFalling shr 1
+                diffRising < diffFalling -> guessRising shr 1
+                else -> (guessFalling + guessRising) shr 2
+            }
+            other[i] = value.coerceIn(0, most).toShort()
+        }
+        fillEdges(width, height, setOf(RED, BLUE), red, green, blue)
+
+        forRowBands(height) { from, until ->
+            for (index in from * width until until * width) {
+                color.store(index, red[index].toInt(), green[index].toInt(), blue[index].toInt())
             }
         }
         return result
     }
 
+    /** Which colour the photosite at [x], [y] of the cropped picture recorded: red, green and blue in rows of red-green and green-blue. */
+    private fun siteOf(x: Int, y: Int): Int = when {
+        y and 1 == 0 -> if (x and 1 == 0) RED else GREEN
+        else -> if (x and 1 == 0) GREEN else BLUE
+    }
+
+    /** Visits every pixel at least [EDGE] away from the picture's edges, with its index. */
+    private inline fun forInterior(width: Int, height: Int, crossinline visit: (x: Int, y: Int, index: Int) -> Unit) {
+        forRowBands(height - 2 * EDGE) { from, until ->
+            for (y in from + EDGE until until + EDGE) {
+                for (x in EDGE until width - EDGE) visit(x, y, y * width + x)
+            }
+        }
+    }
+
+    /**
+     * Fills in [colors] for the pixels within [EDGE] of the picture's edges, which did not record
+     * them, with the average of the photosites around that did; the picture is mirrored beyond its edges.
+     */
+    private fun fillEdges(width: Int, height: Int, colors: Set<Int>, red: ShortArray, green: ShortArray, blue: ShortArray) {
+        fun mirrored(value: Int, size: Int) = when {
+            value < 0 -> -value
+            value >= size -> 2 * size - 2 - value
+            else -> value
+        }
+        for (y in 0 until height) {
+            val edgeRow = y < EDGE || y >= height - EDGE
+            for (x in 0 until width) {
+                if (!edgeRow && x >= EDGE && x < width - EDGE) continue
+                val own = siteOf(x, y)
+                for (wanted in colors) {
+                    if (wanted == own) continue
+                    val plane = when (wanted) {
+                        RED -> red
+                        BLUE -> blue
+                        else -> green
+                    }
+                    var sum = 0
+                    var count = 0
+                    for (dy in -1..1) for (dx in -1..1) {
+                        val nx = mirrored(x + dx, width)
+                        val ny = mirrored(y + dy, height)
+                        if (siteOf(nx, ny) == wanted) {
+                            sum += plane[ny * width + nx]
+                            count++
+                        }
+                    }
+                    if (count > 0) plane[y * width + x] = (sum / count).toShort()
+                }
+            }
+        }
+    }
+
+    /** [value] kept between [one] and [other], whichever way round they are. */
+    private fun between(value: Int, one: Int, other: Int): Int = value.coerceIn(min(one, other), max(one, other))
+
     /** White balance, highlight clipping and the camera's colour matrix, in that order. */
     private class ColorStage(image: ArwImage, private val into: LinearImage) {
-        private val range = image.whiteLevel - image.blackLevel
+        /** The most a white-balanced sensor value can be. */
+        val range = image.whiteLevel - image.blackLevel
 
         // Per sensor value: black removed, white balance applied, and cut off where the sensor clips
         // so that blown highlights stay neutral.
@@ -143,6 +236,12 @@ object RawDeveloper {
     /** How vivid the camera's JPEGs are relative to its colour matrix; this leaves the smallest difference from them. */
     private const val CAMERA_SATURATION = 1.45f
     private const val SENSOR_VALUES = 1 shl 15
+    private const val RED = 0
+    private const val GREEN = 1
+    private const val BLUE = 2
+
+    /** How far the reconstruction reaches around a pixel; nearer the edges, pixels average their neighbours. */
+    private const val EDGE = 3
     private const val LUMA_RED = 0.2126f
     private const val LUMA_GREEN = 0.7152f
     private const val LUMA_BLUE = 0.0722f
