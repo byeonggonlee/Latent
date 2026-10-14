@@ -17,23 +17,25 @@ import kotlin.math.roundToInt
  */
 class DetailFilter(adjustments: Adjustments, scale: Float) {
     private val pixelDetail = scale >= SMALLEST_SCALE_FOR_PIXEL_DETAIL
-    private val texture = adjustments.texture * (if (adjustments.texture > 0f) TEXTURE_AT_FULL else SMOOTHING_AT_FULL)
-    private val textureReach = (TEXTURE_REACH * scale).roundToInt()
+    internal val texture = adjustments.texture * (if (adjustments.texture > 0f) TEXTURE_AT_FULL else SMOOTHING_AT_FULL)
+    internal val textureReach = (TEXTURE_REACH * scale).roundToInt()
 
     // A preview at half size has half as many pixels to tell an edge by; what is added to each shrinks along.
-    private val sharpening = if (pixelDetail) adjustments.sharpening * SHARPENING_AT_FULL * min(1f, scale) else 0f
-    private val noiseReduction = if (pixelDetail) adjustments.noiseReduction else 0f
-    private val noiseReach = max(1, (NOISE_REACH * scale).roundToInt())
-    private val colorNoiseReduction = if (pixelDetail) adjustments.colorNoiseReduction else 0f
-    private val colorNoiseReach = max(1, (COLOR_NOISE_REACH * scale).roundToInt())
+    internal val sharpening = if (pixelDetail) adjustments.sharpening * SHARPENING_AT_FULL * min(1f, scale) else 0f
+    internal val noiseReduction = if (pixelDetail) adjustments.noiseReduction else 0f
+    internal val noiseReach = max(1, (NOISE_REACH * scale).roundToInt())
+    internal val colorNoiseReduction = if (pixelDetail) adjustments.colorNoiseReduction else 0f
+    internal val colorNoiseReach = max(1, (COLOR_NOISE_REACH * scale).roundToInt())
 
-    private val texturing = texture != 0f && textureReach >= 1
+    internal val texturing = texture != 0f && textureReach >= 1
     private val glow = adjustments.glow * GLOW_AT_FULL
 
     /** Whether there is anything to do at this scale. */
     val isNeeded: Boolean = texturing || sharpening > 0f || noiseReduction > 0f || colorNoiseReduction > 0f || glow > 0f
 
     /** Rows above and below a band that its result depends on. */
+    internal val reach get() = margin
+
     private val margin = max(if (texturing) 2 * textureReach else 0, max(2 * noiseReach, 2 * colorNoiseReach)) + 2
 
     /** The picture in [pixels] with its detail changed; [pixels] themselves are left as they are. */
@@ -52,6 +54,13 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
     fun apply(pixels: IntArray, width: Int, height: Int, write: (top: Int, rows: Int, band: IntArray) -> Unit) {
         // The glow spreads far, so it is worked out once for the whole picture, at a small size.
         val glowing = if (glow > 0f) Glow(pixels, width, height) else null
+        // Sharpening alone is over on the processor before the picture would be on the graphics processor and back.
+        val worthIt = noiseReduction > 0f || colorNoiseReduction > 0f || texturing
+        if (useGraphicsProcessor && worthIt && width * height >= SMALLEST_FOR_GRAPHICS_PROCESSOR) {
+            val gpu = GpuDetail.instance()
+            val laid: (IntArray, Int, Int) -> Unit = { band, top, rows -> glowing?.lay(band, width, top, rows, glow) }
+            if (gpu != null && gpu.apply(this, pixels, width, height, laid, write)) return
+        }
         // A few threads, each working its way down its own part of the picture: every thread needs room for a band.
         val parts = min(MOST_THREADS, max(1, height / BAND_ROWS))
         val lock = Any()
@@ -237,7 +246,17 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
         }
     }
 
-    private companion object {
+    internal companion object {
+        /**
+         * Whether detail may be worked out on the graphics processor where there is one. Off, the
+         * processor does it: for comparing the two.
+         */
+        @Volatile
+        var useGraphicsProcessor = true
+
+        /** Below this many pixels, handing a picture to the graphics processor and back costs more than it saves. */
+        private const val SMALLEST_FOR_GRAPHICS_PROCESSOR = 250_000
+
         const val OPAQUE = 0xFF shl 24
         const val BAND_ROWS = 96
         const val MOST_THREADS = 4
