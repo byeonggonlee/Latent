@@ -75,7 +75,7 @@ import com.byeonggon.cameramanager.data.db.GeoSource
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.ui.common.StorageAccessCard
-import com.byeonggon.cameramanager.ui.common.rememberMediaModel
+import com.byeonggon.cameramanager.ui.common.rememberThumbnailModel
 import com.byeonggon.cameramanager.ui.common.rememberStorageAccess
 import com.byeonggon.cameramanager.ui.common.rememberWindowLayout
 import java.io.File
@@ -456,7 +456,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
             .then(if (selected) Modifier.border(4.dp, MaterialTheme.colorScheme.primary) else Modifier),
     ) {
         AsyncImage(
-            model = rememberMediaModel(item),
+            model = rememberThumbnailModel(item),
             contentDescription = item.fileName,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -137,6 +138,22 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             container.libraryIndex.forgetMissingFiles()
             trash.emptyExpired()
+            makeThumbnails()
+        }
+    }
+
+    /**
+     * Makes the thumbnails the grid has not had yet, one at a time and out of the way, newest first
+     * as the grid lists them; and drops those of photos that have changed or gone.
+     */
+    private suspend fun makeThumbnails() = withContext(Dispatchers.IO) {
+        if (!container.storage.isAvailable()) return@withContext
+        val thumbnails = container.thumbnails
+        val photos = mediaDao.all().filter { it.kind != MediaKind.VIDEO }.sortedByDescending { it.capturedAt }
+        thumbnails.keepOnly(photos.map { thumbnails.fileFor(it.path, it.sizeBytes) })
+        for (photo in photos) {
+            ensureActive()
+            thumbnails.of(File(photo.path), photo.sizeBytes)
         }
     }
 

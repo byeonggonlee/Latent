@@ -37,6 +37,7 @@ import coil3.request.ImageRequest
 import com.byeonggon.cameramanager.appContainer
 import com.byeonggon.cameramanager.data.LibraryStorage
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
+import com.byeonggon.cameramanager.data.db.MediaKind
 import java.io.File
 
 @Composable
@@ -54,6 +55,21 @@ fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
         ImageRequest.Builder(context)
             .data(File(item.path))
             .memoryCacheKey("${item.path}#${item.sizeBytes}")
+            .build()
+    }
+}
+
+/**
+ * A request for a library file's thumbnail in the grid; one is made and kept the first time. Videos
+ * are left to the image loader, which takes a frame from them.
+ */
+@Composable
+fun rememberThumbnailModel(item: MediaItemEntity): ImageRequest {
+    val context = LocalContext.current
+    return remember(item.path, item.sizeBytes, item.kind) {
+        ImageRequest.Builder(context)
+            .data(if (item.kind == MediaKind.VIDEO) File(item.path) else Thumbnail(item.path, item.sizeBytes))
+            .memoryCacheKey("thumbnail:${item.path}#${item.sizeBytes}")
             .build()
     }
 }

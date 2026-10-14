@@ -11,6 +11,7 @@ import com.byeonggon.cameramanager.camera.SyncEngine
 import com.byeonggon.cameramanager.camera.UsbCameraConnector
 import com.byeonggon.cameramanager.data.EditSaver
 import com.byeonggon.cameramanager.data.LibraryEdits
+import com.byeonggon.cameramanager.data.Thumbnails
 import com.byeonggon.cameramanager.data.LibraryIndex
 import com.byeonggon.cameramanager.data.LibraryStorage
 import com.byeonggon.cameramanager.data.SettingsRepository
@@ -19,6 +20,7 @@ import com.byeonggon.cameramanager.data.db.AppDatabase
 import com.byeonggon.cameramanager.location.Geotagger
 import com.byeonggon.cameramanager.location.TimelineImporter
 import com.byeonggon.cameramanager.raw.RawCache
+import com.byeonggon.cameramanager.ui.common.ThumbnailFetcher
 
 class CameraManagerApp : Application(), SingletonImageLoader.Factory {
     lateinit var container: AppContainer
@@ -32,7 +34,10 @@ class CameraManagerApp : Application(), SingletonImageLoader.Factory {
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(VideoFrameDecoder.Factory()) }
+            .components {
+                add(VideoFrameDecoder.Factory())
+                add(ThumbnailFetcher.Factory(container.thumbnails))
+            }
             .build()
 }
 
@@ -49,6 +54,7 @@ class AppContainer(context: Context) {
     val usb = UsbCameraConnector(context)
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
     val rawCache = RawCache()
+    val thumbnails = Thumbnails(context)
     val libraryEdits = LibraryEdits(storage, database.mediaDao(), database.filterDao(), geotagger, rawCache)
     val editSaver = EditSaver(libraryEdits)
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
