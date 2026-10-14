@@ -251,6 +251,8 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="more">More</string>
     <string name="histogram_hide">Hide histogram</string>
     <string name="histogram_show">Show histogram</string>
+    <string name="clipping_show">Show clipping</string>
+    <string name="clipping_hide">Hide clipping</string>
     <string name="reset">Reset</string>
     <string name="copy_edit">Copy edit</string>
     <string name="hold_for_original">Hold to see the original</string>

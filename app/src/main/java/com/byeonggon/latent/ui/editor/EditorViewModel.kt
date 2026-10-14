@@ -10,6 +10,7 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustment
 import com.byeonggon.latent.enhance.Adjustments
 import com.byeonggon.latent.enhance.AutoSettings
+import com.byeonggon.latent.enhance.ClippingMarks
 import com.byeonggon.latent.enhance.ColorGrading
 import com.byeonggon.latent.enhance.ColorMixer
 import com.byeonggon.latent.enhance.DetailFilter
@@ -73,6 +74,8 @@ data class EditorUiState(
     val previewView: EditorView = EditorView.PICTURE,
     /** Showing the picture without its corrections for a moment, to compare. */
     val comparing: Boolean = false,
+    /** Marking where the picture is blown out or crushed. */
+    val clipping: Boolean = false,
     /** Whether anything was changed since the editor opened; closing now would lose it. */
     val changed: Boolean = false,
     val canSave: Boolean = false,
@@ -139,13 +142,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         // One rendering at a time, always of the latest settings: a moving slider asks for more than can be drawn.
         viewModelScope.launch {
             combine(source, ui.map(::drawn).distinctUntilChanged(), detailCentre, drafting) { source, drawn, centre, draft ->
-                Drawing(source, drawn.first, drawn.second, centre, draft)
+                Drawing(source, drawn.first, drawn.second, centre, draft, drawn.third)
             }
                 .conflate()
-                .collect { (source, edit, view, centre, draft) ->
+                .collect { (source, edit, view, centre, draft, clipping) ->
                     if (source == null) return@collect
                     val rendered = try {
-                        withContext(Dispatchers.Default) { source.render(edit, view, centre, draft) }
+                        withContext(Dispatchers.Default) { source.render(edit, view, centre, draft, clipping) }
                     } catch (e: OutOfMemoryError) {
                         null
                     } catch (e: IOException) {
@@ -311,6 +314,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setComparing(comparing: Boolean) = ui.update { it.copy(comparing = comparing) }
 
+    fun setClipping(clipping: Boolean) = ui.update { it.copy(clipping = clipping) }
+
     fun show(view: EditorView) = ui.update { it.copy(view = view) }
 
     /**
@@ -380,10 +385,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /** The edit and the view as the preview has to show them right now. */
-    private fun drawn(state: EditorUiState): Pair<PhotoEdit, EditorView> {
+    private fun drawn(state: EditorUiState): Triple<PhotoEdit, EditorView, Boolean> {
         val toned = if (state.comparing) PhotoEdit(lensCorrection = state.edit.lensCorrection, framing = state.edit.framing) else state.edit
         // Only the picture as it will be is framed; the other views show it uncut.
-        return (if (state.view == EditorView.PICTURE) toned else toned.copy(framing = Framing())) to state.view
+        return Triple(if (state.view == EditorView.PICTURE) toned else toned.copy(framing = Framing()), state.view, state.clipping)
     }
 
     private fun EditorUiState.checked(): EditorUiState {
@@ -434,7 +439,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     private class Rendered(val bitmap: Bitmap, val histogram: Histogram)
 
-    private data class Drawing(val source: Source?, val edit: PhotoEdit, val view: EditorView, val centre: Pair<Float, Float>, val draft: Boolean)
+    private data class Drawing(val source: Source?, val edit: PhotoEdit, val view: EditorView, val centre: Pair<Float, Float>, val draft: Boolean, val clipping: Boolean)
 
     /**
      * The picture being edited, small enough to be drawn again for every move of a slider; [scale] is
@@ -473,8 +478,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
          * [draft] allows half the size while a slider moves; only for the picture as it will be, as the
          * frames drawn over the whole picture in other views go by its size.
          */
-        fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>, draft: Boolean = false): Rendered {
-            if (view == EditorView.DETAIL) return renderDetail(edit, centre)
+        fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>, draft: Boolean = false, clipping: Boolean = false): Rendered {
+            if (view == EditorView.DETAIL) return renderDetail(edit, centre, clipping)
             if (edit.spots != spots) {
                 spots = edit.spots
                 healed = if (spots.isEmpty()) image else image.copy().also { Healing.heal(it, spots) }
@@ -495,11 +500,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             }
             val pixels = ToneRenderer(edit, overview).render(picture)
             val shrunk = picture.width.toFloat() / framed.width
-            return Rendered(bitmapOf(pixels, picture.width, picture.height, DetailFilter(edit.adjustments, scale * shrunk)), histogramOf(pixels))
+            val histogram = histogramOf(pixels)
+            return Rendered(bitmapOf(pixels, picture.width, picture.height, DetailFilter(edit.adjustments, scale * shrunk)).marked(clipping), histogram)
         }
 
         /** A part of the original at its full size, toned by what the edit makes of the picture as a whole. */
-        private fun renderDetail(edit: PhotoEdit, centre: Pair<Float, Float>): Rendered {
+        private fun renderDetail(edit: PhotoEdit, centre: Pair<Float, Float>, clipping: Boolean): Rendered {
             val part = detail?.takeIf { centre == detailCentre } ?: region(centre.first, centre.second).also {
                 detail = it
                 detailCentre = centre
@@ -507,9 +513,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             }
             val pixels = IntArray(part.image.width * part.image.height)
             ToneRenderer(edit, wholeOverview).render(part.image, pixels, part.top, part.frameHeight, part.left, part.frameWidth)
-            val bitmap = bitmapOf(pixels, part.image.width, part.image.height, DetailFilter(edit.adjustments, scale = 1f))
-            return Rendered(bitmap, histogramOf(pixels))
+            val histogram = histogramOf(pixels)
+            val bitmap = bitmapOf(pixels, part.image.width, part.image.height, DetailFilter(edit.adjustments, scale = 1f)).marked(clipping)
+            return Rendered(bitmap, histogram)
         }
+
+        private fun Bitmap.marked(clipping: Boolean): Bitmap = if (clipping) ClippingMarks.markOn(this) else this
 
         private fun histogramOf(pixels: IntArray): Histogram {
             val red = IntArray(HISTOGRAM_BINS)

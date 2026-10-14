@@ -217,7 +217,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     PhotoTheme {
     Scaffold(
         // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes;
-        // a letter for each tool, and the original shown while the backslash is held.
+        // a letter for each tool, J for marking clipped tones, and the original shown while the backslash is held.
         modifier = Modifier.keys(
             onRelease = { event -> (event.key == Key.Backslash).also { if (it) viewModel.setComparing(false) } },
         ) { event ->
@@ -228,6 +228,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 event.isCtrlPressed && event.key == Key.S -> viewModel.save().let { true }
                 event.key == Key.Escape -> closeUnlessChanged().let { true }
                 plain && event.key == Key.Backslash -> viewModel.setComparing(true).let { true }
+                plain && event.key == Key.J -> viewModel.setClipping(!state.clipping).let { true }
                 plain -> EditorTab.entries.firstOrNull { it.key == event.key }?.let { tab = it } != null
                 else -> false
             }
@@ -251,6 +252,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         // Beside the picture there is room to show it all the time.
                         histogram = if (window.sidePanel) null else showHistogram,
                         onHistogram = { showHistogram = it },
+                        clipping = state.clipping,
+                        onClipping = viewModel::setClipping,
                         onReset = viewModel::reset,
                         onCopy = viewModel::copyEdit,
                         onPaste = viewModel::pasteEdit,
@@ -355,8 +358,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
 }
 
 /**
- * Starting over, carrying tones and colours from one photo to another, and showing the histogram over
- * the picture; [histogram] is null where the histogram has a place of its own.
+ * Starting over, carrying tones and colours from one photo to another, marking clipped tones, and
+ * showing the histogram over the picture; [histogram] is null where the histogram has a place of its own.
  */
 @Composable
 private fun MoreMenu(
@@ -364,6 +367,8 @@ private fun MoreMenu(
     canPaste: Boolean,
     histogram: Boolean?,
     onHistogram: (Boolean) -> Unit,
+    clipping: Boolean,
+    onClipping: (Boolean) -> Unit,
     onReset: () -> Unit,
     onCopy: () -> Unit,
     onPaste: () -> Unit,
@@ -383,6 +388,13 @@ private fun MoreMenu(
                     },
                 )
             }
+            DropdownMenuItem(
+                text = { Text(stringResource(if (clipping) R.string.clipping_hide else R.string.clipping_show)) },
+                onClick = {
+                    open = false
+                    onClipping(!clipping)
+                },
+            )
             val items = listOf(
                 Triple(stringResource(R.string.reset), true, onReset),
                 Triple(stringResource(R.string.copy_edit), true, onCopy),

@@ -227,6 +227,8 @@
     <string name="more">더 보기</string>
     <string name="histogram_hide">히스토그램 숨기기</string>
     <string name="histogram_show">히스토그램 보기</string>
+    <string name="clipping_show">클리핑 표시</string>
+    <string name="clipping_hide">클리핑 숨기기</string>
     <string name="reset">초기화</string>
     <string name="copy_edit">보정 값 복사</string>
     <string name="hold_for_original">누르고 있으면 원본</string>

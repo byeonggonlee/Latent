@@ -30,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustments
+import com.byeonggon.latent.enhance.ClippingMarks
 import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.Framing
 import com.byeonggon.latent.enhance.MaskShape
@@ -301,6 +302,28 @@ class EditorFlowTest {
         // A short tap is no hold.
         compose.onNodeWithContentDescription("DSC00001.JPG").performClick()
         compose.onAllNodesWithText("원본").assertCountEquals(0)
+    }
+
+    @Test
+    fun marksTonesThatHaveLostTheirDetail() {
+        openEditor("DSC00001.JPG")
+        slide("노출", to = 3f)
+        val editor = ViewModelProvider(compose.activity)[EditorViewModel::class.java]
+        fun marked(color: Int): Int {
+            // Only the screen's own idling lets the view model's coroutines finish.
+            compose.waitForIdle()
+            val bitmap = editor.state.value.preview ?: return 0
+            return IntArray(bitmap.width * bitmap.height).also { bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height) }.count { it == color }
+        }
+        assertEquals(0, marked(ClippingMarks.HIGHLIGHT))
+
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("클리핑 표시").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { marked(ClippingMarks.HIGHLIGHT) > 0 }
+
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("클리핑 숨기기").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { marked(ClippingMarks.HIGHLIGHT) == 0 }
     }
 
     @Test
