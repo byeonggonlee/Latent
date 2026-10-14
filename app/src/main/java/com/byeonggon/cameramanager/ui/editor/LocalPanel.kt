@@ -36,9 +36,14 @@ private val LOCAL_CONTROLS = listOf(
 private fun newMask(shape: MaskShape) = when (shape) {
     MaskShape.LINEAR -> Mask(shape, startX = 0.5f, startY = 0.25f, endX = 0.5f, endY = 0.6f)
     MaskShape.RADIAL -> Mask(shape, startX = 0.5f, startY = 0.5f, endX = 0.75f, endY = 0.8f)
+    MaskShape.BRUSH -> Mask(shape, startX = 0f, startY = 0f, endX = 0f, endY = 0f, feather = 0.5f)
 }
 
-private fun nameOf(local: LocalEdit, index: Int) = (if (local.mask.shape == MaskShape.LINEAR) "선형 " else "원형 ") + (index + 1)
+private fun nameOf(local: LocalEdit, index: Int) = when (local.mask.shape) {
+    MaskShape.LINEAR -> "선형 "
+    MaskShape.RADIAL -> "원형 "
+    MaskShape.BRUSH -> "브러시 "
+} + (index + 1)
 
 /**
  * Settings for parts of the picture: the masks to choose from and to add to, and for the [selected]
@@ -52,6 +57,10 @@ internal fun LocalPanel(
     onSelect: (Int) -> Unit,
     onChange: (List<LocalEdit>) -> Unit,
     onDone: () -> Unit,
+    brushRadius: Float = DEFAULT_BRUSH_RADIUS,
+    onBrushRadius: (Float) -> Unit = {},
+    erasing: Boolean = false,
+    onErasing: (Boolean) -> Unit = {},
 ) {
     fun replaced(local: LocalEdit) = locals.toMutableList().apply { this[selected] = local }
     val current = locals.getOrNull(selected)
@@ -64,7 +73,7 @@ internal fun LocalPanel(
         locals.forEachIndexed { index, local ->
             FilterChip(selected = index == selected, onClick = { onSelect(index) }, enabled = enabled, label = { Text(nameOf(local, index)) })
         }
-        for ((shape, label) in listOf(MaskShape.LINEAR to "+ 선형", MaskShape.RADIAL to "+ 원형")) {
+        for ((shape, label) in listOf(MaskShape.BRUSH to "+ 브러시", MaskShape.LINEAR to "+ 선형", MaskShape.RADIAL to "+ 원형")) {
             OutlinedButton(
                 onClick = {
                     onChange(locals + LocalEdit(newMask(shape)))
@@ -77,7 +86,7 @@ internal fun LocalPanel(
     }
     if (current == null) {
         Text(
-            "사진의 일부분만 보정하려면 마스크를 추가하세요. 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에 씁니다.",
+            "사진의 일부분만 보정하려면 마스크를 추가하세요. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에 씁니다.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -107,7 +116,26 @@ internal fun LocalPanel(
             enabled = enabled,
         ) { Text("마스크 삭제") }
     }
-    if (current.mask.shape == MaskShape.RADIAL) {
+    if (current.mask.shape == MaskShape.BRUSH) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(selected = !erasing, onClick = { onErasing(false) }, enabled = enabled, label = { Text("칠하기") })
+            FilterChip(selected = erasing, onClick = { onErasing(true) }, enabled = enabled, label = { Text("지우개") })
+        }
+        SettingSlider(
+            label = "브러시 크기",
+            value = brushRadius,
+            range = 0.005f..0.15f,
+            valueText = (brushRadius * 1000).roundToInt().toString(),
+            enabled = enabled,
+            onChange = { onBrushRadius((it * 1000).roundToInt() / 1000f) },
+            onDone = {},
+            untouched = DEFAULT_BRUSH_RADIUS,
+        )
+    }
+    if (current.mask.shape != MaskShape.LINEAR) {
         SettingSlider(
             label = "경계 흐림",
             value = current.mask.feather,

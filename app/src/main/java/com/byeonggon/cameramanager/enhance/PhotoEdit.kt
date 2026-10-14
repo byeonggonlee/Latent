@@ -193,6 +193,17 @@ data class PhotoEdit(
                 each.addProperty(SHAPE, local.mask.shape.name)
                 each.add(MASK, numbers(listOf(local.mask.startX, local.mask.startY, local.mask.endX, local.mask.endY, local.mask.feather)))
                 if (local.mask.inverted) each.addProperty(INVERTED, true)
+                if (local.mask.strokes.isNotEmpty()) {
+                    val strokes = JsonArray()
+                    for (stroke in local.mask.strokes) {
+                        val one = JsonObject()
+                        one.addProperty(RADIUS, stroke.radius)
+                        if (stroke.erasing) one.addProperty(ERASING, true)
+                        one.add(POINTS, numbers(stroke.points))
+                        strokes.add(one)
+                    }
+                    each.add(STROKES, strokes)
+                }
                 for (setting in Adjustment.entries) setting.get(local.adjustments).takeIf { it != 0f }?.let { each.addProperty(setting.key, it) }
                 stored.add(each)
             }
@@ -241,6 +252,10 @@ data class PhotoEdit(
         private const val SHAPE = "shape"
         private const val MASK = "mask"
         private const val INVERTED = "inverted"
+        private const val STROKES = "strokes"
+        private const val RADIUS = "radius"
+        private const val ERASING = "erasing"
+        private const val POINTS = "points"
 
         /**
          * Reads what [toJson] wrote. Settings that a stored edit does not mention, because they were
@@ -301,6 +316,14 @@ data class PhotoEdit(
                             endY = mask[3],
                             feather = mask[4],
                             inverted = local.get(INVERTED)?.asBoolean ?: false,
+                            strokes = local.getAsJsonArray(STROKES)?.map { one ->
+                                val stroke = one.asJsonObject
+                                BrushStroke(
+                                    points = stroke.getAsJsonArray(POINTS).map { it.asFloat },
+                                    radius = stroke.get(RADIUS).asFloat,
+                                    erasing = stroke.get(ERASING)?.asBoolean ?: false,
+                                )
+                            } ?: emptyList(),
                         ),
                         Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.asFloat ?: 0f) },
                     )

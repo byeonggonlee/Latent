@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.ui.editor
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -17,6 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -26,6 +28,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.byeonggon.cameramanager.enhance.BrushRaster
+import com.byeonggon.cameramanager.enhance.BrushStroke
 import com.byeonggon.cameramanager.enhance.LocalEdit
 import com.byeonggon.cameramanager.enhance.Mask
 import com.byeonggon.cameramanager.enhance.MaskShape
@@ -58,6 +62,9 @@ internal class MaskLayout(canvas: Size, margin: Float, pictureWidth: Float, pict
     )
 
     fun onCanvas(x: Float, y: Float) = Offset(picture.left + x * picture.width, picture.top + y * picture.height)
+
+    /** Where [position] on the canvas is on the picture, as fractions of its width and height; outside it, beyond 0 to 1. */
+    fun inPicture(position: Offset) = (position.x - picture.left) / picture.width to (position.y - picture.top) / picture.height
 
     fun startOf(mask: Mask) = onCanvas(mask.startX, mask.startY)
 
@@ -110,7 +117,17 @@ internal fun MaskFrame(
     onChange: (Mask) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    brushRadius: Float = DEFAULT_BRUSH_RADIUS,
+    erasing: Boolean = false,
 ) {
+    val brush by rememberUpdatedState(brushRadius)
+    val wiping by rememberUpdatedState(erasing)
+    val aspect = picture.width.toFloat() / picture.height
+    // What a painted mask covers, shown in red over the picture.
+    val selectedMask = locals.getOrNull(selected)?.mask
+    val painted = remember(selectedMask, aspect) {
+        selectedMask?.takeIf { it.shape == MaskShape.BRUSH }?.let { paintedOverlay(it, aspect) }
+    }
     val current by rememberUpdatedState(locals)
     val chosen by rememberUpdatedState(selected)
     val select by rememberUpdatedState(onSelect)
@@ -134,7 +151,17 @@ internal fun MaskFrame(
             .pointerInput(picture.width, picture.height) {
                 fun layout() = MaskLayout(Size(size.width.toFloat(), size.height.toFloat()), MARGIN.toPx(), picture.width.toFloat(), picture.height.toFloat())
                 detectDragGestures(
-                    onDragStart = { position -> grip = current.getOrNull(chosen)?.let { layout().gripAt(it.mask, position, REACH.toPx()) } },
+                    onDragStart = { position ->
+                        val mask = current.getOrNull(chosen)?.mask
+                        if (mask?.shape == MaskShape.BRUSH) {
+                            // A new stroke of the brush, starting where the finger went down.
+                            val (x, y) = layout().inPicture(position)
+                            change(mask.copy(strokes = mask.strokes + BrushStroke(listOf(x, y), brush, wiping)))
+                            grip = null
+                        } else {
+                            grip = mask?.let { layout().gripAt(it, position, REACH.toPx()) }
+                        }
+                    },
                     onDragEnd = {
                         grip = null
                         done()
@@ -147,7 +174,20 @@ internal fun MaskFrame(
                         input.consume()
                         val held = grip
                         val mask = current.getOrNull(chosen)?.mask
-                        if (held != null && mask != null) change(layout().dragged(mask, held, amount))
+                        if (mask?.shape == MaskShape.BRUSH) {
+                            val stroke = mask.strokes.lastOrNull() ?: return@detectDragGestures
+                            val layout = layout()
+                            val (x, y) = layout.inPicture(input.position)
+                            // Points closer together than a quarter of the brush add nothing but work.
+                            val lastX = stroke.points[stroke.points.size - 2]
+                            val lastY = stroke.points[stroke.points.size - 1]
+                            val apart = Offset((x - lastX) * layout.picture.width, (y - lastY) * layout.picture.height).getDistance()
+                            if (apart >= stroke.radius * maxOf(layout.picture.width, layout.picture.height) / 4) {
+                                change(mask.copy(strokes = mask.strokes.dropLast(1) + stroke.copy(points = stroke.points + listOf(x, y))))
+                            }
+                        } else if (held != null && mask != null) {
+                            change(layout().dragged(mask, held, amount))
+                        }
                     },
                 )
             },
@@ -158,8 +198,22 @@ internal fun MaskFrame(
             dstOffset = IntOffset(layout.picture.left.roundToInt(), layout.picture.top.roundToInt()),
             dstSize = IntSize(layout.picture.width.roundToInt(), layout.picture.height.roundToInt()),
         )
+        if (painted != null) {
+            drawImage(
+                painted,
+                dstOffset = IntOffset(layout.picture.left.roundToInt(), layout.picture.top.roundToInt()),
+                dstSize = IntSize(layout.picture.width.roundToInt(), layout.picture.height.roundToInt()),
+            )
+        }
         locals.forEachIndexed { index, local ->
-            if (index == selected) drawMask(layout, local.mask) else drawCircle(Color.White.copy(alpha = 0.7f), 7.dp.toPx(), layout.startOf(local.mask))
+            val mask = local.mask
+            when {
+                mask.shape == MaskShape.BRUSH -> if (index != selected) {
+                    mask.strokes.firstOrNull()?.let { drawCircle(Color.White.copy(alpha = 0.7f), 7.dp.toPx(), layout.onCanvas(it.points[0], it.points[1])) }
+                }
+                index == selected -> drawMask(layout, mask)
+                else -> drawCircle(Color.White.copy(alpha = 0.7f), 7.dp.toPx(), layout.startOf(mask))
+            }
         }
     }
 }
@@ -183,6 +237,7 @@ private fun DrawScope.drawMask(layout: MaskLayout, mask: Mask) {
                     drawLine(Color.White, end - side, end + side, strokeWidth = dashed.width, pathEffect = dashed.pathEffect)
                 }
             }
+            MaskShape.BRUSH -> Unit
             MaskShape.RADIAL -> {
                 val radii = Size(abs(end.x - start.x), abs(end.y - start.y))
                 val inner = Size(radii.width * (1f - mask.feather), radii.height * (1f - mask.feather))
@@ -197,6 +252,19 @@ private fun DrawScope.drawMask(layout: MaskLayout, mask: Mask) {
     drawCircle(Color.Black.copy(alpha = 0.4f), 8.dp.toPx(), end)
     drawCircle(Color.White, 8.dp.toPx(), end, style = solid)
 }
+
+/** What a painted mask covers, as a red veil that is the denser the more of the mask covers a place. */
+private fun paintedOverlay(mask: Mask, aspect: Float): ImageBitmap {
+    val raster = BrushRaster.of(mask, aspect)
+    val pixels = IntArray(raster.coverage.size) { index ->
+        val covered = raster.coverage[index].let { if (mask.inverted) 1f - it else it }
+        ((covered * 110).roundToInt() shl 24) or 0xFF3030
+    }
+    return Bitmap.createBitmap(pixels, raster.width, raster.height, Bitmap.Config.ARGB_8888).asImageBitmap()
+}
+
+/** The width of a new brush stroke, as a fraction of the picture's long side, unless another is chosen. */
+internal const val DEFAULT_BRUSH_RADIUS = 0.04f
 
 private val MARGIN = 20.dp
 private val REACH = 32.dp

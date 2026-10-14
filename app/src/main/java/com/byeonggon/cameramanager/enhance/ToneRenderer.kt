@@ -64,8 +64,8 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
         val sourceBlue = source.blue
         val everywhere = everywhere
         val locals = locals
-        val masks = masks
         val placement = if (masks.isEmpty()) null else Placement(edit.framing, frameWidth, frameHeight)
+        val weights = placement?.let { masks.map { mask -> MaskWeights(mask, it.wholeWidth, it.wholeHeight) } }
         val monochrome = monochrome
         val mixer = mixer
         val grading = grading
@@ -99,11 +99,11 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
                     val blueLevel = sourceBlue[index].toInt()
                     everywhere.shade(redLevel, greenLevel, blueLevel, x, rows, rgb)
 
-                    if (placement != null) {
+                    if (placement != null && weights != null) {
                         val wholeX = placement.xOf(left + x, frameY)
                         val wholeY = placement.yOf(left + x, frameY)
                         for (local in locals.indices) {
-                            val weight = masks[local].weightAt(wholeX, wholeY, placement.wholeWidth, placement.wholeHeight)
+                            val weight = weights[local].at(wholeX, wholeY)
                             if (weight <= 0f) continue
                             locals[local].shade(redLevel, greenLevel, blueLevel, x, localRows[local], part)
                             rgb[0] += (part[0] - rgb[0]) * weight

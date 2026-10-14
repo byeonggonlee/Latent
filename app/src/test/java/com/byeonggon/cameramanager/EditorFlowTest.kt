@@ -531,4 +531,33 @@ class EditorFlowTest {
         assertEquals(0.5f, spot.y, 0.02f)
         assertTrue(spot.fromX != spot.x || spot.fromY != spot.y)
     }
+
+    @Test
+    fun paintsAMaskWithABrush() {
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 브러시").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("마스크 영역").fetchSemanticsNodes().isNotEmpty()
+        }
+        val canvas = compose.onNodeWithContentDescription("마스크 영역").fetchSemanticsNode().size
+        val margin = with(compose.density) { 20.dp.toPx() }
+        val layout = MaskLayout(Size(canvas.width.toFloat(), canvas.height.toFloat()), margin, 96f, 64f)
+        compose.onNodeWithContentDescription("마스크 영역").performTouchInput {
+            down(layout.onCanvas(0.1f, 0.2f))
+            repeat(16) { moveBy(Offset(layout.picture.width / 20, 0f)) }
+            up()
+        }
+        slide("노출", to = 1f)
+        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val mask = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.locals.single().mask
+        assertEquals(MaskShape.BRUSH, mask.shape)
+        val stroke = mask.strokes.single()
+        assertTrue("${stroke.points.size / 2} points", stroke.points.size >= 6)
+        assertEquals(0.2f, stroke.points[1], 0.03f)
+        assertTrue(mask.weightAt(0.5f, 0.2f, 96f, 64f) > 0.9f)
+        assertTrue(mask.weightAt(0.5f, 0.8f, 96f, 64f) < 0.01f)
+    }
 }

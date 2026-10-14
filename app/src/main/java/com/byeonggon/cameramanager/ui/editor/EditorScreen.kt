@@ -138,6 +138,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     var shape by rememberSaveable { mutableStateOf(CropShape.FREE) }
     var selectedLocal by rememberSaveable { mutableIntStateOf(0) }
     var selectedSpot by rememberSaveable { mutableIntStateOf(-1) }
+    var brushRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_BRUSH_RADIUS) }
+    var erasing by rememberSaveable { mutableStateOf(false) }
     var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
     LaunchedEffect(tab) { viewModel.show(tab.view) }
 
@@ -189,6 +191,10 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 onSelectSpot = { selectedSpot = it },
                 spotRadius = spotRadius,
                 onSpotRadius = { spotRadius = it },
+                brushRadius = brushRadius,
+                onBrushRadius = { brushRadius = it },
+                erasing = erasing,
+                onErasing = { erasing = it },
                 viewModel = viewModel,
             )
         },
@@ -213,6 +219,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         onSelect = { selectedLocal = it },
                         onChange = ::setMask,
                         onDone = viewModel::commit,
+                        brushRadius = brushRadius,
+                        erasing = erasing,
                     )
                     tab == EditorTab.SPOTS && state.previewView == EditorView.WHOLE -> SpotFrame(
                         picture = preview.asImageBitmap(),
@@ -356,6 +364,10 @@ private fun EditorPanel(
     onSelectSpot: (Int) -> Unit,
     spotRadius: Float,
     onSpotRadius: (Float) -> Unit,
+    brushRadius: Float,
+    onBrushRadius: (Float) -> Unit,
+    erasing: Boolean,
+    onErasing: (Boolean) -> Unit,
     viewModel: EditorViewModel,
 ) {
     var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
@@ -433,6 +445,10 @@ private fun EditorPanel(
                         onSelect = onSelectLocal,
                         onChange = viewModel::setLocals,
                         onDone = viewModel::commit,
+                        brushRadius = brushRadius,
+                        onBrushRadius = onBrushRadius,
+                        erasing = erasing,
+                        onErasing = onErasing,
                     )
                     EditorTab.SPOTS -> SpotPanel(
                         spots = edit.spots,
