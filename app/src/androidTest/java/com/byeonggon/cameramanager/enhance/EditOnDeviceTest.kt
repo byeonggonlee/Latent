@@ -74,6 +74,67 @@ class EditOnDeviceTest {
         }
     }
 
+    /** The median time of a few runs of [block], in milliseconds. */
+    private fun median(block: () -> Unit): Long {
+        val times = (1..7).map {
+            val startedAt = System.nanoTime()
+            block()
+            (System.nanoTime() - startedAt) / 1_000_000
+        }
+        return times.sorted()[times.size / 2]
+    }
+
+    /**
+     * Where the time of a preview with every tool goes: once for each part of the work, and once for
+     * the whole edit without each tool in turn.
+     */
+    @Test
+    fun profilesThePreviewToolByTool() {
+        assumeTrue(jpegSample != null && jpegSample.isFile)
+        val picture = PhotoEnhancer.load(jpegSample!!, 1600)
+        val overview = picture.downscaled(ToneRenderer.OVERVIEW_EDGE)
+        val renderer = ToneRenderer(everything, overview)
+        val pixels = renderer.render(picture)
+        val detail = DetailFilter(everything.adjustments, scale = 0.25f)
+        Log.i(TAG, "on device: profile ${picture.width}x${picture.height}: set up ${median { ToneRenderer(everything, overview) }} ms, " +
+            "render ${median { renderer.render(picture, pixels) }} ms, detail ${if (detail.isNeeded) median { detail.apply(pixels.copyOf(), picture.width, picture.height) } else 0} ms")
+
+        fun whole(edit: PhotoEdit) = median {
+            val shown = ToneRenderer(edit, overview).render(picture)
+            DetailFilter(edit.adjustments, scale = 0.25f).let { if (it.isNeeded) it.apply(shown, picture.width, picture.height) }
+        }
+        val all = whole(everything)
+        val without = listOf(
+            "parts (2 masks)" to everything.copy(locals = emptyList()),
+            "one part" to everything.copy(locals = everything.locals.take(1)),
+            "shadows and highlights" to everything.copy(adjustments = tones.copy(shadows = 0f, highlights = 0f)),
+            "clarity" to everything.copy(adjustments = tones.copy(clarity = 0f)),
+            "dehaze" to everything.copy(adjustments = tones.copy(dehaze = 0f)),
+            "texture, sharpening, noise" to everything.copy(adjustments = tones.copy(texture = 0f, sharpening = 0f, noiseReduction = 0f, colorNoiseReduction = 0f)),
+            "grain" to everything.copy(adjustments = tones.copy(grain = 0f)),
+            "vignette" to everything.copy(adjustments = tones.copy(vignette = 0f)),
+            "mixer" to everything.copy(mixer = ColorMixer()),
+            "grading" to everything.copy(grading = ColorGrading()),
+            "auto" to everything.copy(autoEnhance = false),
+        )
+        Log.i(TAG, "on device: profile every tool $all ms")
+        for ((tool, edit) in without) Log.i(TAG, "on device: profile without $tool ${whole(edit)} ms")
+        Log.i(TAG, "on device: profile nothing ${whole(PhotoEdit())} ms, cores ${Runtime.getRuntime().availableProcessors()}")
+
+        // While a slider moves, the editor draws at half the size.
+        val half = picture.downscaled(maxOf(picture.width, picture.height) / 2)
+        val draft = median {
+            val shown = ToneRenderer(everything, overview).render(half)
+            DetailFilter(everything.adjustments, scale = 0.125f).let { if (it.isNeeded) it.apply(shown, half.width, half.height) }
+        }
+        Log.i(TAG, "on device: profile every tool while dragging, ${half.width}x${half.height}: $draft ms")
+        val halfPixels = renderer.render(half)
+        val halfDetail = DetailFilter(everything.adjustments, scale = 0.125f)
+        Log.i(TAG, "on device: profile while dragging: render ${median { renderer.render(half, halfPixels) }} ms, " +
+            "detail ${if (halfDetail.isNeeded) median { halfDetail.apply(halfPixels.copyOf(), half.width, half.height) } else 0} ms, " +
+            "full again ${whole(everything)} ms")
+    }
+
     @Test
     fun editsAJpegWithinTheAppsMemory() {
         assumeTrue(jpegSample != null && jpegSample.isFile)

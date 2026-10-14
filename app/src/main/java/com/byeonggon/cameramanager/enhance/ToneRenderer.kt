@@ -1,5 +1,7 @@
 package com.byeonggon.cameramanager.enhance
 
+import java.util.WeakHashMap
+import java.util.stream.IntStream
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -32,13 +34,23 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
     private val vignette = if (adjustments.vignette != 0f) Vignette(adjustments.vignette) else null
 
     init {
-        val auto = if (edit.autoEnhance) AutoEnhance.analyze(asTheCameraShowsIt(overview)) else null
-        everywhere = Stage(adjustments, edit.curves, auto, overview, monochrome)
+        val auto = if (edit.autoEnhance) autoLevelsOf(overview) else null
         // A part's own settings come on top of what applies everywhere.
-        locals = edit.locals.map { local ->
-            val combined = Adjustment.entries.fold(adjustments) { all, each -> each.set(all, each.get(all) + each.get(local.adjustments)) }
-            Stage(combined, edit.curves, auto, overview, monochrome)
+        val settings = listOf(adjustments) + edit.locals.map { local ->
+            Adjustment.entries.fold(adjustments) { all, each -> each.set(all, each.get(all) + each.get(local.adjustments)) }
         }
+        // Each stage takes tens of milliseconds to set up, and they are set up again for every move of a slider.
+        val stages = arrayOfNulls<Stage>(settings.size)
+        IntStream.range(0, settings.size).parallel().forEach { index ->
+            stages[index] = Stage(settings[index], edit.curves, auto, overview, monochrome)
+        }
+        everywhere = stages[0]!!
+        locals = stages.drop(1).map { it!! }
+    }
+
+    /** What auto enhance makes of [overview]; the editor asks for the same picture again with every move of a slider. */
+    private fun autoLevelsOf(overview: LinearImage): AutoLevels = synchronized(autoLevels) {
+        autoLevels.getOrPut(overview) { AutoEnhance.analyze(asTheCameraShowsIt(overview)) }
     }
 
     /** Renders all of [source]. */
@@ -379,6 +391,9 @@ class ToneRenderer(private val edit: PhotoEdit, overview: LinearImage) {
     companion object {
         /** Long side of the small copy a picture's tones are judged by. */
         const val OVERVIEW_EDGE = 320
+
+        /** Auto enhance's judgement of the pictures in use, by the picture itself rather than its pixels. */
+        private val autoLevels = WeakHashMap<LinearImage, AutoLevels>()
 
         private const val OPAQUE = 0xFF shl 24
         private const val TONE_STEPS = 4096

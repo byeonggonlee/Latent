@@ -114,6 +114,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     /** While a slider or a point is being dragged, its moves count as one change. */
     private var changing = false
 
+    /**
+     * Whether the preview may be drawn at half its size, to keep up with a slider that is still moving;
+     * once it is let go of, the picture is drawn in full again.
+     */
+    private val drafting = MutableStateFlow(false)
+
     /** The centre of the part shown at full size, as fractions of the picture. */
     private val detailCentre = MutableStateFlow(0.5f to 0.5f)
 
@@ -130,13 +136,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
         // One rendering at a time, always of the latest settings: a moving slider asks for more than can be drawn.
         viewModelScope.launch {
-            combine(source, ui.map(::drawn).distinctUntilChanged(), detailCentre) { source, drawn, centre -> Triple(source, drawn, centre) }
+            combine(source, ui.map(::drawn).distinctUntilChanged(), detailCentre, drafting) { source, drawn, centre, draft ->
+                Drawing(source, drawn.first, drawn.second, centre, draft)
+            }
                 .conflate()
-                .collect { (source, drawn, centre) ->
+                .collect { (source, edit, view, centre, draft) ->
                     if (source == null) return@collect
-                    val (edit, view) = drawn
                     val rendered = try {
-                        withContext(Dispatchers.Default) { source.render(edit, view, centre) }
+                        withContext(Dispatchers.Default) { source.render(edit, view, centre, draft) }
                     } catch (e: OutOfMemoryError) {
                         null
                     } catch (e: IOException) {
@@ -293,6 +300,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun commit() {
         changing = false
+        drafting.value = false
     }
 
     fun undo() = stepTo(position - 1)
@@ -341,6 +349,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         while (history.size > position + 1) history.removeAt(history.lastIndex)
         if (changing && position > 0) {
             history[position] = after
+            // From the second move of a drag on, the drag is under way.
+            drafting.value = true
         } else {
             history += after
             position++
@@ -422,6 +432,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     private class Rendered(val bitmap: Bitmap, val histogram: Histogram)
 
+    private data class Drawing(val source: Source?, val edit: PhotoEdit, val view: EditorView, val centre: Pair<Float, Float>, val draft: Boolean)
+
     /**
      * The picture being edited, small enough to be drawn again for every move of a slider; [scale] is
      * its size relative to the original. [region] fetches a part of the original at full size. Only
@@ -437,6 +449,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         private var wholeOverview = image.downscaled(ToneRenderer.OVERVIEW_EDGE)
         private var framing = Framing()
         private var framed = image
+        private var draftFramed: LinearImage? = null
         private var overview = wholeOverview
         private var detailCentre: Pair<Float, Float>? = null
         private var detail: PictureRegion? = null
@@ -454,7 +467,11 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         var detailShare = 1f to 1f
             private set
 
-        fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>): Rendered {
+        /**
+         * [draft] allows half the size while a slider moves; only for the picture as it will be, as the
+         * frames drawn over the whole picture in other views go by its size.
+         */
+        fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>, draft: Boolean = false): Rendered {
             if (view == EditorView.DETAIL) return renderDetail(edit, centre)
             if (edit.spots != spots) {
                 spots = edit.spots
@@ -466,10 +483,17 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             if (edit.framing != framing) {
                 framing = edit.framing
                 framed = healed.framed(framing)
+                draftFramed = null
                 overview = if (framing == Framing()) wholeOverview else framed.downscaled(ToneRenderer.OVERVIEW_EDGE)
             }
-            val pixels = ToneRenderer(edit, overview).render(framed)
-            return Rendered(bitmapOf(pixels, framed.width, framed.height, DetailFilter(edit.adjustments, scale)), histogramOf(pixels))
+            val picture = if (draft && view == EditorView.PICTURE) {
+                draftFramed ?: framed.downscaled(maxOf(framed.width, framed.height) / 2).also { draftFramed = it }
+            } else {
+                framed
+            }
+            val pixels = ToneRenderer(edit, overview).render(picture)
+            val shrunk = picture.width.toFloat() / framed.width
+            return Rendered(bitmapOf(pixels, picture.width, picture.height, DetailFilter(edit.adjustments, scale * shrunk)), histogramOf(pixels))
         }
 
         /** A part of the original at its full size, toned by what the edit makes of the picture as a whole. */
