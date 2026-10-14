@@ -119,8 +119,8 @@ class EditorFlowTest {
     }
 
     private fun openEditorFromViewer() {
-        waitForText("보정")
-        compose.onNodeWithText("보정").performClick()
+        waitForText("편집")
+        compose.onNodeWithText("편집").performClick()
         // The sliders come alive once the picture has been read and drawn.
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription("노출").fetchSemanticsNodes()
@@ -199,7 +199,7 @@ class EditorFlowTest {
         compose.onNodeWithContentDescription("닫기").performClick()
         compose.onNodeWithText("닫기").performClick()
 
-        waitForText("보정")
+        waitForText("편집")
         assertFalse(container.storage.originalOf(photo).exists())
         assertNull(runBlocking { mediaDao.byId(photoId)!!.edit })
     }
@@ -215,6 +215,7 @@ class EditorFlowTest {
         compose.onNodeWithText("완료").performClick()
 
         waitForText("원본으로 되돌리기")
+        compose.onNodeWithText("더 보기").performClick()
         compose.onNodeWithText("JPEG로 저장").assertIsDisplayed()
         assertArrayEquals(original, raw.readBytes())
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(rawId)!!.edit })
@@ -271,7 +272,8 @@ class EditorFlowTest {
             compose.onAllNodesWithContentDescription("DSC00002.ARW").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithContentDescription("DSC00002.ARW").performClick()
-        waitForText("보정 값 붙여넣기")
+        waitForText("더 보기")
+        compose.onNodeWithText("더 보기").performClick()
         compose.onNodeWithText("보정 값 붙여넣기").performClick()
 
         compose.waitUntil(timeoutMillis = 10_000) { runBlocking { mediaDao.byId(rawId)!!.edit } != null }

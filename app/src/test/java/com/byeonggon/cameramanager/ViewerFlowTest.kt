@@ -91,7 +91,7 @@ class ViewerFlowTest {
             compose.onAllNodesWithContentDescription(fileName).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithContentDescription(fileName).performClick()
-        waitForText("보정")
+        waitForText("편집")
     }
 
     @Test
@@ -113,6 +113,8 @@ class ViewerFlowTest {
     @Test
     fun givesAPhotoStarsAndNarrowsTheLibraryDownByThem() {
         open("DSC00002.JPG")
+        // On a phone the stars come up from the button under the photo.
+        compose.onNodeWithText("별점").performClick()
         compose.onNodeWithContentDescription("별점 4").performClick()
         waitForRating(4)
         // The same star again takes the stars away; another one changes them.
@@ -122,7 +124,8 @@ class ViewerFlowTest {
         waitForRating(3)
         compose.onNodeWithContentDescription("닫기").performClick()
 
-        compose.onNodeWithText("별점").performClick()
+        compose.onNodeWithContentDescription("보관함 메뉴").performClick()
+        compose.onNodeWithText("별점으로 거르기").performClick()
         compose.onNodeWithText("★★★ 이상").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription("DSC00001.JPG").fetchSemanticsNodes().isEmpty()
@@ -133,7 +136,7 @@ class ViewerFlowTest {
 
         // In the viewer, only the photos that are listed can be swiped to: here that is the one.
         compose.onNodeWithContentDescription("DSC00002.JPG").performClick()
-        waitForText("보정")
+        waitForText("편집")
         compose.onNodeWithContentDescription("DSC00002.JPG").performTouchInput { swipeLeft() }
         compose.onNodeWithText("DSC00002.JPG").assertIsDisplayed()
     }
@@ -149,15 +152,15 @@ class ViewerFlowTest {
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("RAW+J").fetchSemanticsNodes().isNotEmpty() }
         compose.onAllNodesWithContentDescription("DSC00001.ARW").assertCountEquals(0)
         open("DSC00001.JPG")
-        compose.onNodeWithText("RAW 보기").performClick()
-        waitForText("JPEG 보기")
-        compose.onNodeWithText("DSC00001.ARW").assertIsDisplayed()
-        compose.onNodeWithText("JPEG 보기").performClick()
-        waitForText("RAW 보기")
+        compose.onNodeWithText("RAW").performClick()
+        waitForText("DSC00001.ARW")
+        compose.onNodeWithText("JPEG").performClick()
+        waitForText("DSC00001.JPG")
 
         // Unstacked, both are listed.
         compose.onNodeWithContentDescription("닫기").performClick()
-        compose.onNodeWithText("RAW+JPEG 묶기").performClick()
+        compose.onNodeWithContentDescription("보관함 메뉴").performClick()
+        compose.onNodeWithText("RAW+JPEG 묶어 보기").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription("DSC00001.ARW").fetchSemanticsNodes().isNotEmpty()
         }
@@ -171,9 +174,10 @@ class ViewerFlowTest {
         waitForText("DSC00003.JPG")
         compose.onNodeWithContentDescription("닫기").performClick()
 
-        waitForText("휴지통 1")
         compose.onAllNodesWithContentDescription("DSC00002.JPG").assertCountEquals(0)
-        compose.onNodeWithText("휴지통 1").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("보관함 메뉴").performClick()
+        waitForText("휴지통 1")
+        compose.onNodeWithText("휴지통 1").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription("DSC00002.JPG").fetchSemanticsNodes().isNotEmpty()
         }

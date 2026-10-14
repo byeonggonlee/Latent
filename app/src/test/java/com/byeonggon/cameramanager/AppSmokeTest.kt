@@ -50,7 +50,7 @@ class AppSmokeTest {
         }
         compose.onNodeWithText(emptyLibrary, substring = true).assertIsDisplayed()
 
-        compose.onNodeWithText("동기화").performClick()
+        compose.onNodeWithText("카메라").performClick()
         compose.onNodeWithText("카메라 동기화").assertIsDisplayed()
         compose.onNodeWithText("연결된 카메라가 없습니다.").assertIsDisplayed()
         compose.onNodeWithText("기간 선택").performScrollTo().performClick()
@@ -67,7 +67,7 @@ class AppSmokeTest {
     @Test
     fun letsFilesDeletedFromThePhoneBeImportedAgain() {
         val notice = "폰에서 지운 파일 1개"
-        compose.onNodeWithText("동기화").performClick()
+        compose.onNodeWithText("카메라").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText(notice, substring = true).fetchSemanticsNodes().isNotEmpty()
         }

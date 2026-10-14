@@ -6,6 +6,22 @@ import android.content.Intent
 import android.net.Uri
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.byeonggon.cameramanager.R
+import com.byeonggon.cameramanager.ui.common.PhotoTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.pager.HorizontalPager
@@ -28,7 +44,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -89,6 +104,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val CAPTURE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+private val TITLE_FORMAT = DateTimeFormatter.ofPattern("M월 d일 a h:mm", Locale.KOREAN)
 
 /**
  * Shows one photo of [items], the library as it is listed, and lets the neighbouring ones be swiped to;
@@ -162,26 +178,32 @@ fun ViewerScreen(
     }
 
     val window = rememberWindowLayout()
-    val infoPanel: @Composable (Modifier) -> Unit = { modifier ->
+    var rating by rememberSaveable { mutableStateOf(false) }
+    var showingInfo by rememberSaveable { mutableStateOf(false) }
+    var confirmingRestore by remember { mutableStateOf(false) }
+    val share: (Int?) -> Unit = { longSide ->
+        item?.let { if (longSide == RAW_FILE) context.share(File(it.path), it.kind) else viewModel.share(longSide) }
+    }
+    val actions: @Composable () -> Unit = {
         if (item != null) {
-            InfoPanel(
-                    modifier = modifier,
-                    state = state,
-                    item = item,
-                    onEdit = onEdit,
-                    onPaste = viewModel::pasteEdit,
-                    onRestore = viewModel::restoreOriginal,
-                    onExport = viewModel::exportRaw,
-                    onRate = viewModel::setRating,
-                    onShare = { longSide -> if (longSide == RAW_FILE) context.share(File(item.path), item.kind) else viewModel.share(longSide) },
-                    onShowMap = { context.showOnMap(item) },
-                    onPartner = partners[item.id]?.let { partner -> { onItemChange(partner) } },
-                    onTrash = { trashShown?.invoke() },
-                )
+            ActionBar(
+                item = item,
+                state = state,
+                // Beside the photo the stars are always there; under it they come up when asked for.
+                onRating = if (window.sidePanel) null else ({ rating = !rating }),
+                onEdit = onEdit,
+                onShare = share,
+                onTrash = { trashShown?.invoke() },
+                onInfo = if (window.sidePanel) null else ({ showingInfo = true }),
+                onPaste = viewModel::pasteEdit,
+                onExport = viewModel::exportRaw,
+                onShowMap = { context.showOnMap(item) },
+            )
         }
     }
 
     val scope = rememberCoroutineScope()
+    PhotoTheme {
     Scaffold(
         // With a keyboard: arrows turn the page, Delete puts the photo in the trash, Escape closes.
         modifier = Modifier.keys { event ->
@@ -195,15 +217,44 @@ fun ViewerScreen(
         },
         topBar = {
             TopAppBar(
-                title = { Text(item?.fileName.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Column {
+                        Text(
+                            item?.let { TITLE_FORMAT.format(Instant.ofEpochMilli(it.capturedAt).atZone(ZoneId.systemDefault())) }.orEmpty(),
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                        )
+                        Text(
+                            item?.fileName.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = close) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "닫기")
                     }
                 },
+                actions = {
+                    val partner = item?.let { partners[it.id] }
+                    if (item != null && partner != null) PartnerSwitch(showingRaw = item.kind == MediaKind.RAW, onSwitch = { onItemChange(partner) })
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black),
             )
         },
-        bottomBar = { if (!window.sidePanel) infoPanel(Modifier) },
+        bottomBar = {
+            if (!window.sidePanel && item != null) {
+                Column(Modifier.background(Color.Black).navigationBarsPadding()) {
+                    Strip(state, item, onRestore = { confirmingRestore = true })
+                    AnimatedVisibility(rating) { Stars(item.rating, viewModel::setRating, Modifier.align(Alignment.CenterHorizontally)) }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    actions()
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = Color.Black,
     ) { padding ->
@@ -242,97 +293,29 @@ fun ViewerScreen(
                 if (state.busy) CircularProgressIndicator()
             }
             // In a wide window the information goes beside the photo, where there is room for it.
-            if (window.sidePanel) infoPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
-        }
-    }
-}
-
-@Composable
-private fun InfoPanel(
-    modifier: Modifier,
-    state: ViewerUiState,
-    item: MediaItemEntity,
-    onEdit: () -> Unit,
-    onPaste: () -> Unit,
-    onRestore: () -> Unit,
-    onExport: () -> Unit,
-    onRate: (Int) -> Unit,
-    /** Called with the long side the shared copy may have, null for full size, or [RAW_FILE] for the file as it is. */
-    onShare: (Int?) -> Unit,
-    onShowMap: () -> Unit,
-    /** Shows the other file of a raw and JPEG pair; null for a photo that has none. */
-    onPartner: (() -> Unit)?,
-    onTrash: () -> Unit,
-) {
-    val context = LocalContext.current
-    var confirmingRestore by remember { mutableStateOf(false) }
-    Surface(tonalElevation = 3.dp, modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                CAPTURE_FORMAT.format(Instant.ofEpochMilli(item.capturedAt).atZone(ZoneId.systemDefault())) +
-                    " · " + Formatter.formatShortFileSize(context, item.sizeBytes),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            state.details?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = locationLabel(item),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                if (item.geoSource != GeoSource.NONE) TextButton(onClick = onShowMap) { Text("지도에서 보기") }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                for (stars in 1..5) {
-                    Text(
-                        text = if (stars <= item.rating) "★" else "☆",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = if (stars <= item.rating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clickable(role = Role.Button) { onRate(stars) }
-                            .padding(horizontal = 6.dp)
-                            .semantics { contentDescription = "별점 $stars" },
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (item.kind != MediaKind.VIDEO) {
-                    Button(onClick = onEdit, enabled = !state.busy) { Text("보정") }
-                    if (state.canPaste) {
-                        OutlinedButton(onClick = onPaste, enabled = !state.busy) { Text("보정 값 붙여넣기") }
-                    }
-                    if (item.kind == MediaKind.RAW) {
-                        OutlinedButton(onClick = onExport, enabled = !state.busy) { Text("JPEG로 저장") }
-                    }
-                    if (state.edited) {
-                        OutlinedButton(onClick = { confirmingRestore = true }, enabled = !state.busy) { Text("원본으로 되돌리기") }
-                    }
-                }
-                ShareButton(item.kind, enabled = !state.busy, onShare = onShare)
-                TextButton(onClick = onTrash, enabled = !state.busy) { Text("삭제") }
-                if (onPartner != null) {
-                    TextButton(onClick = onPartner, enabled = !state.busy) {
-                        Text(if (item.kind == MediaKind.RAW) "JPEG 보기" else "RAW 보기")
+            if (window.sidePanel && item != null) {
+                Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight()) {
+                    Column(Modifier.navigationBarsPadding()) {
+                        Details(
+                            state = state,
+                            item = item,
+                            onRate = viewModel::setRating,
+                            onRestore = { confirmingRestore = true },
+                            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        actions()
                     }
                 }
             }
         }
     }
 
+    if (showingInfo && item != null) {
+        ModalBottomSheet(onDismissRequest = { showingInfo = false }) {
+            Details(state, item, onRate = viewModel::setRating, onRestore = { confirmingRestore = true }, modifier = Modifier.navigationBarsPadding())
+        }
+    }
     if (confirmingRestore) {
         AlertDialog(
             onDismissRequest = { confirmingRestore = false },
@@ -342,12 +325,197 @@ private fun InfoPanel(
                 TextButton(
                     onClick = {
                         confirmingRestore = false
-                        onRestore()
+                        viewModel.restoreOriginal()
                     },
                 ) { Text("되돌리기") }
             },
             dismissButton = { TextButton(onClick = { confirmingRestore = false }) { Text("취소") } },
         )
+    }
+    }
+}
+
+/** Between JPEG and raw file of a pair, as one photo with two versions. */
+@Composable
+private fun PartnerSwitch(showingRaw: Boolean, onSwitch: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(3.dp)
+            .selectableGroup(),
+    ) {
+        for ((label, raw) in listOf("JPEG" to false, "RAW" to true)) {
+            val chosen = raw == showingRaw
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (chosen) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                    .selectable(selected = chosen, onClick = { if (!chosen) onSwitch() }, role = Role.Tab)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+/** Under the photo on a phone: how it was taken, and the way back to the original of an edited one. */
+@Composable
+private fun Strip(state: ViewerUiState, item: MediaItemEntity, onRestore: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        state.details?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (state.edited && item.kind != MediaKind.VIDEO) {
+            TextButton(onClick = onRestore, enabled = !state.busy) { Text("원본으로 되돌리기") }
+        }
+    }
+}
+
+@Composable
+private fun Stars(rating: Int, onRate: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        for (stars in 1..5) {
+            Icon(
+                painterResource(if (stars <= rating) R.drawable.ic_star_filled else R.drawable.ic_star),
+                contentDescription = "별점 $stars",
+                tint = if (stars <= rating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable(role = Role.Button) { onRate(stars) }
+                    .padding(10.dp)
+                    .size(28.dp),
+            )
+        }
+    }
+}
+
+/** Everything known about the photo: when, how, where, and its stars. */
+@Composable
+private fun Details(
+    state: ViewerUiState,
+    item: MediaItemEntity,
+    onRate: (Int) -> Unit,
+    onRestore: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    Column(modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            CAPTURE_FORMAT.format(Instant.ofEpochMilli(item.capturedAt).atZone(ZoneId.systemDefault())) +
+                " · " + Formatter.formatShortFileSize(context, item.sizeBytes),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        state.details?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = locationLabel(item),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (item.geoSource != GeoSource.NONE) TextButton(onClick = { context.showOnMap(item) }) { Text("지도에서 보기") }
+        }
+        Stars(item.rating, onRate, Modifier.offset(x = (-10).dp))
+        if (state.edited && item.kind != MediaKind.VIDEO) {
+            OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text("원본으로 되돌리기") }
+        }
+    }
+}
+
+/**
+ * Along the bottom, as in a gallery app: stars, edit, share, delete and the rest in a menu. [onRating]
+ * and [onInfo] are null where the stars and the information are on screen anyway.
+ */
+@Composable
+private fun ActionBar(
+    item: MediaItemEntity,
+    state: ViewerUiState,
+    onRating: (() -> Unit)?,
+    onEdit: () -> Unit,
+    /** Called with the long side the shared copy may have, null for full size, or [RAW_FILE] for the file as it is. */
+    onShare: (Int?) -> Unit,
+    onTrash: () -> Unit,
+    onInfo: (() -> Unit)?,
+    onPaste: () -> Unit,
+    onExport: () -> Unit,
+    onShowMap: () -> Unit,
+) {
+    val enabled = !state.busy
+    val photo = item.kind != MediaKind.VIDEO
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceAround) {
+        if (onRating != null) {
+            ActionButton(if (item.rating > 0) R.drawable.ic_star_filled else R.drawable.ic_star, "별점", enabled, onRating)
+        }
+        if (photo) ActionButton(R.drawable.ic_edit, "편집", enabled, onEdit)
+        Box {
+            var open by remember { mutableStateOf(false) }
+            ActionButton(R.drawable.ic_share, "공유", enabled) { if (item.kind == MediaKind.VIDEO) onShare(RAW_FILE) else open = true }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                val choices = when (item.kind) {
+                    MediaKind.RAW -> listOf("JPEG · 원본 크기" to null, "JPEG · 긴 변 2048px" to 2048, "JPEG · 긴 변 1080px" to 1080, "RAW 파일 그대로" to RAW_FILE)
+                    else -> listOf("원본 그대로" to null, "긴 변 2048px로 줄여서" to 2048, "긴 변 1080px로 줄여서" to 1080)
+                }
+                for ((label, longSide) in choices) {
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            open = false
+                            onShare(longSide)
+                        },
+                    )
+                }
+            }
+        }
+        ActionButton(R.drawable.ic_delete, "삭제", enabled, onTrash)
+        Box {
+            var open by remember { mutableStateOf(false) }
+            ActionButton(R.drawable.ic_more_horiz, "더 보기", enabled) { open = true }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                val entries = listOfNotNull(
+                    onInfo?.let { Triple("정보", true, it) },
+                    Triple("보정 값 붙여넣기", state.canPaste, onPaste).takeIf { photo },
+                    Triple("JPEG로 저장", true, onExport).takeIf { item.kind == MediaKind.RAW },
+                    Triple("지도에서 보기", true, onShowMap).takeIf { item.geoSource != GeoSource.NONE },
+                )
+                for ((label, available, action) in entries) {
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        enabled = available,
+                        onClick = {
+                            open = false
+                            action()
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** An icon over its name. */
+@Composable
+private fun ActionButton(@DrawableRes icon: Int, label: String, enabled: Boolean, onClick: () -> Unit) {
+    val color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+    Column(
+        modifier = Modifier
+            .width(64.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(painterResource(icon), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = color)
     }
 }
 
@@ -368,30 +536,6 @@ private fun Context.showOnMap(item: MediaItemEntity) {
     val longitude = item.longitude ?: return
     val uri = "geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(item.fileName)})".toUri()
     launch(Intent(Intent.ACTION_VIEW, uri))
-}
-
-/** Offers the sizes a photo can be shared at; a video is shared as it is. */
-@Composable
-private fun ShareButton(kind: MediaKind, enabled: Boolean, onShare: (Int?) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { if (kind == MediaKind.VIDEO) onShare(RAW_FILE) else open = true }, enabled = enabled) { Text("공유") }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            val choices = when (kind) {
-                MediaKind.RAW -> listOf("JPEG · 원본 크기" to null, "JPEG · 긴 변 2048px" to 2048, "JPEG · 긴 변 1080px" to 1080, "RAW 파일 그대로" to RAW_FILE)
-                else -> listOf("원본 그대로" to null, "긴 변 2048px로 줄여서" to 2048, "긴 변 1080px로 줄여서" to 1080)
-            }
-            for ((label, longSide) in choices) {
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        open = false
-                        onShare(longSide)
-                    },
-                )
-            }
-        }
-    }
 }
 
 /** What [onShare] is given to share a file just as it is stored. */

@@ -1,4 +1,4 @@
-package com.byeonggon.cameramanager.ui.editor
+package com.byeonggon.cameramanager.ui.common
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -6,15 +6,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
- * The editor is dark whatever the system's theme, as photo editors are: bright surroundings make a
- * picture look darker than it is, and coloured ones pull its colours towards theirs.
+ * The viewer and the editor are dark whatever the system's theme, as photo apps are: bright
+ * surroundings make a picture look darker than it is, and coloured ones pull its colours towards theirs.
  */
 @Composable
-internal fun EditorTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = EditorColors, typography = MaterialTheme.typography, content = content)
+fun PhotoTheme(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = PhotoColors, typography = MaterialTheme.typography, content = content)
 }
 
-private val EditorColors = darkColorScheme(
+private val PhotoColors = darkColorScheme(
     primary = Color(0xFF7FA8FF),
     onPrimary = Color(0xFF0B1B3D),
     primaryContainer = Color(0xFF3B6EF0),
@@ -37,4 +37,4 @@ private val EditorColors = darkColorScheme(
 )
 
 /** Behind the picture: a little lighter than black, so the edges of dark photos still show. */
-internal val PictureBackground = Color(0xFF0E0F11)
+val PictureBackground = Color(0xFF0E0F11)

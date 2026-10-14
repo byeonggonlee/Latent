@@ -27,13 +27,20 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -42,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +62,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,10 +79,12 @@ import com.byeonggon.cameramanager.ui.common.rememberMediaModel
 import com.byeonggon.cameramanager.ui.common.rememberStorageAccess
 import com.byeonggon.cameramanager.ui.common.rememberWindowLayout
 import java.io.File
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val DAY_FORMAT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN)
+private val DAY_FORMAT = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)
+private val DAY_FORMAT_WITH_YEAR = DateTimeFormatter.ofPattern("yyyy년 M월 d일 EEEE", Locale.KOREAN)
 
 @Composable
 fun LibraryScreen(
@@ -128,24 +139,19 @@ private fun LibraryContent(
             SelectionBar(state, viewModel)
         } else if (state.showingTrash) {
             TrashBar(state, viewModel)
-        } else Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            LibraryFilter.entries.forEach { filter ->
-                FilterChip(selected = filter == state.filter, onClick = { viewModel.setFilter(filter) }, label = { Text(filter.label) })
-            }
-            RatingFilter(state.leastRating, viewModel::setLeastRating)
-            FilterChip(selected = state.stacked, onClick = { viewModel.setStacked(!state.stacked) }, label = { Text("RAW+JPEG 묶기") })
-            FilterChip(
-                selected = false,
-                onClick = { viewModel.showTrash(true) },
-                label = { Text(if (state.trashCount > 0) "휴지통 ${state.trashCount}" else "휴지통") },
-            )
+        } else {
+            // Once the large title has scrolled away, a small one stays at the top with the menu, as in One UI.
+            val titleGone by remember(gridState) { derivedStateOf { gridState.firstVisibleItemIndex > 0 } }
+            if (titleGone && state.days.isNotEmpty()) CompactTitle(state, viewModel)
         }
+        val withTitle = !selecting && !state.showingTrash && state.batch == null
         if (state.loading) {
             // Nothing to show until the first query returns; it is too quick to warrant a spinner.
         } else if (state.days.isEmpty()) {
+            if (withTitle) {
+                LargeTitle(state, viewModel)
+                KindFilters(state, viewModel)
+            }
             EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash)
         } else {
             LazyVerticalGrid(
@@ -156,17 +162,28 @@ private fun LibraryContent(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
+                if (withTitle) {
+                    item(key = "title", span = { GridItemSpan(maxLineSpan) }, contentType = "title") { LargeTitle(state, viewModel) }
+                    item(key = "kinds", span = { GridItemSpan(maxLineSpan) }, contentType = "kinds") { KindFilters(state, viewModel) }
+                }
                 state.days.forEach { day ->
                     item(
                         key = "day-${day.date}",
                         span = { GridItemSpan(maxLineSpan) },
                         contentType = "header",
                     ) {
-                        Text(
-                            text = "${day.date.format(DAY_FORMAT)} · ${day.items.size}",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                        )
+                        Row(
+                            modifier = Modifier.padding(start = 18.dp, top = 16.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(dayTitle(day.date), style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "${day.items.size}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     items(day.items, key = { it.id }, contentType = { "media" }) { item ->
                         // Holding a photo starts picking photos out; from then on a tap picks, too.
@@ -287,29 +304,128 @@ private fun BatchBar(batch: BatchProgress, onCancel: () -> Unit) {
     }
 }
 
-/** Narrows the library down to the photos with at least so many stars. */
+/** The library's name in large type with what it holds, scrolling away with the photos as in One UI. */
 @Composable
-private fun RatingFilter(leastRating: Int, onChange: (Int) -> Unit) {
+private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel) {
+    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 40.dp)) {
+        Text("보관함", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                summaryOf(state),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            LibraryMenu(state, viewModel)
+        }
+    }
+}
+
+/** What stays at the top once [LargeTitle] has scrolled away. */
+@Composable
+private fun CompactTitle(state: LibraryUiState, viewModel: LibraryViewModel) {
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("보관함", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        LibraryMenu(state, viewModel)
+    }
+}
+
+/** How many photos and videos are shown, e.g. "사진 1,434 · 동영상 106". */
+private fun summaryOf(state: LibraryUiState): String {
+    val shown = state.days.flatMap { it.items }
+    val videos = shown.count { it.kind == MediaKind.VIDEO }
+    val photos = shown.size - videos
+    val format = java.text.NumberFormat.getIntegerInstance(Locale.KOREAN)
+    return listOfNotNull(
+        "사진 ${format.format(photos)}".takeIf { photos > 0 || videos == 0 },
+        "동영상 ${format.format(videos)}".takeIf { videos > 0 },
+    ).joinToString(" · ")
+}
+
+/** Which kinds of files are shown, and the stars a photo needs if that is narrowed down too. */
+@Composable
+private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        LibraryFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = filter == state.filter,
+                onClick = { viewModel.setFilter(filter) },
+                label = { Text(filter.label) },
+                shape = RoundedCornerShape(50),
+                border = null,
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    selectedContainerColor = MaterialTheme.colorScheme.onSurface,
+                    selectedLabelColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        }
+        // Narrowing by stars is chosen from the menu; here it shows, and can be taken off.
+        if (state.leastRating > 0) {
+            InputChip(
+                selected = true,
+                onClick = { viewModel.setLeastRating(0) },
+                label = { Text("★ ${state.leastRating} 이상") },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "별점 조건 지우기", modifier = Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(50),
+            )
+        }
+    }
+}
+
+/** How the library is shown, and the trash. */
+@Composable
+private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     var open by remember { mutableStateOf(false) }
+    var rating by remember { mutableStateOf(false) }
     Box {
-        FilterChip(
-            selected = leastRating > 0,
-            onClick = { open = true },
-            label = { Text(if (leastRating == 0) "별점" else "★ $leastRating 이상") },
-        )
+        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "보관함 메뉴") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text("별점으로 거르기") },
+                onClick = {
+                    open = false
+                    rating = true
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("RAW+JPEG 묶어 보기") },
+                trailingIcon = { Checkbox(checked = state.stacked, onCheckedChange = null) },
+                onClick = {
+                    open = false
+                    viewModel.setStacked(!state.stacked)
+                },
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(if (state.trashCount > 0) "휴지통 ${state.trashCount}" else "휴지통") },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_delete), contentDescription = null) },
+                onClick = {
+                    open = false
+                    viewModel.showTrash(true)
+                },
+            )
+        }
+        DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
             for (stars in 0..5) {
                 DropdownMenuItem(
                     text = { Text(if (stars == 0) "모두 보기" else "★".repeat(stars) + " 이상") },
                     onClick = {
-                        open = false
-                        onChange(stars)
+                        rating = false
+                        viewModel.setLeastRating(stars)
                     },
                 )
             }
         }
     }
 }
+
+/** A day as One UI names it: "10월 9일 목요일", with the year only when it is not this one. */
+private fun dayTitle(date: LocalDate): String =
+    date.format(if (date.year == LocalDate.now().year) DAY_FORMAT else DAY_FORMAT_WITH_YEAR)
 
 @Composable
 private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean) {
@@ -318,7 +434,7 @@ private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean) {
             text = if (trash) {
                 "휴지통이 비어 있습니다."
             } else if (noItemsAtAll) {
-                "아직 가져온 사진이 없습니다.\n동기화 탭에서 카메라를 연결해 가져오세요."
+                "아직 가져온 사진이 없습니다.\n카메라 탭에서 카메라를 연결해 가져오세요."
             } else {
                 "이 종류의 항목이 없습니다."
             },
@@ -392,7 +508,7 @@ private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean
         }
         if (item.edit != null) {
             Icon(
-                painterResource(R.drawable.ic_auto_fix),
+                painterResource(R.drawable.ic_edit),
                 contentDescription = "보정됨",
                 tint = Color.White,
                 modifier = Modifier.align(Alignment.BottomStart).padding(4.dp).size(14.dp),

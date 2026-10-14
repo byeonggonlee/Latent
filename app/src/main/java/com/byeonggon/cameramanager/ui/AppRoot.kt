@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -37,7 +36,7 @@ import com.byeonggon.cameramanager.ui.viewer.ViewerScreen
 
 private enum class Tab(val label: String) {
     LIBRARY("보관함"),
-    SYNC("동기화"),
+    SYNC("카메라"),
     LOCATION("위치"),
 }
 
@@ -123,7 +122,7 @@ fun AppRoot(startOnSync: Boolean) {
 private fun TabIcon(tab: Tab) {
     when (tab) {
         Tab.LIBRARY -> Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null)
-        Tab.SYNC -> Icon(Icons.Default.Refresh, contentDescription = null)
+        Tab.SYNC -> Icon(painterResource(R.drawable.ic_camera), contentDescription = null)
         Tab.LOCATION -> Icon(Icons.Default.LocationOn, contentDescription = null)
     }
 }

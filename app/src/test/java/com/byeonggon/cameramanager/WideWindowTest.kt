@@ -76,20 +76,20 @@ class WideWindowTest {
     private fun open(fileName: String) {
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithContentDescription(fileName).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription(fileName).performClick()
-        waitForText("보정")
+        waitForText("편집")
     }
 
     @Test
     fun putsTheTabsDownTheSideAndThePanelsBesideThePicture() {
-        compose.onNodeWithText("동기화").assertIsDisplayed()
+        compose.onNodeWithText("카메라").assertIsDisplayed()
         open("DSC00001.JPG")
 
         // The information stands to the right of the photo, not under it.
         val photo = compose.onNodeWithContentDescription("DSC00001.JPG").fetchSemanticsNode().boundsInRoot
-        val edit = compose.onNodeWithText("보정").fetchSemanticsNode().boundsInRoot
+        val edit = compose.onNodeWithText("편집").fetchSemanticsNode().boundsInRoot
         assertTrue("photo $photo, panel $edit", edit.left >= photo.right - 1f)
 
-        compose.onNodeWithText("보정").performClick()
+        compose.onNodeWithText("편집").performClick()
         waitForEditor()
         val picture = compose.onNodeWithContentDescription("DSC00001.JPG").fetchSemanticsNode().boundsInRoot
         val slider = compose.onNodeWithContentDescription("노출").fetchSemanticsNode().boundsInRoot
@@ -113,7 +113,7 @@ class WideWindowTest {
     @Test
     fun undoesWithTheKeyboardInTheEditor() {
         open("DSC00001.JPG")
-        compose.onNodeWithText("보정").performClick()
+        compose.onNodeWithText("편집").performClick()
         waitForEditor()
         compose.onNodeWithText("자동").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {

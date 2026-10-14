@@ -89,6 +89,8 @@ import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.enhance.Adjustments
 import com.byeonggon.cameramanager.enhance.Framing
 import com.byeonggon.cameramanager.enhance.Mask
+import com.byeonggon.cameramanager.ui.common.PhotoTheme
+import com.byeonggon.cameramanager.ui.common.PictureBackground
 import com.byeonggon.cameramanager.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.cameramanager.ui.common.ZoomableBox
 import com.byeonggon.cameramanager.ui.common.keys
@@ -203,7 +205,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 viewModel = viewModel,
             )
     }
-    EditorTheme {
+    PhotoTheme {
     Scaffold(
         // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes.
         modifier = Modifier.keys { event ->
