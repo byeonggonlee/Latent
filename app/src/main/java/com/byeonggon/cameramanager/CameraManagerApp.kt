@@ -13,6 +13,7 @@ import com.byeonggon.cameramanager.data.LibraryEdits
 import com.byeonggon.cameramanager.data.LibraryIndex
 import com.byeonggon.cameramanager.data.LibraryStorage
 import com.byeonggon.cameramanager.data.SettingsRepository
+import com.byeonggon.cameramanager.data.Trash
 import com.byeonggon.cameramanager.data.db.AppDatabase
 import com.byeonggon.cameramanager.location.Geotagger
 import com.byeonggon.cameramanager.location.TimelineImporter
@@ -43,6 +44,7 @@ class AppContainer(context: Context) {
     val settings = SettingsRepository(context)
     val storage = LibraryStorage(context)
     val libraryIndex = LibraryIndex(storage, database)
+    val trash = Trash(storage, database.mediaDao())
     val usb = UsbCameraConnector(context)
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
     val rawCache = RawCache()

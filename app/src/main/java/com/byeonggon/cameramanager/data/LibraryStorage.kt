@@ -61,6 +61,20 @@ class LibraryStorage(private val context: Context) {
     /** A file among the copies of one share, which may hold several. */
     fun sharedFile(fileName: String): File = File(context.cacheDir, "share").apply { mkdirs() }.let { uniqueFile(it, fileName) }
 
+    /**
+     * The folder that keeps a file in the trash, with what belongs to it: one for each library entry.
+     * Gallery apps are told to leave the trash alone.
+     */
+    fun trashFolder(id: Long): File {
+        val trash = File(root, ".trash")
+        trash.mkdirs()
+        File(trash, ".nomedia").createNewFile()
+        return File(trash, id.toString()).apply { mkdirs() }
+    }
+
+    /** [file] if it is free, or else a free name next to it, such as DSC0001_1.JPG. */
+    fun freeFileLike(file: File): File = uniqueFile(file.parentFile ?: root, file.name)
+
     /** Makes the file show up in gallery apps. */
     fun publish(file: File) {
         MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)

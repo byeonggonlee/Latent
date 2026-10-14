@@ -48,6 +48,10 @@ data class MediaItemEntity(
     val edit: String? = null,
     /** Stars from 0 to 5, for picking out the photos worth keeping. */
     @ColumnInfo(defaultValue = "0") val rating: Int = 0,
+    /** When the file was put in the trash; null while it is in the library. */
+    val trashedAt: Long? = null,
+    /** Where the file was in the library before it went into the trash, to put it back there. */
+    val trashedFrom: String? = null,
 )
 
 /** Remembers every camera file ever imported, so removing it from the library does not re-import it. */

@@ -102,7 +102,11 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     /** Gives the photo [rating] stars; the number it already has takes them away again. */
     fun setRating(rating: Int) {
         val item = state.value.item ?: return
-        viewModelScope.launch { mediaDao.setRating(item.id, if (rating == item.rating) 0 else rating) }
+        viewModelScope.launch {
+            // What the database has: a second tap may come before the screen shows the first.
+            val current = mediaDao.byId(item.id)?.rating ?: return@launch
+            mediaDao.setRating(item.id, if (rating == current) 0 else rating)
+        }
     }
 
     /** Takes the corrections away again. A JPEG gets back the original that was kept when it was edited. */
@@ -148,6 +152,16 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
                 null
             }
             status.update { it.copy(busy = false, shareFile = file, message = if (file == null) "공유할 사진을 만들지 못했습니다." else null) }
+        }
+    }
+
+    /** Puts the photo in the trash, together with [alsoId], the other file of its pair if that goes along. */
+    fun moveToTrash(alsoId: Long?) {
+        val item = state.value.item ?: return
+        runTask(failure = "휴지통으로 옮기지 못했습니다.") {
+            val partner = alsoId?.let { mediaDao.byId(it) }
+            container.trash.throwAway(listOfNotNull(item, partner))
+            "휴지통으로 옮겼습니다."
         }
     }
 

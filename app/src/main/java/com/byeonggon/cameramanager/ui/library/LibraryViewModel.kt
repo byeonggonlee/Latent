@@ -13,7 +13,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -73,6 +77,9 @@ data class LibraryUiState(
     val message: String? = null,
     /** Files ready to be handed to another app together, until the screen has done so. */
     val shareFiles: List<File> = emptyList(),
+    /** Showing what is in the trash instead of the library. */
+    val showingTrash: Boolean = false,
+    val trashCount: Int = 0,
 )
 
 class LibraryViewModel(application: Application) : AndroidViewModel(application) {
@@ -82,12 +89,20 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val filter = MutableStateFlow(LibraryFilter.ALL)
     private val leastRating = MutableStateFlow(0)
     private val stacked = MutableStateFlow(true)
+    private val showingTrash = MutableStateFlow(false)
+    private val trash = container.trash
 
     /** What is not read from the library itself: the selection, and what is being done with it. */
     private val activity = MutableStateFlow(LibraryUiState())
     private var batch: Job? = null
 
-    private val listed = combine(mediaDao.observeAll(), filter, leastRating, stacked) { items, filter, leastRating, stacked ->
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val listed = combine(
+        showingTrash.flatMapLatest { inTrash -> if (inTrash) trash.items else mediaDao.observeAll() },
+        filter,
+        leastRating,
+        stacked,
+    ) { items, filter, leastRating, stacked ->
         val zone = ZoneId.systemDefault()
         val partners = partnersOf(items)
         // Only the JPEG of a pair is listed, unless raw files are what is asked for.
@@ -104,7 +119,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     }.flowOn(Dispatchers.Default)
 
     val state: StateFlow<LibraryUiState> =
-        combine(listed, activity, edits.copied) { listed, activity, copied ->
+        combine(listed, activity, edits.copied, showingTrash, trash.items.map { it.size }) { listed, activity, copied, inTrash, trashCount ->
             // A photo that is no longer listed, deleted or filtered out, is no longer selected either.
             val shown = listed.days.flatMapTo(HashSet()) { day -> day.items.map { it.id } }
             listed.copy(
@@ -113,11 +128,64 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 batch = activity.batch,
                 message = activity.message,
                 shareFiles = activity.shareFiles,
+                showingTrash = inTrash,
+                trashCount = trashCount,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
     init {
-        viewModelScope.launch { container.libraryIndex.forgetMissingFiles() }
+        viewModelScope.launch {
+            container.libraryIndex.forgetMissingFiles()
+            trash.emptyExpired()
+        }
+    }
+
+    /** Shows the trash instead of the library, or the library again. The selection does not carry over. */
+    fun showTrash(shown: Boolean) {
+        showingTrash.value = shown
+        clearSelection()
+    }
+
+    /**
+     * Puts the selected photos in the trash. A JPEG that stands for its raw file as well, in the
+     * stacked library, takes the raw file along.
+     */
+    fun trashSelected() = whileBusy("휴지통으로 옮기지 못했습니다.") {
+        val current = state.value
+        val chosen = selectedItems()
+        val partners = if (current.stacked) mediaDao.byIds(chosen.mapNotNull { current.partners[it.id] }) else emptyList()
+        trash.throwAway(chosen + partners.filter { partner -> chosen.none { it.id == partner.id } })
+        "${chosen.size}장을 휴지통으로 옮겼습니다."
+    }
+
+    fun restoreSelected() = whileBusy("되돌리지 못했습니다.") {
+        val chosen = selectedItems()
+        trash.restore(chosen)
+        "${chosen.size}장을 되돌렸습니다."
+    }
+
+    fun deleteSelectedForever() = whileBusy("삭제하지 못했습니다.") {
+        val chosen = selectedItems()
+        trash.deleteForever(chosen)
+        "${chosen.size}장을 완전히 삭제했습니다."
+    }
+
+    fun emptyTrash() = whileBusy("휴지통을 비우지 못했습니다.") {
+        val all = trash.items.first()
+        trash.deleteForever(all)
+        "${all.size}장을 완전히 삭제했습니다."
+    }
+
+    /** Runs [work] and reports what it says it did, or [failure]; the selection is cleared either way. */
+    private fun whileBusy(failure: String, work: suspend () -> String) {
+        viewModelScope.launch {
+            val message = try {
+                work()
+            } catch (e: IOException) {
+                failure
+            }
+            activity.update { it.copy(selected = emptySet(), message = message) }
+        }
     }
 
     fun setFilter(value: LibraryFilter) {

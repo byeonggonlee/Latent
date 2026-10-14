@@ -92,6 +92,8 @@ fun ViewerScreen(
     onItemChange: (Long) -> Unit,
     /** For each photo shot as raw and JPEG at once, the other file of the pair. */
     partners: Map<Long, Long> = emptyMap(),
+    /** Whether a pair is listed as one: then deleting one deletes both. */
+    stacked: Boolean = false,
     onClose: () -> Unit,
     onEdit: () -> Unit,
     viewModel: ViewerViewModel = viewModel(),
@@ -163,6 +165,13 @@ fun ViewerScreen(
                     onShare = { longSide -> if (longSide == RAW_FILE) context.share(File(item.path), item.kind) else viewModel.share(longSide) },
                     onShowMap = { context.showOnMap(item) },
                     onPartner = partners[item.id]?.let { partner -> { onItemChange(partner) } },
+                    onTrash = {
+                        // On to the next photo, as a gallery does; back to the library after the last.
+                        val page = pages.indexOfFirst { it.id == item.id }
+                        val next = pages.getOrNull(page + 1) ?: pages.getOrNull(page - 1)
+                        viewModel.moveToTrash(partners[item.id]?.takeIf { stacked })
+                        if (next != null && next.id != item.id) onItemChange(next.id) else close()
+                    },
                 )
             }
         },
@@ -219,6 +228,7 @@ private fun InfoPanel(
     onShowMap: () -> Unit,
     /** Shows the other file of a raw and JPEG pair; null for a photo that has none. */
     onPartner: (() -> Unit)?,
+    onTrash: () -> Unit,
 ) {
     val context = LocalContext.current
     var confirmingRestore by remember { mutableStateOf(false) }
@@ -275,6 +285,7 @@ private fun InfoPanel(
                     }
                 }
                 ShareButton(item.kind, enabled = !state.busy, onShare = onShare)
+                TextButton(onClick = onTrash, enabled = !state.busy) { Text("삭제") }
                 if (onPartner != null) {
                     TextButton(onClick = onPartner, enabled = !state.busy) {
                         Text(if (item.kind == MediaKind.RAW) "JPEG 보기" else "RAW 보기")

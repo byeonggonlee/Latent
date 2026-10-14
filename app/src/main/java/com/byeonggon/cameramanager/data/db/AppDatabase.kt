@@ -12,8 +12,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MediaDao {
-    @Query("SELECT * FROM media_items ORDER BY capturedAt DESC, id DESC")
+    /** Everything in the library, newest first; what is in the trash is not. */
+    @Query("SELECT * FROM media_items WHERE trashedAt IS NULL ORDER BY capturedAt DESC, id DESC")
     fun observeAll(): Flow<List<MediaItemEntity>>
+
+    @Query("SELECT * FROM media_items WHERE trashedAt IS NOT NULL ORDER BY trashedAt DESC, id DESC")
+    fun observeTrash(): Flow<List<MediaItemEntity>>
+
+    @Query("SELECT * FROM media_items WHERE trashedAt IS NOT NULL AND trashedAt < :before")
+    suspend fun trashedBefore(before: Long): List<MediaItemEntity>
+
+    @Query("UPDATE media_items SET path = :path, trashedAt = :trashedAt, trashedFrom = :trashedFrom WHERE id = :id")
+    suspend fun setPlace(id: Long, path: String, trashedAt: Long?, trashedFrom: String?)
 
     @Query("SELECT * FROM media_items WHERE id = :id")
     fun observeById(id: Long): Flow<MediaItemEntity?>
@@ -27,7 +37,7 @@ interface MediaDao {
     @Query("SELECT * FROM media_items")
     suspend fun all(): List<MediaItemEntity>
 
-    @Query("SELECT * FROM media_items WHERE geoSource = 'NONE'")
+    @Query("SELECT * FROM media_items WHERE geoSource = 'NONE' AND trashedAt IS NULL")
     suspend fun withoutLocation(): List<MediaItemEntity>
 
     @Query("SELECT COUNT(*) FROM media_items WHERE geoSource = 'NONE'")
@@ -129,7 +139,7 @@ interface LocationDao {
         LocationPointEntity::class,
         FilterEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -176,7 +186,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `trashedAt` INTEGER")
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `trashedFrom` TEXT")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
     }
 }

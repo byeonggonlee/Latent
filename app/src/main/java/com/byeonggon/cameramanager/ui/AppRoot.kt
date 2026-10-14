@@ -47,7 +47,9 @@ fun AppRoot(startOnSync: Boolean) {
     // The viewer pages through the photos in the order, and with the filters, that the library lists them.
     val library: LibraryViewModel = viewModel()
     val libraryState by library.state.collectAsStateWithLifecycle()
-    val shownInLibrary = remember(libraryState.days) { libraryState.days.flatMap { it.items } }
+    val shownInLibrary = remember(libraryState.days, libraryState.showingTrash) {
+        if (libraryState.showingTrash) emptyList() else libraryState.days.flatMap { it.items }
+    }
 
     val openItemId = viewerItemId
     if (openItemId != null) {
@@ -58,6 +60,7 @@ fun AppRoot(startOnSync: Boolean) {
                 itemId = openItemId,
                 items = shownInLibrary,
                 partners = libraryState.partners,
+                stacked = libraryState.stacked,
                 onItemChange = { viewerItemId = it },
                 onClose = { viewerItemId = null },
                 onEdit = { editing = true },

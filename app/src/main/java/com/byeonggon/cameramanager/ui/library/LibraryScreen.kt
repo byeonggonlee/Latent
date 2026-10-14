@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -60,6 +61,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.cameramanager.R
+import com.byeonggon.cameramanager.data.Trash
 import com.byeonggon.cameramanager.data.db.GeoSource
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
@@ -119,8 +121,12 @@ private fun LibraryContent(
         val batch = state.batch
         if (batch != null) {
             BatchBar(batch, onCancel = viewModel::cancelBatch)
+        } else if (selecting && state.showingTrash) {
+            TrashSelectionBar(state, viewModel)
         } else if (selecting) {
             SelectionBar(state, viewModel)
+        } else if (state.showingTrash) {
+            TrashBar(state, viewModel)
         } else Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -130,11 +136,16 @@ private fun LibraryContent(
             }
             RatingFilter(state.leastRating, viewModel::setLeastRating)
             FilterChip(selected = state.stacked, onClick = { viewModel.setStacked(!state.stacked) }, label = { Text("RAW+JPEG 묶기") })
+            FilterChip(
+                selected = false,
+                onClick = { viewModel.showTrash(true) },
+                label = { Text(if (state.trashCount > 0) "휴지통 ${state.trashCount}" else "휴지통") },
+            )
         }
         if (state.loading) {
             // Nothing to show until the first query returns; it is too quick to warrant a spinner.
         } else if (state.days.isEmpty()) {
-            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty)
+            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash)
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(108.dp),
@@ -162,7 +173,8 @@ private fun LibraryContent(
                             // A JPEG that stands for its raw file as well says so.
                             withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners,
                             selected = item.id in state.selected,
-                            onClick = { if (selecting) viewModel.toggle(item.id) else onOpen(item.id) },
+                            // In the trash a photo is only picked, to be put back or deleted.
+                            onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(item.id) },
                             onHold = { viewModel.toggle(item.id) },
                         )
                     }
@@ -199,7 +211,66 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
         TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text("보정 값 붙여넣기") }
         TextButton(onClick = viewModel::exportSelected) { Text("RAW를 JPEG로") }
         TextButton(onClick = viewModel::shareSelected) { Text("공유") }
+        TextButton(onClick = viewModel::trashSelected) { Text("삭제") }
     }
+}
+
+/** Above the trash: the way back to the library, how long photos stay, and emptying it. */
+@Composable
+private fun TrashBar(state: LibraryUiState, viewModel: LibraryViewModel) {
+    var confirming by remember { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { viewModel.showTrash(false) }) { Text("← 보관함") }
+            Text("휴지통", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { confirming = true }, enabled = state.trashCount > 0) { Text("비우기") }
+        }
+        Text(
+            "${Trash.KEPT_DAYS}일이 지나면 완전히 삭제됩니다. 사진을 눌러 고른 뒤 되돌리거나 지울 수 있습니다.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+    }
+    if (confirming) {
+        ConfirmDeletion("휴지통을 비울까요?", "${state.trashCount}장이 완전히 삭제되며 되돌릴 수 없습니다.", { confirming = false }) {
+            viewModel.emptyTrash()
+        }
+    }
+}
+
+/** What can be done to photos picked out in the trash. */
+@Composable
+private fun TrashSelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
+    var confirming by remember { mutableStateOf(false) }
+    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = viewModel::clearSelection) { Text("✕ ${state.selected.size}장 선택") }
+        TextButton(onClick = viewModel::restoreSelected) { Text("되돌리기") }
+        TextButton(onClick = { confirming = true }) { Text("완전히 삭제") }
+    }
+    if (confirming) {
+        ConfirmDeletion("완전히 삭제할까요?", "${state.selected.size}장이 삭제되며 되돌릴 수 없습니다.", { confirming = false }) {
+            viewModel.deleteSelectedForever()
+        }
+    }
+}
+
+@Composable
+private fun ConfirmDeletion(title: String, text: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(text) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm()
+                },
+            ) { Text("삭제") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
 }
 
 /** How far the work on the selected photos has got, and a way to stop it. */
@@ -239,10 +310,12 @@ private fun RatingFilter(leastRating: Int, onChange: (Int) -> Unit) {
 }
 
 @Composable
-private fun EmptyLibrary(noItemsAtAll: Boolean) {
+private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Text(
-            text = if (noItemsAtAll) {
+            text = if (trash) {
+                "휴지통이 비어 있습니다."
+            } else if (noItemsAtAll) {
                 "아직 가져온 사진이 없습니다.\n동기화 탭에서 카메라를 연결해 가져오세요."
             } else {
                 "이 종류의 항목이 없습니다."

@@ -9,6 +9,7 @@ import com.byeonggon.cameramanager.data.db.SyncedFolderEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -47,6 +48,7 @@ class MigrationTest {
             assertEquals(null, item.sourceKey)
             assertEquals(null, item.edit)
             assertEquals(0, item.rating)
+            assertNull(item.trashedAt)
             database.mediaDao().setRating(item.id, 4)
             assertEquals(4, database.mediaDao().byId(item.id)!!.rating)
             database.mediaDao().setEdit(item.id, "{}")

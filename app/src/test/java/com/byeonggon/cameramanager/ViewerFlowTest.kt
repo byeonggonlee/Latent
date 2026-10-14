@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
@@ -159,5 +160,29 @@ class ViewerFlowTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription("DSC00001.ARW").fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun deletesToTheTrashAndPutsBackFromIt() {
+        open("DSC00002.JPG")
+        compose.onNodeWithText("삭제").performClick()
+        // On to the next photo.
+        waitForText("DSC00003.JPG")
+        compose.onNodeWithContentDescription("닫기").performClick()
+
+        waitForText("휴지통 1")
+        compose.onAllNodesWithContentDescription("DSC00002.JPG").assertCountEquals(0)
+        compose.onNodeWithText("휴지통 1").performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("DSC00002.JPG").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithContentDescription("DSC00002.JPG").performClick()
+        compose.onNodeWithText("되돌리기").performClick()
+        waitForText("1장을 되돌렸습니다.")
+        compose.onNodeWithText("← 보관함").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("DSC00002.JPG").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(null, runBlocking { mediaDao.byId(ids[1])!!.trashedAt })
     }
 }
