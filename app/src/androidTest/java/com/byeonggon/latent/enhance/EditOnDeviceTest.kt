@@ -48,6 +48,17 @@ class EditOnDeviceTest {
         ),
     )
 
+    /** What [everything] leaves out: glow, a painted mask, blemishes taken out, and black and white. */
+    private val andTheRest = everything.copy(
+        adjustments = tones.copy(glow = 0.5f),
+        monochrome = true,
+        locals = everything.locals + LocalEdit(
+            Mask(MaskShape.BRUSH, 0f, 0f, 0f, 0f, strokes = listOf(BrushStroke(listOf(0.2f, 0.3f, 0.5f, 0.5f, 0.8f, 0.4f), 0.08f))),
+            Adjustments(exposure = 0.3f, clarity = 0.4f),
+        ),
+        spots = List(8) { Spot(0.15f + 0.09f * it, 0.3f + 0.05f * (it % 3), 0.02f, 0.15f + 0.09f * it, 0.65f) },
+    )
+
     private inline fun <T> timed(what: String, block: () -> T): T {
         val startedAt = System.nanoTime()
         return block().also { Log.i(TAG, "on device: $what in ${(System.nanoTime() - startedAt) / 1_000_000} ms") }
@@ -60,9 +71,9 @@ class EditOnDeviceTest {
     }
 
     /** Draws the picture as the editor does while a slider moves, and logs how long one drawing takes. */
-    private fun followASlider(name: String, picture: LinearImage) {
+    private fun followASlider(name: String, picture: LinearImage, heaviest: PhotoEdit = everything) {
         val overview = picture.downscaled(ToneRenderer.OVERVIEW_EDGE)
-        for ((what, base) in listOf("a few sliders" to PhotoEdit(Adjustments(contrast = 0.2f, shadows = 0.4f, vibrance = 0.3f)), "every tool" to everything)) {
+        for ((what, base) in listOf("a few sliders" to PhotoEdit(Adjustments(contrast = 0.2f, shadows = 0.4f, vibrance = 0.3f)), "every tool" to heaviest)) {
             val times = (1..12).map { step ->
                 val edit = base.copy(adjustments = base.adjustments.copy(exposure = step / 20f))
                 val startedAt = System.nanoTime()
@@ -161,6 +172,36 @@ class EditOnDeviceTest {
             folder.deleteRecursively()
         }
         Log.i(TAG, "on device: heap limit ${Runtime.getRuntime().maxMemory() shr 20} MB")
+    }
+
+    @Test
+    fun editsWithTheRestOfTheToolsWithinTheAppsMemory() {
+        assumeTrue(jpegSample != null && jpegSample.isFile)
+        folder.deleteRecursively()
+        folder.mkdirs()
+        val photo = File(folder, "photo.jpg")
+        val backup = File(folder, "originals/photo.jpg")
+        try {
+            jpegSample!!.copyTo(photo)
+            val original = sizeOf(photo)
+            followASlider("jpeg with glow, brush, healing", timed("jpeg load for editing") { PhotoEnhancer.load(photo, 1600) }, andTheRest)
+            timed("jpeg save with glow, brush, healing") { PhotoEnhancer.saveEdited(photo, backup, andTheRest) }
+            assertEquals(original, sizeOf(photo))
+        } finally {
+            folder.deleteRecursively()
+        }
+        if (arwSample != null && arwSample.isFile) {
+            val target = File(folder, "developed.jpg")
+            folder.mkdirs()
+            try {
+                val raw = RawRenderer.read(arwSample)
+                followASlider("raw with glow, brush, healing", RawRenderer.proxy(raw, cells = 2, lensCorrection = true), andTheRest)
+                timed("raw export with glow, brush, healing") { RawRenderer.export(arwSample, target, andTheRest) }
+                assertTrue(target.length() > 0)
+            } finally {
+                folder.deleteRecursively()
+            }
+        }
     }
 
     @Test
