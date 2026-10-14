@@ -1,12 +1,17 @@
 package com.byeonggon.cameramanager.ui.editor
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -14,6 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,7 +85,7 @@ internal fun signed(value: Float): String = String.format(Locale.US, "%+d", valu
 private const val SNAP_TO_ZERO = 0.03f
 
 /**
- * A slider with its name in front and its value behind. Tapping the value puts it back to [untouched].
+ * A slider under its name and value. Tapping the value puts it back to [untouched].
  * [onDone] is called when the slider is let go of. [hues] gives the track the colours of the rainbow.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,15 +101,38 @@ internal fun SettingSlider(
     untouched: Float = 0f,
     hues: Boolean = false,
 ) {
-    Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(92.dp))
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(
+                valueText,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.End,
+                color = if (value == untouched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(enabled = enabled && value != untouched, onClickLabel = "$label 되돌리기") {
+                        onChange(untouched)
+                        onDone()
+                    }
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
         Slider(
             value = value,
             onValueChange = onChange,
             onValueChangeFinished = onDone,
             valueRange = range,
             enabled = enabled,
-            modifier = Modifier.weight(1f).semantics { contentDescription = label },
+            modifier = Modifier.fillMaxWidth().height(32.dp).semantics { contentDescription = label },
+            thumb = {
+                Box(
+                    Modifier
+                        .size(18.dp)
+                        .shadow(2.dp, CircleShape)
+                        .background(if (enabled) Color.White else MaterialTheme.colorScheme.outline, CircleShape),
+                )
+            },
             track = { state ->
                 val span = range.endInclusive - range.start
                 SettingTrack(
@@ -113,35 +143,25 @@ internal fun SettingSlider(
                 )
             },
         )
-        Text(
-            valueText,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.End,
-            color = if (value == untouched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .width(52.dp)
-                .clickable(enabled = enabled && value != untouched, onClickLabel = "$label 되돌리기") {
-                    onChange(untouched)
-                    onDone()
-                },
-        )
     }
 }
 
 /** A track that is filled between where a setting changes nothing and where the slider stands, both from 0 to 1. */
 @Composable
 private fun SettingTrack(from: Float, to: Float, enabled: Boolean, hues: Boolean) {
-    val rest = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 0.4f else 0.2f)
+    val rest = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 0.35f else 0.2f)
     val filled = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.4f)
-    Canvas(Modifier.fillMaxWidth().height(4.dp)) {
+    Canvas(Modifier.fillMaxWidth().height(12.dp)) {
         val middle = size.height / 2
+        val line = 2.dp.toPx()
         if (hues) {
             val rainbow = Brush.horizontalGradient(List(13) { Color.hsv(it * 30f % 360f, 0.85f, 0.95f) })
-            drawLine(rainbow, Offset(0f, middle), Offset(size.width, middle), strokeWidth = size.height, cap = StrokeCap.Round, alpha = if (enabled) 1f else 0.4f)
+            drawLine(rainbow, Offset(0f, middle), Offset(size.width, middle), strokeWidth = line * 2, cap = StrokeCap.Round, alpha = if (enabled) 1f else 0.4f)
             return@Canvas
         }
-        drawLine(rest, Offset(0f, middle), Offset(size.width, middle), strokeWidth = size.height, cap = StrokeCap.Round)
-        drawLine(filled, Offset(size.width * from, middle), Offset(size.width * to, middle), strokeWidth = size.height)
-        if (from > 0f) drawCircle(if (to == from) rest else filled, radius = size.height, center = Offset(size.width * from, middle))
+        drawLine(rest, Offset(0f, middle), Offset(size.width, middle), strokeWidth = line, cap = StrokeCap.Round)
+        // A mark where the setting changes nothing, unless that is where the track starts.
+        if (from > 0f) drawLine(rest, Offset(size.width * from, 0f), Offset(size.width * from, size.height), strokeWidth = 1.dp.toPx())
+        drawLine(filled, Offset(size.width * from, middle), Offset(size.width * to, middle), strokeWidth = line)
     }
 }

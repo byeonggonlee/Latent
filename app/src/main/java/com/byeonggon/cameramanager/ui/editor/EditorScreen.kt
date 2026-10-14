@@ -2,9 +2,12 @@ package com.byeonggon.cameramanager.ui.editor
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -528,6 +531,8 @@ private fun EditorPanel(
 ) {
     var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
     var colorTools by rememberSaveable { mutableStateOf(ColorTools.SLIDERS) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val height by animateDpAsState(if (expanded) EXPANDED_PANEL_HEIGHT else PANEL_HEIGHT, label = "panel height")
     val edit = state.edit
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -541,11 +546,13 @@ private fun EditorPanel(
                     HistogramView(it, docked = true)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            } else {
+                Grabber(expanded, onExpand = { expanded = it })
             }
             Column(
-                (if (tall) Modifier.weight(1f) else Modifier.height(PANEL_HEIGHT))
+                (if (tall) Modifier.weight(1f) else Modifier.height(height))
                     .verticalScroll(rememberScrollState())
-                    .padding(vertical = 8.dp),
+                    .padding(bottom = 8.dp),
             ) {
                 when (tab) {
                     EditorTab.FILTERS -> FilterPanel(
@@ -642,6 +649,26 @@ private fun EditorPanel(
                 }
             }
         }
+    }
+}
+
+/** A handle on top of the panel: dragging it up shows more of the panel, at the cost of the picture's room. */
+@Composable
+private fun Grabber(expanded: Boolean, onExpand: (Boolean) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(22.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, amount ->
+                    change.consume()
+                    if (amount < -GRAB_THRESHOLD) onExpand(true) else if (amount > GRAB_THRESHOLD) onExpand(false)
+                }
+            }
+            .clickable(onClickLabel = if (expanded) "패널 접기" else "패널 펼치기") { onExpand(!expanded) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(width = 36.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(50)))
     }
 }
 
@@ -795,5 +822,7 @@ private fun FramingControls(
 }
 
 private val PANEL_HEIGHT = 268.dp
+private val EXPANDED_PANEL_HEIGHT = 420.dp
+private const val GRAB_THRESHOLD = 4f
 private const val MAX_ANGLE = 30f
 private const val ANGLE_SNAP = 0.3f
