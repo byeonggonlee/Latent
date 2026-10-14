@@ -30,6 +30,11 @@ have the permission to use the internet: nothing it reads or makes can leave the
 | USB | To read the camera. |
 | Foreground services, starting at boot | To keep recording and syncing running while the screen is off, and to tell you after a restart that recording stopped. |
 
+## Backups
+
+The app's database, with the recorded locations, is kept out of Android's cloud backup. When you move to a
+new phone with the system's own transfer, started by you, it comes along.
+
 ## Sharing
 
 Photos leave the app only when you share them, to the app you pick, or when another app on the phone
