@@ -16,11 +16,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
@@ -47,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
@@ -55,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -69,9 +75,13 @@ import coil3.compose.AsyncImage
 import com.byeonggon.cameramanager.data.db.GeoSource
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
+import com.byeonggon.cameramanager.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.cameramanager.ui.common.ZoomableBox
+import com.byeonggon.cameramanager.ui.common.keys
+import com.byeonggon.cameramanager.ui.common.rememberWindowLayout
 import com.byeonggon.cameramanager.ui.common.rememberMediaModel
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -141,20 +151,21 @@ fun ViewerScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(item?.fileName.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = close) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "닫기")
-                    }
-                },
-            )
-        },
-        bottomBar = {
-            if (item != null) {
-                InfoPanel(
+    // Puts the photo on screen in the trash and moves on to the next, as a gallery does; back to the library after the last.
+    val trashShown: (() -> Unit)? = item?.let { shown ->
+        {
+            val page = pages.indexOfFirst { it.id == shown.id }
+            val next = pages.getOrNull(page + 1) ?: pages.getOrNull(page - 1)
+            viewModel.moveToTrash(partners[shown.id]?.takeIf { stacked })
+            if (next != null && next.id != shown.id) onItemChange(next.id) else close()
+        }
+    }
+
+    val window = rememberWindowLayout()
+    val infoPanel: @Composable (Modifier) -> Unit = { modifier ->
+        if (item != null) {
+            InfoPanel(
+                    modifier = modifier,
                     state = state,
                     item = item,
                     onEdit = onEdit,
@@ -165,57 +176,80 @@ fun ViewerScreen(
                     onShare = { longSide -> if (longSide == RAW_FILE) context.share(File(item.path), item.kind) else viewModel.share(longSide) },
                     onShowMap = { context.showOnMap(item) },
                     onPartner = partners[item.id]?.let { partner -> { onItemChange(partner) } },
-                    onTrash = {
-                        // On to the next photo, as a gallery does; back to the library after the last.
-                        val page = pages.indexOfFirst { it.id == item.id }
-                        val next = pages.getOrNull(page + 1) ?: pages.getOrNull(page - 1)
-                        viewModel.moveToTrash(partners[item.id]?.takeIf { stacked })
-                        if (next != null && next.id != item.id) onItemChange(next.id) else close()
-                    },
+                    onTrash = { trashShown?.invoke() },
                 )
+        }
+    }
+
+    val scope = rememberCoroutineScope()
+    Scaffold(
+        // With a keyboard: arrows turn the page, Delete puts the photo in the trash, Escape closes.
+        modifier = Modifier.keys { event ->
+            when (event.key) {
+                Key.DirectionRight -> scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }.let { true }
+                Key.DirectionLeft -> scope.launch { pager.animateScrollToPage(pager.currentPage - 1) }.let { true }
+                Key.Delete, Key.Backspace -> trashShown?.invoke().let { trashShown != null }
+                Key.Escape -> close().let { true }
+                else -> false
             }
         },
+        topBar = {
+            TopAppBar(
+                title = { Text(item?.fileName.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    IconButton(onClick = close) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "닫기")
+                    }
+                },
+            )
+        },
+        bottomBar = { if (!window.sidePanel) infoPanel(Modifier) },
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = Color.Black,
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-            // While the list of pages changes, the pager can briefly ask for a page that is no longer there.
-            HorizontalPager(state = pager, key = { pages.getOrNull(it)?.id ?: -1L - it }, modifier = Modifier.fillMaxSize()) { page ->
-                val shown = pages.getOrNull(page) ?: return@HorizontalPager
-                // A raw file with corrections is drawn with them; that is only worked out for the photo in front.
-                val rendered = state.rendered.takeIf { shown.id == item?.id }
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    ZoomableBox(resetKey = shown.id) {
-                        if (rendered != null) {
-                            Image(
-                                bitmap = rendered.asImageBitmap(),
-                                contentDescription = shown.fileName,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            AsyncImage(
-                                model = rememberMediaModel(shown),
-                                contentDescription = shown.fileName,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+        Row(Modifier.fillMaxSize().padding(padding)) {
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                // While the list of pages changes, the pager can briefly ask for a page that is no longer there.
+                HorizontalPager(state = pager, key = { pages.getOrNull(it)?.id ?: -1L - it }, modifier = Modifier.fillMaxSize()) { page ->
+                    val shown = pages.getOrNull(page) ?: return@HorizontalPager
+                    // A raw file with corrections is drawn with them; that is only worked out for the photo in front.
+                    val rendered = state.rendered.takeIf { shown.id == item?.id }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        ZoomableBox(resetKey = shown.id) {
+                            if (rendered != null) {
+                                Image(
+                                    bitmap = rendered.asImageBitmap(),
+                                    contentDescription = shown.fileName,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = rememberMediaModel(shown),
+                                    contentDescription = shown.fileName,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         }
-                    }
-                    if (shown.kind == MediaKind.VIDEO) {
-                        FilledIconButton(onClick = { context.playVideo(shown) }, modifier = Modifier.size(64.dp)) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "재생", modifier = Modifier.size(40.dp))
+                        if (shown.kind == MediaKind.VIDEO) {
+                            FilledIconButton(onClick = { context.playVideo(shown) }, modifier = Modifier.size(64.dp)) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = "재생", modifier = Modifier.size(40.dp))
+                            }
                         }
                     }
                 }
+                if (state.busy) CircularProgressIndicator()
             }
-            if (state.busy) CircularProgressIndicator()
+            // In a wide window the information goes beside the photo, where there is room for it.
+            if (window.sidePanel) infoPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
         }
     }
 }
 
 @Composable
 private fun InfoPanel(
+    modifier: Modifier,
     state: ViewerUiState,
     item: MediaItemEntity,
     onEdit: () -> Unit,
@@ -232,9 +266,13 @@ private fun InfoPanel(
 ) {
     val context = LocalContext.current
     var confirmingRestore by remember { mutableStateOf(false) }
-    Surface(tonalElevation = 3.dp) {
+    Surface(tonalElevation = 3.dp, modifier = modifier) {
         Column(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(

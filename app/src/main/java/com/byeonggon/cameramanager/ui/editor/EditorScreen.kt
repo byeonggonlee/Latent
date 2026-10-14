@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -54,6 +56,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -65,7 +71,10 @@ import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.enhance.Adjustments
 import com.byeonggon.cameramanager.enhance.Framing
 import com.byeonggon.cameramanager.enhance.Mask
+import com.byeonggon.cameramanager.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.cameramanager.ui.common.ZoomableBox
+import com.byeonggon.cameramanager.ui.common.keys
+import com.byeonggon.cameramanager.ui.common.rememberWindowLayout
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
@@ -152,7 +161,41 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     }
 
     val ready = state.preview != null && !state.saving
+    val window = rememberWindowLayout()
+    val editorPanel: @Composable (Modifier) -> Unit = { modifier ->
+        EditorPanel(
+            modifier = modifier,
+            tall = window.sidePanel,
+                state = state,
+                enabled = ready,
+                tab = tab,
+                onTab = { tab = it },
+                shape = shape,
+                onShape = { shape = it },
+                selectedLocal = selectedLocal,
+                onSelectLocal = { selectedLocal = it },
+                selectedSpot = selectedSpot,
+                onSelectSpot = { selectedSpot = it },
+                spotRadius = spotRadius,
+                onSpotRadius = { spotRadius = it },
+                brushRadius = brushRadius,
+                onBrushRadius = { brushRadius = it },
+                erasing = erasing,
+                onErasing = { erasing = it },
+                viewModel = viewModel,
+            )
+    }
     Scaffold(
+        // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes.
+        modifier = Modifier.keys { event ->
+            when {
+                event.isCtrlPressed && event.key == Key.Z && !event.isShiftPressed -> viewModel.undo().let { true }
+                event.isCtrlPressed && (event.key == Key.Y || (event.key == Key.Z && event.isShiftPressed)) -> viewModel.redo().let { true }
+                event.isCtrlPressed && event.key == Key.S -> viewModel.save().let { true }
+                event.key == Key.Escape -> closeUnlessChanged().let { true }
+                else -> false
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text("보정") },
@@ -177,83 +220,67 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 },
             )
         },
-        bottomBar = {
-            EditorPanel(
-                state = state,
-                enabled = ready,
-                tab = tab,
-                onTab = { tab = it },
-                shape = shape,
-                onShape = { shape = it },
-                selectedLocal = selectedLocal,
-                onSelectLocal = { selectedLocal = it },
-                selectedSpot = selectedSpot,
-                onSelectSpot = { selectedSpot = it },
-                spotRadius = spotRadius,
-                onSpotRadius = { spotRadius = it },
-                brushRadius = brushRadius,
-                onBrushRadius = { brushRadius = it },
-                erasing = erasing,
-                onErasing = { erasing = it },
-                viewModel = viewModel,
-            )
-        },
+        bottomBar = { if (!window.sidePanel) editorPanel(Modifier) },
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = Color.Black,
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-            state.preview?.let { preview ->
-                // The preview lags a moment behind a change of tab; each view is only drawn onto a picture made for it.
-                when {
-                    tab == EditorTab.FRAMING && state.previewView == EditorView.WHOLE -> CropFrame(
-                        picture = preview.asImageBitmap(),
-                        framing = state.edit.framing,
-                        keepShape = shape != CropShape.FREE,
-                        onChange = viewModel::setFraming,
-                        onDone = viewModel::commit,
-                    )
-                    tab == EditorTab.LOCAL && state.previewView == EditorView.WHOLE -> MaskFrame(
-                        picture = preview.asImageBitmap(),
-                        locals = state.edit.locals,
-                        selected = selectedLocal,
-                        onSelect = { selectedLocal = it },
-                        onChange = ::setMask,
-                        onDone = viewModel::commit,
-                        brushRadius = brushRadius,
-                        erasing = erasing,
-                    )
-                    tab == EditorTab.SPOTS && state.previewView == EditorView.WHOLE -> SpotFrame(
-                        picture = preview.asImageBitmap(),
-                        spots = state.edit.spots,
-                        selected = selectedSpot,
-                        onSelect = { selectedSpot = it },
-                        onAdd = { x, y -> viewModel.addSpot(x, y, spotRadius) { selectedSpot = it } },
-                        onMoveSource = { spot ->
-                            viewModel.setSpots(state.edit.spots.toMutableList().apply { this[selectedSpot] = spot })
-                        },
-                        onDone = viewModel::commit,
-                    )
-                    tab == EditorTab.DETAIL && state.previewView == EditorView.DETAIL ->
-                        DetailView(preview.asImageBitmap(), onMove = viewModel::moveDetail)
-                    else -> ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing) {
-                        // Holding the picture shows it without its corrections, the same as the button below does.
-                        Image(
-                            bitmap = preview.asImageBitmap(),
-                            contentDescription = state.item?.fileName,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize(),
+        Row(Modifier.fillMaxSize().padding(padding)) {
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                state.preview?.let { preview ->
+                    // The preview lags a moment behind a change of tab; each view is only drawn onto a picture made for it.
+                    when {
+                        tab == EditorTab.FRAMING && state.previewView == EditorView.WHOLE -> CropFrame(
+                            picture = preview.asImageBitmap(),
+                            framing = state.edit.framing,
+                            keepShape = shape != CropShape.FREE,
+                            onChange = viewModel::setFraming,
+                            onDone = viewModel::commit,
                         )
+                        tab == EditorTab.LOCAL && state.previewView == EditorView.WHOLE -> MaskFrame(
+                            picture = preview.asImageBitmap(),
+                            locals = state.edit.locals,
+                            selected = selectedLocal,
+                            onSelect = { selectedLocal = it },
+                            onChange = ::setMask,
+                            onDone = viewModel::commit,
+                            brushRadius = brushRadius,
+                            erasing = erasing,
+                        )
+                        tab == EditorTab.SPOTS && state.previewView == EditorView.WHOLE -> SpotFrame(
+                            picture = preview.asImageBitmap(),
+                            spots = state.edit.spots,
+                            selected = selectedSpot,
+                            onSelect = { selectedSpot = it },
+                            onAdd = { x, y -> viewModel.addSpot(x, y, spotRadius) { selectedSpot = it } },
+                            onMoveSource = { spot ->
+                                viewModel.setSpots(state.edit.spots.toMutableList().apply { this[selectedSpot] = spot })
+                            },
+                            onDone = viewModel::commit,
+                        )
+                        tab == EditorTab.DETAIL && state.previewView == EditorView.DETAIL ->
+                            DetailView(preview.asImageBitmap(), onMove = viewModel::moveDetail)
+                        else -> ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing) {
+                            // Holding the picture shows it without its corrections, the same as the button below does.
+                            Image(
+                                bitmap = preview.asImageBitmap(),
+                                contentDescription = state.item?.fileName,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
+                if (tab.view != EditorView.WHOLE) {
+                    state.histogram?.let { HistogramView(it, Modifier.align(Alignment.TopStart)) }
+                }
+                if (state.edit.changesColors && tab.view == EditorView.PICTURE) {
+                    CompareButton(onCompare = viewModel::setComparing, modifier = Modifier.align(Alignment.BottomEnd))
+                }
+                if (state.comparing) Pill("원본", Modifier.align(Alignment.TopCenter))
+                if (state.loading || state.saving) CircularProgressIndicator()
             }
-            if (tab.view != EditorView.WHOLE) {
-                state.histogram?.let { HistogramView(it, Modifier.align(Alignment.TopStart)) }
-            }
-            if (state.edit.changesColors && tab.view == EditorView.PICTURE) {
-                CompareButton(onCompare = viewModel::setComparing, modifier = Modifier.align(Alignment.BottomEnd))
-            }
-            if (state.comparing) Pill("원본", Modifier.align(Alignment.TopCenter))
-            if (state.loading || state.saving) CircularProgressIndicator()
+            // In a wide window the controls go beside the picture, the full height of the window.
+            if (window.sidePanel) editorPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
         }
     }
 
@@ -352,6 +379,9 @@ private fun DetailView(part: ImageBitmap, onMove: (across: Float, down: Float) -
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditorPanel(
+    modifier: Modifier,
+    /** The panel stands beside the picture and has the window's height, rather than a fixed one. */
+    tall: Boolean,
     state: EditorUiState,
     enabled: Boolean,
     tab: EditorTab,
@@ -373,14 +403,18 @@ private fun EditorPanel(
     var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
     var colorTools by rememberSaveable { mutableStateOf(ColorTools.SLIDERS) }
     val edit = state.edit
-    Surface(tonalElevation = 3.dp) {
+    Surface(tonalElevation = 3.dp, modifier = modifier) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
             SecondaryScrollableTabRow(selectedTabIndex = tab.ordinal, edgePadding = 8.dp) {
                 EditorTab.entries.forEach { entry ->
                     Tab(selected = tab == entry, onClick = { onTab(entry) }, text = { Text(entry.label) })
                 }
             }
-            Column(Modifier.height(PANEL_HEIGHT).verticalScroll(rememberScrollState()).padding(vertical = 4.dp)) {
+            Column(
+                (if (tall) Modifier.weight(1f) else Modifier.height(PANEL_HEIGHT))
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp),
+            ) {
                 when (tab) {
                     EditorTab.FILTERS -> FilterPanel(
                         state = state,

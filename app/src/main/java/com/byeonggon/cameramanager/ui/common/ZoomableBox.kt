@@ -19,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 
 private const val MAX_ZOOM = 8f
 private const val DOUBLE_TAP_ZOOM = 2.5f
+private const val WHEEL_STEP = 0.15f
 
 /**
  * Pinch to zoom, drag to pan, double-tap to toggle. Resets when [resetKey] changes.
@@ -56,6 +58,20 @@ fun ZoomableBox(resetKey: Any, onHold: (Boolean) -> Unit = {}, content: @Composa
                             event.changes.forEach { if (it.positionChanged()) it.consume() }
                         }
                     } while (event.changes.any { it.pressed })
+                }
+            }
+            .pointerInput(resetKey) {
+                // A mouse wheel or a touchpad zooms in and out, as it does in photo apps on a computer.
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type != PointerEventType.Scroll) continue
+                        val turned = event.changes.sumOf { it.scrollDelta.y.toDouble() }.toFloat()
+                        if (turned == 0f) continue
+                        scale = (scale * (1f - turned * WHEEL_STEP)).coerceIn(1f, MAX_ZOOM)
+                        if (scale == 1f) offset = Offset.Zero
+                        event.changes.forEach { it.consume() }
+                    }
                 }
             }
             .pointerInput(resetKey) {

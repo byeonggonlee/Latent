@@ -1,6 +1,7 @@
 package com.byeonggon.cameramanager.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -10,6 +11,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +26,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byeonggon.cameramanager.R
+import com.byeonggon.cameramanager.ui.common.ReadableWidth
+import com.byeonggon.cameramanager.ui.common.rememberWindowLayout
 import com.byeonggon.cameramanager.ui.editor.EditorScreen
 import com.byeonggon.cameramanager.ui.library.LibraryScreen
 import com.byeonggon.cameramanager.ui.library.LibraryViewModel
@@ -69,6 +74,33 @@ fun AppRoot(startOnSync: Boolean) {
         return
     }
 
+    val window = rememberWindowLayout()
+    val content: @Composable () -> Unit = {
+        when (tab) {
+            Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it })
+            Tab.SYNC -> ReadableWidth { SyncScreen() }
+            Tab.LOCATION -> ReadableWidth { LocationScreen() }
+        }
+    }
+    if (window.sideNavigation) {
+        // A wide window has height to spare less than width: the tabs go down the side.
+        Scaffold { padding ->
+            Row(Modifier.fillMaxSize().padding(padding)) {
+                NavigationRail {
+                    Tab.entries.forEach { entry ->
+                        NavigationRailItem(
+                            selected = tab == entry,
+                            onClick = { tab = entry },
+                            icon = { TabIcon(entry) },
+                            label = { Text(entry.label) },
+                        )
+                    }
+                }
+                Box(Modifier.weight(1f).fillMaxSize()) { content() }
+            }
+        }
+        return
+    }
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -83,13 +115,7 @@ fun AppRoot(startOnSync: Boolean) {
             }
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when (tab) {
-                Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it })
-                Tab.SYNC -> SyncScreen()
-                Tab.LOCATION -> LocationScreen()
-            }
-        }
+        Box(Modifier.fillMaxSize().padding(padding)) { content() }
     }
 }
 

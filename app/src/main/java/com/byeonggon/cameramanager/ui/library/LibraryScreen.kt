@@ -68,6 +68,7 @@ import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.ui.common.StorageAccessCard
 import com.byeonggon.cameramanager.ui.common.rememberMediaModel
 import com.byeonggon.cameramanager.ui.common.rememberStorageAccess
+import com.byeonggon.cameramanager.ui.common.rememberWindowLayout
 import java.io.File
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -148,7 +149,8 @@ private fun LibraryContent(
             EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash)
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(108.dp),
+                // Larger thumbnails where the window has room for them, as on a tablet or a laptop.
+                columns = GridCells.Adaptive(if (rememberWindowLayout().sideNavigation) 160.dp else 108.dp),
                 state = gridState,
                 contentPadding = PaddingValues(bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
