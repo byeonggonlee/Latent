@@ -406,15 +406,19 @@ private fun EditorPanel(
                     EditorTab.LIGHT -> {
                         ToolRow {
                             Choices(LightTools.entries, lightTools, { it.label }, { lightTools = it })
-                            FilterChip(
-                                selected = edit.autoEnhance,
-                                onClick = { viewModel.setAutoEnhance(!edit.autoEnhance) },
-                                enabled = enabled,
-                                label = { Text("자동 보정") },
-                                leadingIcon = {
-                                    Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
-                                },
-                            )
+                            OutlinedButton(onClick = viewModel::autoAdjust, enabled = enabled) {
+                                Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text("자동", modifier = Modifier.padding(start = 6.dp))
+                            }
+                            // Edits made before auto set the sliders may still have the old correction switched on.
+                            if (edit.autoEnhance) {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { viewModel.setAutoEnhance(false) },
+                                    enabled = enabled,
+                                    label = { Text("이전 자동 보정 끄기") },
+                                )
+                            }
                         }
                         when (lightTools) {
                             LightTools.SLIDERS -> Sliders(tab.controls, edit.adjustments, enabled, viewModel)

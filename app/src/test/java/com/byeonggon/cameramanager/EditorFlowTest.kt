@@ -560,4 +560,19 @@ class EditorFlowTest {
         assertTrue(mask.weightAt(0.5f, 0.2f, 96f, 64f) > 0.9f)
         assertTrue(mask.weightAt(0.5f, 0.8f, 96f, 64f) < 0.01f)
     }
+
+    @Test
+    fun autoSetsTheSlidersForTheUserToTakeFurther() {
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("자동").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("실행 취소").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
+        }
+        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!
+        assertFalse(stored.autoEnhance)
+        assertTrue(stored.adjustments != Adjustments())
+    }
 }

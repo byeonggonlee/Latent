@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.byeonggon.cameramanager.appContainer
 import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
+import com.byeonggon.cameramanager.enhance.Adjustment
 import com.byeonggon.cameramanager.enhance.Adjustments
+import com.byeonggon.cameramanager.enhance.AutoSettings
 import com.byeonggon.cameramanager.enhance.ColorGrading
 import com.byeonggon.cameramanager.enhance.ColorMixer
 import com.byeonggon.cameramanager.enhance.DetailFilter
@@ -235,6 +237,24 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     fun setMonochrome(enabled: Boolean) = changeOnce { it.copy(monochrome = enabled) }
 
     fun setAutoEnhance(enabled: Boolean) = changeOnce { it.copy(autoEnhance = enabled) }
+
+    /**
+     * Sets the light and colour sliders to what the picture seems to need. Settings it does not judge,
+     * such as texture or vignette, stay as they are.
+     */
+    fun autoAdjust() {
+        val image = source.value?.image ?: return
+        viewModelScope.launch {
+            val auto = withContext(Dispatchers.Default) { AutoSettings.of(image.downscaled(ToneRenderer.OVERVIEW_EDGE)) }
+            changeOnce { edit ->
+                val judged = listOf(
+                    Adjustment.EXPOSURE, Adjustment.CONTRAST, Adjustment.HIGHLIGHTS, Adjustment.SHADOWS, Adjustment.WHITES,
+                    Adjustment.BLACKS, Adjustment.TEMPERATURE, Adjustment.TINT, Adjustment.VIBRANCE,
+                )
+                edit.copy(adjustments = judged.fold(edit.adjustments) { all, each -> each.set(all, each.get(auto)) }, autoEnhance = false)
+            }
+        }
+    }
 
     fun setLensCorrection(enabled: Boolean) = changeOnce { it.copy(lensCorrection = enabled) }
 
