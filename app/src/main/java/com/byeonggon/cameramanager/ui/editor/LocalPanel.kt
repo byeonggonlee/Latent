@@ -147,6 +147,25 @@ internal fun LocalPanel(
             untouched = DEFAULT_FEATHER,
         )
     }
+    // The tones within the mask that the edit applies to: dragging these in keeps it off the darkest or brightest parts.
+    SettingSlider(
+        label = "어두운 쪽 제외",
+        value = current.darkest,
+        range = 0f..1f,
+        valueText = (current.darkest * 100).roundToInt().toString(),
+        enabled = enabled,
+        onChange = { onChange(replaced(current.copy(darkest = ((it * 100).roundToInt() / 100f).coerceAtMost(current.brightest - 0.05f).coerceAtLeast(0f)))) },
+        onDone = onDone,
+    )
+    SettingSlider(
+        label = "밝은 쪽 제외",
+        value = 1f - current.brightest,
+        range = 0f..1f,
+        valueText = ((1f - current.brightest) * 100).roundToInt().toString(),
+        enabled = enabled,
+        onChange = { onChange(replaced(current.copy(brightest = (1f - (it * 100).roundToInt() / 100f).coerceAtLeast(current.darkest + 0.05f).coerceAtMost(1f)))) },
+        onDone = onDone,
+    )
     LOCAL_CONTROLS.forEach { control ->
         val value = control.setting.get(current.adjustments)
         SettingSlider(

@@ -208,6 +208,8 @@ data class PhotoEdit(
                     each.add(STROKES, strokes)
                 }
                 for (setting in Adjustment.entries) setting.get(local.adjustments).takeIf { it != 0f }?.let { each.addProperty(setting.key, it) }
+                if (local.darkest > 0f) each.addProperty(DARKEST, local.darkest)
+                if (local.brightest < 1f) each.addProperty(BRIGHTEST, local.brightest)
                 stored.add(each)
             }
             add(LOCALS, stored)
@@ -256,6 +258,8 @@ data class PhotoEdit(
         private const val MASK = "mask"
         private const val INVERTED = "inverted"
         private const val STROKES = "strokes"
+        private const val DARKEST = "darkest"
+        private const val BRIGHTEST = "brightest"
         private const val RADIUS = "radius"
         private const val ERASING = "erasing"
         private const val POINTS = "points"
@@ -329,6 +333,8 @@ data class PhotoEdit(
                             } ?: emptyList(),
                         ),
                         Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.asFloat ?: 0f) },
+                        darkest = local.get(DARKEST)?.asFloat ?: 0f,
+                        brightest = local.get(BRIGHTEST)?.asFloat ?: 1f,
                     )
                 } ?: emptyList(),
                 spots = stored.getAsJsonArray(SPOTS)?.map { each ->

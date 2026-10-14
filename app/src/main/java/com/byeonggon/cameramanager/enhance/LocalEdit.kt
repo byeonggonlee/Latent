@@ -92,7 +92,28 @@ internal class MaskWeights(private val mask: Mask, private val pictureWidth: Flo
  * Settings for a part of the picture only, on top of what applies to all of it. Of [adjustments],
  * those that act on single pixels' tones and colours count; detail, vignette and grain do not.
  */
-data class LocalEdit(val mask: Mask, val adjustments: Adjustments = Adjustments())
+data class LocalEdit(
+    val mask: Mask,
+    val adjustments: Adjustments = Adjustments(),
+    /**
+     * The tones the edit is held to, from 0 (black) to 1 (white), as the picture is shown: within
+     * the mask, darker or brighter parts are left alone. The whole range by default.
+     */
+    val darkest: Float = 0f,
+    val brightest: Float = 1f,
+) {
+    /** How much of the edit a pixel of brightness [luma] takes, from 0 to 1, fading out over a little beyond the range. */
+    fun toneWeight(luma: Float): Float {
+        if (darkest <= 0f && brightest >= 1f) return 1f
+        val below = if (darkest <= 0f) 1f else ((luma - darkest) / TONE_FADE + 1f).coerceIn(0f, 1f)
+        val above = if (brightest >= 1f) 1f else ((brightest - luma) / TONE_FADE + 1f).coerceIn(0f, 1f)
+        return below * above
+    }
+
+    private companion object {
+        const val TONE_FADE = 0.1f
+    }
+}
 
 /**
  * How a framed picture, [frameWidth] by [frameHeight] pixels, lies in the whole upright picture it was

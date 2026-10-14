@@ -71,6 +71,7 @@ import com.byeonggon.cameramanager.data.db.MediaItemEntity
 import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.ui.common.ZoomableBox
 import com.byeonggon.cameramanager.ui.common.rememberMediaModel
+import kotlinx.coroutines.flow.drop
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -131,7 +132,9 @@ fun ViewerScreen(
         if (page >= 0 && page != pager.currentPage) pager.scrollToPage(page)
     }
     LaunchedEffect(pager) {
-        snapshotFlow { pager.settledPage }.collect { page ->
+        // Only a page the user turned to counts. Where the pager starts out may not be the photo yet,
+        // if the list of pages was not ready when it was set up; the effect above takes it there.
+        snapshotFlow { pager.settledPage }.drop(1).collect { page ->
             currentPages.getOrNull(page)?.id?.let { if (it != shownId) changeItem(it) }
         }
     }

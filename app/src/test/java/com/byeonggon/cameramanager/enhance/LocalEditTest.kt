@@ -138,4 +138,22 @@ class LocalEditTest {
         assertEquals(emptyList<LocalEdit>(), PhotoEdit().withLookOf(edit).locals)
         assertEquals(edit.locals, edit.withLookOf(PhotoEdit(Adjustments(exposure = 1f))).locals)
     }
+
+    @Test
+    fun keepsALocalEditToTheTonesItIsHeldTo() {
+        // Dark on the left, bright on the right, all under a mask that covers everything.
+        val picture = LinearImage.fromArgb(IntArray(100 * 20) { gray(if (it % 100 < 50) 50 else 200) }, 100, 20)
+        val everywhere = Mask(MaskShape.LINEAR, startX = 0.5f, startY = 2f, endX = 0.5f, endY = 3f)
+        val brightOnly = LocalEdit(everywhere, Adjustments(exposure = -1f), darkest = 0.5f)
+
+        val rendered = picture.render(PhotoEdit(locals = listOf(brightOnly)))
+
+        assertEquals(gray(50), rendered[10 * 100 + 10])
+        assertTrue(green(rendered[10 * 100 + 90]) < 170)
+        assertEquals(1f, LocalEdit(everywhere).toneWeight(0.01f), 0f)
+        assertEquals(0f, brightOnly.toneWeight(0.3f), 0f)
+        assertEquals(0.5f, brightOnly.toneWeight(0.45f), 1e-5f)
+        val stored = PhotoEdit(locals = listOf(brightOnly.copy(brightest = 0.9f)))
+        assertEquals(stored, PhotoEdit.fromJson(stored.toJson()))
+    }
 }
