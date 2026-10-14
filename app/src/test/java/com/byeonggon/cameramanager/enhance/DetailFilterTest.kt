@@ -127,7 +127,7 @@ class DetailFilterTest {
     fun worksInBandsWithoutLeavingSeams() {
         // The same in every row, so the result has to be the same in every row too, wherever a band ends.
         val columns = picture { x, _ -> rgb(100 + (x * 7) % 60, 110 + (x * 13) % 50, 90 + (x * 5) % 70) }
-        val everything = Adjustments(texture = 0.6f, sharpening = 0.8f, noiseReduction = 0.5f, colorNoiseReduction = 0.5f)
+        val everything = Adjustments(texture = 0.6f, sharpening = 0.8f, noiseReduction = 0.5f, colorNoiseReduction = 0.5f, glow = 0.7f)
 
         val result = filtered(columns, everything)
 
@@ -152,5 +152,19 @@ class DetailFilterTest {
         }
 
         assertTrue(written.all { it == 1 })
+    }
+
+    @Test
+    fun glowSpreadsLightFromTheBrightPartsAndNeverDarkens() {
+        // A dark picture with a bright square in the middle.
+        val lamp = picture { x, y -> if (x in 100..140 && y in 130..170) gray(250) else gray(40) }
+
+        val glowing = filtered(lamp, Adjustments(glow = 1f), scale = 0.25f)
+
+        assertTrue(DetailFilter(Adjustments(glow = 0.3f), scale = 0.25f).isNeeded)
+        assertTrue("next to it ${green(glowing[150 * width + 150])}", green(glowing[150 * width + 150]) > 60)
+        assertTrue(green(glowing[150 * width + 150]) > green(glowing[150 * width + 200]))
+        assertEquals(gray(40), glowing[5 * width + 5])
+        assertTrue(glowing.indices.all { green(glowing[it]) >= green(lamp[it]) })
     }
 }

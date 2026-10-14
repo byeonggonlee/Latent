@@ -32,6 +32,8 @@ data class Adjustments(
     val vignette: Float = 0f,
     /** From 0 to 1. */
     val grain: Float = 0f,
+    /** From 0 to 1: a soft light that spreads from the bright parts, as from a diffusion filter. */
+    val glow: Float = 0f,
     /** From 0 to 1. */
     val sharpening: Float = 0f,
     /** From 0 to 1: smooths out noise in brightness. */
@@ -57,6 +59,7 @@ enum class Adjustment(val key: String, val get: (Adjustments) -> Float, val set:
     DEHAZE("dehaze", { it.dehaze }, { all, value -> all.copy(dehaze = value) }),
     VIGNETTE("vignette", { it.vignette }, { all, value -> all.copy(vignette = value) }),
     GRAIN("grain", { it.grain }, { all, value -> all.copy(grain = value) }),
+    GLOW("glow", { it.glow }, { all, value -> all.copy(glow = value) }),
     SHARPENING("sharpening", { it.sharpening }, { all, value -> all.copy(sharpening = value) }),
     NOISE_REDUCTION("noiseReduction", { it.noiseReduction }, { all, value -> all.copy(noiseReduction = value) }),
     COLOR_NOISE_REDUCTION("colorNoiseReduction", { it.colorNoiseReduction }, { all, value -> all.copy(colorNoiseReduction = value) }),

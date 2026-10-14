@@ -28,9 +28,10 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
     private val colorNoiseReach = max(1, (COLOR_NOISE_REACH * scale).roundToInt())
 
     private val texturing = texture != 0f && textureReach >= 1
+    private val glow = adjustments.glow * GLOW_AT_FULL
 
     /** Whether there is anything to do at this scale. */
-    val isNeeded: Boolean = texturing || sharpening > 0f || noiseReduction > 0f || colorNoiseReduction > 0f
+    val isNeeded: Boolean = texturing || sharpening > 0f || noiseReduction > 0f || colorNoiseReduction > 0f || glow > 0f
 
     /** Rows above and below a band that its result depends on. */
     private val margin = max(if (texturing) 2 * textureReach else 0, max(2 * noiseReach, 2 * colorNoiseReach)) + 2
@@ -49,6 +50,8 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
      * [write] is called from several threads, but never by two at once.
      */
     fun apply(pixels: IntArray, width: Int, height: Int, write: (top: Int, rows: Int, band: IntArray) -> Unit) {
+        // The glow spreads far, so it is worked out once for the whole picture, at a small size.
+        val glowing = if (glow > 0f) Glow(pixels, width, height) else null
         // A few threads, each working its way down its own part of the picture: every thread needs room for a band.
         val parts = min(MOST_THREADS, max(1, height / BAND_ROWS))
         val lock = Any()
@@ -60,6 +63,7 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
             while (top < partBottom) {
                 val rows = min(BAND_ROWS, partBottom - top)
                 process(pixels, width, height, top, rows, band)
+                if (glowing != null) glowing.lay(band, width, top, rows, glow)
                 synchronized(lock) { write(top, rows, band) }
                 top += rows
             }
@@ -163,6 +167,76 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
 
     private fun toByte(value: Float): Int = (value * 255f + 0.5f).toInt().coerceIn(0, 255)
 
+    /**
+     * The light that the bright parts of a picture, [width] by [height] pixels, spread around them:
+     * the picture shrunk, blurred far and kept small, with its darker parts left out.
+     */
+    private class Glow(pixels: IntArray, private val width: Int, private val height: Int) {
+        private val block = max(1, max(width, height) / GLOW_SIDE)
+        private val smallWidth = max(1, width / block)
+        private val smallHeight = max(1, height / block)
+        private val red: FloatArray
+        private val green: FloatArray
+        private val blue: FloatArray
+
+        init {
+            val planes = Array(3) { FloatArray(smallWidth * smallHeight) }
+            for (y in 0 until smallHeight) for (x in 0 until smallWidth) {
+                var sumRed = 0f
+                var sumGreen = 0f
+                var sumBlue = 0f
+                for (row in y * block until minOf(height, (y + 1) * block)) for (column in x * block until minOf(width, (x + 1) * block)) {
+                    val pixel = pixels[row * width + column]
+                    sumRed += (pixel ushr 16) and 0xFF
+                    sumGreen += (pixel ushr 8) and 0xFF
+                    sumBlue += pixel and 0xFF
+                }
+                val count = (minOf(height, (y + 1) * block) - y * block) * (minOf(width, (x + 1) * block) - x * block) * 255f
+                planes[0][y * smallWidth + x] = sumRed / count
+                planes[1][y * smallWidth + x] = sumGreen / count
+                planes[2][y * smallWidth + x] = sumBlue / count
+            }
+            val reach = max(1, (max(smallWidth, smallHeight) * GLOW_REACH).roundToInt())
+            fun spread(plane: FloatArray): FloatArray {
+                // Only what is bright gives off light; twice blurred is close to a soft, round spread.
+                for (index in plane.indices) plane[index] = ((plane[index] - GLOW_THRESHOLD) / (1f - GLOW_THRESHOLD)).coerceAtLeast(0f)
+                return GuidedMap.blurred(GuidedMap.blurred(plane, smallWidth, smallHeight, reach), smallWidth, smallHeight, reach)
+            }
+            red = spread(planes[0])
+            green = spread(planes[1])
+            blue = spread(planes[2])
+        }
+
+        /** Lays the glow over the rows from [top] in [band], [amount] strong, as light added to light. */
+        fun lay(band: IntArray, frameWidth: Int, top: Int, rows: Int, amount: Float) {
+            val columns = GuidedMap.columns(smallWidth, frameWidth)
+            for (row in 0 until rows) {
+                val position = ((top + row + 0.5f) * smallHeight / height - 0.5f).coerceIn(0f, smallHeight - 1f)
+                val upper = position.toInt() * smallWidth
+                val lower = min(position.toInt() + 1, smallHeight - 1) * smallWidth
+                val down = position - position.toInt()
+                for (x in 0 until frameWidth) {
+                    val left = columns.left[x]
+                    val right = columns.right[x]
+                    val across = columns.weight[x]
+                    fun sample(plane: FloatArray): Float {
+                        val above = plane[upper + left] + (plane[upper + right] - plane[upper + left]) * across
+                        val below = plane[lower + left] + (plane[lower + right] - plane[lower + left]) * across
+                        return (above + (below - above) * down) * amount
+                    }
+                    val at = row * frameWidth + x
+                    val pixel = band[at]
+                    // Screening: light adds to light without ever going past white.
+                    fun screened(value: Int, light: Float) = (255f - (255f - value) * (1f - light.coerceIn(0f, 1f)) + 0.5f).toInt()
+                    band[at] = (pixel and OPAQUE) or
+                        (screened((pixel ushr 16) and 0xFF, sample(red)) shl 16) or
+                        (screened((pixel ushr 8) and 0xFF, sample(green)) shl 8) or
+                        screened(pixel and 0xFF, sample(blue))
+                }
+            }
+        }
+    }
+
     private companion object {
         const val OPAQUE = 0xFF shl 24
         const val BAND_ROWS = 96
@@ -184,5 +258,11 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
         /** How large differences in brightness are evened out by full noise reduction. */
         const val NOISE_AT_FULL = 0.05f
         const val COLOR_EDGE_VARIANCE = 0.0004f
+
+        /** The glow is worked out on a copy this many pixels along its long side, and spreads this share of it. */
+        const val GLOW_SIDE = 400
+        const val GLOW_REACH = 0.025f
+        const val GLOW_THRESHOLD = 0.35f
+        const val GLOW_AT_FULL = 1.6f
     }
 }

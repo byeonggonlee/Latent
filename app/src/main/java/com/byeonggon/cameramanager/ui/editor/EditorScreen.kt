@@ -76,7 +76,7 @@ private enum class EditorTab(val label: String, val controls: List<Control> = em
     FRAMING("자르기"),
     LIGHT("밝기", listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
     COLOR("색상", listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
-    EFFECTS("효과", listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN)),
+    EFFECTS("효과", listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
     LOCAL("부분"),
     SPOTS("잡티"),
     DETAIL("세부", listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));

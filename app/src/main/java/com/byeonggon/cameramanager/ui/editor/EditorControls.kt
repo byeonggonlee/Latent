@@ -51,6 +51,7 @@ internal enum class Control(
     DEHAZE("디헤이즈", Adjustment.DEHAZE),
     VIGNETTE("비네팅", Adjustment.VIGNETTE),
     GRAIN("그레인", Adjustment.GRAIN, addsOnly = true),
+    GLOW("글로우", Adjustment.GLOW, addsOnly = true),
     SHARPENING("선명하게", Adjustment.SHARPENING, addsOnly = true),
     NOISE_REDUCTION("노이즈 감소", Adjustment.NOISE_REDUCTION, addsOnly = true),
     COLOR_NOISE_REDUCTION("색상 노이즈 감소", Adjustment.COLOR_NOISE_REDUCTION, addsOnly = true);

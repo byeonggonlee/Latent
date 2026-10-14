@@ -100,6 +100,14 @@ object Filters {
                 grading = ColorGrading(shadows = Tint(200f, 0.4f), midtones = Tint(30f, 0.1f), highlights = Tint(40f, 0.3f), balance = -0.1f),
             ),
         ),
+        Filter(
+            "hdr", "HDR",
+            PhotoEdit(Adjustments(highlights = -0.6f, shadows = 0.55f, whites = 0.1f, blacks = -0.1f, vibrance = 0.25f, texture = 0.25f, clarity = 0.5f)),
+        ),
+        Filter(
+            "glow", "글로우",
+            PhotoEdit(Adjustments(contrast = -0.05f, highlights = -0.1f, vibrance = 0.15f, clarity = -0.2f, glow = 0.5f)),
+        ),
         Filter("mono", "흑백", PhotoEdit(Adjustments(contrast = 0.1f), monochrome = true)),
         Filter(
             "mono-contrast", "흑백 고대비",
@@ -113,6 +121,14 @@ object Filters {
         Filter(
             "mono-film", "흑백 필름",
             PhotoEdit(Adjustments(vignette = -0.2f, grain = 0.45f), curves = ToneCurves(all = faded), monochrome = true),
+        ),
+        Filter(
+            "noir", "누아르",
+            PhotoEdit(
+                Adjustments(contrast = 0.45f, blacks = -0.3f, shadows = -0.2f, clarity = 0.2f, vignette = -0.45f, grain = 0.25f),
+                mixer = ColorMixer(luminance = List(MixerBand.entries.size) { if (it == MixerBand.RED.ordinal || it == MixerBand.ORANGE.ordinal) 0.15f else -0.1f }),
+                monochrome = true,
+            ),
         ),
         Filter(
             "sepia", "세피아",
