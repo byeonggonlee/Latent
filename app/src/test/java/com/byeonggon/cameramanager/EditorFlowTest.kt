@@ -143,14 +143,14 @@ class EditorFlowTest {
         val backup = container.storage.originalOf(photo)
 
         openEditor("DSC00001.JPG")
-        compose.onNodeWithText("저장").assertIsNotEnabled()
+        compose.onNodeWithText("완료").assertIsNotEnabled()
         slide("노출", to = 1f)
         compose.onNodeWithText("+1.00").assertIsDisplayed()
         compose.onNodeWithText("색상").performClick()
         slide("채도", to = -0.5f)
         compose.onNodeWithText("-50").assertIsDisplayed()
-        compose.onNodeWithText("누르고 있으면 원본").assertIsDisplayed()
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithContentDescription("누르고 있으면 원본").assertIsDisplayed()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         assertArrayEquals(original, backup.readBytes())
@@ -171,17 +171,17 @@ class EditorFlowTest {
     fun reopensAnEditWhereItWasLeft() {
         openEditor("DSC00001.JPG")
         slide("대비", to = 0.4f)
-        compose.onNodeWithText("저장").performClick()
+        compose.onNodeWithText("완료").performClick()
         waitForText("원본으로 되돌리기")
 
         openEditorFromViewer()
         compose.onNodeWithText("+40").assertIsDisplayed()
-        compose.onNodeWithText("저장").assertIsNotEnabled()
+        compose.onNodeWithText("완료").assertIsNotEnabled()
 
         // Putting everything back to zero and saving leaves the photo as the camera made it.
         compose.onNodeWithContentDescription("더 보기").performClick()
         compose.onNodeWithText("초기화").performClick()
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
         compose.waitUntil(timeoutMillis = 10_000) { runBlocking { mediaDao.byId(photoId)!!.edit } == null }
         assertFalse(container.storage.originalOf(photo).exists())
     }
@@ -212,7 +212,7 @@ class EditorFlowTest {
         slide("어두운 영역", to = 0.5f)
         compose.onNodeWithText("자르기").performClick()
         compose.onNodeWithText("렌즈 보정").assertIsDisplayed()
-        compose.onNodeWithText("저장").performClick()
+        compose.onNodeWithText("완료").performClick()
 
         waitForText("원본으로 되돌리기")
         compose.onNodeWithText("JPEG로 저장").assertIsDisplayed()
@@ -242,7 +242,7 @@ class EditorFlowTest {
             repeat(10) { moveBy(Offset(-kept.width / 40, -kept.height / 40)) }
             up()
         }
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.framing
@@ -263,7 +263,7 @@ class EditorFlowTest {
         compose.onNodeWithContentDescription("더 보기").performClick()
         compose.onNodeWithText("보정 값 붙여넣기").assertIsNotEnabled()
         compose.onNodeWithText("보정 값 복사").performClick()
-        compose.onNodeWithText("저장").performClick()
+        compose.onNodeWithText("완료").performClick()
         waitForText("원본으로 되돌리기")
         compose.onNodeWithContentDescription("닫기").performClick()
 
@@ -308,7 +308,7 @@ class EditorFlowTest {
         compose.onNodeWithContentDescription("실행 취소").performClick()
         compose.onAllNodesWithText("+1.00").assertCountEquals(0)
         compose.onNodeWithContentDescription("실행 취소").assertIsNotEnabled()
-        compose.onNodeWithText("저장").assertIsNotEnabled()
+        compose.onNodeWithText("완료").assertIsNotEnabled()
 
         compose.onNodeWithContentDescription("다시 실행").performClick()
         compose.onNodeWithContentDescription("다시 실행").performClick()
@@ -327,7 +327,7 @@ class EditorFlowTest {
             moveBy(Offset(0f, -height / 4f))
             up()
         }
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val curve = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.curves.all
@@ -348,7 +348,7 @@ class EditorFlowTest {
         compose.onNodeWithText("색상 등급").performClick()
         slide("색", to = 210f)
         slide("양", to = 0.5f)
-        compose.onNodeWithText("저장").performClick()
+        compose.onNodeWithText("완료").performClick()
 
         waitForText("원본으로 되돌리기")
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!
@@ -367,6 +367,10 @@ class EditorFlowTest {
         }
         slide("선명하게", to = 0.6f)
         compose.onNodeWithText("60").assertIsDisplayed()
+        // The histogram is out of the way until asked for.
+        compose.onAllNodesWithContentDescription("히스토그램").assertCountEquals(0)
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("히스토그램 보기").performClick()
         compose.onNodeWithContentDescription("히스토그램").assertIsDisplayed()
     }
 
@@ -378,7 +382,7 @@ class EditorFlowTest {
         compose.onNodeWithText("필터").performClick()
         filter("필름").performClick()
         slide("강도", to = 0.5f)
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         assertEquals(PhotoEdit().withLookOf(film.look.lookAt(0.5f)), PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit }))
@@ -398,7 +402,7 @@ class EditorFlowTest {
         compose.onNodeWithText("없음").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { runBlocking { container.database.filterDao().observeAll().first() }.isNotEmpty() }
         filter("저녁 빛").performClick()
-        compose.onNodeWithText("저장").performClick()
+        compose.onNodeWithText("완료").performClick()
         waitForText("원본으로 되돌리기")
         assertEquals(PhotoEdit(Adjustments(exposure = 0.5f)), PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit }))
 
@@ -432,7 +436,7 @@ class EditorFlowTest {
             repeat(10) { moveBy(Offset(0f, layout.picture.height / 50)) }
             up()
         }
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val local = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.locals.single()
@@ -456,7 +460,7 @@ class EditorFlowTest {
         }
         compose.onNodeWithText("좌우 반전").performClick()
         slide("수직 원근", to = 0.5f)
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.framing
@@ -524,7 +528,7 @@ class EditorFlowTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("선택한 잡티 되돌리기").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
         }
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val spot = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.spots.single()
@@ -550,7 +554,7 @@ class EditorFlowTest {
             up()
         }
         slide("노출", to = 1f)
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val mask = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.locals.single().mask
@@ -569,7 +573,7 @@ class EditorFlowTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription("실행 취소").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
         }
-        compose.onNodeWithText("저장").assertIsEnabled().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
 
         waitForText("원본으로 되돌리기")
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!

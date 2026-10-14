@@ -1,13 +1,16 @@
 package com.byeonggon.cameramanager.ui.editor
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,30 +21,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,8 +61,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -63,6 +73,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -80,15 +95,15 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-private enum class EditorTab(val label: String, val controls: List<Control> = emptyList()) {
-    FILTERS("필터"),
-    FRAMING("자르기"),
-    LIGHT("밝기", listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
-    COLOR("색상", listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
-    EFFECTS("효과", listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
-    LOCAL("부분"),
-    SPOTS("잡티"),
-    DETAIL("세부", listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
+private enum class EditorTab(val label: String, @DrawableRes val icon: Int, val controls: List<Control> = emptyList()) {
+    FILTERS("필터", R.drawable.ic_tool_filters),
+    FRAMING("자르기", R.drawable.ic_tool_crop),
+    LIGHT("밝기", R.drawable.ic_tool_light, listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
+    COLOR("색상", R.drawable.ic_tool_color, listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
+    EFFECTS("효과", R.drawable.ic_tool_effects, listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
+    LOCAL("부분", R.drawable.ic_tool_local),
+    SPOTS("잡티", R.drawable.ic_tool_spots),
+    DETAIL("세부", R.drawable.ic_tool_detail, listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
 
     /** What of the picture has to be on screen while this tab is open. */
     val view: EditorView
@@ -150,6 +165,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     var brushRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_BRUSH_RADIUS) }
     var erasing by rememberSaveable { mutableStateOf(false) }
     var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
+    var showHistogram by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(tab) { viewModel.show(tab.view) }
 
     /** Changes the mask of the part that is selected, as dragging it on the picture does. */
@@ -169,7 +185,6 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 state = state,
                 enabled = ready,
                 tab = tab,
-                onTab = { tab = it },
                 shape = shape,
                 onShape = { shape = it },
                 selectedLocal = selectedLocal,
@@ -185,6 +200,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 viewModel = viewModel,
             )
     }
+    EditorTheme {
     Scaffold(
         // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes.
         modifier = Modifier.keys { event ->
@@ -198,7 +214,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
         },
         topBar = {
             TopAppBar(
-                title = { Text("보정") },
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = closeUnlessChanged) { Icon(Icons.Default.Close, contentDescription = "닫기") }
                 },
@@ -209,22 +225,44 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                     IconButton(onClick = viewModel::redo, enabled = ready && state.canRedo) {
                         Icon(painterResource(R.drawable.ic_redo), contentDescription = "다시 실행")
                     }
-                    TextButton(onClick = viewModel::save, enabled = ready && state.canSave) { Text("저장") }
                     MoreMenu(
                         enabled = ready,
                         canPaste = state.canPaste,
+                        // Beside the picture there is room to show it all the time.
+                        histogram = if (window.sidePanel) null else showHistogram,
+                        onHistogram = { showHistogram = it },
                         onReset = viewModel::reset,
                         onCopy = viewModel::copyEdit,
                         onPaste = viewModel::pasteEdit,
                     )
+                    Button(
+                        onClick = viewModel::save,
+                        enabled = ready && state.canSave,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 18.dp),
+                        modifier = Modifier.padding(start = 4.dp, end = 8.dp).height(36.dp),
+                    ) { Text("완료") }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PictureBackground),
             )
         },
-        bottomBar = { if (!window.sidePanel) editorPanel(Modifier) },
+        bottomBar = {
+            if (!window.sidePanel) {
+                Column {
+                    editorPanel(Modifier)
+                    ToolStrip(tab, onTab = { tab = it })
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = Color.Black,
+        containerColor = PictureBackground,
     ) { padding ->
         Row(Modifier.fillMaxSize().padding(padding)) {
+            // In a wide window the tools stand in a column on the left, as in desktop editors.
+            if (window.sidePanel) ToolRail(tab, onTab = { tab = it })
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                 state.preview?.let { preview ->
                     // The preview lags a moment behind a change of tab; each view is only drawn onto a picture made for it.
@@ -270,7 +308,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         }
                     }
                 }
-                if (tab.view != EditorView.WHOLE) {
+                if (showHistogram && !window.sidePanel && tab.view != EditorView.WHOLE) {
                     state.histogram?.let { HistogramView(it, Modifier.align(Alignment.TopStart)) }
                 }
                 if (state.edit.changesColors && tab.view == EditorView.PICTURE) {
@@ -282,6 +320,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
             // In a wide window the controls go beside the picture, the full height of the window.
             if (window.sidePanel) editorPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
         }
+    }
     }
 
     if (confirmingDiscard) {
@@ -295,15 +334,35 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     }
 }
 
-/** Starting over, and carrying tones and colours from one photo to another. */
+/**
+ * Starting over, carrying tones and colours from one photo to another, and showing the histogram over
+ * the picture; [histogram] is null where the histogram has a place of its own.
+ */
 @Composable
-private fun MoreMenu(enabled: Boolean, canPaste: Boolean, onReset: () -> Unit, onCopy: () -> Unit, onPaste: () -> Unit) {
+private fun MoreMenu(
+    enabled: Boolean,
+    canPaste: Boolean,
+    histogram: Boolean?,
+    onHistogram: (Boolean) -> Unit,
+    onReset: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }, enabled = enabled) {
             Icon(Icons.Default.MoreVert, contentDescription = "더 보기")
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (histogram != null) {
+                DropdownMenuItem(
+                    text = { Text(if (histogram) "히스토그램 숨기기" else "히스토그램 보기") },
+                    onClick = {
+                        open = false
+                        onHistogram(!histogram)
+                    },
+                )
+            }
             val items = listOf(
                 Triple("초기화", true, onReset),
                 Triple("보정 값 복사", true, onCopy),
@@ -326,18 +385,86 @@ private fun MoreMenu(enabled: Boolean, canPaste: Boolean, onReset: () -> Unit, o
 /** Shows the picture without its corrections for as long as it is held down. */
 @Composable
 private fun CompareButton(onCompare: (Boolean) -> Unit, modifier: Modifier = Modifier) {
-    Pill(
-        "누르고 있으면 원본",
-        modifier.pointerInput(Unit) {
-            detectTapGestures(
-                onPress = {
-                    onCompare(true)
-                    tryAwaitRelease()
-                    onCompare(false)
-                },
-            )
-        },
-    )
+    Surface(
+        color = Color.Black.copy(alpha = 0.6f),
+        contentColor = Color.White,
+        shape = CircleShape,
+        modifier = modifier
+            .padding(12.dp)
+            .size(44.dp)
+            .semantics { contentDescription = "누르고 있으면 원본" }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        onCompare(true)
+                        tryAwaitRelease()
+                        onCompare(false)
+                    },
+                )
+            },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_compare), contentDescription = null, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+/** The tools along the bottom of the screen, each its icon over its name; they scroll if there are too many to fit. */
+@Composable
+private fun ToolStrip(tab: EditorTab, onTab: (EditorTab) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .selectableGroup(),
+            ) {
+                EditorTab.entries.forEach { entry -> ToolButton(entry, selected = entry == tab, onClick = { onTab(entry) }, width = 62.dp) }
+            }
+        }
+    }
+}
+
+/** The tools down the left of a wide window. */
+@Composable
+private fun ToolRail(tab: EditorTab, onTab: (EditorTab) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            EditorTab.entries.forEach { entry -> ToolButton(entry, selected = entry == tab, onClick = { onTab(entry) }, width = 64.dp) }
+        }
+    }
+}
+
+@Composable
+private fun ToolButton(tool: EditorTab, selected: Boolean, onClick: () -> Unit, width: Dp) {
+    val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = Modifier
+            .width(width)
+            .clip(RoundedCornerShape(12.dp))
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(painterResource(tool.icon), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        Text(
+            tool.label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
 }
 
 /** A short text on a dark, rounded patch that stays readable on top of any picture. */
@@ -385,7 +512,6 @@ private fun EditorPanel(
     state: EditorUiState,
     enabled: Boolean,
     tab: EditorTab,
-    onTab: (EditorTab) -> Unit,
     shape: CropShape,
     onShape: (CropShape) -> Unit,
     selectedLocal: Int,
@@ -403,17 +529,23 @@ private fun EditorPanel(
     var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
     var colorTools by rememberSaveable { mutableStateOf(ColorTools.SLIDERS) }
     val edit = state.edit
-    Surface(tonalElevation = 3.dp, modifier = modifier) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
-            SecondaryScrollableTabRow(selectedTabIndex = tab.ordinal, edgePadding = 8.dp) {
-                EditorTab.entries.forEach { entry ->
-                    Tab(selected = tab == entry, onClick = { onTab(entry) }, text = { Text(entry.label) })
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = if (tall) RectangleShape else RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        modifier = modifier,
+    ) {
+        Column(Modifier.fillMaxWidth().then(if (tall) Modifier.navigationBarsPadding() else Modifier)) {
+            if (tall) {
+                // Beside the picture there is room for the histogram all the time, as in desktop editors.
+                state.histogram?.let {
+                    HistogramView(it, docked = true)
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
             Column(
                 (if (tall) Modifier.weight(1f) else Modifier.height(PANEL_HEIGHT))
                     .verticalScroll(rememberScrollState())
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 8.dp),
             ) {
                 when (tab) {
                     EditorTab.FILTERS -> FilterPanel(
@@ -525,11 +657,29 @@ private fun ToolRow(content: @Composable () -> Unit) {
     }
 }
 
-/** One chip for each of [options], of which one is [selected]; for use inside a [ToolRow]. */
+/** A pill of [options] side by side, of which one is [selected]; for use inside a [ToolRow]. */
 @Composable
 private fun <T> Choices(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit) {
-    options.forEach { option ->
-        FilterChip(selected = option == selected, onClick = { onSelect(option) }, label = { Text(label(option)) })
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(3.dp)
+            .selectableGroup(),
+    ) {
+        options.forEach { option ->
+            val chosen = option == selected
+            Text(
+                label(option),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (chosen) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                    .selectable(selected = chosen, onClick = { onSelect(option) }, role = Role.Tab)
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            )
+        }
     }
 }
 

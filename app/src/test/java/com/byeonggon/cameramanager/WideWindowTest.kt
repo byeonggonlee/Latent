@@ -117,12 +117,12 @@ class WideWindowTest {
         waitForEditor()
         compose.onNodeWithText("자동").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("저장").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
+            compose.onAllNodesWithText("완료").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
         }
 
         compose.onAllNodes(isRoot())[0].performKeyInput { withKeyDown(Key.CtrlLeft) { pressKey(Key.Z) } }
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("저장").fetchSemanticsNodes().all { it.config.getOrNull(SemanticsProperties.Disabled) != null }
+            compose.onAllNodesWithText("완료").fetchSemanticsNodes().all { it.config.getOrNull(SemanticsProperties.Disabled) != null }
         }
         compose.onAllNodes(isRoot())[0].performKeyInput { withKeyDown(Key.CtrlLeft) { pressKey(Key.S) } }
         assertEquals(null, runBlocking { container.database.mediaDao().byId(ids[0])!!.edit }?.let(PhotoEdit::fromJson))

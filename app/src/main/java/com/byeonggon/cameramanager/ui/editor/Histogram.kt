@@ -2,6 +2,8 @@ package com.byeonggon.cameramanager.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,11 +21,12 @@ import kotlin.math.sqrt
 
 /** How the picture's tones are spread from black on the left to white on the right, for each colour. */
 @Composable
-internal fun HistogramView(histogram: Histogram, modifier: Modifier = Modifier) {
+internal fun HistogramView(histogram: Histogram, modifier: Modifier = Modifier, docked: Boolean = false) {
     Canvas(
         modifier
             .padding(12.dp)
-            .size(width = 96.dp, height = 52.dp)
+            // Docked in a side panel it takes the panel's width; over the picture it stays small.
+            .then(if (docked) Modifier.fillMaxWidth().height(84.dp) else Modifier.size(width = 96.dp, height = 52.dp))
             .clip(RoundedCornerShape(6.dp))
             .background(Color.Black.copy(alpha = 0.55f))
             .semantics { contentDescription = "히스토그램" },
