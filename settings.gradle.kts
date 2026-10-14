@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CameraManager"
+rootProject.name = "Latent"
 include(":app")

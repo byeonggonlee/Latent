@@ -1,0 +1,830 @@
+package com.byeonggon.latent.ui.editor
+
+import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.byeonggon.latent.R
+import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.enhance.Adjustments
+import com.byeonggon.latent.enhance.Framing
+import com.byeonggon.latent.enhance.Mask
+import com.byeonggon.latent.ui.common.PhotoTheme
+import com.byeonggon.latent.ui.common.PictureBackground
+import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
+import com.byeonggon.latent.ui.common.ZoomableBox
+import com.byeonggon.latent.ui.common.keys
+import com.byeonggon.latent.ui.common.rememberWindowLayout
+import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.roundToInt
+
+private enum class EditorTab(val label: String, @DrawableRes val icon: Int, val controls: List<Control> = emptyList()) {
+    FILTERS("필터", R.drawable.ic_tool_filters),
+    FRAMING("자르기", R.drawable.ic_tool_crop),
+    LIGHT("밝기", R.drawable.ic_tool_light, listOf(Control.EXPOSURE, Control.CONTRAST, Control.HIGHLIGHTS, Control.SHADOWS, Control.WHITES, Control.BLACKS)),
+    COLOR("색상", R.drawable.ic_tool_color, listOf(Control.TEMPERATURE, Control.TINT, Control.VIBRANCE, Control.SATURATION)),
+    EFFECTS("효과", R.drawable.ic_tool_effects, listOf(Control.TEXTURE, Control.CLARITY, Control.DEHAZE, Control.VIGNETTE, Control.GRAIN, Control.GLOW)),
+    LOCAL("부분", R.drawable.ic_tool_local),
+    SPOTS("잡티", R.drawable.ic_tool_spots),
+    DETAIL("세부", R.drawable.ic_tool_detail, listOf(Control.SHARPENING, Control.NOISE_REDUCTION, Control.COLOR_NOISE_REDUCTION));
+
+    /** What of the picture has to be on screen while this tab is open. */
+    val view: EditorView
+        get() = when (this) {
+            FRAMING, LOCAL, SPOTS -> EditorView.WHOLE
+            DETAIL -> EditorView.DETAIL
+            else -> EditorView.PICTURE
+        }
+}
+
+private enum class LightTools(val label: String) { SLIDERS("기본"), CURVE("곡선") }
+
+private enum class ColorTools(val label: String) { SLIDERS("기본"), MIXER("색상 혼합"), GRADING("색상 등급") }
+
+/** A shape the kept part of the picture can be held to. */
+private enum class CropShape(val label: String, private val longSide: Int, private val shortSide: Int) {
+    FREE("자유", 0, 0),
+    ORIGINAL("원본", 0, 0),
+    SQUARE("1:1", 1, 1),
+    FOUR_BY_THREE("4:3", 4, 3),
+    THREE_BY_TWO("3:2", 3, 2),
+    SIXTEEN_BY_NINE("16:9", 16, 9);
+
+    /** Width over height of this shape for a picture of the given size, lying the way the picture does; null if any shape goes. */
+    fun ratio(width: Float, height: Float): Float? = when {
+        this == FREE -> null
+        this == ORIGINAL -> width / height
+        width >= height -> longSide.toFloat() / shortSide
+        else -> shortSide.toFloat() / longSide
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel = viewModel()) {
+    LaunchedEffect(itemId) { viewModel.open(itemId) }
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val leave = {
+        viewModel.close()
+        onClose()
+    }
+    var confirmingDiscard by remember { mutableStateOf(false) }
+    val closeUnlessChanged = { if (state.changed) confirmingDiscard = true else leave() }
+    BackHandler(onBack = closeUnlessChanged)
+    LaunchedEffect(state.finished) { if (state.finished) leave() }
+
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbar.showSnackbar(it)
+            viewModel.consumeMessage()
+        }
+    }
+
+    var tab by rememberSaveable { mutableStateOf(EditorTab.LIGHT) }
+    var shape by rememberSaveable { mutableStateOf(CropShape.FREE) }
+    var selectedLocal by rememberSaveable { mutableIntStateOf(0) }
+    var selectedSpot by rememberSaveable { mutableIntStateOf(-1) }
+    var brushRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_BRUSH_RADIUS) }
+    var erasing by rememberSaveable { mutableStateOf(false) }
+    var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
+    var showHistogram by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(tab) { viewModel.show(tab.view) }
+
+    /** Changes the mask of the part that is selected, as dragging it on the picture does. */
+    fun setMask(mask: Mask) {
+        val locals = state.edit.locals
+        if (selectedLocal in locals.indices) {
+            viewModel.setLocals(locals.toMutableList().apply { this[selectedLocal] = this[selectedLocal].copy(mask = mask) })
+        }
+    }
+
+    val ready = state.preview != null && !state.saving
+    val window = rememberWindowLayout()
+    val editorPanel: @Composable (Modifier) -> Unit = { modifier ->
+        EditorPanel(
+            modifier = modifier,
+            tall = window.sidePanel,
+                state = state,
+                enabled = ready,
+                tab = tab,
+                shape = shape,
+                onShape = { shape = it },
+                selectedLocal = selectedLocal,
+                onSelectLocal = { selectedLocal = it },
+                selectedSpot = selectedSpot,
+                onSelectSpot = { selectedSpot = it },
+                spotRadius = spotRadius,
+                onSpotRadius = { spotRadius = it },
+                brushRadius = brushRadius,
+                onBrushRadius = { brushRadius = it },
+                erasing = erasing,
+                onErasing = { erasing = it },
+                viewModel = viewModel,
+            )
+    }
+    PhotoTheme {
+    Scaffold(
+        // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes.
+        modifier = Modifier.keys { event ->
+            when {
+                event.isCtrlPressed && event.key == Key.Z && !event.isShiftPressed -> viewModel.undo().let { true }
+                event.isCtrlPressed && (event.key == Key.Y || (event.key == Key.Z && event.isShiftPressed)) -> viewModel.redo().let { true }
+                event.isCtrlPressed && event.key == Key.S -> viewModel.save().let { true }
+                event.key == Key.Escape -> closeUnlessChanged().let { true }
+                else -> false
+            }
+        },
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = closeUnlessChanged) { Icon(Icons.Default.Close, contentDescription = "닫기") }
+                },
+                actions = {
+                    IconButton(onClick = viewModel::undo, enabled = ready && state.canUndo) {
+                        Icon(painterResource(R.drawable.ic_undo), contentDescription = "실행 취소")
+                    }
+                    IconButton(onClick = viewModel::redo, enabled = ready && state.canRedo) {
+                        Icon(painterResource(R.drawable.ic_redo), contentDescription = "다시 실행")
+                    }
+                    MoreMenu(
+                        enabled = ready,
+                        canPaste = state.canPaste,
+                        // Beside the picture there is room to show it all the time.
+                        histogram = if (window.sidePanel) null else showHistogram,
+                        onHistogram = { showHistogram = it },
+                        onReset = viewModel::reset,
+                        onCopy = viewModel::copyEdit,
+                        onPaste = viewModel::pasteEdit,
+                    )
+                    Button(
+                        onClick = viewModel::save,
+                        enabled = ready && state.canSave,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 18.dp),
+                        modifier = Modifier.padding(start = 4.dp, end = 8.dp).height(36.dp),
+                    ) { Text("완료") }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PictureBackground),
+            )
+        },
+        bottomBar = {
+            if (!window.sidePanel) {
+                Column {
+                    editorPanel(Modifier)
+                    ToolStrip(tab, onTab = { tab = it })
+                }
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbar) },
+        containerColor = PictureBackground,
+    ) { padding ->
+        Row(Modifier.fillMaxSize().padding(padding)) {
+            // In a wide window the tools stand in a column on the left, as in desktop editors.
+            if (window.sidePanel) ToolRail(tab, onTab = { tab = it })
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                state.preview?.let { preview ->
+                    // The preview lags a moment behind a change of tab; each view is only drawn onto a picture made for it.
+                    when {
+                        tab == EditorTab.FRAMING && state.previewView == EditorView.WHOLE -> CropFrame(
+                            picture = preview.asImageBitmap(),
+                            framing = state.edit.framing,
+                            keepShape = shape != CropShape.FREE,
+                            onChange = viewModel::setFraming,
+                            onDone = viewModel::commit,
+                        )
+                        tab == EditorTab.LOCAL && state.previewView == EditorView.WHOLE -> MaskFrame(
+                            picture = preview.asImageBitmap(),
+                            locals = state.edit.locals,
+                            selected = selectedLocal,
+                            onSelect = { selectedLocal = it },
+                            onChange = ::setMask,
+                            onDone = viewModel::commit,
+                            brushRadius = brushRadius,
+                            erasing = erasing,
+                        )
+                        tab == EditorTab.SPOTS && state.previewView == EditorView.WHOLE -> SpotFrame(
+                            picture = preview.asImageBitmap(),
+                            spots = state.edit.spots,
+                            selected = selectedSpot,
+                            onSelect = { selectedSpot = it },
+                            onAdd = { x, y -> viewModel.addSpot(x, y, spotRadius) { selectedSpot = it } },
+                            onMoveSource = { spot ->
+                                viewModel.setSpots(state.edit.spots.toMutableList().apply { this[selectedSpot] = spot })
+                            },
+                            onDone = viewModel::commit,
+                        )
+                        tab == EditorTab.DETAIL && state.previewView == EditorView.DETAIL ->
+                            DetailView(preview.asImageBitmap(), onMove = viewModel::moveDetail)
+                        else -> ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing) {
+                            // Holding the picture shows it without its corrections, the same as the button below does.
+                            Image(
+                                bitmap = preview.asImageBitmap(),
+                                contentDescription = state.item?.fileName,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                    }
+                }
+                if (showHistogram && !window.sidePanel && tab.view != EditorView.WHOLE) {
+                    state.histogram?.let { HistogramView(it, Modifier.align(Alignment.TopStart)) }
+                }
+                if (state.edit.changesColors && tab.view == EditorView.PICTURE) {
+                    CompareButton(onCompare = viewModel::setComparing, modifier = Modifier.align(Alignment.BottomEnd))
+                }
+                if (state.comparing) Pill("원본", Modifier.align(Alignment.TopCenter))
+                if (state.loading || state.saving) CircularProgressIndicator()
+            }
+            // In a wide window the controls go beside the picture, the full height of the window.
+            if (window.sidePanel) editorPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
+        }
+    }
+    }
+
+    if (confirmingDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmingDiscard = false },
+            title = { Text("저장하지 않고 닫을까요?") },
+            text = { Text("바꾼 보정 값이 사라집니다.") },
+            confirmButton = { TextButton(onClick = leave) { Text("닫기") } },
+            dismissButton = { TextButton(onClick = { confirmingDiscard = false }) { Text("계속 보정") } },
+        )
+    }
+}
+
+/**
+ * Starting over, carrying tones and colours from one photo to another, and showing the histogram over
+ * the picture; [histogram] is null where the histogram has a place of its own.
+ */
+@Composable
+private fun MoreMenu(
+    enabled: Boolean,
+    canPaste: Boolean,
+    histogram: Boolean?,
+    onHistogram: (Boolean) -> Unit,
+    onReset: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, enabled = enabled) {
+            Icon(Icons.Default.MoreVert, contentDescription = "더 보기")
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (histogram != null) {
+                DropdownMenuItem(
+                    text = { Text(if (histogram) "히스토그램 숨기기" else "히스토그램 보기") },
+                    onClick = {
+                        open = false
+                        onHistogram(!histogram)
+                    },
+                )
+            }
+            val items = listOf(
+                Triple("초기화", true, onReset),
+                Triple("보정 값 복사", true, onCopy),
+                Triple("보정 값 붙여넣기", canPaste, onPaste),
+            )
+            for ((text, available, action) in items) {
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    enabled = available,
+                    onClick = {
+                        open = false
+                        action()
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Shows the picture without its corrections for as long as it is held down. */
+@Composable
+private fun CompareButton(onCompare: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = Color.Black.copy(alpha = 0.6f),
+        contentColor = Color.White,
+        shape = CircleShape,
+        modifier = modifier
+            .padding(12.dp)
+            .size(44.dp)
+            .semantics { contentDescription = "누르고 있으면 원본" }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        onCompare(true)
+                        tryAwaitRelease()
+                        onCompare(false)
+                    },
+                )
+            },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_compare), contentDescription = null, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+/** The tools along the bottom of the screen, each its icon over its name; they scroll if there are too many to fit. */
+@Composable
+private fun ToolStrip(tab: EditorTab, onTab: (EditorTab) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .selectableGroup(),
+            ) {
+                EditorTab.entries.forEach { entry -> ToolButton(entry, selected = entry == tab, onClick = { onTab(entry) }, width = 62.dp) }
+            }
+        }
+    }
+}
+
+/** The tools down the left of a wide window. */
+@Composable
+private fun ToolRail(tab: EditorTab, onTab: (EditorTab) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            EditorTab.entries.forEach { entry -> ToolButton(entry, selected = entry == tab, onClick = { onTab(entry) }, width = 64.dp) }
+        }
+    }
+}
+
+@Composable
+private fun ToolButton(tool: EditorTab, selected: Boolean, onClick: () -> Unit, width: Dp) {
+    val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = Modifier
+            .width(width)
+            .clip(RoundedCornerShape(12.dp))
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(painterResource(tool.icon), contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        Text(
+            tool.label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+/** A short text on a dark, rounded patch that stays readable on top of any picture. */
+@Composable
+private fun Pill(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        color = Color.Black.copy(alpha = 0.6f),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(50),
+        modifier = modifier.padding(12.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+    }
+}
+
+/**
+ * A part of the picture at its full size. Dragging moves on to the part beside it; [onMove] is told
+ * how far, in fractions of what is shown.
+ */
+@Composable
+private fun DetailView(part: ImageBitmap, onMove: (across: Float, down: Float) -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectDragGestures { input, amount ->
+                    input.consume()
+                    val shown = min(size.width, size.height).toFloat()
+                    onMove(amount.x / shown, amount.y / shown)
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(bitmap = part, contentDescription = "100% 보기", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        Pill("100% · 끌어서 이동", Modifier.align(Alignment.TopCenter))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditorPanel(
+    modifier: Modifier,
+    /** The panel stands beside the picture and has the window's height, rather than a fixed one. */
+    tall: Boolean,
+    state: EditorUiState,
+    enabled: Boolean,
+    tab: EditorTab,
+    shape: CropShape,
+    onShape: (CropShape) -> Unit,
+    selectedLocal: Int,
+    onSelectLocal: (Int) -> Unit,
+    selectedSpot: Int,
+    onSelectSpot: (Int) -> Unit,
+    spotRadius: Float,
+    onSpotRadius: (Float) -> Unit,
+    brushRadius: Float,
+    onBrushRadius: (Float) -> Unit,
+    erasing: Boolean,
+    onErasing: (Boolean) -> Unit,
+    viewModel: EditorViewModel,
+) {
+    var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
+    var colorTools by rememberSaveable { mutableStateOf(ColorTools.SLIDERS) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val height by animateDpAsState(if (expanded) EXPANDED_PANEL_HEIGHT else PANEL_HEIGHT, label = "panel height")
+    val edit = state.edit
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = if (tall) RectangleShape else RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        modifier = modifier,
+    ) {
+        Column(Modifier.fillMaxWidth().then(if (tall) Modifier.navigationBarsPadding() else Modifier)) {
+            if (tall) {
+                // Beside the picture there is room for the histogram all the time, as in desktop editors.
+                state.histogram?.let {
+                    HistogramView(it, docked = true)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            } else {
+                Grabber(expanded, onExpand = { expanded = it })
+            }
+            Column(
+                (if (tall) Modifier.weight(1f) else Modifier.height(height))
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 8.dp),
+            ) {
+                when (tab) {
+                    EditorTab.FILTERS -> FilterPanel(
+                        state = state,
+                        enabled = enabled,
+                        onApply = viewModel::applyFilter,
+                        onAmount = viewModel::setFilterAmount,
+                        onDone = viewModel::commit,
+                        onSave = viewModel::saveFilter,
+                        onDelete = viewModel::deleteFilter,
+                    )
+                    EditorTab.FRAMING -> FramingControls(
+                        framing = edit.framing,
+                        pictureWidth = state.pictureWidth.toFloat(),
+                        pictureHeight = state.pictureHeight.toFloat(),
+                        shape = shape,
+                        lensCorrection = edit.lensCorrection.takeIf { state.item?.kind == MediaKind.RAW },
+                        enabled = enabled,
+                        onShape = onShape,
+                        onFraming = viewModel::setFraming,
+                        onLensCorrection = viewModel::setLensCorrection,
+                        onDone = viewModel::commit,
+                    )
+                    EditorTab.LIGHT -> {
+                        ToolRow {
+                            Choices(LightTools.entries, lightTools, { it.label }, { lightTools = it })
+                            OutlinedButton(onClick = viewModel::autoAdjust, enabled = enabled) {
+                                Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text("자동", modifier = Modifier.padding(start = 6.dp))
+                            }
+                            // Edits made before auto set the sliders may still have the old correction switched on.
+                            if (edit.autoEnhance) {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { viewModel.setAutoEnhance(false) },
+                                    enabled = enabled,
+                                    label = { Text("이전 자동 보정 끄기") },
+                                )
+                            }
+                        }
+                        when (lightTools) {
+                            LightTools.SLIDERS -> Sliders(tab.controls, edit.adjustments, enabled, viewModel)
+                            LightTools.CURVE -> CurveEditor(edit.curves, enabled, viewModel::setCurves, viewModel::commit)
+                        }
+                    }
+                    EditorTab.COLOR -> {
+                        ToolRow {
+                            Choices(ColorTools.entries, colorTools, { it.label }, { colorTools = it })
+                            FilterChip(
+                                selected = edit.monochrome,
+                                onClick = { viewModel.setMonochrome(!edit.monochrome) },
+                                enabled = enabled,
+                                label = { Text("흑백") },
+                            )
+                        }
+                        when (colorTools) {
+                            ColorTools.SLIDERS -> Sliders(tab.controls, edit.adjustments, enabled, viewModel)
+                            ColorTools.MIXER -> MixerPanel(edit.mixer, enabled, viewModel::setMixer, viewModel::commit)
+                            ColorTools.GRADING -> GradingPanel(edit.grading, enabled, viewModel::setGrading, viewModel::commit)
+                        }
+                    }
+                    EditorTab.EFFECTS -> Sliders(tab.controls, edit.adjustments, enabled, viewModel)
+                    EditorTab.LOCAL -> LocalPanel(
+                        locals = edit.locals,
+                        selected = selectedLocal,
+                        enabled = enabled,
+                        onSelect = onSelectLocal,
+                        onChange = viewModel::setLocals,
+                        onDone = viewModel::commit,
+                        brushRadius = brushRadius,
+                        onBrushRadius = onBrushRadius,
+                        erasing = erasing,
+                        onErasing = onErasing,
+                    )
+                    EditorTab.SPOTS -> SpotPanel(
+                        spots = edit.spots,
+                        selected = selectedSpot,
+                        radius = spotRadius,
+                        enabled = enabled,
+                        onRadius = onSpotRadius,
+                        onChange = viewModel::setSpots,
+                        onDone = viewModel::commit,
+                        onSelect = onSelectSpot,
+                    )
+                    EditorTab.DETAIL -> {
+                        Sliders(tab.controls, edit.adjustments, enabled, viewModel)
+                        Text(
+                            "위 사진은 100% 크기의 일부분입니다. 선명도와 노이즈는 이 크기에서 보입니다.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A handle on top of the panel: dragging it up shows more of the panel, at the cost of the picture's room. */
+@Composable
+private fun Grabber(expanded: Boolean, onExpand: (Boolean) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(22.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, amount ->
+                    change.consume()
+                    if (amount < -GRAB_THRESHOLD) onExpand(true) else if (amount > GRAB_THRESHOLD) onExpand(false)
+                }
+            }
+            .clickable(onClickLabel = if (expanded) "패널 접기" else "패널 펼치기") { onExpand(!expanded) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(width = 36.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(50)))
+    }
+}
+
+/** The switches at the top of a tab, side by side; they scroll if there are too many to fit. */
+@Composable
+private fun ToolRow(content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        content()
+    }
+}
+
+/** A pill of [options] side by side, of which one is [selected]; for use inside a [ToolRow]. */
+@Composable
+private fun <T> Choices(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(3.dp)
+            .selectableGroup(),
+    ) {
+        options.forEach { option ->
+            val chosen = option == selected
+            Text(
+                label(option),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (chosen) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                    .selectable(selected = chosen, onClick = { onSelect(option) }, role = Role.Tab)
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun Sliders(controls: List<Control>, adjustments: Adjustments, enabled: Boolean, viewModel: EditorViewModel) {
+    controls.forEach { control ->
+        val value = control.setting.get(adjustments)
+        SettingSlider(
+            label = control.label,
+            value = value,
+            range = control.range,
+            valueText = control.describe(value),
+            enabled = enabled,
+            onChange = { position -> viewModel.adjust { control.setting.set(it, control.valueAt(position)) } },
+            onDone = viewModel::commit,
+        )
+    }
+}
+
+/** Levelling, quarter turns, the lens and the shape of the kept part; the part itself is marked on the picture. */
+@Composable
+private fun FramingControls(
+    framing: Framing,
+    pictureWidth: Float,
+    pictureHeight: Float,
+    shape: CropShape,
+    /** Null for pictures whose lens cannot be corrected for. */
+    lensCorrection: Boolean?,
+    enabled: Boolean,
+    onShape: (CropShape) -> Unit,
+    onFraming: (Framing) -> Unit,
+    onLensCorrection: (Boolean) -> Unit,
+    onDone: () -> Unit,
+) {
+    val sideways = framing.quarterTurns % 2 != 0
+    val turnedWidth = if (sideways) pictureHeight else pictureWidth
+    val turnedHeight = if (sideways) pictureWidth else pictureHeight
+
+    /** The shape of the part that is kept now: its width over its height, in pixels. */
+    val kept = framing.width * turnedWidth / (framing.height * turnedHeight)
+
+    // Levelling and tilting take the corners away, so the kept part starts over as the largest of its shape.
+    fun reframed(changed: Framing) = onFraming(changed.largestOf(kept, pictureWidth, pictureHeight))
+
+    SettingSlider(
+        label = "수평",
+        value = framing.angle,
+        range = -MAX_ANGLE..MAX_ANGLE,
+        valueText = if (framing.angle == 0f) "0" else String.format(Locale.US, "%+.1f°", framing.angle),
+        enabled = enabled,
+        onChange = { position ->
+            val angle = if (abs(position) < ANGLE_SNAP) 0f else (position * 10).roundToInt() / 10f
+            if (angle != framing.angle) reframed(framing.copy(angle = angle))
+        },
+        onDone = onDone,
+    )
+    SettingSlider(
+        label = "수직 원근",
+        value = framing.vertical,
+        range = -1f..1f,
+        valueText = if (framing.vertical == 0f) "0" else signed(framing.vertical * 100),
+        enabled = enabled,
+        onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.vertical) reframed(framing.copy(vertical = it)) } },
+        onDone = onDone,
+    )
+    SettingSlider(
+        label = "수평 원근",
+        value = framing.horizontal,
+        range = -1f..1f,
+        valueText = if (framing.horizontal == 0f) "0" else signed(framing.horizontal * 100),
+        enabled = enabled,
+        onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.horizontal) reframed(framing.copy(horizontal = it)) } },
+        onDone = onDone,
+    )
+    ToolRow {
+        OutlinedButton(
+            onClick = {
+                onFraming(framing.turnedClockwise())
+                onDone()
+            },
+            enabled = enabled,
+        ) { Text("90° 회전") }
+        OutlinedButton(
+            onClick = {
+                onFraming(framing.mirrored())
+                onDone()
+            },
+            enabled = enabled,
+        ) { Text("좌우 반전") }
+        if (lensCorrection != null) {
+            FilterChip(
+                selected = lensCorrection,
+                onClick = { onLensCorrection(!lensCorrection) },
+                enabled = enabled,
+                label = { Text("렌즈 보정") },
+            )
+        }
+    }
+    ToolRow {
+        CropShape.entries.forEach { entry ->
+            FilterChip(
+                selected = shape == entry,
+                onClick = {
+                    onShape(entry)
+                    entry.ratio(turnedWidth, turnedHeight)?.let { onFraming(framing.largestOf(it, pictureWidth, pictureHeight)) }
+                    onDone()
+                },
+                enabled = enabled,
+                label = { Text(entry.label) },
+            )
+        }
+    }
+}
+
+private val PANEL_HEIGHT = 268.dp
+private val EXPANDED_PANEL_HEIGHT = 420.dp
+private const val GRAB_THRESHOLD = 4f
+private const val MAX_ANGLE = 30f
+private const val ANGLE_SNAP = 0.3f

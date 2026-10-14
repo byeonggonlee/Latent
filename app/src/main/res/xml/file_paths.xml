@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-path name="library" path="DCIM/CameraManager/" />
+    <external-path name="library" path="DCIM/Latent/" />
     <cache-path name="share" path="share/" />
 </paths>

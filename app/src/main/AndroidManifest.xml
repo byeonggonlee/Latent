@@ -16,11 +16,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:name=".CameraManagerApp"
+        android:name=".LatentApp"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
-        android:theme="@style/Theme.CameraManager">
+        android:theme="@style/Theme.Latent">
 
         <activity
             android:name=".MainActivity"

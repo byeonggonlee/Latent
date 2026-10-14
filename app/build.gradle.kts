@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.byeonggon.cameramanager"
+    namespace = "com.byeonggon.latent"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.byeonggon.cameramanager"
+        applicationId = "com.byeonggon.latent"
         minSdk = 35
         targetSdk = 37
         versionCode = 1
