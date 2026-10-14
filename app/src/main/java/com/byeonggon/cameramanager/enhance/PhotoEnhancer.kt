@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
+import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -181,7 +182,7 @@ object PhotoEnhancer {
     fun writeSmaller(bitmap: Bitmap, target: File, longSide: Int, describe: () -> Unit) {
         val scale = minOf(1f, longSide.toFloat() / max(bitmap.width, bitmap.height))
         val small = if (scale < 1f) {
-            Bitmap.createScaledBitmap(bitmap, max(1, (bitmap.width * scale).toInt()), max(1, (bitmap.height * scale).toInt()), true)
+            bitmap.scale(max(1, (bitmap.width * scale).toInt()), max(1, (bitmap.height * scale).toInt()))
         } else {
             bitmap
         }
