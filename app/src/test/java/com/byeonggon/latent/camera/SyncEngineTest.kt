@@ -268,6 +268,31 @@ class SyncEngineTest {
     }
 
     @Test
+    fun stopsBeforeFillingThePhoneAndTakesTheRestNextTime() = runBlocking {
+        val files = mapOf(
+            remote("DSC00010.ARW", MediaKind.RAW, RAW_BYTES, modifiedAt = capturedAt) to RAW_BYTES,
+            remote("DSC00011.ARW", MediaKind.RAW, RAW_BYTES, modifiedAt = capturedAt + minute) to RAW_BYTES,
+            remote("DSC00012.ARW", MediaKind.RAW, RAW_BYTES, modifiedAt = capturedAt + 2 * minute) to RAW_BYTES,
+        )
+        // Room for the margin and two files, not for the third.
+        var free = 500L * 1024 * 1024 + 2 * RAW_BYTES.size + 100
+        val limited = SyncEngine(storage, database, settings, Geotagger(database.locationDao(), database.mediaDao(), storage), freeBytes = { free })
+
+        limited.run(FakeCameraSource(files) .also { it.onDownload = { free -= RAW_BYTES.size } })
+
+        val finished = limited.state.value as SyncState.Finished
+        assertEquals(2, finished.imported)
+        assertTrue(finished.outOfSpace)
+        assertEquals(emptyList<String>(), finished.failed)
+        assertEquals(listOf("DSC00010.ARW", "DSC00011.ARW"), database.mediaDao().all().map { it.fileName }.sorted())
+
+        free = Long.MAX_VALUE
+        limited.run(FakeCameraSource(files))
+        assertEquals(1, (limited.state.value as SyncState.Finished).imported)
+        assertFalse((limited.state.value as SyncState.Finished).outOfSpace)
+    }
+
+    @Test
     fun reportsFilesThatFailToTransferAndRetriesThemLater() = runBlocking {
         val broken = remote("DSC00003.JPG", MediaKind.PHOTO, ByteArray(10))
 
@@ -324,6 +349,7 @@ class SyncEngineTest {
     private class FakeCameraSource(private val files: Map<RemoteFile, ByteArray?>) : CameraSource {
         val tree = FakeTree()
         var closed = false
+        var onDownload: () -> Unit = {}
 
         init {
             val folders = HashMap<String, Int>()
@@ -344,6 +370,7 @@ class SyncEngineTest {
         override fun download(file: RemoteFile, destination: File): Boolean {
             val bytes = files[file] ?: return false
             destination.writeBytes(bytes)
+            onDownload()
             return true
         }
 

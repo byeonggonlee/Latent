@@ -32,6 +32,9 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     /** Whether library files can be reached right now: access is granted and shared storage is mounted. */
     fun isAvailable(): Boolean = hasAccess() && Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
 
+    /** How many bytes shared storage has left for the library. */
+    fun freeBytes(): Long = generateSequence(root) { it.parentFile }.firstOrNull { it.exists() }?.usableSpace ?: 0L
+
     /**
      * Creates the hidden staging folder and drops partial downloads left behind by an interrupted sync:
      * everything in it, as a finished download is moved out at once.

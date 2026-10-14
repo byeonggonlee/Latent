@@ -177,6 +177,8 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="nothing_imported">Nothing was imported.</string>
     <string name="nothing_new">There is nothing new to import.</string>
     <string name="failed_retry_hint">Files that failed are tried again at the next sync.</string>
+    <string name="sync_out_of_space">The phone is almost full, so the sync stopped.</string>
+    <string name="sync_out_of_space_hint">Free up some space, then sync again: the rest is imported from where it stopped.</string>
     <string name="sync_failed">Sync failed</string>
     <string name="sync_failed_hint">Check the cable and the camera\'s USB connection setting (MTP).</string>
     <string name="usb_camera">USB camera</string>

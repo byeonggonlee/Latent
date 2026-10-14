@@ -48,6 +48,8 @@ sealed interface SyncState {
         val geotagged: Int,
         val failed: List<String>,
         val cancelled: Boolean,
+        /** Stopped because the phone was nearly full; the files not yet imported are still on the camera. */
+        val outOfSpace: Boolean = false,
     ) : SyncState
 
     data class Failed(val message: String) : SyncState
@@ -66,6 +68,7 @@ class SyncEngine(
     private val database: AppDatabase,
     private val settings: SettingsRepository,
     private val geotagger: Geotagger,
+    private val freeBytes: () -> Long = { storage.freeBytes() },
 ) {
     private val _state = MutableStateFlow<SyncState>(SyncState.Idle)
     val state: StateFlow<SyncState> = _state.asStateFlow()
@@ -131,10 +134,16 @@ class SyncEngine(
         var doneBytes = 0L
         var imported = 0
         var geotagged = 0
+        var outOfSpace = false
         val failed = ArrayList<String>()
 
         for ((index, file) in pending.withIndex()) {
             if (cancelRequested) break
+            // The oldest files come first; what does not fit is left on the camera for the next time.
+            if (freeBytes() - file.sizeBytes < LEAVE_FREE_BYTES) {
+                outOfSpace = true
+                break
+            }
             val part = storage.incomingFile(file.name)
             val downloaded = download(source, file, part) { bytes ->
                 _state.value = SyncState.Transferring(
@@ -165,9 +174,9 @@ class SyncEngine(
         rememberImportedFolders(cameraId, acceptedKinds, listing, alreadyImported)
         Log.i(
             SYNC_LOG_TAG,
-            "Finished: imported=$imported, geotagged=$geotagged, failed=$failed, cancelled=$cancelRequested",
+            "Finished: imported=$imported, geotagged=$geotagged, failed=$failed, cancelled=$cancelRequested, outOfSpace=$outOfSpace",
         )
-        _state.value = SyncState.Finished(imported, geotagged, failed, cancelled = cancelRequested)
+        _state.value = SyncState.Finished(imported, geotagged, failed, cancelled = cancelRequested, outOfSpace = outOfSpace)
     }
 
     /** Folders that can be skipped while unchanged: fully imported for at least the kinds wanted now. */
@@ -318,5 +327,8 @@ class SyncEngine(
 
     private companion object {
         const val PROGRESS_INTERVAL_MS = 250L
+
+        /** Left free on the phone: filling it to the last byte would leave it unable to do anything else. */
+        const val LEAVE_FREE_BYTES = 500L * 1024 * 1024
     }
 }

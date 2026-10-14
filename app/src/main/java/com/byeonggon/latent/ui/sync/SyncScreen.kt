@@ -226,7 +226,7 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
                 OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
             }
         }
-        is SyncState.Finished -> SectionCard(stringResource(if (state.cancelled) R.string.sync_stopped else R.string.sync_done)) {
+        is SyncState.Finished -> SectionCard(stringResource(if (state.cancelled || state.outOfSpace) R.string.sync_stopped else R.string.sync_done)) {
             if (state.imported == 0 && state.failed.isEmpty()) {
                 Text(stringResource(if (state.cancelled) R.string.nothing_imported else R.string.nothing_new))
             } else {
@@ -237,6 +237,10 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
                         pluralStringResource(R.plurals.geotagged_files, state.geotagged, state.geotagged),
                     ),
                 )
+            }
+            if (state.outOfSpace) {
+                Text(stringResource(R.string.sync_out_of_space), color = MaterialTheme.colorScheme.error)
+                Hint(stringResource(R.string.sync_out_of_space_hint))
             }
             if (state.failed.isNotEmpty()) {
                 Text(
