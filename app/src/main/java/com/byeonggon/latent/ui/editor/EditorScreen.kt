@@ -760,36 +760,7 @@ private fun FramingControls(
     // Levelling and tilting take the corners away, so the kept part starts over as the largest of its shape.
     fun reframed(changed: Framing) = onFraming(changed.largestOf(kept, pictureWidth, pictureHeight))
 
-    SettingSlider(
-        label = stringResource(R.string.straighten),
-        value = framing.angle,
-        range = -MAX_ANGLE..MAX_ANGLE,
-        valueText = if (framing.angle == 0f) "0" else String.format(Locale.US, "%+.1f°", framing.angle),
-        enabled = enabled,
-        onChange = { position ->
-            val angle = if (abs(position) < ANGLE_SNAP) 0f else (position * 10).roundToInt() / 10f
-            if (angle != framing.angle) reframed(framing.copy(angle = angle))
-        },
-        onDone = onDone,
-    )
-    SettingSlider(
-        label = stringResource(R.string.vertical_perspective),
-        value = framing.vertical,
-        range = -1f..1f,
-        valueText = if (framing.vertical == 0f) "0" else signed(framing.vertical * 100),
-        enabled = enabled,
-        onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.vertical) reframed(framing.copy(vertical = it)) } },
-        onDone = onDone,
-    )
-    SettingSlider(
-        label = stringResource(R.string.horizontal_perspective),
-        value = framing.horizontal,
-        range = -1f..1f,
-        valueText = if (framing.horizontal == 0f) "0" else signed(framing.horizontal * 100),
-        enabled = enabled,
-        onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.horizontal) reframed(framing.copy(horizontal = it)) } },
-        onDone = onDone,
-    )
+    // Turning, flipping and the lens first: in a short panel they are what is seen without scrolling.
     ToolRow {
         OutlinedButton(
             onClick = {
@@ -828,6 +799,36 @@ private fun FramingControls(
             )
         }
     }
+    SettingSlider(
+        label = stringResource(R.string.straighten),
+        value = framing.angle,
+        range = -MAX_ANGLE..MAX_ANGLE,
+        valueText = if (framing.angle == 0f) "0" else String.format(Locale.US, "%+.1f°", framing.angle),
+        enabled = enabled,
+        onChange = { position ->
+            val angle = if (abs(position) < ANGLE_SNAP) 0f else (position * 10).roundToInt() / 10f
+            if (angle != framing.angle) reframed(framing.copy(angle = angle))
+        },
+        onDone = onDone,
+    )
+    SettingSlider(
+        label = stringResource(R.string.vertical_perspective),
+        value = framing.vertical,
+        range = -1f..1f,
+        valueText = if (framing.vertical == 0f) "0" else signed(framing.vertical * 100),
+        enabled = enabled,
+        onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.vertical) reframed(framing.copy(vertical = it)) } },
+        onDone = onDone,
+    )
+    SettingSlider(
+        label = stringResource(R.string.horizontal_perspective),
+        value = framing.horizontal,
+        range = -1f..1f,
+        valueText = if (framing.horizontal == 0f) "0" else signed(framing.horizontal * 100),
+        enabled = enabled,
+        onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.horizontal) reframed(framing.copy(horizontal = it)) } },
+        onDone = onDone,
+    )
 }
 
 private val PANEL_HEIGHT = 268.dp
