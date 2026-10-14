@@ -1,5 +1,6 @@
 package com.byeonggon.cameramanager.location
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationManager
@@ -7,12 +8,15 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.location.LocationRequest
 import android.os.IBinder
+import androidx.core.content.edit
+import com.byeonggon.cameramanager.MainActivity
 import com.byeonggon.cameramanager.Notifications
 import com.byeonggon.cameramanager.R
 import com.byeonggon.cameramanager.appContainer
@@ -44,6 +48,7 @@ class LocationRecorderService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            setWanted(this, false)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -54,13 +59,17 @@ class LocationRecorderService : Service() {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
             )
         } catch (e: SecurityException) {
-            // A restart from the background is only allowed with "allow all the time" location access.
+            // The system restarting the service after killing the app is not allowed to use the location
+            // while the app is out of sight; the person has to start it again.
             stopSelf()
+            notifyStopped(this)
             return START_NOT_STICKY
         } catch (e: IllegalStateException) {
             stopSelf()
+            notifyStopped(this)
             return START_NOT_STICKY
         }
+        getSystemService(NotificationManager::class.java).cancel(Notifications.ID_LOCATION_STOPPED)
         running.value = true
         if (settingsJob == null) {
             settingsJob = scope.launch {
@@ -160,12 +169,57 @@ class LocationRecorderService : Service() {
         private val running = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = running.asStateFlow()
 
+        const val ACTION_RESUME = "com.byeonggon.cameramanager.action.RESUME_RECORDING"
+        private const val PREFERENCES = "location_recording"
+        private const val WANTED = "wanted"
+
         fun start(context: Context) {
+            setWanted(context, true)
             context.startForegroundService(Intent(context, LocationRecorderService::class.java))
         }
 
         fun stop(context: Context) {
+            setWanted(context, false)
             context.stopService(Intent(context, LocationRecorderService::class.java))
+        }
+
+        /** Whether the person left recording switched on, even if the service is not running now. */
+        fun isWanted(context: Context): Boolean =
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getBoolean(WANTED, false)
+
+        private fun setWanted(context: Context, wanted: Boolean) {
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit { putBoolean(WANTED, wanted) }
+        }
+
+        /**
+         * Tells the person that recording stopped although they left it on, for when the system ended it:
+         * starting it again needs them, since the app may only use the location while they are using it.
+         */
+        fun notifyStopped(context: Context) {
+            if (!isWanted(context) || isRunning.value) return
+            val resume = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java)
+                    .setAction(ACTION_RESUME)
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
+            val notification = Notification.Builder(context, Notifications.CHANNEL_LOCATION_STOPPED)
+                .setSmallIcon(R.drawable.ic_stat_camera)
+                .setContentTitle("위치 기록이 멈췄습니다")
+                .setContentText("누르면 다시 기록합니다")
+                .setContentIntent(resume)
+                .setAutoCancel(true)
+                .build()
+            context.getSystemService(NotificationManager::class.java).notify(Notifications.ID_LOCATION_STOPPED, notification)
+        }
+
+        /** Starts recording again from the "stopped" notification, if location access is still there. */
+        fun resume(context: Context) {
+            val allowed = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (allowed && isWanted(context)) start(context)
         }
     }
 }

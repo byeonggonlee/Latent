@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,8 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byeonggon.cameramanager.ui.common.ChoiceRow
@@ -47,21 +44,11 @@ fun LocationScreen(viewModel: LocationViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var locationGranted by remember { mutableStateOf(context.hasLocationPermission()) }
-    var backgroundGranted by remember { mutableStateOf(context.hasBackgroundLocationPermission()) }
     var permissionDenied by remember { mutableStateOf(false) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        locationGranted = context.hasLocationPermission()
-        backgroundGranted = context.hasBackgroundLocationPermission()
-    }
-
     val startRecording = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        locationGranted = context.hasLocationPermission()
-        permissionDenied = !locationGranted
-        if (locationGranted) viewModel.startRecording()
-    }
-    val requestBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        backgroundGranted = it
+        val granted = context.hasLocationPermission()
+        permissionDenied = !granted
+        if (granted) viewModel.startRecording()
     }
     val pickTimeline = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.importTimeline(uri)
@@ -119,15 +106,7 @@ fun LocationScreen(viewModel: LocationViewModel = viewModel()) {
                     },
                 )
             }
-
-            if (locationGranted && !backgroundGranted) {
-                Hint("위치 권한을 '항상 허용'으로 바꾸면 시스템이 앱을 재시작한 뒤에도 기록이 이어집니다.")
-                OutlinedButton(
-                    onClick = { requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) },
-                ) {
-                    Text("항상 허용으로 변경")
-                }
-            }
+            Hint("시스템이 기록을 멈추면 알림으로 알려드립니다. 알림을 누르면 다시 시작합니다.")
         }
 
         SectionCard("구글 타임라인 가져오기") {
@@ -189,6 +168,3 @@ private fun recordingSummary(state: LocationUiState): String {
 private fun Context.hasLocationPermission(): Boolean =
     checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-private fun Context.hasBackgroundLocationPermission(): Boolean =
-    checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED

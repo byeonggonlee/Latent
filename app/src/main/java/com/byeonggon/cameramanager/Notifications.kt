@@ -9,14 +9,17 @@ import android.content.Intent
 object Notifications {
     const val CHANNEL_LOCATION = "location_recording"
     const val CHANNEL_SYNC = "camera_sync"
+    const val CHANNEL_LOCATION_STOPPED = "location_stopped"
     const val ID_LOCATION = 1
     const val ID_SYNC = 2
+    const val ID_LOCATION_STOPPED = 3
 
     fun createChannels(context: Context) {
         context.getSystemService(NotificationManager::class.java).createNotificationChannels(
             listOf(
                 NotificationChannel(CHANNEL_LOCATION, "위치 기록", NotificationManager.IMPORTANCE_LOW),
                 NotificationChannel(CHANNEL_SYNC, "카메라 동기화", NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(CHANNEL_LOCATION_STOPPED, "위치 기록 중단", NotificationManager.IMPORTANCE_DEFAULT),
             ),
         )
     }
