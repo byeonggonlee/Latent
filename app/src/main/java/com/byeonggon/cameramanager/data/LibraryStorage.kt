@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
 import android.os.Environment
+import com.byeonggon.cameramanager.data.db.MediaKind
 import com.byeonggon.cameramanager.enhance.PhotoFiles
 import java.io.File
 import java.io.IOException
@@ -95,8 +96,32 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     /** Moves [from] to [to], which must not exist yet. */
     @Throws(IOException::class)
     fun move(from: File, to: File) {
-        if (!from.renameTo(to) && !folder.move(from, to)) throw IOException("Cannot move ${from.name}")
+        if (from.renameTo(to)) return
+        if (isPhoto(to) && takeOver(from, to)) return
+        if (!folder.move(from, to)) throw IOException("Cannot move ${from.name}")
     }
+
+    /**
+     * Moves a photo the app did not make, copied in from another phone say, by copying it to a file of
+     * the app's own and deleting it: moved as it is, it would stay another's, and in the folders whose
+     * names start with a dot, where kept originals and the trash are, the app could not read it again.
+     * Returns whether it moved.
+     */
+    private fun takeOver(from: File, to: File): Boolean {
+        val modifiedAt = from.lastModified()
+        return try {
+            to.parentFile?.mkdirs()
+            val input = if (from.canRead()) from.inputStream() else folder.openInput(from)
+            input.use { source -> to.outputStream().use { source.copyTo(it) } }
+            if (modifiedAt > 0) to.setLastModified(modifiedAt)
+            folder.delete(from).also { deleted -> if (!deleted) to.delete() }
+        } catch (e: IOException) {
+            to.delete()
+            false
+        }
+    }
+
+    private fun isPhoto(file: File) = MediaKind.fromFileName(file.name).let { it == MediaKind.PHOTO || it == MediaKind.RAW }
 
     /** Deletes a file, or a folder with all it holds. Returns whether it is gone. */
     fun delete(file: File): Boolean {

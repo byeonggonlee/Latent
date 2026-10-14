@@ -8,6 +8,7 @@ import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
 
 /**
@@ -83,6 +84,11 @@ class GrantedFolder(private val context: Context, private val root: File) {
         }
         return uri?.let { resolver.openOutputStream(it, "wt") } ?: throw IOException("Cannot write ${file.name}")
     }
+
+    /** Opens [file] to be read. */
+    @Throws(IOException::class)
+    fun openInput(file: File): InputStream =
+        uriOf(file)?.let { resolver.openInputStream(it) } ?: throw IOException("Cannot read ${file.name}")
 
     /** Opens [file] to be read and changed in place. */
     @Throws(IOException::class)
