@@ -26,7 +26,7 @@ Latent brings the photos of your camera onto your phone, places them where they 
 
 - Import over USB (MTP), only what is new or only the days you pick. Photos and videos, raw and JPEG together.
 - Location from your phone's own record or a Google Timeline export, written into the photos. Fix a camera clock that is off.
-- Develop Sony ARW raw files with the camera's lens corrections, and edit JPEGs: exposure, tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise reduction, filters, cropping, levelling and perspective, linear, radial and painted masks, and spot healing. Edits stay editable; a JPEG's original is kept.
+- Develop Sony ARW raw files with the camera's lens corrections, and edit JPEGs: exposure, tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise reduction, filters, cropping, levelling and perspective, subject and background masks found on the phone, linear, radial and painted masks, and spot healing. Edits stay editable; a JPEG's original is kept.
 - Swipe on a photo to edit it, type exact values, see clipped highlights and shadows.
 - A library by day, with ratings, a trash, sharing, and a map of where you took your photos.
 - List your phone's own photos too, from the folders you choose. They are never changed; edits are kept as settings.
@@ -42,7 +42,7 @@ Latent는 카메라의 사진을 휴대전화로 가져와 찍은 곳에 놓고,
 
 - USB(MTP)로 가져오기: 새 사진만, 또는 고른 날짜만. 사진·동영상, RAW와 JPEG를 함께.
 - 휴대전화가 기록한 위치나 Google 타임라인 내보내기로 사진에 위치를 넣습니다. 카메라 시계가 틀려도 맞출 수 있습니다.
-- Sony ARW RAW를 카메라의 렌즈 보정과 함께 현상하고 JPEG를 보정합니다: 노출, 톤 곡선, 색상 혼합·등급, 텍스처, 명료도, 안개 제거, 선명도, 노이즈 감소, 필터, 자르기·수평·원근, 선형·원형·브러시 마스크, 잡티 제거. 보정은 언제든 다시 열 수 있고, JPEG 원본은 보관됩니다.
+- Sony ARW RAW를 카메라의 렌즈 보정과 함께 현상하고 JPEG를 보정합니다: 노출, 톤 곡선, 색상 혼합·등급, 텍스처, 명료도, 안개 제거, 선명도, 노이즈 감소, 필터, 자르기·수평·원근, 휴대전화 안에서 찾는 피사체·배경 마스크, 선형·원형·브러시 마스크, 잡티 제거. 보정은 언제든 다시 열 수 있고, JPEG 원본은 보관됩니다.
 - 사진 위에서 스와이프로 보정하고, 값을 직접 입력하고, 날아간 밝은 곳·어두운 곳을 확인합니다.
 - 날짜별 보관함, 별점, 휴지통, 공유, 사진을 찍은 곳의 지도.
 - 휴대전화 자체의 사진도 고른 폴더에서 함께 볼 수 있습니다. 원본은 절대 바뀌지 않고 보정은 설정으로 저장됩니다.
@@ -74,6 +74,7 @@ visible) and starting a sync (notification with progress).
 - Does the app collect or share user data? **Collected: none by the developer. No data is sent to the developer or to any analytics or ad service.**
 - With online maps on, map tile requests go from the phone straight to OpenStreetMap's servers. That reveals an IP address and the map area looked at, not photos or a list of places. If the console asks about it, answer for *Approximate location* (the area of the map shown), **shared with a third party (OpenStreetMap), optional, not linked to the user, for app functionality**, and name it in the policy (it is: see PRIVACY.md, "Online maps").
 - Photos and videos, location history, and edits stay on the device. Not collected, not shared.
+- Subject and background masks are worked out on the device by a model shipped inside the app (LiteRT, no Google Play services, no ML Kit): processing on the device is not collection, so nothing changes in the form.
 - Data encrypted in transit: yes, for the map tiles (HTTPS); nothing else is transmitted.
 - Can users ask to delete their data? Everything is local; uninstalling deletes the app's database. Photos are ordinary files the user owns.
 - Cloud backup: the database (it holds recorded locations) is excluded from Android's cloud backup.

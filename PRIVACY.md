@@ -22,6 +22,8 @@ how the app starts out, it makes no network request at all.
 - **The locations it adds to photos**: written into JPEG files (EXIF) and into sidecar files next to
   raw files (XMP), so that other apps can show where a photo was taken. A shared photo carries its
   location along.
+- **Automatic masks** (subject and background) are made on the phone by a model inside the app; the photo
+  is not sent anywhere for it.
 
 ## Permissions
 
