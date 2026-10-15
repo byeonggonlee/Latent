@@ -2,9 +2,18 @@ package com.byeonggon.latent.raw
 
 import android.graphics.BitmapFactory
 import androidx.exifinterface.media.ExifInterface
+import com.byeonggon.latent.enhance.Adjustments
+import com.byeonggon.latent.enhance.DetectedKind
+import com.byeonggon.latent.enhance.Detection
 import com.byeonggon.latent.enhance.Framing
+import com.byeonggon.latent.enhance.LocalEdit
+import com.byeonggon.latent.enhance.Mask
+import com.byeonggon.latent.enhance.MaskRaster
+import com.byeonggon.latent.enhance.MaskShape
+import com.byeonggon.latent.enhance.MaskStore
 import com.byeonggon.latent.enhance.PhotoEdit
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,5 +74,19 @@ class RawRendererTest {
 
         assertEquals(8 to 28, sizeOf(jpeg))
         assertEquals(ExifInterface.ORIENTATION_NORMAL, ExifInterface(jpeg).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0))
+    }
+
+    @Test
+    fun exportsADetectedMaskWhereItWasFoundOnTheUprightPicture() {
+        // An outline of the top half of the picture as it is shown, upright: 8 across, 56 down.
+        val outline = MaskStore.newId()
+        MaskStore.save(outline, MaskRaster.of(8, 56, FloatArray(8 * 56) { if (it / 8 < 28) 1f else 0f }))
+        val subject = Mask(MaskShape.DETECTED, 0f, 0f, 0f, 0f, feather = 0f, detection = Detection(DetectedKind.SUBJECT, outline, "test", 1))
+
+        RawRenderer.export(raw, jpeg, PhotoEdit(locals = listOf(LocalEdit(subject, Adjustments(exposure = -1f)))))
+
+        assertEquals(8 to 56, sizeOf(jpeg))
+        val exported = BitmapFactory.decodeFile(jpeg.path)
+        assertTrue((exported.getPixel(4, 6) and 0xFF) < (exported.getPixel(4, 50) and 0xFF) - 20)
     }
 }

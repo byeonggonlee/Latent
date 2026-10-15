@@ -126,6 +126,16 @@ class DetectedMaskTest {
     }
 
     @Test
+    fun aLookPastedOntoAnotherPhotoLeavesTheMasksBehind() {
+        val masked = PhotoEdit(Adjustments(contrast = 0.4f), locals = listOf(LocalEdit(detected(Detection(DetectedKind.SUBJECT, leftHalf, "u2netp", 1)), Adjustments(exposure = 1f))))
+        val other = PhotoEdit(locals = listOf(LocalEdit(Mask(MaskShape.RADIAL, 0.5f, 0.5f, 0.7f, 0.7f))))
+
+        // The outline is of one photo's subject; another photo keeps its own masks.
+        assertEquals(PhotoEdit(Adjustments(contrast = 0.4f), locals = other.locals), other.withLookOf(masked))
+        assertEquals(PhotoEdit(Adjustments(contrast = 0.4f)), PhotoEdit().withLookOf(masked))
+    }
+
+    @Test
     fun editsMadeBeforeDetectedMasksReadAsTheyDid() {
         val stored = """{"exposure":0.5,"locals":[{"shape":"RADIAL","mask":[0.5,0.5,0.75,0.8,0.5],"exposure":-1.0}]}"""
 
