@@ -488,4 +488,5 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">%1$d photo taken out of the album.</item>
         <item quantity="other">%1$d photos taken out of the album.</item>
     </plurals>
+    <string name="edit_elsewhere">Edit in another app…</string>
 </resources>

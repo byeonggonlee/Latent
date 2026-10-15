@@ -44,6 +44,8 @@ data class ViewerUiState(
     val canPaste: Boolean = false,
     /** A file ready to be handed to another app, until the screen has done so. */
     val shareFile: File? = null,
+    /** Whether [shareFile] is to be opened for editing in another app instead of being shared. */
+    val toEdit: Boolean = false,
     /** How the photo was taken, as far as the file says. */
     val details: String? = null,
     /** A raw file as its corrections make it look, shown in place of the preview the camera embedded. */
@@ -159,19 +161,20 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
      * Gets the photo ready to be sent to another app: as a JPEG no larger than [longSide] pixels, or
      * at its full size for null. A raw file is developed with its edit first.
      */
-    fun share(longSide: Int?) {
+    fun share(longSide: Int?, toEdit: Boolean = false) {
         val item = state.value.item ?: return
         if (status.value.busy) return
         viewModelScope.launch {
             status.update { it.copy(busy = true) }
             val file = try {
-                withContext(Dispatchers.Default) { edits.shareCopy(item, longSide) }
+                // To be edited elsewhere it is always a copy: whatever the other app does, the library's file is safe.
+                withContext(Dispatchers.Default) { edits.shareCopy(item, longSide, forceCopy = toEdit) }
             } catch (e: IOException) {
                 null
             } catch (e: OutOfMemoryError) {
                 null
             }
-            status.update { it.copy(busy = false, shareFile = file, message = if (file == null) text(R.string.share_failed) else null) }
+            status.update { it.copy(busy = false, shareFile = file, toEdit = toEdit, message = if (file == null) text(R.string.share_failed) else null) }
         }
     }
 
@@ -196,7 +199,7 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun consumeShareFile() = status.update { it.copy(shareFile = null) }
+    fun consumeShareFile() = status.update { it.copy(shareFile = null, toEdit = false) }
 
     /** The system has dealt with the request to delete; the library drops the photo if it is gone. */
     fun deletionDone() {

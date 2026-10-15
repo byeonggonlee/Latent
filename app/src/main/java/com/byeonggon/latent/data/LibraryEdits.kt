@@ -165,13 +165,18 @@ class LibraryEdits(
 
     /**
      * A copy of [item] to send to another app: a JPEG at its full size, or no larger than [longSide]
-     * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is.
+     * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is,
+     * unless [forceCopy] asks for a copy of it.
      */
     @Throws(IOException::class)
-    suspend fun shareCopy(item: MediaItemEntity, longSide: Int?, alongsideOthers: Boolean = false): File {
+    suspend fun shareCopy(item: MediaItemEntity, longSide: Int?, alongsideOthers: Boolean = false, forceCopy: Boolean = false): File {
         val source = File(item.path)
         val phoneEdit = if (item.origin == MediaOrigin.PHONE) editOf(item) else null
-        if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null) return source
+        if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null) {
+            if (!forceCopy) return source
+            // A copy of the file as it is, for an app that may do what it likes with it.
+            return (if (alongsideOthers) storage.sharedFile(source.name) else storage.shareFile(source.name)).also { source.copyTo(it, overwrite = true) }
+        }
         val name = source.nameWithoutExtension + ".jpg"
         // One share at a time: copies made for an earlier one are cleared away, unless this is one of several.
         val target = if (alongsideOthers) storage.sharedFile(name) else storage.shareFile(name)

@@ -56,6 +56,14 @@ class ShareCopyTest {
         .let { it.outWidth to it.outHeight }
 
     @Test
+    fun makesACopyOfAJpegWhenAnotherAppIsToEditIt() {
+        val copy = runBlocking { container.libraryEdits.shareCopy(photo, null, forceCopy = true) }
+
+        assertNotEquals(File(photo.path).path, copy.path)
+        org.junit.Assert.assertArrayEquals(File(photo.path).readBytes(), copy.readBytes())
+    }
+
+    @Test
     fun sharesAJpegAsItIsAtFullSize() {
         assertSame(File(photo.path).path, runBlocking { container.libraryEdits.shareCopy(photo, null) }.path)
     }

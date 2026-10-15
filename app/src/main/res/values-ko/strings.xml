@@ -456,4 +456,5 @@
     <plurals name="removed_from_album">
         <item quantity="other">사진 %1$d장을 앨범에서 뺐습니다.</item>
     </plurals>
+    <string name="edit_elsewhere">다른 앱에서 편집…</string>
 </resources>

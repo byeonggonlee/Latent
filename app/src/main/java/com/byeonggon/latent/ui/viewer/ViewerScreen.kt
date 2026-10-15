@@ -145,7 +145,7 @@ fun ViewerScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.shareFile) {
         state.shareFile?.let {
-            context.share(it, MediaKind.PHOTO)
+            if (state.toEdit) context.editInAnotherApp(it) else context.share(it, MediaKind.PHOTO)
             viewModel.consumeShareFile()
         }
     }
@@ -219,6 +219,7 @@ fun ViewerScreen(
                 onPaste = viewModel::pasteEdit,
                 onExport = viewModel::exportRaw,
                 onShowMap = { context.showOnMap(item) },
+                onEditElsewhere = { viewModel.share(null, toEdit = true) },
             )
         }
     }
@@ -514,6 +515,7 @@ private fun ActionBar(
     onPaste: () -> Unit,
     onExport: () -> Unit,
     onShowMap: () -> Unit,
+    onEditElsewhere: () -> Unit,
 ) {
     val enabled = !state.busy
     val photo = item.kind != MediaKind.VIDEO
@@ -552,6 +554,7 @@ private fun ActionBar(
                     Triple(stringResource(if (item.origin == MediaOrigin.PHONE) R.string.save_copy else R.string.save_as_jpeg), true, onExport)
                         // A raw file is developed into a JPEG; an edited photo of another app, which stays as it is, into a copy.
                         .takeIf { item.kind == MediaKind.RAW || (item.origin == MediaOrigin.PHONE && state.edited && photo) },
+                    Triple(stringResource(R.string.edit_elsewhere), true, onEditElsewhere).takeIf { photo },
                     Triple(stringResource(R.string.show_on_map), true, onShowMap).takeIf { item.geoSource != GeoSource.NONE },
                 )
                 for ((label, available, action) in entries) {
@@ -612,6 +615,23 @@ private const val ZOOM_KEY_STEP = 1.25f
 
 /** What [onShare] is given to share a file just as it is stored. */
 private const val RAW_FILE = -1
+
+/**
+ * Opens a copy of a photo in an editor the user picks, such as Snapseed or Lightroom. The editor may read
+ * it but not write it: it saves its result as a photo of its own, which the library can list from the
+ * phone's folders.
+ */
+private fun Context.editInAnotherApp(file: File) {
+    val uri = try {
+        FileProvider.getUriForFile(this, "$packageName.files", file)
+    } catch (e: IllegalArgumentException) {
+        return
+    }
+    val edit = Intent(Intent.ACTION_EDIT)
+        .setDataAndType(uri, "image/jpeg")
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    launch(Intent.createChooser(edit, file.name))
+}
 
 /** Hands the file to whichever app the user picks: a messenger, a cloud drive, another editor. */
 private fun Context.share(file: File, kind: MediaKind) {

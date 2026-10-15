@@ -38,6 +38,8 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Share and delete of a video.
 - [ ] Plus, minus and 0 zoom with a keyboard; a "125%" label shows while zoomed; pinching and double tapping still work.
 
+- [ ] "Edit in another app…" (viewer, More): the chooser lists Snapseed and Lightroom; the picture opens there; what they save (Snapseed: `Pictures/Snapseed`) shows up in Latent once that folder is ticked under "Photos on this phone…". Check that the library's own file was not touched.
+
 ## Editor
 
 - [ ] Tap a slider's number: the box to type a value opens with the number selected and the keyboard up; `±` flips the sign; OK applies; Reset puts it back; two taps on the number reset it.
