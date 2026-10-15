@@ -60,7 +60,7 @@ class AppContainer(private val context: Context) {
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
     val rawCache = RawCache()
     val thumbnails = Thumbnails(context)
-    val libraryEdits = LibraryEdits(storage, database.mediaDao(), database.filterDao(), geotagger, rawCache)
+    val libraryEdits = LibraryEdits(storage, database.mediaDao(), database.filterDao(), geotagger, rawCache, exportOptions = { settings.settings.first().exportOptions() })
     val editSaver = EditSaver(context, libraryEdits)
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())

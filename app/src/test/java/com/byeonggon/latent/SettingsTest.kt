@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.data.AppSettings
+import com.byeonggon.latent.data.ExportOptions
 import com.byeonggon.latent.data.GridSize
 import com.byeonggon.latent.data.TabPosition
 import com.byeonggon.latent.data.ThemeMode
@@ -100,6 +101,20 @@ class SettingsTest {
         }
         // The trash holds photos for a month until told otherwise.
         assertEquals(30, AppSettings().trashKeptDays)
+    }
+
+    @Test
+    fun choosesHowFinelyCopiesAreCompressedAndWhetherSharingLeavesThePlaceOut() {
+        openSettings()
+        assertEquals(95, runBlocking { container.settings.settings.first() }.jpegQuality)
+        compose.onNodeWithText("공유할 때 위치 빼기").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("최고 · 100").performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runBlocking { container.settings.settings.first() }.jpegQuality == 100 }
+
+        assertEquals(false, runBlocking { container.settings.settings.first() }.exportOptions().removeLocation)
+        runBlocking { container.settings.update { it.copy(removeLocationWhenSharing = true, jpegQuality = 1000) } }
+        // A quality out of range is held to the range.
+        assertEquals(ExportOptions(quality = 100, removeLocation = true), runBlocking { container.settings.settings.first() }.exportOptions())
     }
 
     @Test

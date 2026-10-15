@@ -22,6 +22,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [x] The ZV-E10 writes `OffsetTimeOriginal`, `OffsetTimeDigitized` and `OffsetTime` (+09:00) in its raw files too (seen in the details, 2026-10-15), so the zone comes from the file and the camera time zone setting is only for files with none.
 - [ ] Does a video's creation time (UTC in the file) agree with the stills?
 - [ ] "Every EXIF value": off, the photo's details show only camera, lens and exposure in one line; on, the sheet under the photo (phone) or the panel beside it (wide window) also lists the values in parts, scrolling on a phone. Compare a ZV-E10 JPEG and raw file with `exiftool`: values as recorded (codes such as Flash 16 are not spelled out), no row missing that matters, nothing odd on a phone's own photos. Sony's MakerNote is not listed.
+- [ ] Sharing and saving: JPEG quality (80, 90, 95, 100) changes the size of what Share makes at a reduced size and of copies saved from raw files and phone photos (compare in a file manager). "Leave out the place when sharing" on: share a located photo to another app (Messages, a mail app) and look at its details there, or open the copy in a file manager / `exiftool`: no GPS. It cleans EXIF GPS tags only; a place written in a JPEG's XMP block is not looked for. Off, shares keep the place as before. A video and a raw file shared as they are are not changed either way.
 - [ ] Online maps switch: turning it on asks first, off does not; Photos on this phone opens the folder question in the library.
 
 ## Languages

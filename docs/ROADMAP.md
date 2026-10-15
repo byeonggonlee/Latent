@@ -2,7 +2,7 @@
 
 What to build next, ranked by how often the feature is used in everyday photo editing, how much of it
 the app already has, and what it costs. Goal of the app: between Snapseed and Lightroom Mobile, plus
-camera sync, all on the phone. Last revised 2026-10-15.
+camera sync, all on the phone. Last revised 2026-10-15 (export options done).
 
 ## Where the app stands, by stage of a typical edit
 
@@ -25,8 +25,10 @@ Each is small or medium, works offline, and needs no new permission.
 1. ~~**Pick and reject flags** (cull).~~ *Done 2026-10-15.* The step every shoot starts with; Lightroom users do it with `P`/`X`
    before touching a slider. Flags in the viewer and the selection bar, keys `P`, `X`, `U`, a filter, and
    "trash the rejected" (to the trash, so it can be undone). Small.
-2. **Export options.** Size (long side), quality, JPEG or PNG, and an optional "remove location" switch,
-   off by default (the owner wants places kept in photos). Small to medium.
+2. ~~**Export options.**~~ *Done 2026-10-15, without PNG:* JPEG quality (80/90/95/100) and "leave out the place when
+   sharing", off by default (the owner wants places kept in photos), both in Settings; sizes were already in the
+   Share menu. PNG left out: it would lose the camera's Exif, which is the point of a photo. A custom long side
+   could come later. Small.
 3. **Find photos.** With the phone's whole camera roll listed, scrolling is not enough: filter by camera,
    lens, ISO range, dates, has a place, edited, flag. Place names would need a geocoder (a network service),
    so not those. Medium.

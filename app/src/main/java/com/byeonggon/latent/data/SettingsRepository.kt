@@ -46,7 +46,13 @@ data class AppSettings(
     val cameraZoneId: String? = null,
     /** Whether the details of a photo list every EXIF value the file has, not only how it was taken. */
     val allExif: Boolean = false,
+    /** How finely JPEGs that are shared or saved as copies are compressed, 1 to 100. */
+    val jpegQuality: Int = 95,
+    /** Whether the pictures shared with other apps leave their place out. */
+    val removeLocationWhenSharing: Boolean = false,
 ) {
+    fun exportOptions() = ExportOptions(jpegQuality.coerceIn(1, 100), removeLocationWhenSharing)
+
     /** The zone to read a photo's time in when the photo does not say which it is. */
     fun cameraZone(): ZoneId = cameraZoneId?.let { id -> try { ZoneId.of(id) } catch (e: DateTimeException) { null } } ?: ZoneId.systemDefault()
 
@@ -82,6 +88,8 @@ class SettingsRepository(private val context: Context) {
             preferences[GRID_SIZE] = next.gridSize.name
             preferences[TRASH_KEPT_DAYS] = next.trashKeptDays
             preferences[ALL_EXIF] = next.allExif
+            preferences[JPEG_QUALITY] = next.jpegQuality
+            preferences[REMOVE_LOCATION_WHEN_SHARING] = next.removeLocationWhenSharing
             if (next.cameraZoneId == null) preferences.remove(CAMERA_ZONE_ID) else preferences[CAMERA_ZONE_ID] = next.cameraZoneId
         }
     }
@@ -104,6 +112,8 @@ class SettingsRepository(private val context: Context) {
             trashKeptDays = this[TRASH_KEPT_DAYS] ?: defaults.trashKeptDays,
             cameraZoneId = this[CAMERA_ZONE_ID],
             allExif = this[ALL_EXIF] ?: defaults.allExif,
+            jpegQuality = this[JPEG_QUALITY] ?: defaults.jpegQuality,
+            removeLocationWhenSharing = this[REMOVE_LOCATION_WHEN_SHARING] ?: defaults.removeLocationWhenSharing,
         )
     }
 
@@ -123,5 +133,7 @@ class SettingsRepository(private val context: Context) {
         val TRASH_KEPT_DAYS = intPreferencesKey("trash_kept_days")
         val CAMERA_ZONE_ID = stringPreferencesKey("camera_zone_id")
         val ALL_EXIF = booleanPreferencesKey("all_exif")
+        val JPEG_QUALITY = intPreferencesKey("jpeg_quality")
+        val REMOVE_LOCATION_WHEN_SHARING = booleanPreferencesKey("remove_location_when_sharing")
     }
 }

@@ -155,6 +155,27 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
             Hint(R.string.trash_kept_hint)
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Heading(R.string.settings_sharing)
+            Text(stringResource(R.string.jpeg_quality), style = MaterialTheme.typography.bodyLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                QUALITIES.forEach { (quality, label) ->
+                    FilterChip(
+                        selected = current.jpegQuality == quality,
+                        onClick = { scope.launch { settings.update { it.copy(jpegQuality = quality) } } },
+                        label = { Text(stringResource(label)) },
+                    )
+                }
+            }
+            Hint(R.string.jpeg_quality_hint)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.remove_location_when_sharing), style = MaterialTheme.typography.bodyLarge)
+                    Hint(R.string.remove_location_when_sharing_hint)
+                }
+                Switch(checked = current.removeLocationWhenSharing, onCheckedChange = { on -> scope.launch { settings.update { it.copy(removeLocationWhenSharing = on) } } })
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Heading(R.string.settings_camera)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
@@ -198,6 +219,9 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
         }
     }
 }
+
+/** The JPEG qualities to choose from, with their names. */
+private val QUALITIES = listOf(80 to R.string.quality_small, 90 to R.string.quality_balanced, 95 to R.string.quality_high, 100 to R.string.quality_maximum)
 
 /** How long the trash can keep photos. */
 private val TRASH_DAYS = listOf(7, 30, 90)

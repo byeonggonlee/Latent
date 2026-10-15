@@ -15,6 +15,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,6 +51,9 @@ class ShareCopyTest {
         photo = MediaItemEntity(path = photoFile.path, fileName = photoFile.name, kind = MediaKind.PHOTO, sizeBytes = photoFile.length(), capturedAt = 1, importedAt = 1, latitude = 37.5, longitude = 127.0)
         raw = photo.copy(path = rawFile.path, fileName = rawFile.name, kind = MediaKind.RAW, sizeBytes = rawFile.length())
     }
+
+    @After
+    fun forgetTheSettings() = runBlocking { container.settings.update { AppSettings() } }
 
     private fun sizeOf(file: File) = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         .also { BitmapFactory.decodeFile(file.path, it) }
@@ -99,5 +103,56 @@ class ShareCopyTest {
         // The next share on its own clears them away.
         runBlocking { container.libraryEdits.shareCopy(photo, 1080) }
         assertFalse(first.exists())
+    }
+
+    @Test
+    fun leavesThePlaceOutOfWhatIsSharedWhenTheSettingsSayAndNeverTouchesTheOriginal() {
+        ExifInterface(File(photo.path)).apply { setLatLong(37.5, 127.0); saveAttributes() }
+        val original = File(photo.path).readBytes()
+        runBlocking { container.settings.update { it.copy(removeLocationWhenSharing = true) } }
+
+        // As it is would hand over the file with its place in it, so a copy is made.
+        val asIs = runBlocking { container.libraryEdits.shareCopy(photo, null) }
+        assertNotEquals(photo.path, asIs.path)
+        assertEquals(null, ExifInterface(asIs).latLong)
+        assertEquals("ZV-E10", ExifInterface(asIs).getAttribute(ExifInterface.TAG_MODEL))
+
+        val smaller = runBlocking { container.libraryEdits.shareCopy(photo, 1080) }
+        assertEquals(null, ExifInterface(smaller).latLong)
+        assertEquals("ZV-E10", ExifInterface(smaller).getAttribute(ExifInterface.TAG_MODEL))
+
+        val developed = runBlocking { container.libraryEdits.shareCopy(raw, 2048) }
+        assertEquals(null, ExifInterface(developed).latLong)
+
+        org.junit.Assert.assertArrayEquals(original, File(photo.path).readBytes())
+        assertEquals(37.5, ExifInterface(File(photo.path)).latLong!![0], 1e-4)
+    }
+
+    @Test
+    fun keepsThePlaceInACopyMadeForAnotherAppToEdit() {
+        ExifInterface(File(photo.path)).apply { setLatLong(37.5, 127.0); saveAttributes() }
+        runBlocking { container.settings.update { it.copy(removeLocationWhenSharing = true) } }
+
+        val copy = runBlocking { container.libraryEdits.shareCopy(photo, null, forceCopy = true) }
+
+        assertEquals(37.5, ExifInterface(copy).latLong!![0], 1e-4)
+    }
+
+    @Test
+    fun compressesSharedJpegsAsFinelyAsTheSettingsSay() {
+        val noisy = File(File(photo.path).parentFile, "DSC00003.JPG")
+        val random = java.util.Random(7)
+        val bitmap = Bitmap.createBitmap(1500, 1000, Bitmap.Config.ARGB_8888).apply {
+            setPixels(IntArray(1500 * 1000) { 0xFF000000.toInt() or random.nextInt(0x1000000) }, 0, 1500, 0, 0, 1500, 1000)
+        }
+        noisy.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it) }
+        val item = photo.copy(path = noisy.path, fileName = noisy.name, sizeBytes = noisy.length())
+
+        runBlocking { container.settings.update { it.copy(jpegQuality = 50) } }
+        val coarse = runBlocking { container.libraryEdits.shareCopy(item, 1000) }.length()
+        runBlocking { container.settings.update { it.copy(jpegQuality = 100) } }
+        val fine = runBlocking { container.libraryEdits.shareCopy(item, 1000) }.length()
+
+        assertTrue("coarse $coarse, fine $fine", fine > coarse * 2)
     }
 }

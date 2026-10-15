@@ -18,7 +18,6 @@ object PhotoEnhancer {
     const val JPEG_QUALITY = 95
 
     /** Copies made to be sent on are smaller to begin with; a little more compression is no loss there. */
-    private const val SHARE_QUALITY = 90
 
     private val COPIED_EXIF_TAGS = arrayOf(
         ExifInterface.TAG_ORIENTATION,
@@ -68,7 +67,7 @@ object PhotoEnhancer {
         val kept = files.exists(backup)
         val original = if (kept) backup else photo
         val started = System.nanoTime()
-        val bytes = editedBytes(original, edit, photo.name)
+        val bytes = editedBytes(original, edit, photo.name, JPEG_QUALITY)
         // Hidden, but still named as a photo: shared storage only takes photos and videos in DCIM.
         val edited = File(photo.parentFile, ".${photo.nameWithoutExtension}-edited.${photo.extension}")
         timed("${photo.name}: write") { edited.writeBytes(bytes) }
@@ -100,10 +99,10 @@ object PhotoEnhancer {
         return renderedBitmap(edit, scale) { image.also { Healing.heal(it, edit.spots) }.framed(edit.framing) }
     }
 
-    /** Writes the edited version of [original] to [target], a new file; [original] stays as it is. */
+    /** Writes the edited version of [original] to [target], a new file, compressed to [quality]; [original] stays as it is. */
     @Throws(IOException::class)
-    fun exportEdited(original: File, target: File, edit: PhotoEdit) {
-        val bytes = editedBytes(original, edit, target.name)
+    fun exportEdited(original: File, target: File, edit: PhotoEdit, quality: Int = JPEG_QUALITY) {
+        val bytes = editedBytes(original, edit, target.name, quality)
         target.parentFile?.mkdirs()
         try {
             target.writeBytes(bytes)
@@ -114,7 +113,7 @@ object PhotoEnhancer {
     }
 
     /** The JPEG file of [original] edited as [edit] says, with the camera's Exif carried over to it. */
-    private fun editedBytes(original: File, edit: PhotoEdit, name: String): ByteArray {
+    private fun editedBytes(original: File, edit: PhotoEdit, name: String, quality: Int): ByteArray {
         // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
         // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
         val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
@@ -122,7 +121,7 @@ object PhotoEnhancer {
         val encoded = ByteArrayOutputStream()
         try {
             timed("$name: encode") {
-                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, encoded)) {
                     throw IOException("Cannot encode $name")
                 }
             }
@@ -219,16 +218,15 @@ object PhotoEnhancer {
      * long side, with the camera settings and location of the original.
      */
     @Throws(IOException::class)
-    fun writeSmaller(source: File, target: File, longSide: Int) = writeSmaller(decodeFitting(source, longSide), target, longSide) {
-        copyExif(source, target)
-    }
+    fun writeSmaller(source: File, target: File, longSide: Int, quality: Int = JPEG_QUALITY) =
+        writeSmaller(decodeFitting(source, longSide), target, longSide, quality) { copyExif(source, target) }
 
     /**
      * Writes [bitmap] to [target] as a JPEG no larger than [longSide] pixels on its long side, and
      * then lets [describe] add what the file should say about itself. The bitmap is recycled.
      */
     @Throws(IOException::class)
-    fun writeSmaller(bitmap: Bitmap, target: File, longSide: Int, describe: () -> Unit) {
+    fun writeSmaller(bitmap: Bitmap, target: File, longSide: Int, quality: Int = JPEG_QUALITY, describe: () -> Unit) {
         val scale = minOf(1f, longSide.toFloat() / max(bitmap.width, bitmap.height))
         val small = if (scale < 1f) {
             bitmap.scale(max(1, (bitmap.width * scale).toInt()), max(1, (bitmap.height * scale).toInt()))
@@ -237,7 +235,7 @@ object PhotoEnhancer {
         }
         try {
             target.outputStream().use { output ->
-                if (!small.compress(Bitmap.CompressFormat.JPEG, SHARE_QUALITY, output)) throw IOException("Cannot encode ${target.name}")
+                if (!small.compress(Bitmap.CompressFormat.JPEG, quality, output)) throw IOException("Cannot encode ${target.name}")
             }
         } finally {
             if (small !== bitmap) small.recycle()

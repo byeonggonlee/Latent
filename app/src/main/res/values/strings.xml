@@ -561,4 +561,13 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="exif_image">Picture</string>
     <string name="exif_time">Time</string>
     <string name="exif_place">Place</string>
+    <string name="settings_sharing">Sharing and saving</string>
+    <string name="jpeg_quality">JPEG quality</string>
+    <string name="quality_small">Small · 80</string>
+    <string name="quality_balanced">Balanced · 90</string>
+    <string name="quality_high">High · 95</string>
+    <string name="quality_maximum">Maximum · 100</string>
+    <string name="jpeg_quality_hint">For JPEGs made to share, and for copies saved from raw files and other apps\' photos. Photos of the library that are shared as they are stay as they are.</string>
+    <string name="remove_location_when_sharing">Leave out the place when sharing</string>
+    <string name="remove_location_when_sharing_hint">Photos sent from Share carry no GPS position. Copies saved in the library, \"Edit in another app\", videos, and raw files sent as they are are not changed.</string>
 </resources>

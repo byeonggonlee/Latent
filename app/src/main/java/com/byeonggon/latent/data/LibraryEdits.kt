@@ -11,6 +11,7 @@ import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.location.GeoPoint
+import com.byeonggon.latent.location.GpsTags
 import com.byeonggon.latent.location.Geotagger
 import com.byeonggon.latent.raw.RawCache
 import com.byeonggon.latent.raw.RawRenderer
@@ -34,6 +35,8 @@ class LibraryEdits(
     private val filterDao: FilterDao,
     private val geotagger: Geotagger,
     private val rawCache: RawCache,
+    /** What the copies made here are like, asked for each time so that the settings are followed. */
+    private val exportOptions: suspend () -> ExportOptions = { ExportOptions() },
 ) {
     /** Tones and colours copied from one photo, to be given to others. */
     val copied = MutableStateFlow<PhotoEdit?>(null)
@@ -114,7 +117,7 @@ class LibraryEdits(
         } else {
             storage.siblingFor(source, suffix = "_developed", extension = "jpg")
         }
-        RawRenderer.export(source, target, editOf(item) ?: PhotoEdit())
+        RawRenderer.export(source, target, editOf(item) ?: PhotoEdit(), exportOptions().quality)
         val latitude = item.latitude
         val longitude = item.longitude
         if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
@@ -143,7 +146,7 @@ class LibraryEdits(
     suspend fun saveCopy(item: MediaItemEntity): File {
         val source = File(item.path)
         val target = storage.targetFor(source.nameWithoutExtension + "_edited.jpg", item.capturedAt)
-        PhotoEnhancer.exportEdited(source, target, editOf(item) ?: PhotoEdit())
+        PhotoEnhancer.exportEdited(source, target, editOf(item) ?: PhotoEdit(), exportOptions().quality)
         val latitude = item.latitude
         val longitude = item.longitude
         if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
@@ -166,16 +169,22 @@ class LibraryEdits(
     /**
      * A copy of [item] to send to another app: a JPEG at its full size, or no larger than [longSide]
      * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is,
-     * unless [forceCopy] asks for a copy of it.
+     * unless [forceCopy] asks for a copy of it (for an app that is to edit it, which keeps its place) or the
+     * settings say the place is to be left out, which a copy is made for.
      */
     @Throws(IOException::class)
     suspend fun shareCopy(item: MediaItemEntity, longSide: Int?, alongsideOthers: Boolean = false, forceCopy: Boolean = false): File {
         val source = File(item.path)
+        val options = exportOptions()
+        val leaveOutPlace = options.removeLocation && !forceCopy
         val phoneEdit = if (item.origin == MediaOrigin.PHONE) editOf(item) else null
         if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null) {
-            if (!forceCopy) return source
+            if (!forceCopy && !leaveOutPlace) return source
             // A copy of the file as it is, for an app that may do what it likes with it.
-            return (if (alongsideOthers) storage.sharedFile(source.name) else storage.shareFile(source.name)).also { source.copyTo(it, overwrite = true) }
+            return (if (alongsideOthers) storage.sharedFile(source.name) else storage.shareFile(source.name)).also {
+                source.copyTo(it, overwrite = true)
+                if (leaveOutPlace) GpsTags.remove(it)
+            }
         }
         val name = source.nameWithoutExtension + ".jpg"
         // One share at a time: copies made for an earlier one are cleared away, unless this is one of several.
@@ -184,31 +193,35 @@ class LibraryEdits(
             val edit = editOf(item) ?: PhotoEdit()
             if (longSide == null) {
                 rawCache.clear()
-                RawRenderer.export(source, target, edit)
+                RawRenderer.export(source, target, edit, options.quality)
             } else {
                 // Half the sensor's resolution is as large as a reduced copy gets; it is turned upright on the way.
                 val bitmap = RawRenderer.preview(rawCache.read(source), edit)
-                PhotoEnhancer.writeSmaller(bitmap, target, longSide) { PhotoEnhancer.copyExif(source, target, upright = true) }
+                PhotoEnhancer.writeSmaller(bitmap, target, longSide, options.quality) { PhotoEnhancer.copyExif(source, target, upright = true) }
             }
         } else if (phoneEdit != null) {
             // The photo is edited from its own file into the copy; a smaller one is made from that.
             if (longSide == null) {
-                PhotoEnhancer.exportEdited(source, target, phoneEdit)
+                PhotoEnhancer.exportEdited(source, target, phoneEdit, options.quality)
             } else {
                 val full = storage.sharedFile(".full-" + name)
                 try {
-                    PhotoEnhancer.exportEdited(source, full, phoneEdit)
-                    PhotoEnhancer.writeSmaller(full, target, longSide)
+                    PhotoEnhancer.exportEdited(source, full, phoneEdit, options.quality)
+                    PhotoEnhancer.writeSmaller(full, target, longSide, options.quality)
                 } finally {
                     full.delete()
                 }
             }
         } else {
-            PhotoEnhancer.writeSmaller(source, target, longSide!!)
+            PhotoEnhancer.writeSmaller(source, target, longSide!!, options.quality)
         }
         val latitude = item.latitude
         val longitude = item.longitude
-        if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
+        if (leaveOutPlace) {
+            GpsTags.remove(target)
+        } else if (latitude != null && longitude != null) {
+            geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
+        }
         return target
     }
 

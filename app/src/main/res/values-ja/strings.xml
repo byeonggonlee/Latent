@@ -526,4 +526,13 @@
     <string name="exif_image">画像</string>
     <string name="exif_time">日時</string>
     <string name="exif_place">位置</string>
+    <string name="settings_sharing">共有と保存</string>
+    <string name="jpeg_quality">JPEG の画質</string>
+    <string name="quality_small">低め · 80</string>
+    <string name="quality_balanced">標準 · 90</string>
+    <string name="quality_high">高め · 95</string>
+    <string name="quality_maximum">最高 · 100</string>
+    <string name="jpeg_quality_hint">共有用に作る JPEG と、RAW ファイルや他のアプリの写真から保存するコピーに適用されます。ライブラリの写真をそのまま共有するときは、ファイルは変わりません。</string>
+    <string name="remove_location_when_sharing">共有するときに位置情報を除く</string>
+    <string name="remove_location_when_sharing_hint">共有で送る写真には GPS の位置情報が入りません。ライブラリに保存するコピー、「他のアプリで編集」、動画、そのまま送る RAW ファイルは変わりません。</string>
 </resources>

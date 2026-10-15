@@ -53,14 +53,14 @@ object RawRenderer {
         }
     }
 
-    /** Develops [source] at full resolution into a JPEG at [target], carrying over its camera settings. */
+    /** Develops [source] at full resolution into a JPEG at [target] compressed to [quality], carrying over its camera settings. */
     @Throws(IOException::class)
-    fun export(source: File, target: File, edit: PhotoEdit) {
+    fun export(source: File, target: File, edit: PhotoEdit, quality: Int = PhotoEnhancer.JPEG_QUALITY) {
         val bitmap = timed("full development") { renderedBitmap(edit, scale = 1f) { developFull(source, edit) } }
         try {
             timed("encode") {
                 target.outputStream().use { output ->
-                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoEnhancer.JPEG_QUALITY, output)) {
+                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)) {
                         throw IOException("Cannot encode ${target.name}")
                     }
                 }
