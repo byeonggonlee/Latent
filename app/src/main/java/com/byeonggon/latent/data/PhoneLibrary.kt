@@ -35,7 +35,7 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
     private val resolver get() = context.contentResolver
     private val collection: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
-    /** The folders that hold photos or videos, the most filled first, leaving out the library's own. */
+    /** The folders that hold photos or videos, the most filled first, leaving out the library's own and phone raw files. */
     suspend fun folders(): List<Folder> = withContext(Dispatchers.IO) {
         rows().groupingBy { it.folder }.eachCount().map { (path, count) -> Folder(path, count) }.sortedByDescending { it.count }
     }
@@ -105,8 +105,8 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
                 val path = cursor.getString(0) ?: continue
                 val folder = groupOf(cursor.getString(1) ?: continue)
                 val name = cursor.getString(2) ?: continue
-                // Raw files of phones are not in a form the app can develop; the library's own folder is the library.
-                val kind = MediaKind.fromFileName(name)?.takeIf { it != MediaKind.RAW } ?: continue
+                // The raw files of phones are DNGs, which the app cannot develop; those of a Sony camera it can.
+                val kind = MediaKind.fromFileName(name)?.takeUnless { it == MediaKind.RAW && name.endsWith(".dng", ignoreCase = true) } ?: continue
                 if (folder.startsWith(LIBRARY_FOLDER)) continue
                 result += Row(path, folder, name, kind, cursor.getLong(3), cursor.getLong(4))
             }

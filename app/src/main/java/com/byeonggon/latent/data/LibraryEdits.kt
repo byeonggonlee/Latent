@@ -108,7 +108,12 @@ class LibraryEdits(
         // The export decodes the file itself; holding a second copy would only cost memory.
         rawCache.clear()
         val source = File(item.path)
-        val target = storage.siblingFor(source, suffix = "_developed", extension = "jpg")
+        // Next to the raw file if it is the library's; a raw file of another app is not written beside.
+        val target = if (item.origin == MediaOrigin.PHONE) {
+            storage.targetFor(source.nameWithoutExtension + "_developed.jpg", item.capturedAt)
+        } else {
+            storage.siblingFor(source, suffix = "_developed", extension = "jpg")
+        }
         RawRenderer.export(source, target, editOf(item) ?: PhotoEdit())
         val latitude = item.latitude
         val longitude = item.longitude
@@ -124,6 +129,7 @@ class LibraryEdits(
                 importedAt = System.currentTimeMillis(),
                 sourceKey = null,
                 edit = null,
+                origin = MediaOrigin.LIBRARY,
             ),
         )
         return target

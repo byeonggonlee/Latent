@@ -218,7 +218,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         val partners = if (current.stacked) mediaDao.byIds(own.mapNotNull { current.partners[it.id] }) else emptyList()
         trash.throwAway(own + partners.filter { partner -> own.none { it.id == partner.id } })
         // What other apps made is theirs to delete: the system asks the person, and keeps it in its own trash.
-        if (phone.isNotEmpty()) requestDeletion(phone)
+        if (phone.isNotEmpty()) {
+            val phonePartners = if (current.stacked) mediaDao.byIds(phone.mapNotNull { current.partners[it.id] }) else emptyList()
+            requestDeletion(phone + phonePartners.filter { partner -> partner.origin == MediaOrigin.PHONE && phone.none { it.id == partner.id } })
+        }
         plural(R.plurals.trashed_count, own.size + phone.size)
     }
 
@@ -343,7 +346,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             { it.kind == MediaKind.RAW || (it.origin == MediaOrigin.PHONE && it.kind == MediaKind.PHOTO && edits.isEdited(it)) },
             done = R.plurals.batch_exported,
         ) { item ->
-            if (item.origin == MediaOrigin.PHONE) edits.saveCopy(item) else edits.exportRaw(item)
+            if (item.origin == MediaOrigin.PHONE && item.kind == MediaKind.PHOTO) edits.saveCopy(item) else edits.exportRaw(item)
         }
     }
 

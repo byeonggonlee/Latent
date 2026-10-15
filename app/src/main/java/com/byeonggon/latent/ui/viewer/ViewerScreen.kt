@@ -189,7 +189,7 @@ fun ViewerScreen(
             val moveOn = { if (next != null && next.id != shown.id) onItemChange(next.id) else close() }
             if (shown.origin == MediaOrigin.PHONE) {
                 afterDeletion = moveOn
-                viewModel.moveToTrash(null)
+                viewModel.moveToTrash(partners[shown.id]?.takeIf { stacked })
             } else {
                 viewModel.moveToTrash(partners[shown.id]?.takeIf { stacked })
                 moveOn()

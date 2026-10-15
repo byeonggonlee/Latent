@@ -108,14 +108,16 @@ class PhoneLibraryTest {
     }
 
     @Test
-    fun listsTheFoldersWithPhotosAndLeavesOutTheLibraryAndRawFiles() = runBlocking {
+    fun listsTheFoldersWithPhotosAndLeavesOutTheLibraryAndPhoneRawFiles() = runBlocking {
         val library = File(container.storage.root, "2026/2026-10-08").apply { mkdirs() }
         list(
             photo(camera, "A.jpg"), photo(camera, "B.jpg"), File(camera, "C.mp4").apply { writeBytes(ByteArray(10)) },
-            File(camera, "D.dng").apply { writeBytes(ByteArray(10)) }, photo(screenshots, "S.jpg"), photo(library, "DSC1.JPG"),
+            File(camera, "D.dng").apply { writeBytes(ByteArray(10)) }, File(camera, "E.ARW").apply { writeBytes(ByteArray(10)) },
+            photo(screenshots, "S.jpg"), photo(library, "DSC1.JPG"),
         )
 
-        assertEquals(listOf(PhoneLibrary.Folder("DCIM/Camera/", 3), PhoneLibrary.Folder("Pictures/Screenshots/", 1)), container.phoneLibrary.folders())
+        // A phone's DNG is left out, a camera's ARW is not.
+        assertEquals(listOf(PhoneLibrary.Folder("DCIM/Camera/", 4), PhoneLibrary.Folder("Pictures/Screenshots/", 1)), container.phoneLibrary.folders())
     }
 
     @Test

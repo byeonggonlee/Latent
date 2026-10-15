@@ -151,7 +151,7 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     fun exportRaw() {
         val item = state.value.item?.takeIf { it.kind == MediaKind.RAW || it.origin == MediaOrigin.PHONE } ?: return
         runTask(failure = R.string.save_as_jpeg_failed) {
-            text(R.string.saved_as_jpeg, (if (item.origin == MediaOrigin.PHONE) edits.saveCopy(item) else edits.exportRaw(item)).name)
+            text(R.string.saved_as_jpeg, (if (item.origin == MediaOrigin.PHONE && item.kind == MediaKind.PHOTO) edits.saveCopy(item) else edits.exportRaw(item)).name)
         }
     }
 
@@ -181,8 +181,10 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         if (item.origin == MediaOrigin.PHONE) {
             // Another app's photo: the system asks the person, and keeps it in its own trash.
             viewModelScope.launch {
-                val uri = withContext(Dispatchers.IO) { container.phoneLibrary.uriOf(item.path) }
-                val request = uri?.let { MediaStore.createTrashRequest(getApplication<Application>().contentResolver, listOf(it), true).intentSender }
+                // The other file of a raw and JPEG pair goes along, as it does from the library.
+                val partner = alsoId?.let { mediaDao.byId(it) }?.takeIf { it.origin == MediaOrigin.PHONE }
+                val uris = withContext(Dispatchers.IO) { listOfNotNull(item, partner).mapNotNull { container.phoneLibrary.uriOf(it.path) } }
+                val request = uris.takeIf { it.isNotEmpty() }?.let { MediaStore.createTrashRequest(getApplication<Application>().contentResolver, it, true).intentSender }
                 status.update { it.copy(deleteRequest = request, message = if (request == null) text(R.string.trash_failed) else null) }
             }
             return
