@@ -626,4 +626,5 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">%d file had no preset to take.</item>
         <item quantity="other">%d files had no preset to take.</item>
     </plurals>
+    <string name="compare">Compare</string>
 </resources>

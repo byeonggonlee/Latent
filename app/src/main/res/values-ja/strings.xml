@@ -588,4 +588,5 @@
     <plurals name="presets_unreadable">
         <item quantity="other">%d 件のファイルには取り込めるプリセットがありませんでした。</item>
     </plurals>
+    <string name="compare">比較</string>
 </resources>

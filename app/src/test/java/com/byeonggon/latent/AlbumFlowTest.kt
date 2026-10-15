@@ -77,7 +77,7 @@ class AlbumFlowTest {
         // Pick two photos and put them in the album.
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("DSC00002.JPG").performClick()
-        compose.onNodeWithText("앨범에 추가").performClick()
+        compose.onNodeWithText("앨범에 추가").performScrollTo().performClick()
         compose.onNodeWithText("여행 (0)").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); members(albumId).size == 2 }
         assertEquals(setOf(ids[0], ids[1]), members(albumId).toSet())

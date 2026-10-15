@@ -36,6 +36,7 @@ import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.common.rememberWindowLayout
 import com.byeonggon.latent.ui.editor.EditorScreen
 import com.byeonggon.latent.ui.library.LibraryScreen
+import com.byeonggon.latent.ui.compare.CompareScreen
 import com.byeonggon.latent.ui.library.LibraryViewModel
 import com.byeonggon.latent.ui.location.LocationScreen
 import com.byeonggon.latent.ui.map.MapScreen
@@ -61,6 +62,8 @@ fun AppRoot(startOnSync: Boolean) {
 
     var editing by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    // The photos being compared, as the ids written out with commas: a saved state holds text more surely than lists.
+    var comparing by rememberSaveable { mutableStateOf<String?>(null) }
     val tabPositions = LocalContext.current.appContainer.settings.settings
     val tabPosition by remember { tabPositions.map { it.tabPosition } }.collectAsStateWithLifecycle(TabPosition.AUTO)
     // The viewer pages through the photos in the order, and with the filters, that the library lists them.
@@ -88,6 +91,15 @@ fun AppRoot(startOnSync: Boolean) {
         return
     }
 
+    comparing?.let { written ->
+        CompareScreen(
+            ids = written.split(',').mapNotNull { it.toLongOrNull() },
+            partners = libraryState.partners,
+            onClose = { comparing = null },
+        )
+        return
+    }
+
     if (settingsOpen) {
         SettingsScreen(
             onBack = { settingsOpen = false },
@@ -104,7 +116,7 @@ fun AppRoot(startOnSync: Boolean) {
     val window = rememberWindowLayout()
     val content: @Composable () -> Unit = {
         when (tab) {
-            Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it }, onSettings = { settingsOpen = true })
+            Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it }, onSettings = { settingsOpen = true }, onCompare = { comparing = it.joinToString(",") })
             Tab.SYNC -> ReadableWidth { SyncScreen() }
             Tab.MAP -> MapScreen(onOpen = { viewerItemId = it })
             Tab.LOCATION -> ReadableWidth { LocationScreen() }

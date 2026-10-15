@@ -51,8 +51,9 @@ Each is small or medium, works offline, and needs no new permission.
    (Log footage). A 3D lookup with trilinear interpolation as a late colour stage, in both the CPU and the
    GPU renderer, with an import that checks the file and tells what it could not read. Also the base for
    Sony S-Log and Creative Look LUTs. Medium to large. **For Opus**, as the owner suggested.
-8. **Compare and survey view** (two or four photos side by side, zoomed together) for choosing between
-   similar shots. Medium.
+8. ~~**Compare and survey view.**~~ *Done 2026-10-15:* two to four selected photos side by side, zoomed together, with
+   pick, reject and stars under each. Not done: a survey of many small photos, edited versions shown rendered (the
+   file as it is), raw files at full size.
 9. **Point colour and colour calibration.** Used by those who grade by eye; the colour mixer covers most
    of it. Medium.
 

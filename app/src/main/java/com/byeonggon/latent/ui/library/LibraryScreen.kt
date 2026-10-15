@@ -84,6 +84,7 @@ import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.latent.R
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.ui.compare.MOST_COMPARED
 import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.db.FLAG_PICKED
 import com.byeonggon.latent.data.db.FLAG_REJECTED
@@ -108,6 +109,7 @@ fun LibraryScreen(
     gridState: LazyGridState,
     onOpen: (Long) -> Unit,
     onSettings: () -> Unit,
+    onCompare: (List<Long>) -> Unit = {},
     viewModel: LibraryViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -140,7 +142,7 @@ fun LibraryScreen(
     LaunchedEffect(state.deleteRequest) { state.deleteRequest?.let { deletion.launch(IntentSenderRequest.Builder(it).build()) } }
 
     Box(Modifier.fillMaxSize()) {
-        LibraryContent(state, storageGranted, selecting, gridState, onOpen, onSettings, viewModel)
+        LibraryContent(state, storageGranted, selecting, gridState, onOpen, onSettings, onCompare, viewModel)
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
     state.phoneChoice?.let { choice -> PhoneFoldersDialog(choice, viewModel) }
@@ -185,6 +187,7 @@ private fun LibraryContent(
     gridState: LazyGridState,
     onOpen: (Long) -> Unit,
     onSettings: () -> Unit,
+    onCompare: (List<Long>) -> Unit,
     viewModel: LibraryViewModel,
 ) {
     val gridSize = LocalContext.current.appContainer.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.gridSize
@@ -196,7 +199,7 @@ private fun LibraryContent(
         } else if (selecting && state.showingTrash) {
             TrashSelectionBar(state, viewModel)
         } else if (selecting) {
-            SelectionBar(state, viewModel)
+            SelectionBar(state, viewModel, onCompare)
         } else if (state.showingTrash) {
             TrashBar(state, viewModel)
         } else {
@@ -295,7 +298,7 @@ internal fun monthsAlongTheGrid(days: List<LibraryDay>, leading: Int): MonthsAlo
 
 /** What can be done to all the selected photos at once. */
 @Composable
-private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
+private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel, onCompare: (List<Long>) -> Unit) {
     var rating by remember { mutableStateOf(false) }
     var choosingAlbum by remember { mutableStateOf(false) }
     if (choosingAlbum) AlbumPickDialog(state, viewModel, onDismiss = { choosingAlbum = false })
@@ -308,6 +311,8 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
         // What is done most comes first: the rest is a scroll away on a narrow screen.
         TextButton(onClick = viewModel::shareSelected) { Text(stringResource(R.string.share)) }
         TextButton(onClick = viewModel::trashSelected) { Text(stringResource(R.string.delete)) }
+        // Two to four photos can be set side by side to choose between.
+        TextButton(onClick = { onCompare(state.selected.toList()) }, enabled = state.selected.size in 2..MOST_COMPARED) { Text(stringResource(R.string.compare)) }
         Box {
             TextButton(onClick = { rating = true }) { Text(stringResource(R.string.rating)) }
             DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
