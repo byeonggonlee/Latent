@@ -206,5 +206,10 @@ class PhoneLibraryTest {
         assertEquals("DCIM/Camera/", PhoneLibrary.folderOf(File(storage, "DCIM/Camera/a.jpg").path))
         assertEquals("DCIM/Camera/", PhoneLibrary.folderOf("/storage/1234-ABCD/DCIM/Camera/a.jpg"))
         assertEquals("Pictures/", PhoneLibrary.folderOf("/storage/emulated/0/Pictures/a.jpg"))
+        // A folder sorted into years and days counts as the one it is kept in.
+        assertEquals("DCIM/CameraManager/", PhoneLibrary.folderOf("/storage/emulated/0/DCIM/CameraManager/2026/2026-10-08/a.jpg"))
+        assertEquals("DCIM/CameraManager/", PhoneLibrary.groupOf("DCIM/CameraManager/2026/2026-10-08/"))
+        assertEquals("Download/", PhoneLibrary.groupOf("Download/2025-11-02/"))
+        assertEquals("Pictures/Trip 2024/", PhoneLibrary.groupOf("Pictures/Trip 2024/"))
     }
 }

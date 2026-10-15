@@ -13,6 +13,10 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.location.MediaMetadataReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -41,20 +45,25 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
      * what is gone from the phone, and what lay in folders no longer chosen unless it was edited.
      * Returns how many were added.
      */
-    suspend fun refresh(chosen: Set<String>): Int = withContext(Dispatchers.IO) {
+    suspend fun refresh(chosen: Set<String>): Int = withContext(Dispatchers.IO) { listFrom(chosen) }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val readers = Dispatchers.IO.limitedParallelism(READERS)
+
+    private suspend fun listFrom(chosen: Set<String>): Int = coroutineScope {
         val dao = database.mediaDao()
         val known = dao.fromPhone()
         val gone = known.filter { !File(it.path).exists() || (folderOf(it.path) !in chosen && it.edit == null) }
         gone.map { it.id }.chunked(500).forEach { dao.deleteByIds(it) }
-        if (chosen.isEmpty()) return@withContext 0
+        if (chosen.isEmpty()) return@coroutineScope 0
 
         val have = known.mapTo(HashSet()) { it.path }
         val fresh = rows().filter { it.folder in chosen && it.path !in have }
         val now = System.currentTimeMillis()
         for (batch in fresh.chunked(BATCH)) {
             ensureActive()
-            val items = batch.map { row ->
-                val metadata = MediaMetadataReader.read(File(row.path), row.kind)
+            // Reading the place out of each file is what takes the time; a few at once make the most of the storage.
+            val items = batch.map { row -> async(readers) { row to MediaMetadataReader.read(File(row.path), row.kind) } }.awaitAll().map { (row, metadata) ->
                 MediaItemEntity(
                     path = row.path,
                     fileName = row.name,
@@ -94,7 +103,7 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
         resolver.query(collection, projection, "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN ($types)", null, null)?.use { cursor ->
             while (cursor.moveToNext()) {
                 val path = cursor.getString(0) ?: continue
-                val folder = cursor.getString(1) ?: continue
+                val folder = groupOf(cursor.getString(1) ?: continue)
                 val name = cursor.getString(2) ?: continue
                 // Raw files of phones are not in a form the app can develop; the library's own folder is the library.
                 val kind = MediaKind.fromFileName(name)?.takeIf { it != MediaKind.RAW } ?: continue
@@ -107,6 +116,7 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
 
     companion object {
         private const val BATCH = 200
+        private const val READERS = 4
 
         /** The library's own folder as MediaStore names it. */
         const val LIBRARY_FOLDER = "DCIM/Latent/"
@@ -116,12 +126,28 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
 
         private val VOLUME_PREFIX = Regex("^/storage/(emulated/\\d+|[^/]+)/")
 
-        /** The folder of a file by the path, as MediaStore names folders: "DCIM/Camera/" for ".../0/DCIM/Camera/a.jpg". */
+        /**
+         * The folder of a file by the path, as MediaStore names folders: "DCIM/Camera/" for ".../0/DCIM/Camera/a.jpg".
+         * Folders of years and days are counted with the folder they are kept in: see [groupOf].
+         */
         fun folderOf(path: String): String {
             val internal = Environment.getExternalStorageDirectory().path + "/"
             val relative = if (path.startsWith(internal)) path.removePrefix(internal) else path.replace(VOLUME_PREFIX, "")
             val folder = relative.substringBeforeLast('/', "")
-            return if (folder.isEmpty()) "" else "$folder/"
+            return groupOf(if (folder.isEmpty()) "" else "$folder/")
+        }
+
+        private val DATED = Regex("^\\d{4}(-\\d{2}(-\\d{2})?)?$")
+
+        /**
+         * A folder as the person chooses it: one that is sorted into folders of years and days, as a
+         * library is, is a single choice, such as "DCIM/CameraManager/" for ".../2026/2026-10-08/".
+         */
+        fun groupOf(folder: String): String {
+            val parts = folder.trimEnd('/').split('/')
+            val dated = parts.indexOfFirst { DATED.matches(it) }
+            if (dated < 0) return folder
+            return parts.take(dated).joinToString("/") { "$it/" }.replace("//", "/")
         }
     }
 }
