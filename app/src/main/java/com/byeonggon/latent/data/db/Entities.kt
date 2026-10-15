@@ -24,6 +24,13 @@ enum class MediaKind {
 
 enum class GeoSource { NONE, CAMERA, TRACK }
 
+/**
+ * Where a file lives. [LIBRARY] files are in the library's own folder, made or taken in by the app,
+ * which may change them. [PHONE] files are photos and videos that other apps made, listed where they
+ * are: the app never changes them, and keeps what is done to them as settings, as for a raw file.
+ */
+enum class MediaOrigin { LIBRARY, PHONE }
+
 enum class LocationSource { APP, TIMELINE }
 
 @Entity(
@@ -52,7 +59,14 @@ data class MediaItemEntity(
     val trashedAt: Long? = null,
     /** Where the file was in the library before it went into the trash, to put it back there. */
     val trashedFrom: String? = null,
-)
+    @ColumnInfo(defaultValue = "'LIBRARY'") val origin: MediaOrigin = MediaOrigin.LIBRARY,
+) {
+    /**
+     * Whether what is done to this file is kept as settings, and applied whenever it is shown or
+     * exported, instead of being written into the file: raw files, and files that are not the app's.
+     */
+    val editsAsSettings: Boolean get() = kind == MediaKind.RAW || origin == MediaOrigin.PHONE
+}
 
 /** Remembers every camera file ever imported, so removing it from the library does not re-import it. */
 @Entity(tableName = "sync_records")

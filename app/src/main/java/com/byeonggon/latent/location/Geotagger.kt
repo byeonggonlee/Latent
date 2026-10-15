@@ -7,6 +7,7 @@ import com.byeonggon.latent.data.db.LocationDao
 import com.byeonggon.latent.data.db.LocationPointEntity
 import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -66,10 +67,13 @@ class Geotagger(
             ensureActive()
             val point = locate(item.capturedAt - clockOffsetMs, maxGapMs) ?: continue
             val file = File(item.path)
-            when (item.kind) {
-                MediaKind.PHOTO -> if (writeExif(file, point)) storage.publish(file)
-                MediaKind.RAW -> writeSidecar(file, point)
-                MediaKind.VIDEO -> Unit
+            // A photo that another app made is not written to; the place is kept in the database only.
+            if (item.origin == MediaOrigin.LIBRARY) {
+                when (item.kind) {
+                    MediaKind.PHOTO -> if (writeExif(file, point)) storage.publish(file)
+                    MediaKind.RAW -> writeSidecar(file, point)
+                    MediaKind.VIDEO -> Unit
+                }
             }
             mediaDao.setLocation(item.id, point.latitude, point.longitude, point.altitude, GeoSource.TRACK)
             tagged++

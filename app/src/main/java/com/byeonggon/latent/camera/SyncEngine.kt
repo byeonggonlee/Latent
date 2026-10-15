@@ -9,6 +9,7 @@ import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncRecordEntity
 import com.byeonggon.latent.data.db.SyncedFolderEntity
 import com.byeonggon.latent.location.Geotagger
@@ -299,7 +300,7 @@ class SyncEngine(
      * if it was edited. They are remembered as imported from now on, as if this sync had brought them.
      */
     private suspend fun withoutCopiesInLibrary(files: List<RemoteFile>, cameraId: String, imported: ImportedFiles): List<RemoteFile> {
-        val unclaimed = database.mediaDao().all().filter { it.sourceKey == null }
+        val unclaimed = database.mediaDao().all().filter { it.sourceKey == null && it.origin == MediaOrigin.LIBRARY }
         if (unclaimed.isEmpty()) return files
         val copies = HashMap<String, MediaItemEntity>()
         for (item in unclaimed) {

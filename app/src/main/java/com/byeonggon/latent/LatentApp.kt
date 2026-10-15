@@ -7,6 +7,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.video.VideoFrameDecoder
+import kotlinx.coroutines.flow.first
 import com.byeonggon.latent.camera.SyncEngine
 import com.byeonggon.latent.camera.UsbCameraConnector
 import com.byeonggon.latent.data.EditSaver
@@ -14,6 +15,7 @@ import com.byeonggon.latent.data.LibraryEdits
 import com.byeonggon.latent.data.Thumbnails
 import com.byeonggon.latent.data.LibraryIndex
 import com.byeonggon.latent.data.LibraryStorage
+import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.SettingsRepository
 import com.byeonggon.latent.data.Trash
 import com.byeonggon.latent.data.db.AppDatabase
@@ -42,7 +44,7 @@ class LatentApp : Application(), SingletonImageLoader.Factory {
 }
 
 /** App-wide singletons, wired by hand. */
-class AppContainer(context: Context) {
+class AppContainer(private val context: Context) {
     val database: AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "latent.db")
             .addMigrations(*AppDatabase.MIGRATIONS)
@@ -51,6 +53,7 @@ class AppContainer(context: Context) {
     val storage = LibraryStorage(context)
     val libraryIndex = LibraryIndex(storage, database) { editSaver.saving.value }
     val trash = Trash(storage, database.mediaDao())
+    val phoneLibrary = PhoneLibrary(context, database)
     val usb = UsbCameraConnector(context)
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
     val rawCache = RawCache()
@@ -59,6 +62,10 @@ class AppContainer(context: Context) {
     val editSaver = EditSaver(context, libraryEdits)
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())
+
+    /** Brings the photos and videos listed from the phone in line with the folders chosen; how many were added. */
+    suspend fun refreshPhoneLibrary(): Int =
+        if (LibraryStorage.canReadMedia(context)) phoneLibrary.refresh(settings.settings.first().phoneFolders) else 0
 }
 
 val Context.appContainer: AppContainer

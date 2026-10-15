@@ -368,6 +368,16 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="share_1080">Smaller, 1080 px long side</string>
     <string name="info">Info</string>
     <string name="save_as_jpeg">Save as JPEG</string>
+    <string name="source_all">Everything</string>
+    <string name="source_library">Camera and Latent</string>
+    <string name="source_phone">This phone</string>
+    <string name="show_photos_from">Show photos from</string>
+    <string name="phone_folders">Photos on this phone…</string>
+    <string name="phone_folders_title">Photos from this phone</string>
+    <string name="phone_folders_hint">Choose the folders to list in the library. The photos stay where they are and are never changed: edits are kept as settings, and exporting saves a copy.</string>
+    <string name="phone_folders_none">No photos or videos were found on this phone.</string>
+    <string name="phone_folder_count">%1$s (%2$s)</string>
+    <string name="save_copy">Save a copy as JPEG</string>
     <string name="no_location">No location</string>
     <string name="location_from_camera">camera</string>
     <string name="location_from_record_video">location record · in the app only</string>

@@ -5,9 +5,14 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -116,10 +122,46 @@ fun LibraryScreen(
         }
     }
 
+    // Photos of other apps are deleted by the system, which asks the person first.
+    val deletion = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { viewModel.deletionDone() }
+    LaunchedEffect(state.deleteRequest) { state.deleteRequest?.let { deletion.launch(IntentSenderRequest.Builder(it).build()) } }
+
     Box(Modifier.fillMaxSize()) {
         LibraryContent(state, storageGranted, selecting, gridState, onOpen, viewModel)
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
+    state.phoneChoice?.let { choice -> PhoneFoldersDialog(choice, viewModel) }
+}
+
+/** The folders of the phone with photos in them, to pick those the library lists. */
+@Composable
+private fun PhoneFoldersDialog(choice: PhoneFolderChoice, viewModel: LibraryViewModel) {
+    val format = java.text.NumberFormat.getIntegerInstance()
+    AlertDialog(
+        onDismissRequest = viewModel::dismissPhoneFolders,
+        title = { Text(stringResource(R.string.phone_folders_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.phone_folders_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (choice.folders.isEmpty()) {
+                    Text(stringResource(R.string.phone_folders_none), modifier = Modifier.padding(top = 12.dp))
+                }
+                Column(Modifier.verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
+                    choice.folders.forEach { folder ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { viewModel.togglePhoneFolder(folder.path) },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = folder.path in choice.chosen, onCheckedChange = null, modifier = Modifier.padding(12.dp))
+                            Text(stringResource(R.string.phone_folder_count, folder.path.trimEnd('/'), format.format(folder.count)), style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = viewModel::confirmPhoneFolders) { Text(stringResource(R.string.ok)) } },
+        dismissButton = { TextButton(onClick = viewModel::dismissPhoneFolders) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @Composable
@@ -429,6 +471,31 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
                     rating = true
                 },
             )
+            HorizontalDivider()
+            Text(
+                stringResource(R.string.show_photos_from),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+            LibrarySource.entries.forEach { entry ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(entry.label)) },
+                    trailingIcon = { RadioButton(selected = state.source == entry, onClick = null) },
+                    onClick = {
+                        open = false
+                        viewModel.setSource(entry)
+                    },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.phone_folders)) },
+                onClick = {
+                    open = false
+                    viewModel.choosePhoneFolders()
+                },
+            )
+            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.stack_raw_jpeg)) },
                 trailingIcon = { Checkbox(checked = state.stacked, onCheckedChange = null) },

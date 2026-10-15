@@ -5,6 +5,7 @@ import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.location.GeoPoint
 import com.byeonggon.latent.location.MediaMetadataReader
@@ -35,7 +36,8 @@ class LibraryIndex(
         val dao = database.mediaDao()
         // A file the app cannot see by its path may still be there; the granted folder sees everything.
         val saving = beingSaved()
-        val missing = dao.all().filterNot { it.id in saving || storage.exists(File(it.path)) }
+        // Photos listed from the phone are not the library's: PhoneLibrary looks after those.
+        val missing = dao.all().filter { it.origin == MediaOrigin.LIBRARY }.filterNot { it.id in saving || storage.exists(File(it.path)) }
         // The hidden original of an edited photo would otherwise stay behind, taking up space unseen.
         missing.forEach { storage.delete(storage.originalOf(File(it.path))) }
         missing.map { it.id }.chunked(500).forEach { dao.deleteByIds(it) }

@@ -1,11 +1,15 @@
 package com.byeonggon.latent.ui.library
 
 import android.app.Application
+import android.content.IntentSender
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.db.MediaItemEntity
+import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.PhotoEdit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +61,16 @@ enum class LibraryFilter(@StringRes val label: Int, val kind: MediaKind?) {
     VIDEO(R.string.filter_videos, MediaKind.VIDEO),
 }
 
+/** Whose photos are shown: those of the library's own folder, those listed from the phone, or both. */
+enum class LibrarySource(@StringRes val label: Int) {
+    ALL(R.string.source_all),
+    LIBRARY(R.string.source_library),
+    PHONE(R.string.source_phone),
+}
+
+/** The folders of the phone the person can choose from, and which are chosen. */
+data class PhoneFolderChoice(val folders: List<PhoneLibrary.Folder>, val chosen: Set<String>)
+
 data class LibraryDay(val date: LocalDate, val items: List<MediaItemEntity>)
 
 /** Something being done to the selected photos one after the other, and how far it has got. */
@@ -84,6 +98,11 @@ data class LibraryUiState(
     /** Showing what is in the trash instead of the library. */
     val showingTrash: Boolean = false,
     val trashCount: Int = 0,
+    val source: LibrarySource = LibrarySource.ALL,
+    /** Set while the person is choosing which folders of the phone to list. */
+    val phoneChoice: PhoneFolderChoice? = null,
+    /** Photos of other apps picked out for deletion: the system asks the person, with this, before it does. */
+    val deleteRequest: IntentSender? = null,
 )
 
 class LibraryViewModel(application: Application) : AndroidViewModel(application) {
@@ -93,6 +112,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val filter = MutableStateFlow(LibraryFilter.ALL)
     private val leastRating = MutableStateFlow(0)
     private val stacked = MutableStateFlow(true)
+    private val source = MutableStateFlow(LibrarySource.ALL)
     private val showingTrash = MutableStateFlow(false)
     private val trash = container.trash
 
@@ -106,7 +126,8 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         filter,
         leastRating,
         stacked,
-    ) { items, filter, leastRating, stacked ->
+        source,
+    ) { items, filter, leastRating, stacked, source ->
         val zone = ZoneId.systemDefault()
         val partners = partnersOf(items)
         // Only the JPEG of a pair is listed, unless raw files are what is asked for.
@@ -117,9 +138,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
         val days = items
             .filter { (filter.kind == null || it.kind == filter.kind) && it.rating >= leastRating && it.id !in hidden }
+            .filter { source == LibrarySource.ALL || (source == LibrarySource.PHONE) == (it.origin == MediaOrigin.PHONE) }
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
-        LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty())
+        LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source)
     }.flowOn(Dispatchers.Default)
 
     val state: StateFlow<LibraryUiState> =
@@ -132,6 +154,8 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 batch = activity.batch,
                 message = activity.message,
                 shareFiles = activity.shareFiles,
+                phoneChoice = activity.phoneChoice,
+                deleteRequest = activity.deleteRequest,
                 showingTrash = inTrash,
                 trashCount = trashCount,
             )
@@ -155,6 +179,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             // A file a sync is moving in is the sync's to add.
             val added = if (container.syncEngine.state.value.isRunning) 0 else container.libraryIndex.adoptUnknownFiles()
             if (added > 0) activity.update { it.copy(message = plural(R.plurals.library_adopted, added)) }
+            container.refreshPhoneLibrary()
             trash.emptyExpired()
             makeThumbnails()
         }
@@ -167,11 +192,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun makeThumbnails() = withContext(Dispatchers.IO) {
         if (!container.storage.isAvailable()) return@withContext
         val thumbnails = container.thumbnails
-        val photos = mediaDao.all().filter { it.kind != MediaKind.VIDEO }.sortedByDescending { it.capturedAt }
-        thumbnails.keepOnly(photos.map { thumbnails.fileFor(it.path, it.sizeBytes) })
+        // Photos of other apps are many and come in their own time, as the grid asks for them; only the newest are made ahead.
+        val (library, phone) = mediaDao.all().filter { it.kind != MediaKind.VIDEO }.partition { it.origin == MediaOrigin.LIBRARY }
+        val photos = (library + phone.sortedByDescending { it.capturedAt }.take(PHONE_THUMBNAILS_AHEAD)).sortedByDescending { it.capturedAt }
+        thumbnails.keepOnly((library + phone).map { thumbnails.fileFor(it.path, it.sizeBytes, it.edit.takeIf { _ -> it.origin == MediaOrigin.PHONE }) })
         for (photo in photos) {
             ensureActive()
-            thumbnails.of(File(photo.path), photo.sizeBytes)
+            thumbnails.of(File(photo.path), photo.sizeBytes, photo.edit.takeIf { photo.origin == MediaOrigin.PHONE })
         }
     }
 
@@ -187,10 +214,59 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
      */
     fun trashSelected() = whileBusy(R.string.trash_failed) {
         val current = state.value
-        val chosen = selectedItems()
-        val partners = if (current.stacked) mediaDao.byIds(chosen.mapNotNull { current.partners[it.id] }) else emptyList()
-        trash.throwAway(chosen + partners.filter { partner -> chosen.none { it.id == partner.id } })
-        plural(R.plurals.trashed_count, chosen.size)
+        val (phone, own) = selectedItems().partition { it.origin == MediaOrigin.PHONE }
+        val partners = if (current.stacked) mediaDao.byIds(own.mapNotNull { current.partners[it.id] }) else emptyList()
+        trash.throwAway(own + partners.filter { partner -> own.none { it.id == partner.id } })
+        // What other apps made is theirs to delete: the system asks the person, and keeps it in its own trash.
+        if (phone.isNotEmpty()) requestDeletion(phone)
+        plural(R.plurals.trashed_count, own.size + phone.size)
+    }
+
+    private suspend fun requestDeletion(items: List<MediaItemEntity>) {
+        val uris = withContext(Dispatchers.IO) { items.mapNotNull { container.phoneLibrary.uriOf(it.path) } }
+        if (uris.isEmpty()) return
+        val request = MediaStore.createTrashRequest(getApplication<Application>().contentResolver, uris, true).intentSender
+        activity.update { it.copy(deleteRequest = request) }
+    }
+
+    /** The system has dealt with the request to delete photos of other apps; the library drops those that are gone. */
+    fun deletionDone() {
+        activity.update { it.copy(deleteRequest = null) }
+        viewModelScope.launch { container.refreshPhoneLibrary() }
+    }
+
+    fun setSource(value: LibrarySource) {
+        source.value = value
+    }
+
+    /** Looks up the folders of the phone that hold photos, for the person to choose which to list. */
+    fun choosePhoneFolders() {
+        viewModelScope.launch {
+            val folders = container.phoneLibrary.folders()
+            val chosen = container.settings.settings.first().phoneFolders
+            // Nothing is chosen at first: the phone's camera folder is the one most people mean.
+            val start = chosen.ifEmpty { folders.map { it.path }.filter { it == PhoneLibrary.CAMERA_FOLDER }.toSet() }
+            activity.update { it.copy(phoneChoice = PhoneFolderChoice(folders, start)) }
+        }
+    }
+
+    fun togglePhoneFolder(path: String) = activity.update { current ->
+        val choice = current.phoneChoice ?: return@update current
+        current.copy(phoneChoice = choice.copy(chosen = if (path in choice.chosen) choice.chosen - path else choice.chosen + path))
+    }
+
+    fun dismissPhoneFolders() = activity.update { it.copy(phoneChoice = null) }
+
+    /** Lists the photos of the chosen folders in the library, and leaves out those of the folders no longer chosen. */
+    fun confirmPhoneFolders() {
+        val chosen = activity.value.phoneChoice?.chosen ?: return
+        activity.update { it.copy(phoneChoice = null) }
+        viewModelScope.launch {
+            container.settings.update { it.copy(phoneFolders = chosen) }
+            val added = container.refreshPhoneLibrary()
+            if (added > 0) activity.update { it.copy(message = plural(R.plurals.library_adopted, added)) }
+            makeThumbnails()
+        }
     }
 
     fun restoreSelected() = whileBusy(R.string.restore_failed) {
@@ -259,10 +335,15 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Develops every selected raw file, with its edit, into a JPEG next to it. */
+    /** Develops every selected raw file, with its edit, into a JPEG next to it; edited photos of other apps are saved as copies. */
     fun exportSelected() {
-        runBatch(R.string.batch_exporting, { it.kind == MediaKind.RAW }, done = R.plurals.batch_exported) { item ->
-            edits.exportRaw(item)
+        runBatch(
+            R.string.batch_exporting,
+            // A photo of another app is saved as a copy when it has an edit to put into one.
+            { it.kind == MediaKind.RAW || (it.origin == MediaOrigin.PHONE && it.kind == MediaKind.PHOTO && edits.isEdited(it)) },
+            done = R.plurals.batch_exported,
+        ) { item ->
+            if (item.origin == MediaOrigin.PHONE) edits.saveCopy(item) else edits.exportRaw(item)
         }
     }
 
@@ -343,5 +424,8 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private companion object {
         /** Raw files shared several at a time are sent at a size that messengers and mail take without trouble. */
         const val RAW_SHARE_SIDE = 2048
+
+        /** How many of the phone's photos, the newest, get their thumbnails made before the grid asks. */
+        const val PHONE_THUMBNAILS_AHEAD = 300
     }
 }

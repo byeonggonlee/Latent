@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.FilterEntity
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncedFolderEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -49,6 +50,7 @@ class MigrationTest {
             assertEquals(null, item.edit)
             assertEquals(0, item.rating)
             assertNull(item.trashedAt)
+            assertEquals(MediaOrigin.LIBRARY, item.origin)
             database.mediaDao().setRating(item.id, 4)
             assertEquals(4, database.mediaDao().byId(item.id)!!.rating)
             database.mediaDao().setEdit(item.id, "{}")

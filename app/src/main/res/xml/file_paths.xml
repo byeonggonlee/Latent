@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <external-path name="library" path="DCIM/Latent/" />
+    <!-- Photos and videos that other apps keep on the phone, which can be shared as they are. -->
+    <external-path name="phone" path="." />
     <cache-path name="share" path="share/" />
 </paths>

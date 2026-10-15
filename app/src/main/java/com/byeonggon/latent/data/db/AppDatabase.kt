@@ -37,6 +37,9 @@ interface MediaDao {
     @Query("SELECT * FROM media_items")
     suspend fun all(): List<MediaItemEntity>
 
+    @Query("SELECT * FROM media_items WHERE origin = 'PHONE'")
+    suspend fun fromPhone(): List<MediaItemEntity>
+
     @Query("SELECT * FROM media_items WHERE geoSource = 'NONE' AND trashedAt IS NULL")
     suspend fun withoutLocation(): List<MediaItemEntity>
 
@@ -146,7 +149,7 @@ interface LocationDao {
         LocationPointEntity::class,
         FilterEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -200,7 +203,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `origin` TEXT NOT NULL DEFAULT 'LIBRARY'")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
     }
 }

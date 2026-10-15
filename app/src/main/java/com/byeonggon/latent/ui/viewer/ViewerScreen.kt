@@ -3,6 +3,7 @@ package com.byeonggon.latent.ui.viewer
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.app.Activity
 import android.net.Uri
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
@@ -27,6 +28,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.horizontalScroll
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -90,6 +94,7 @@ import coil3.compose.AsyncImage
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.latent.ui.common.ZoomableBox
 import com.byeonggon.latent.ui.common.keys
@@ -169,12 +174,26 @@ fun ViewerScreen(
     }
 
     // Puts the photo on screen in the trash and moves on to the next, as a gallery does; back to the library after the last.
+    // A photo of another app is deleted by the system, which asks the person first: the viewer moves on once it has.
+    var afterDeletion by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val deletion = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) afterDeletion?.invoke()
+        afterDeletion = null
+        viewModel.deletionDone()
+    }
+    LaunchedEffect(state.deleteRequest) { state.deleteRequest?.let { deletion.launch(IntentSenderRequest.Builder(it).build()) } }
     val trashShown: (() -> Unit)? = item?.let { shown ->
         {
             val page = pages.indexOfFirst { it.id == shown.id }
             val next = pages.getOrNull(page + 1) ?: pages.getOrNull(page - 1)
-            viewModel.moveToTrash(partners[shown.id]?.takeIf { stacked })
-            if (next != null && next.id != shown.id) onItemChange(next.id) else close()
+            val moveOn = { if (next != null && next.id != shown.id) onItemChange(next.id) else close() }
+            if (shown.origin == MediaOrigin.PHONE) {
+                afterDeletion = moveOn
+                viewModel.moveToTrash(null)
+            } else {
+                viewModel.moveToTrash(partners[shown.id]?.takeIf { stacked })
+                moveOn()
+            }
         }
     }
 
@@ -512,7 +531,9 @@ private fun ActionBar(
                 val entries = listOfNotNull(
                     onInfo?.let { Triple(stringResource(R.string.info), true, it) },
                     Triple(stringResource(R.string.paste_edit), state.canPaste, onPaste).takeIf { photo },
-                    Triple(stringResource(R.string.save_as_jpeg), true, onExport).takeIf { item.kind == MediaKind.RAW },
+                    Triple(stringResource(if (item.origin == MediaOrigin.PHONE) R.string.save_copy else R.string.save_as_jpeg), true, onExport)
+                        // A raw file is developed into a JPEG; an edited photo of another app, which stays as it is, into a copy.
+                        .takeIf { item.kind == MediaKind.RAW || (item.origin == MediaOrigin.PHONE && state.edited && photo) },
                     Triple(stringResource(R.string.show_on_map), true, onShowMap).takeIf { item.geoSource != GeoSource.NONE },
                 )
                 for ((label, available, action) in entries) {

@@ -67,26 +67,11 @@ object PhotoEnhancer {
     fun saveEdited(photo: File, backup: File, edit: PhotoEdit, files: PhotoFiles = PhotoFiles.Direct) {
         val kept = files.exists(backup)
         val original = if (kept) backup else photo
-        // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
-        // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
-        val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
         val started = System.nanoTime()
-        val bitmap = if (reframed) reframed(original, edit) else retoned(original, edit)
-        val encoded = ByteArrayOutputStream()
-        try {
-            timed("${photo.name}: encode") {
-                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
-                    throw IOException("Cannot encode ${photo.name}")
-                }
-            }
-        } finally {
-            bitmap.recycle()
-        }
+        val bytes = editedBytes(original, edit, photo.name)
         // Hidden, but still named as a photo: shared storage only takes photos and videos in DCIM.
         val edited = File(photo.parentFile, ".${photo.nameWithoutExtension}-edited.${photo.extension}")
-        timed("${photo.name}: write") {
-            edited.writeBytes(JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed))
-        }
+        timed("${photo.name}: write") { edited.writeBytes(bytes) }
 
         if (!kept) {
             backup.parentFile?.mkdirs()
@@ -105,6 +90,46 @@ object PhotoEnhancer {
             throw IOException("Cannot replace ${photo.name}", e)
         }
         Log.i(SAVE_LOG_TAG, "${photo.name}: saved in ${(System.nanoTime() - started) / 1_000_000} ms")
+    }
+
+    /** The photo in [file] edited as [edit] says, no larger than about [maxEdge] pixels on its long side, for the screen. */
+    @Throws(IOException::class)
+    fun preview(file: File, edit: PhotoEdit, maxEdge: Int): Bitmap {
+        val image = load(file, maxEdge)
+        val scale = max(image.width, image.height).toFloat() / longSideOf(file).coerceAtLeast(1)
+        return renderedBitmap(edit, scale) { image.also { Healing.heal(it, edit.spots) }.framed(edit.framing) }
+    }
+
+    /** Writes the edited version of [original] to [target], a new file; [original] stays as it is. */
+    @Throws(IOException::class)
+    fun exportEdited(original: File, target: File, edit: PhotoEdit) {
+        val bytes = editedBytes(original, edit, target.name)
+        target.parentFile?.mkdirs()
+        try {
+            target.writeBytes(bytes)
+        } catch (e: IOException) {
+            target.delete()
+            throw e
+        }
+    }
+
+    /** The JPEG file of [original] edited as [edit] says, with the camera's Exif carried over to it. */
+    private fun editedBytes(original: File, edit: PhotoEdit, name: String): ByteArray {
+        // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
+        // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
+        val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+        val bitmap = if (reframed) reframed(original, edit) else retoned(original, edit)
+        val encoded = ByteArrayOutputStream()
+        try {
+            timed("$name: encode") {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, encoded)) {
+                    throw IOException("Cannot encode $name")
+                }
+            }
+        } finally {
+            bitmap.recycle()
+        }
+        return JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed)
     }
 
     /** Puts the original kept at [backup] back in place of the enhanced [photo]. */

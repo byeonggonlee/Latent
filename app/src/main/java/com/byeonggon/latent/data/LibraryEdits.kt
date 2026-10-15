@@ -5,6 +5,7 @@ import com.byeonggon.latent.data.db.FilterEntity
 import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.Filter
 import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.PhotoEdit
@@ -23,8 +24,9 @@ import java.io.IOException
  * Puts edits into effect on library files and takes them away again.
  *
  * A JPEG is replaced by its edited version while its original is kept aside, so that other apps see
- * the edit too. A raw file only has its settings stored; they are applied whenever it is shown or
- * exported. Everything here works on files and must run off the main thread.
+ * the edit too. A raw file, and any photo that another app made and the library merely lists, only has
+ * its settings stored; they are applied whenever it is shown or exported. Everything here works on
+ * files and must run off the main thread.
  */
 class LibraryEdits(
     private val storage: LibraryStorage,
@@ -56,13 +58,14 @@ class LibraryEdits(
     /** The picture an edit of [item] starts from: the original, also when the file itself is an edited version. */
     fun originalOf(item: MediaItemEntity): File {
         val file = File(item.path)
+        if (item.origin == MediaOrigin.PHONE) return file
         return storage.originalOf(file).takeIf { it.exists() } ?: file
     }
 
-    fun isEdited(item: MediaItemEntity): Boolean = when (item.kind) {
-        MediaKind.PHOTO -> storage.originalOf(File(item.path)).exists()
-        MediaKind.RAW -> item.edit != null
-        MediaKind.VIDEO -> false
+    fun isEdited(item: MediaItemEntity): Boolean = when {
+        item.kind == MediaKind.VIDEO -> false
+        item.editsAsSettings -> item.edit != null
+        else -> storage.originalOf(File(item.path)).exists()
     }
 
     /** The edit in effect on [item], or null if it is as the camera made it. */
@@ -76,6 +79,11 @@ class LibraryEdits(
     /** Puts [edit] into effect on [item], in place of any earlier edit. */
     @Throws(IOException::class)
     suspend fun apply(item: MediaItemEntity, edit: PhotoEdit) {
+        if (item.origin == MediaOrigin.PHONE) {
+            // The photo is another app's and stays as it is; an edit that changes nothing is no edit.
+            mediaDao.setEdit(item.id, edit.takeIf { it.changesPicture }?.toJson())
+            return
+        }
         if (item.kind == MediaKind.RAW) {
             mediaDao.setEdit(item.id, edit.toJson())
             return
@@ -122,13 +130,42 @@ class LibraryEdits(
     }
 
     /**
+     * Makes an edited copy, a new JPEG in the library, of a photo that is listed from the phone, which
+     * itself stays untouched. Returns the new file.
+     */
+    @Throws(IOException::class)
+    suspend fun saveCopy(item: MediaItemEntity): File {
+        val source = File(item.path)
+        val target = storage.targetFor(source.nameWithoutExtension + "_edited.jpg", item.capturedAt)
+        PhotoEnhancer.exportEdited(source, target, editOf(item) ?: PhotoEdit())
+        val latitude = item.latitude
+        val longitude = item.longitude
+        if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
+        storage.publish(target)
+        mediaDao.insert(
+            item.copy(
+                id = 0,
+                path = target.absolutePath,
+                fileName = target.name,
+                sizeBytes = target.length(),
+                importedAt = System.currentTimeMillis(),
+                sourceKey = null,
+                edit = null,
+                origin = MediaOrigin.LIBRARY,
+            ),
+        )
+        return target
+    }
+
+    /**
      * A copy of [item] to send to another app: a JPEG at its full size, or no larger than [longSide]
      * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is.
      */
     @Throws(IOException::class)
     suspend fun shareCopy(item: MediaItemEntity, longSide: Int?, alongsideOthers: Boolean = false): File {
         val source = File(item.path)
-        if (item.kind != MediaKind.RAW && longSide == null) return source
+        val phoneEdit = if (item.origin == MediaOrigin.PHONE) editOf(item) else null
+        if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null) return source
         val name = source.nameWithoutExtension + ".jpg"
         // One share at a time: copies made for an earlier one are cleared away, unless this is one of several.
         val target = if (alongsideOthers) storage.sharedFile(name) else storage.shareFile(name)
@@ -142,6 +179,19 @@ class LibraryEdits(
                 val bitmap = RawRenderer.preview(rawCache.read(source), edit)
                 PhotoEnhancer.writeSmaller(bitmap, target, longSide) { PhotoEnhancer.copyExif(source, target, upright = true) }
             }
+        } else if (phoneEdit != null) {
+            // The photo is edited from its own file into the copy; a smaller one is made from that.
+            if (longSide == null) {
+                PhotoEnhancer.exportEdited(source, target, phoneEdit)
+            } else {
+                val full = storage.sharedFile(".full-" + name)
+                try {
+                    PhotoEnhancer.exportEdited(source, full, phoneEdit)
+                    PhotoEnhancer.writeSmaller(full, target, longSide)
+                } finally {
+                    full.delete()
+                }
+            }
         } else {
             PhotoEnhancer.writeSmaller(source, target, longSide!!)
         }
@@ -154,7 +204,7 @@ class LibraryEdits(
     /** Takes the edit of [item] away: a JPEG gets its original back. */
     @Throws(IOException::class)
     suspend fun remove(item: MediaItemEntity) {
-        if (item.kind == MediaKind.PHOTO) {
+        if (item.kind == MediaKind.PHOTO && item.origin == MediaOrigin.LIBRARY) {
             val photo = File(item.path)
             val backup = storage.originalOf(photo)
             if (storage.exists(backup)) {

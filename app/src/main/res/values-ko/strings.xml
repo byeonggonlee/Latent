@@ -344,6 +344,16 @@
     <string name="share_1080">긴 변 1080px로 줄여서</string>
     <string name="info">정보</string>
     <string name="save_as_jpeg">JPEG로 저장</string>
+    <string name="source_all">모두</string>
+    <string name="source_library">카메라와 Latent</string>
+    <string name="source_phone">이 휴대전화</string>
+    <string name="show_photos_from">다음 사진 보기</string>
+    <string name="phone_folders">휴대전화의 사진…</string>
+    <string name="phone_folders_title">휴대전화의 사진</string>
+    <string name="phone_folders_hint">라이브러리에 함께 보여줄 폴더를 고르세요. 사진은 제자리에 있고 절대 바뀌지 않습니다. 보정은 설정으로만 저장되고, 내보낼 때 사본을 만듭니다.</string>
+    <string name="phone_folders_none">이 휴대전화에서 사진이나 동영상을 찾지 못했습니다.</string>
+    <string name="phone_folder_count">%1$s (%2$s)</string>
+    <string name="save_copy">JPEG 사본으로 저장</string>
     <string name="no_location">위치 정보 없음</string>
     <string name="location_from_camera">카메라</string>
     <string name="location_from_record_video">위치 기록 · 앱에만 저장</string>

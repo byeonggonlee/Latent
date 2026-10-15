@@ -1,13 +1,17 @@
 package com.byeonggon.latent.ui.viewer
 
 import android.app.Application
+import android.content.IntentSender
 import android.graphics.Bitmap
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.PhotoEdit
+import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.raw.RawRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,6 +48,8 @@ data class ViewerUiState(
     val details: String? = null,
     /** A raw file as its corrections make it look, shown in place of the preview the camera embedded. */
     val rendered: Bitmap? = null,
+    /** Set while the person is to be asked by the system whether a photo of another app may be deleted. */
+    val deleteRequest: IntentSender? = null,
     val busy: Boolean = false,
     /** Whether an edit of the photo is still being saved; until it is, the photo shows as it was. */
     val saving: Boolean = false,
@@ -89,9 +95,9 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
             container.editSaver.failures.collect { failure -> status.update { it.copy(message = failure) } }
         }
         viewModelScope.launch {
-            item.map { it?.takeIf { item -> item.kind == MediaKind.RAW } }
+            item.map { it?.takeIf { item -> item.editsAsSettings && item.kind != MediaKind.VIDEO } }
                 .distinctUntilChanged { old, new -> old?.path == new?.path && old?.edit == new?.edit }
-                .collectLatest { raw -> showCorrected(raw) }
+                .collectLatest { stored -> showCorrected(stored) }
         }
     }
 
@@ -138,10 +144,15 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** Develops the raw file at full resolution, with its corrections, into a new JPEG. */
+    /**
+     * Develops the raw file at full resolution, with its corrections, into a new JPEG; a photo of
+     * another app, which stays as it is, is saved as an edited copy in the library.
+     */
     fun exportRaw() {
-        val item = state.value.item?.takeIf { it.kind == MediaKind.RAW } ?: return
-        runTask(failure = R.string.save_as_jpeg_failed) { text(R.string.saved_as_jpeg, edits.exportRaw(item).name) }
+        val item = state.value.item?.takeIf { it.kind == MediaKind.RAW || it.origin == MediaOrigin.PHONE } ?: return
+        runTask(failure = R.string.save_as_jpeg_failed) {
+            text(R.string.saved_as_jpeg, (if (item.origin == MediaOrigin.PHONE) edits.saveCopy(item) else edits.exportRaw(item)).name)
+        }
     }
 
     /**
@@ -167,6 +178,15 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     /** Puts the photo in the trash, together with [alsoId], the other file of its pair if that goes along. */
     fun moveToTrash(alsoId: Long?) {
         val item = state.value.item ?: return
+        if (item.origin == MediaOrigin.PHONE) {
+            // Another app's photo: the system asks the person, and keeps it in its own trash.
+            viewModelScope.launch {
+                val uri = withContext(Dispatchers.IO) { container.phoneLibrary.uriOf(item.path) }
+                val request = uri?.let { MediaStore.createTrashRequest(getApplication<Application>().contentResolver, listOf(it), true).intentSender }
+                status.update { it.copy(deleteRequest = request, message = if (request == null) text(R.string.trash_failed) else null) }
+            }
+            return
+        }
         runTask(failure = R.string.trash_failed) {
             val partner = alsoId?.let { mediaDao.byId(it) }
             container.trash.throwAway(listOfNotNull(item, partner))
@@ -176,9 +196,15 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun consumeShareFile() = status.update { it.copy(shareFile = null) }
 
+    /** The system has dealt with the request to delete; the library drops the photo if it is gone. */
+    fun deletionDone() {
+        status.update { it.copy(deleteRequest = null) }
+        viewModelScope.launch { container.refreshPhoneLibrary() }
+    }
+
     fun consumeMessage() = status.update { it.copy(message = null) }
 
-    /** Renders [raw] with the corrections stored for it; without any, the camera's preview is all there is to show. */
+    /** Renders [raw], a photo whose corrections are stored as settings, with them; without any, the file itself is what there is to show. */
     private suspend fun showCorrected(raw: MediaItemEntity?) {
         val edit = PhotoEdit.fromJson(raw?.edit)
         if (raw == null || edit == null) {
@@ -188,7 +214,9 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         status.update { it.copy(busy = true) }
         val bitmap = try {
             withContext(Dispatchers.Default) {
-                renderLock.withLock { RawRenderer.preview(container.rawCache.read(File(raw.path)), edit) }
+                renderLock.withLock {
+                    if (raw.kind == MediaKind.RAW) RawRenderer.preview(container.rawCache.read(File(raw.path)), edit) else PhotoEnhancer.preview(File(raw.path), edit, PREVIEW_EDGE)
+                }
             }
         } catch (e: IOException) {
             null
@@ -217,4 +245,9 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun text(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+
+    private companion object {
+        /** A photo of another app is drawn this large on the screen: about as much as it shows at full width. */
+        const val PREVIEW_EDGE = 2400
+    }
 }

@@ -38,6 +38,7 @@ import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.LibraryStorage
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.MediaOrigin
 import java.io.File
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.R
@@ -68,10 +69,12 @@ fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
 @Composable
 fun rememberThumbnailModel(item: MediaItemEntity): ImageRequest {
     val context = LocalContext.current
-    return remember(item.path, item.sizeBytes, item.kind) {
+    // A photo of another app stays as it is; what was done to it shows in its thumbnail all the same.
+    val edit = item.edit.takeIf { item.origin == MediaOrigin.PHONE }
+    return remember(item.path, item.sizeBytes, item.kind, edit) {
         ImageRequest.Builder(context)
-            .data(if (item.kind == MediaKind.VIDEO) File(item.path) else Thumbnail(item.path, item.sizeBytes))
-            .memoryCacheKey("thumbnail:${item.path}#${item.sizeBytes}")
+            .data(if (item.kind == MediaKind.VIDEO) File(item.path) else Thumbnail(item.path, item.sizeBytes, edit))
+            .memoryCacheKey("thumbnail:${item.path}#${item.sizeBytes}${edit?.let { "#$it" } ?: ""}")
             .build()
     }
 }

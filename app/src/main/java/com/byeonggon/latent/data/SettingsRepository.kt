@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.byeonggon.latent.data.db.MediaKind
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +20,8 @@ data class AppSettings(
     val geotagMaxGapMinutes: Int = 15,
     /** How far ahead of the real time the camera's clock runs; below zero, how far behind. */
     val cameraClockOffsetMinutes: Int = 0,
+    /** The folders of the phone, as MediaStore names them ("DCIM/Camera/"), whose photos and videos are listed in the library too. */
+    val phoneFolders: Set<String> = emptySet(),
 ) {
     /** The moment a photo taken at [cameraTime] by the camera's clock was really taken. */
     fun realTimeOf(cameraTime: Long): Long = cameraTime - cameraClockOffsetMinutes * 60_000L
@@ -45,6 +48,7 @@ class SettingsRepository(private val context: Context) {
             preferences[HIGH_ACCURACY_LOCATION] = next.highAccuracyLocation
             preferences[GEOTAG_MAX_GAP_MINUTES] = next.geotagMaxGapMinutes
             preferences[CAMERA_CLOCK_OFFSET_MINUTES] = next.cameraClockOffsetMinutes
+            preferences[PHONE_FOLDERS] = next.phoneFolders
         }
     }
 
@@ -58,6 +62,7 @@ class SettingsRepository(private val context: Context) {
             highAccuracyLocation = this[HIGH_ACCURACY_LOCATION] ?: defaults.highAccuracyLocation,
             geotagMaxGapMinutes = this[GEOTAG_MAX_GAP_MINUTES] ?: defaults.geotagMaxGapMinutes,
             cameraClockOffsetMinutes = this[CAMERA_CLOCK_OFFSET_MINUTES] ?: defaults.cameraClockOffsetMinutes,
+            phoneFolders = this[PHONE_FOLDERS] ?: defaults.phoneFolders,
         )
     }
 
@@ -69,5 +74,6 @@ class SettingsRepository(private val context: Context) {
         val HIGH_ACCURACY_LOCATION = booleanPreferencesKey("high_accuracy_location")
         val GEOTAG_MAX_GAP_MINUTES = intPreferencesKey("geotag_max_gap_minutes")
         val CAMERA_CLOCK_OFFSET_MINUTES = intPreferencesKey("camera_clock_offset_minutes")
+        val PHONE_FOLDERS = stringSetPreferencesKey("phone_folders")
     }
 }

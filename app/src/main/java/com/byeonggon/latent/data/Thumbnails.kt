@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
+import com.byeonggon.latent.enhance.PhotoEdit
+import com.byeonggon.latent.enhance.PhotoEnhancer
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -34,21 +36,27 @@ class Thumbnails(context: Context) {
         }
     }.asCoroutineDispatcher()
 
-    /** Where the thumbnail of the photo at [path] goes; a photo replaced by an edit changes size, and so name. */
-    fun fileFor(path: String, sizeBytes: Long): File =
-        File(folder, UUID.nameUUIDFromBytes("$path#$sizeBytes".toByteArray()).toString() + ".jpg")
+    /**
+     * Where the thumbnail of the photo at [path] goes; a photo replaced by an edit changes size, and so
+     * name. A photo that stays as it is, with its [edit] kept as settings, has the settings in its name.
+     */
+    fun fileFor(path: String, sizeBytes: Long, edit: String? = null): File =
+        File(folder, UUID.nameUUIDFromBytes("$path#$sizeBytes${edit?.let { "#$it" } ?: ""}".toByteArray()).toString() + ".jpg")
 
-    /** The thumbnail of [photo], made first if there is none yet; null if the photo cannot be decoded. */
-    suspend fun of(photo: File, sizeBytes: Long): File? {
-        val thumbnail = fileFor(photo.path, sizeBytes)
+    /**
+     * The thumbnail of [photo], made first if there is none yet; null if the photo cannot be decoded.
+     * With an [edit] it shows the photo as that makes it look.
+     */
+    suspend fun of(photo: File, sizeBytes: Long, edit: String? = null): File? {
+        val thumbnail = fileFor(photo.path, sizeBytes, edit)
         if (thumbnail.exists()) return thumbnail
-        return withContext(maker) { make(photo, thumbnail) }
+        return withContext(maker) { make(photo, thumbnail, PhotoEdit.fromJson(edit)) }
     }
 
-    private fun make(photo: File, thumbnail: File): File? {
+    private fun make(photo: File, thumbnail: File, edit: PhotoEdit?): File? {
         // Another request for the same photo may have made it while this one waited its turn.
         if (thumbnail.exists()) return thumbnail
-        val bitmap = decode(photo) ?: return null
+        val bitmap = (if (edit != null) edited(photo, edit) else null) ?: decode(photo) ?: return null
         try {
             folder.mkdirs()
             // Made under a name of its own: the grid may ask for the same photo twice at once.
@@ -65,6 +73,15 @@ class Thumbnails(context: Context) {
             bitmap.recycle()
         }
         return thumbnail
+    }
+
+    /** The photo edited as [edit] says, small; null if that cannot be drawn. */
+    private fun edited(photo: File, edit: PhotoEdit): Bitmap? = try {
+        PhotoEnhancer.preview(photo, edit, SHORT_SIDE * 2)
+    } catch (e: IOException) {
+        null
+    } catch (e: OutOfMemoryError) {
+        null
     }
 
     /** Drops the thumbnails of photos that are no longer as they were, given the files that should have one. */
