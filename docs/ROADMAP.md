@@ -69,8 +69,10 @@ Each is small or medium, works offline, and needs no new permission.
 8. ~~**Compare and survey view.**~~ *Done 2026-10-15:* two to four selected photos side by side, zoomed together, with
    pick, reject and stars under each. Not done: a survey of many small photos, edited versions shown rendered (the
    file as it is), raw files at full size.
-9. **Point colour and colour calibration.** Used by those who grade by eye; the colour mixer covers most
-   of it. Medium.
+9. **Point colour and colour calibration.** Used by those who grade by eye. The colour mixer (eight bands) and the
+   colour range mask (any hue, with a range, and its own exposure, saturation, temperature and tint) cover most of
+   it; what is left is a hue shift on a hue of one's choosing, and calibration of the primaries. Held back until
+   someone misses it. Medium.
 10. **HDR in the viewer.** Show Ultra HDR JPEGs and 10-bit HEIF as HDR (window colour mode and headroom, 16-bit
     float decoding): viewing only, no change to editing. No native code is needed (minimum Android is 15).
     Small to medium.
