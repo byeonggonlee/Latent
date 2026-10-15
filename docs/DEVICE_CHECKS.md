@@ -15,6 +15,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 
 - [ ] The fast scroller handle appears when scrolling a long library, follows it, and dragging it names the month. Tapping elsewhere on the right edge still opens photos.
 - [ ] "Show photos from" (everything, camera and Latent, this phone) filters as named.
+- [ ] "About Latent" in the library menu shows the version; both links open in the browser.
 - [ ] Selecting several photos: rating, paste edit, share, delete, RAW to JPEG.
 - [ ] Right click menu, with a mouse on a tablet or laptop window: open, select, paste, share, delete.
 

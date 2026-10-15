@@ -469,6 +469,8 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
 private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     var open by remember { mutableStateOf(false) }
     var rating by remember { mutableStateOf(false) }
+    var about by remember { mutableStateOf(false) }
+    if (about) AboutDialog(onDismiss = { about = false })
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -510,6 +512,13 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
                 onClick = {
                     open = false
                     viewModel.setStacked(!state.stacked)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.about)) },
+                onClick = {
+                    open = false
+                    about = true
                 },
             )
             HorizontalDivider()
