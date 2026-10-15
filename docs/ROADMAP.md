@@ -46,8 +46,12 @@ Each is small or medium, works offline, and needs no new permission.
 ## Larger, to be settled first
 
 6. **Sky and subject masks** (on-device segmentation). The most used Lightroom mask, and what makes quick
-   local edits quick. Needs a model (size, licence, speed on the phone, no network): start with a spike that
-   answers those, then decide. Large. **For Opus.**
+   local edits quick. *Spike done 2026-10-15, see [`AI_MASKS.md`](AI_MASKS.md):* possible without a network,
+   with LiteRT and models shipped in the app (about 9 MB of runtime and 14 to 30 MB of models, no new
+   permission; Google's ML Kit and MediaPipe Tasks libraries are ruled out by their telemetry and Play services
+   download). Stages: a bake-off on the owner's photos, then subject and background (U2-Netp), sky (EfficientViT
+   ADE20K), tap to select (MagicTouch). Waiting for the owner's answers to the questions at the end of that
+   document (privacy line, size budget, training-data risk, order). Large. **For Opus.**
 7. **LUTs (`.cube`)** as looks with an intensity slider, first for stills, then the same stage for video
    (Log footage). A 3D lookup with trilinear interpolation as a late colour stage, in both the CPU and the
    GPU renderer, with an import that checks the file and tells what it could not read. Also the base for
