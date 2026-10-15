@@ -688,6 +688,10 @@ private fun EditorPanel(
                         onSave = viewModel::saveFilter,
                         onDelete = viewModel::deleteFilter,
                         onImport = viewModel::importPresets,
+                        onApplyLut = viewModel::applyLut,
+                        onLutIntensity = viewModel::setLutIntensity,
+                        onDeleteLut = viewModel::deleteLut,
+                        onImportLuts = viewModel::importLuts,
                     )
                     EditorTab.FRAMING -> FramingControls(
                         framing = edit.framing,

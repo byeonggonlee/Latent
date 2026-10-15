@@ -589,4 +589,26 @@
         <item quantity="other">파일 %d개에는 가져올 프리셋이 없었습니다.</item>
     </plurals>
     <string name="compare">비교</string>
+    <string name="lut_problem_unreadable">파일을 읽을 수 없습니다.</string>
+    <string name="lut_problem_too_large">파일이 20MB보다 커서 LUT로 쓸 수 없습니다.</string>
+    <string name="lut_problem_not_a_lut">이 파일에는 LUT가 없습니다.</string>
+    <string name="lut_problem_one_dimensional">1D LUT입니다. 3D LUT만 쓸 수 있습니다.</string>
+    <string name="lut_problem_no_size">크기(LUT_3D_SIZE)가 적혀 있지 않습니다.</string>
+    <string name="lut_problem_bad_size">크기(LUT_3D_SIZE)가 2에서 65 사이의 정수가 아닙니다.</string>
+    <string name="lut_problem_bad_domain">입력 범위(DOMAIN_MIN, DOMAIN_MAX)를 쓸 수 없습니다.</string>
+    <string name="lut_problem_not_a_number">표의 한 줄이 숫자 세 개가 아닙니다.</string>
+    <string name="lut_problem_not_finite">표에 유한한 수가 아닌 값이 있습니다.</string>
+    <string name="lut_problem_wrong_count">표의 줄 수가 크기와 맞지 않습니다.</string>
+    <string name="lut_problem_at_line">%1$s (%2$d번째 줄)</string>
+    <string name="lut_not_imported">%1$s: %2$s</string>
+    <string name="import_lut">LUT 가져오기…</string>
+    <string name="lut_list">LUT 목록</string>
+    <string name="no_lut">LUT 없음</string>
+    <string name="lut_intensity">LUT 강도</string>
+    <string name="lut_log_hint">Log 영상용 LUT(S-Log3 → Rec.709 등)는 Log로 찍은 화면을 전제로 하므로 일반 사진에서는 색이 어긋나 보입니다.</string>
+    <plurals name="luts_added">
+        <item quantity="other">LUT %d개를 추가했습니다.</item>
+    </plurals>
+    <string name="delete_lut_question">\'%1$s\' LUT를 지울까요?</string>
+    <string name="delete_lut_detail">이 LUT로 이미 보정한 사진은 그대로 남습니다.</string>
 </resources>

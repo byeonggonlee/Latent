@@ -9,6 +9,7 @@ import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.EditVersionEntity
 import com.byeonggon.latent.data.db.FLAG_REJECTED
 import com.byeonggon.latent.data.db.FilterEntity
+import com.byeonggon.latent.data.db.LutEntity
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncedFolderEntity
 import kotlinx.coroutines.flow.first
@@ -87,6 +88,18 @@ class MigrationTest {
             // Versions of an edit came after that: kept per photo, and gone with it.
             database.editVersionDao().insert(EditVersionEntity(mediaId = item.id, name = "Warm", edit = "{}", createdAt = 3))
             assertEquals(listOf("Warm"), database.editVersionDao().observeFor(item.id).first().map { it.name })
+
+            // LUTs came last: one for each file however often it is imported, and edits can be searched for one.
+            val lut = LutEntity(name = "Teal", size = 33, hash = "0123456789abcdef0123456789abcdef", createdAt = 4)
+            database.lutDao().insert(lut)
+            database.lutDao().insert(lut.copy(name = "Teal again"))
+            assertEquals(listOf("Teal"), database.lutDao().observeAll().first().map { it.name })
+            assertEquals(33, database.lutDao().byHash(lut.hash)!!.size)
+            database.mediaDao().setEdit(item.id, """{"lut":"${lut.hash}"}""")
+            assertEquals(1, database.mediaDao().countEditsLike("%\"${lut.hash}\"%"))
+            assertEquals(0, database.editVersionDao().countLike("%\"${lut.hash}\"%"))
+            database.lutDao().delete(lut.hash)
+            assertNull(database.lutDao().byHash(lut.hash))
 
             val folder = SyncedFolderEntity("camera", "10001:/2024-12-08/", "fingerprint", "PHOTO,RAW")
             database.syncedFolderDao().upsert(folder)

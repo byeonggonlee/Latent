@@ -2,7 +2,7 @@
 
 What to build next, ranked by how often the feature is used in everyday photo editing, how much of it
 the app already has, and what it costs. Goal of the app: between Snapseed and Lightroom Mobile, plus
-camera sync, all on the phone. Last revised 2026-10-15 (items 1 to 5 and 8 done; HDR and 10-bit placed).
+camera sync, all on the phone. Last revised 2026-10-15 (items 1 to 5 and 8 done, 7 for stills; HDR and 10-bit placed).
 
 ## Where the app stands, by stage of a typical edit
 
@@ -13,7 +13,7 @@ camera sync, all on the phone. Last revised 2026-10-15 (items 1 to 5 and 8 done;
 | Global tone and colour | Light, colour mixer, grading, curves, detail, effects | Tune, curves, white balance, details, vignette, grain | All of these, with raw development |
 | Crop and geometry | Crop, upright, perspective | Crop, rotate, perspective | All of these, with auto level |
 | **Local edits** | Masks: **subject, sky, background**, linear, radial, brush, colour range, luminance range, healing | Selective, brush, healing | Linear, radial, brush, colour range, luminance range, healing. **No AI masks** |
-| **Looks** | Presets (own and imported), profiles, **LUTs** | Looks, HDR, glow, drama | 16 built-in looks, own looks, Lightroom presets imported. **No LUTs** |
+| **Looks** | Presets (own and imported), profiles, **LUTs** | Looks, HDR, glow, drama | 16 built-in looks, own looks, Lightroom presets and `.cube` LUTs imported (LUTs on stills only) |
 | **Export** | Size, quality, format, metadata, watermark | Save, export, share | Share at a size, JPEG quality, place left out, save a copy. **JPEG only** |
 | **Organise** | Albums, search, keywords, flags | – | Albums, ratings, versions, search by Exif, date, place |
 | **Bit depth, HDR** | 10-bit HEIC and Ultra HDR in and out, HDR display | HDR look (tone mapping, not HDR output) | **8-bit pictures in and out, SDR screen** (inside, light is 16-bit) |
@@ -52,11 +52,20 @@ Each is small or medium, works offline, and needs no new permission.
    download). Stages: a bake-off on the owner's photos, then subject and background (U2-Netp), sky (EfficientViT
    ADE20K), tap to select (MagicTouch). Waiting for the owner's answers to the questions at the end of that
    document (privacy line, size budget, training-data risk, order). Large. **For Opus.**
-7. **LUTs (`.cube`)** as looks with an intensity slider, first for stills, then the same stage for video
-   (Log footage). A 3D lookup with trilinear interpolation as a late colour stage, in both the CPU and the
-   GPU renderer, with an import that checks the file and tells what it could not read. Also the base for
-   Sony S-Log and Creative Look LUTs. Medium to large. **For Opus**, as the owner suggested. The video
-   stage is also where 10-bit starts to matter (item 12).
+7. **LUTs (`.cube`)** as looks with an intensity slider. *Stills done 2026-10-15, to be judged on a phone;
+   the same stage for video (Log footage) is next, with item 12.* "Import LUT…" in the filter panel reads
+   Adobe's and Resolve's 3D `.cube` files (2 to 65 points a side, `DOMAIN_MIN`/`DOMAIN_MAX`, up to 20 MB) and
+   says why a file cannot be used, with the line. 1D LUTs, alone or as a shaper in front of a 3D one, are
+   refused: the curves do what a 1D LUT does, and a shaper is mostly for Log video. The table is kept in a
+   file of its own (`files/luts/<digest>.lut`, plain floats, read once and held at hand); an edit names it
+   and an intensity, so raw files and phone photos keep it as a setting and library JPEGs have it baked in.
+   A LUT taken off the list stays on disk while a photo, version or filter uses it; one whose file is gone
+   renders as no LUT. LUTs sit in a row of their own under the filters, chosen apart from them. The stage is
+   a 3D lookup with trilinear interpolation on the colours as shown (0 to 1), after the mixer and grading and
+   before vignette and grain, written the same way for the CPU and the GPU renderer. A LUT made for S-Log3
+   (Sony's, to Rec.709) expects a Log picture, so it looks wrong on a JPEG; the panel says so. Not done:
+   tetrahedral interpolation, 1D LUTs, choosing a LUT inside a mask, saving a look as a `.cube`, video. The
+   video stage is also where 10-bit starts to matter (item 12).
 8. ~~**Compare and survey view.**~~ *Done 2026-10-15:* two to four selected photos side by side, zoomed together, with
    pick, reject and stars under each. Not done: a survey of many small photos, edited versions shown rendered (the
    file as it is), raw files at full size.
@@ -69,7 +78,7 @@ Each is small or medium, works offline, and needs no new permission.
     its gain map today and leaves an SDR picture. Either carry the gain map through (it can be edited along, or
     kept for an untouched picture) or tell the person. Medium.
 12. **10-bit video with LUTs and grading** (Log, HLG) on Media3 (ExoPlayer, Transformer and its OpenGL effects),
-    together with the video stage of item 7. Large; the one place where 10-bit has real demand, since the ZV-E10
+    together with the video stage of item 7 (the parser, `LutStore` and the lookup can be taken over as they are). Large; the one place where 10-bit has real demand, since the ZV-E10
     shoots stills in 8-bit JPEG and raw only.
 
 ## Later, or only if asked

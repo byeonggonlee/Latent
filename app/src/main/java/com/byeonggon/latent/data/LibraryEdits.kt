@@ -1,15 +1,21 @@
 package com.byeonggon.latent.data
 
+import com.byeonggon.latent.data.db.EditVersionDao
 import com.byeonggon.latent.data.db.FilterDao
 import com.byeonggon.latent.data.db.FilterEntity
+import com.byeonggon.latent.data.db.LutDao
+import com.byeonggon.latent.data.db.LutEntity
 import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
+import com.byeonggon.latent.enhance.CubeLut
 import com.byeonggon.latent.enhance.Filter
 import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.ImportedPreset
 import com.byeonggon.latent.enhance.LightroomPreset
+import com.byeonggon.latent.enhance.LutStore
+import com.byeonggon.latent.enhance.UnusableLutException
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.location.GeoPoint
@@ -38,6 +44,8 @@ class LibraryEdits(
     private val filterDao: FilterDao,
     private val geotagger: Geotagger,
     private val rawCache: RawCache,
+    private val lutDao: LutDao,
+    private val versionDao: EditVersionDao,
     /** What the copies made here are like, asked for each time so that the settings are followed. */
     private val exportOptions: suspend () -> ExportOptions = { ExportOptions() },
 ) {
@@ -70,6 +78,42 @@ class LibraryEdits(
     /** Deletes a filter the user saved; the ones that come with the app stay. */
     suspend fun deleteFilter(filter: Filter) {
         if (filter.custom) filter.id.removePrefix(CUSTOM_PREFIX).toLongOrNull()?.let { filterDao.delete(it) }
+    }
+
+    /** The LUTs the person imported, in the order they came. */
+    val luts: Flow<List<LutEntity>> = lutDao.observeAll()
+
+    /**
+     * Keeps the 3D LUT read from [input], to give photos its look, under the title it gives itself or else
+     * [fallbackName]; the same file imported again is the same LUT. Throws [UnusableLutException], which
+     * says why, when it is no LUT that can be used.
+     */
+    @Throws(UnusableLutException::class, IOException::class)
+    suspend fun importLut(input: InputStream, fallbackName: String): LutEntity {
+        val bytes = CubeLut.bytesOf(input)
+        val cube = CubeLut.parse(bytes)
+        val id = LutStore.idOf(bytes)
+        LutStore.save(id, cube.lut)
+        val name = (cube.title?.trim()?.takeIf { it.isNotEmpty() } ?: fallbackName).take(MOST_NAME)
+        lutDao.insert(LutEntity(name = name, size = cube.lut.size, hash = id, createdAt = System.currentTimeMillis()))
+        return lutDao.byHash(id) ?: throw IOException("The LUT $id was not kept")
+    }
+
+    /**
+     * Takes [lut] off the list. Its table stays for as long as a photo's edit, a kept version or a filter
+     * uses it, so that photos keep their look; what nothing uses any more is deleted.
+     */
+    suspend fun deleteLut(lut: LutEntity) {
+        lutDao.delete(lut.hash)
+        for (id in LutStore.ids()) {
+            if (lutDao.byHash(id) == null && !isLutInUse(id)) LutStore.delete(id)
+        }
+    }
+
+    private suspend fun isLutInUse(id: String): Boolean {
+        // Edits are kept as JSON text, where a LUT is named by its id in quotes.
+        val pattern = "%\"$id\"%"
+        return mediaDao.countEditsLike(pattern) > 0 || versionDao.countLike(pattern) > 0 || filterDao.countLike(pattern) > 0
     }
 
     /** The picture an edit of [item] starts from: the original, also when the file itself is an edited version. */

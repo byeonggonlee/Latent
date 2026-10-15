@@ -31,6 +31,11 @@ import com.byeonggon.latent.enhance.bitmapOf
 import com.byeonggon.latent.enhance.framed
 import com.byeonggon.latent.raw.RawRenderer
 import com.byeonggon.latent.enhance.ImportedPreset
+import com.byeonggon.latent.data.db.LutEntity
+import com.byeonggon.latent.enhance.CubeLut
+import com.byeonggon.latent.enhance.LutLook
+import com.byeonggon.latent.enhance.LutProblem
+import com.byeonggon.latent.enhance.UnusableLutException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,6 +102,9 @@ data class EditorUiState(
     /** The filter whose look the edit has right now, if it has one, and at what strength. */
     val filter: Filter? = null,
     val filterAmount: Float = 1f,
+    /** The LUTs the person imported, and the picture with each of them on it, by its hash. */
+    val luts: List<LutEntity> = emptyList(),
+    val lutPreviews: Map<String, Bitmap> = emptyMap(),
     /** The picture is still being read. */
     val loading: Boolean = true,
     val saving: Boolean = false,
@@ -146,12 +154,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     init {
         viewModelScope.launch { edits.copied.collect { copied -> ui.update { it.copy(canPaste = copied != null) } } }
         viewModelScope.launch { edits.filters.collect { filters -> ui.update { it.copy(filters = filters).checked() } } }
-        // The filters are shown on the picture itself; drawing them all takes a moment.
+        viewModelScope.launch { edits.luts.collect { luts -> ui.update { it.copy(luts = luts) } } }
+        // The filters and LUTs are shown on the picture itself; drawing them all takes a moment.
         viewModelScope.launch {
-            combine(source, edits.filters) { source, filters -> source to filters }.collectLatest { (source, filters) ->
+            combine(source, edits.filters, edits.luts) { source, filters, luts -> Triple(source, filters, luts) }.collectLatest { (source, filters, luts) ->
                 if (source == null) return@collectLatest
-                val previews = withContext(Dispatchers.Default) { source.previews(filters) }
-                if (this@EditorViewModel.source.value === source) ui.update { it.copy(filterPreviews = previews) }
+                val (filterPreviews, lutPreviews) = withContext(Dispatchers.Default) {
+                    val looks = filters.associate { it.id to PhotoEdit().withLookOf(it.look) } + (NO_FILTER to PhotoEdit())
+                    source.previews(looks) to source.previews(luts.associate { it.hash to PhotoEdit(lut = LutLook(it.hash)) })
+                }
+                if (this@EditorViewModel.source.value === source) ui.update { it.copy(filterPreviews = filterPreviews, lutPreviews = lutPreviews) }
             }
         }
         // One rendering at a time, always of the latest settings: a moving slider asks for more than can be drawn.
@@ -218,7 +230,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         session = null
         source.value = null
         detailCentre.value = 0.5f to 0.5f
-        ui.update { EditorUiState(canPaste = edits.copied.value != null, filters = it.filters) }
+        ui.update { EditorUiState(canPaste = edits.copied.value != null, filters = it.filters, luts = it.luts) }
     }
 
     /** Remembers this photo's tones and colours, to be given to other photos. */
@@ -288,15 +300,70 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     /** Gives the photo the look of [filter] at full strength, or takes every look away for null. */
     fun applyFilter(filter: Filter?) {
         ui.update { it.copy(filter = filter, filterAmount = 1f) }
-        changeOnce { it.withLookOf(filter?.look ?: PhotoEdit()) }
+        changeOnce { it.withFilterLook(filter?.look ?: PhotoEdit()) }
     }
 
     /** Doses the filter that was applied: nothing of it at 0, all of it at 1, more than that above. */
     fun setFilterAmount(amount: Float) {
         val filter = ui.value.filter ?: return
         ui.update { it.copy(filterAmount = amount) }
-        change { it.withLookOf(filter.look.lookAt(amount)) }
+        change { it.withFilterLook(filter.look.lookAt(amount)) }
     }
+
+    /** Lays [lut] over the photo's colours at full strength, or takes the LUT away for null. */
+    fun applyLut(lut: LutEntity?) = changeOnce { it.copy(lut = lut?.let { chosen -> LutLook(chosen.hash) }) }
+
+    /** How much of the LUT laid over the photo to take, from 0 to 1. */
+    fun setLutIntensity(intensity: Float) = change { edit -> edit.lut?.let { edit.copy(lut = it.copy(intensity = intensity)) } ?: edit }
+
+    /** Adds the LUTs in the .cube files at [uris] to the list, and says what came of it, and why a file could not be used. */
+    fun importLuts(uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val resolver = getApplication<Application>().contentResolver
+            val added = ArrayList<LutEntity>()
+            val refused = ArrayList<String>()
+            var forLog = false
+            withContext(Dispatchers.IO) {
+                for (uri in uris) {
+                    val fileName = displayName(uri)
+                    val reason = try {
+                        val lut = resolver.openInputStream(uri)?.use { edits.importLut(it, fileName.substringBeforeLast('.')) }
+                        if (lut != null) {
+                            added += lut
+                            forLog = forLog || CubeLut.isForLogFootage(lut.name) || CubeLut.isForLogFootage(fileName)
+                            null
+                        } else {
+                            text(LutProblem.UNREADABLE.label)
+                        }
+                    } catch (e: UnusableLutException) {
+                        if (e.line > 0) text(R.string.lut_problem_at_line, text(e.problem.label), e.line) else text(e.problem.label)
+                    } catch (e: IOException) {
+                        text(LutProblem.UNREADABLE.label)
+                    }
+                    if (reason != null) refused += text(R.string.lut_not_imported, fileName, reason)
+                }
+            }
+            val app = getApplication<Application>()
+            val message = buildList {
+                if (added.isNotEmpty()) add(app.resources.getQuantityString(R.plurals.luts_added, added.size, added.size))
+                addAll(refused)
+                if (forLog) add(text(R.string.lut_log_hint))
+            }.joinToString(" ")
+            ui.update { it.copy(message = message) }
+        }
+    }
+
+    /** Takes [lut] off the list; photos that use it keep their look. */
+    fun deleteLut(lut: LutEntity) {
+        viewModelScope.launch { edits.deleteLut(lut) }
+    }
+
+    /** The name the file at [uri] goes by, for messages and as a name of last resort. */
+    private fun displayName(uri: android.net.Uri): String =
+        getApplication<Application>().contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        } ?: uri.lastPathSegment.orEmpty()
 
     /** Keeps the look the photo has now as a filter of the user's own. */
     fun saveFilter(name: String) {
@@ -316,9 +383,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             var unreadable = 0
             withContext(Dispatchers.IO) {
                 for (uri in uris) {
-                    val fileName = resolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) cursor.getString(0) else null
-                    } ?: uri.lastPathSegment.orEmpty()
+                    val fileName = displayName(uri)
                     val preset = try {
                         resolver.openInputStream(uri)?.use { edits.importPreset(it, fileName.substringBeforeLast('.')) }
                     } catch (e: java.io.IOException) {
@@ -469,6 +534,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** This edit with the [look] of a filter. A LUT is chosen on its own, so a filter without one leaves the LUT as it is. */
+    private fun PhotoEdit.withFilterLook(look: PhotoEdit): PhotoEdit =
+        withLookOf(look).let { if (look.lut == null) it.copy(lut = lut) else it }
+
     /** The edit and the view as the preview has to show them right now. */
     private fun drawn(state: EditorUiState): Triple<PhotoEdit, EditorView, Boolean> {
         val toned = if (state.comparing) PhotoEdit(lensCorrection = state.edit.lensCorrection, framing = state.edit.framing) else state.edit
@@ -479,7 +548,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private fun EditorUiState.checked(): EditorUiState {
         val changed = edit != opened
         // A filter stays chosen only for as long as the edit is what the filter made it, and the filter exists.
-        val current = filter?.takeIf { it in filters && edit == edit.withLookOf(it.look.lookAt(filterAmount)) }
+        val current = filter?.takeIf { it in filters && edit == edit.withFilterLook(it.look.lookAt(filterAmount)) }
         return copy(
             filter = current,
             changed = changed,
@@ -546,12 +615,11 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         private var detailCentre: Pair<Float, Float>? = null
         private var detail: PictureRegion? = null
 
-        /** The whole picture, small, with the look of each of [filters] on it. */
-        fun previews(filters: List<Filter>): Map<String, Bitmap> {
-            val small = image.downscaled(FILTER_PREVIEW_EDGE)
-            fun drawn(look: PhotoEdit) =
-                Bitmap.createBitmap(ToneRenderer(look, small).render(small), small.width, small.height, Bitmap.Config.ARGB_8888)
-            return filters.associate { it.id to drawn(PhotoEdit().withLookOf(it.look)) } + (NO_FILTER to drawn(PhotoEdit()))
+        private val small by lazy { image.downscaled(FILTER_PREVIEW_EDGE) }
+
+        /** The whole picture, small, with each of [looks] on it, by the same keys. */
+        fun previews(looks: Map<String, PhotoEdit>): Map<String, Bitmap> = looks.mapValues { (_, look) ->
+            Bitmap.createBitmap(ToneRenderer(look, small).render(small), small.width, small.height, Bitmap.Config.ARGB_8888)
         }
 
         /** How much of the whole picture's width and height the part shown at full size takes up. */

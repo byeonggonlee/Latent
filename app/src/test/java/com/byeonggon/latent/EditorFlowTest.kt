@@ -36,6 +36,7 @@ import com.byeonggon.latent.enhance.Adjustments
 import com.byeonggon.latent.enhance.ClippingMarks
 import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.Framing
+import com.byeonggon.latent.enhance.LutLook
 import com.byeonggon.latent.enhance.MaskShape
 import com.byeonggon.latent.enhance.MixerBand
 import com.byeonggon.latent.enhance.PhotoEdit
@@ -518,6 +519,28 @@ class EditorFlowTest {
         compose.waitUntil(timeoutMillis = 10_000) { runBlocking { container.database.filterDao().observeAll().first() }.isEmpty() }
         filter("필름").performTouchInput { longClick() }
         compose.onAllNodesWithText("지우기").assertCountEquals(0)
+    }
+
+    @Test
+    fun laysAnImportedLutOverThePhotoAndDosesIt() {
+        // The system's file picker cannot be driven here; the LUT is imported as the picker would hand it over.
+        val negative = "TITLE \"Negative\"\nLUT_3D_SIZE 2\n" + buildString {
+            for (b in 1 downTo 0) for (g in 1 downTo 0) for (r in 1 downTo 0) append("$r $g $b\n")
+        }
+        val lut = runBlocking { container.libraryEdits.importLut(negative.byteInputStream(), "negative") }
+
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("필터").performClick()
+        compose.onNodeWithText("Negative").performScrollTo().performClick()
+        slide("LUT 강도", to = 0.5f)
+        // A filter chosen afterwards leaves the LUT as it is.
+        filter("필름").performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val film = Filters.BUILT_IN.first { it.id == "film" }
+        val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })
+        assertEquals(PhotoEdit().withLookOf(film.look).copy(lut = LutLook(lut.hash, 0.5f)), stored)
     }
 
     @Test

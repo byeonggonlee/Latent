@@ -20,12 +20,14 @@ import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.SettingsRepository
 import com.byeonggon.latent.data.Trash
 import com.byeonggon.latent.data.db.AppDatabase
+import com.byeonggon.latent.enhance.LutStore
 import com.byeonggon.latent.location.Geotagger
 import com.byeonggon.latent.location.TimelineImporter
 import com.byeonggon.latent.map.MapTiles
 import com.byeonggon.latent.map.OnlineAccess
 import com.byeonggon.latent.raw.RawCache
 import com.byeonggon.latent.ui.common.ThumbnailFetcher
+import java.io.File
 
 class LatentApp : Application(), SingletonImageLoader.Factory {
     lateinit var container: AppContainer
@@ -48,6 +50,10 @@ class LatentApp : Application(), SingletonImageLoader.Factory {
 
 /** App-wide singletons, wired by hand. */
 class AppContainer(private val context: Context) {
+    init {
+        LutStore.directory = File(context.filesDir, "luts")
+    }
+
     val database: AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "latent.db")
             .addMigrations(*AppDatabase.MIGRATIONS)
@@ -62,7 +68,10 @@ class AppContainer(private val context: Context) {
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
     val rawCache = RawCache()
     val thumbnails = Thumbnails(context)
-    val libraryEdits = LibraryEdits(storage, database.mediaDao(), database.filterDao(), geotagger, rawCache, exportOptions = { settings.settings.first().exportOptions() })
+    val libraryEdits = LibraryEdits(
+        storage, database.mediaDao(), database.filterDao(), geotagger, rawCache, database.lutDao(), database.editVersionDao(),
+        exportOptions = { settings.settings.first().exportOptions() },
+    )
     val editSaver = EditSaver(context, libraryEdits)
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())

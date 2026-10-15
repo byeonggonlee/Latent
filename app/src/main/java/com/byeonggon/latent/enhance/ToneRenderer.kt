@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
  * picture as it is shown, in this order: tones (whites, blacks, contrast and the tone curves), haze,
  * the brightness of whole areas (shadows, highlights and clarity) and vividness. Up to here a part of
  * the picture can have settings of its own, which are blended in by its mask. Then come the colours
- * as a whole (the mixer and the grading), and last what is laid over the picture (vignette and grain).
+ * as a whole (the mixer, the grading and a LUT), and last what is laid over the picture (vignette and grain).
  *
  * What depends on the picture as a whole is judged by [overview], a small copy of it: auto enhance
  * reads its tones, and areas are told apart by how bright their surroundings are in it. The picture
@@ -32,6 +32,10 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
     internal val mixer = if (edit.mixer != ColorMixer()) MixerTable(edit.mixer) else null
     internal val grading = if (edit.grading.copy(balance = 0f) != ColorGrading()) GradingTable(edit.grading) else null
     internal val vignette = if (adjustments.vignette != 0f) Vignette(adjustments.vignette) else null
+
+    /** The edit's LUT, unless it is taken at no strength or its table is gone, and how much of it to take. */
+    internal val lut: ColorLut? = edit.lut?.takeIf { it.intensity > 0f }?.let { LutStore.load(it.id) }
+    internal val lutIntensity = edit.lut?.intensity ?: 0f
 
     init {
         val auto = if (edit.autoEnhance) autoLevelsOf(overview) else null
@@ -96,6 +100,8 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
         val monochrome = monochrome
         val mixer = mixer
         val grading = grading
+        val lut = lut
+        val lutIntensity = lutIntensity
         val vignette = vignette
         val grain = if (adjustments.grain > 0f) Grain(adjustments.grain, frameWidth, frameHeight) else null
         val columns = if (everywhere.usesSurroundings || locals.any { it.usesSurroundings }) {
@@ -111,6 +117,7 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
             val localRows = locals.map { it.rows(width) }
             val rgb = FloatArray(3)
             val part = FloatArray(3)
+            val looked = FloatArray(3)
             for (y in from until until) {
                 val frameY = y + top
                 val down = (frameY + 0.5f) / frameHeight
@@ -162,6 +169,13 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
                         r += grading.red[step]
                         g += grading.green[step]
                         b += grading.blue[step]
+                    }
+
+                    if (lut != null) {
+                        lut.lookup(r, g, b, looked)
+                        r += (looked[0] - r) * lutIntensity
+                        g += (looked[1] - g) * lutIntensity
+                        b += (looked[2] - b) * lutIntensity
                     }
 
                     if (vignette != null) {
