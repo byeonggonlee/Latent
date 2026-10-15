@@ -22,10 +22,14 @@ object MediaMetadataReader {
 
     private fun readExif(file: File, cameraZone: ZoneId): MediaMetadata {
         val exif = ExifInterface(file)
+        val original = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+        // A camera may note the zone only beside the time it digitized the picture, which is the time it was shot too.
+        val digitizedOffset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_DIGITIZED)
+            ?.takeIf { original != null && original == exif.getAttribute(ExifInterface.TAG_DATETIME_DIGITIZED) }
         val capturedAt = MediaTime.parseExif(
-            dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
-                ?: exif.getAttribute(ExifInterface.TAG_DATETIME),
+            dateTime = original ?: exif.getAttribute(ExifInterface.TAG_DATETIME),
             offset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL)
+                ?: digitizedOffset
                 ?: exif.getAttribute(ExifInterface.TAG_OFFSET_TIME),
             fallbackZone = cameraZone,
         )
