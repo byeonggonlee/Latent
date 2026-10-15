@@ -5,11 +5,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.byeonggon.latent.data.db.MediaKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+/** Where the tabs stand in a wide window (landscape, a tablet, an unfolded foldable): a narrow one always has them at the bottom. */
+enum class TabPosition { AUTO, LEFT, RIGHT, BOTTOM }
 
 data class AppSettings(
     val syncPhotos: Boolean = true,
@@ -24,6 +28,8 @@ data class AppSettings(
     val phoneFolders: Set<String> = emptySet(),
     /** Whether the app may use the internet, for the map. Off until the person turns it on. */
     val onlineMaps: Boolean = false,
+    /** For one hand, or for the other: the side the tabs are on. [TabPosition.AUTO] is the left. */
+    val tabPosition: TabPosition = TabPosition.AUTO,
 ) {
     /** The moment a photo taken at [cameraTime] by the camera's clock was really taken. */
     fun realTimeOf(cameraTime: Long): Long = cameraTime - cameraClockOffsetMinutes * 60_000L
@@ -52,6 +58,7 @@ class SettingsRepository(private val context: Context) {
             preferences[CAMERA_CLOCK_OFFSET_MINUTES] = next.cameraClockOffsetMinutes
             preferences[PHONE_FOLDERS] = next.phoneFolders
             preferences[ONLINE_MAPS] = next.onlineMaps
+            preferences[TAB_POSITION] = next.tabPosition.name
         }
     }
 
@@ -67,6 +74,7 @@ class SettingsRepository(private val context: Context) {
             cameraClockOffsetMinutes = this[CAMERA_CLOCK_OFFSET_MINUTES] ?: defaults.cameraClockOffsetMinutes,
             phoneFolders = this[PHONE_FOLDERS] ?: defaults.phoneFolders,
             onlineMaps = this[ONLINE_MAPS] ?: defaults.onlineMaps,
+            tabPosition = this[TAB_POSITION]?.let { name -> TabPosition.entries.firstOrNull { it.name == name } } ?: defaults.tabPosition,
         )
     }
 
@@ -80,5 +88,6 @@ class SettingsRepository(private val context: Context) {
         val CAMERA_CLOCK_OFFSET_MINUTES = intPreferencesKey("camera_clock_offset_minutes")
         val PHONE_FOLDERS = stringSetPreferencesKey("phone_folders")
         val ONLINE_MAPS = booleanPreferencesKey("online_maps")
+        val TAB_POSITION = stringPreferencesKey("tab_position")
     }
 }

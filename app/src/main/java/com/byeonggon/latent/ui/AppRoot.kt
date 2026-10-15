@@ -1,6 +1,7 @@
 package com.byeonggon.latent.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,10 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byeonggon.latent.R
+import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.data.TabPosition
 import com.byeonggon.latent.ui.common.ReadableWidth
 import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.common.rememberWindowLayout
@@ -37,6 +41,7 @@ import com.byeonggon.latent.ui.location.LocationScreen
 import com.byeonggon.latent.ui.map.MapScreen
 import com.byeonggon.latent.ui.sync.SyncScreen
 import com.byeonggon.latent.ui.viewer.ViewerScreen
+import kotlinx.coroutines.flow.map
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 
@@ -55,6 +60,9 @@ fun AppRoot(startOnSync: Boolean) {
     val libraryGridState = rememberLazyGridState()
 
     var editing by rememberSaveable { mutableStateOf(false) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    val tabPositions = LocalContext.current.appContainer.settings.settings
+    val tabPosition by remember { tabPositions.map { it.tabPosition } }.collectAsStateWithLifecycle(TabPosition.AUTO)
     // The viewer pages through the photos in the order, and with the filters, that the library lists them.
     val library: LibraryViewModel = viewModel()
     val libraryState by library.state.collectAsStateWithLifecycle()
@@ -80,33 +88,53 @@ fun AppRoot(startOnSync: Boolean) {
         return
     }
 
+    if (settingsOpen) {
+        SettingsScreen(
+            onBack = { settingsOpen = false },
+            onChoosePhoneFolders = {
+                // The folders are chosen in the library, which shows the question.
+                settingsOpen = false
+                tab = Tab.LIBRARY
+                library.choosePhoneFolders()
+            },
+        )
+        return
+    }
+
     val window = rememberWindowLayout()
     val content: @Composable () -> Unit = {
         when (tab) {
-            Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it })
+            Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it }, onSettings = { settingsOpen = true })
             Tab.SYNC -> ReadableWidth { SyncScreen() }
             Tab.MAP -> MapScreen(onOpen = { viewerItemId = it })
             Tab.LOCATION -> ReadableWidth { LocationScreen() }
         }
     }
-    if (window.sideNavigation) {
-        // A wide window has height to spare less than width: the tabs go down the side.
+    // A wide window has height to spare less than width: the tabs go down a side, the left unless asked otherwise;
+    // a narrow one, or the bottom as asked, has them along the bottom.
+    val side = if (window.sideNavigation && tabPosition != TabPosition.BOTTOM) tabPosition else null
+    if (side != null) {
+        val rail: @Composable () -> Unit = {
+            // The parent keeps clear of the system bars already.
+            NavigationRail(windowInsets = WindowInsets(0)) {
+                // In the middle of the side, not at the top: a foldable's camera sits near the top corner of its inner screen.
+                Spacer(Modifier.weight(1f))
+                Tab.entries.forEach { entry ->
+                    NavigationRailItem(
+                        selected = tab == entry,
+                        onClick = { tab = entry },
+                        icon = { TabIcon(entry) },
+                        label = { Text(stringResource(entry.label)) },
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+            }
+        }
         Scaffold(contentWindowInsets = SafeInsets) { padding ->
             Row(Modifier.fillMaxSize().padding(padding)) {
-                NavigationRail(windowInsets = SafeInsets) {
-                    // In the middle of the side, not at the top: a foldable's camera sits near the top corner of its inner screen.
-                    Spacer(Modifier.weight(1f))
-                    Tab.entries.forEach { entry ->
-                        NavigationRailItem(
-                            selected = tab == entry,
-                            onClick = { tab = entry },
-                            icon = { TabIcon(entry) },
-                            label = { Text(stringResource(entry.label)) },
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                }
+                if (side != TabPosition.RIGHT) rail()
                 Box(Modifier.weight(1f).fillMaxSize()) { content() }
+                if (side == TabPosition.RIGHT) rail()
             }
         }
         return

@@ -11,6 +11,12 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Nothing was lost: 210 files in `DCIM/Latent` before and after.
 - [ ] Same on the S26: a fresh install, no photos, first-run card, then a sync.
 
+## Settings
+
+- [ ] Library menu → Settings. Tab position (Automatic, Left, Right, Bottom) on a wide window: landscape on a phone, an unfolded Fold. Right and bottom suit one hand or the other; a narrow screen keeps the tabs at the bottom whatever is chosen.
+- [ ] Language → Change opens the phone's per-app language list with English, 한국어 and 日本語; the app follows.
+- [ ] Online maps switch: turning it on asks first, off does not; Photos on this phone opens the folder question in the library.
+
 ## Languages
 
 - [ ] Set the phone to Japanese: no text is cut off or English where Japanese should be (longest: the setup card, the Map tab's explanation, the editor's panel tabs), and the wording reads naturally to a Japanese speaker (the translation was written without one checking it; the Lightroom terms for the sliders are used).

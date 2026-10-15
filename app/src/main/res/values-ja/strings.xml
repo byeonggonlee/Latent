@@ -483,4 +483,18 @@
     <plurals name="flagged_count">
         <item quantity="other">写真 %1$d 枚にフラグをつけました。</item>
     </plurals>
+    <string name="settings">設定</string>
+    <string name="settings_screen">画面</string>
+    <string name="settings_library">ライブラリ</string>
+    <string name="settings_internet">インターネット</string>
+    <string name="tab_position">タブの位置</string>
+    <string name="tab_position_auto">自動</string>
+    <string name="tab_position_left">左</string>
+    <string name="tab_position_right">右</string>
+    <string name="tab_position_bottom">下</string>
+    <string name="tab_position_hint">横向きやタブレット、開いた折りたたみ端末など、幅の広い画面で使われます。幅の狭い画面では、タブは常に下にあります。</string>
+    <string name="language">言語</string>
+    <string name="language_change">変更</string>
+    <string name="online_maps">オンライン地図</string>
+    <string name="online_maps_hint">OpenStreetMap から地図の画像をダウンロードします。オフにすると、アプリはネットワークに接続しません。</string>
 </resources>

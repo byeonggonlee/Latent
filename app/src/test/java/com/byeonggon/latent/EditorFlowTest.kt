@@ -444,6 +444,8 @@ class EditorFlowTest {
         compose.onNodeWithText("완료").performClick()
 
         waitForText("원본으로 되돌리기")
+        // The edit is stored in the background, a moment after the viewer shows.
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runBlocking { mediaDao.byId(photoId)!!.edit } != null }
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!
         assertTrue(stored.monochrome)
         assertEquals(-0.4f, stored.mixer.luminance[MixerBand.BLUE.ordinal], 1e-6f)
