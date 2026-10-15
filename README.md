@@ -48,6 +48,11 @@ Tests that time real photos on a device live in `app/src/androidTest`. Run them 
 `adb shell am instrument`, passing sample files with `-e jpegSample <path> -e arwSample <path>`;
 Gradle's `connectedAndroidTest` uninstalls the app afterwards, taking its database with it.
 
+## Notes for contributors
+
+- [`docs/DEVICE_CHECKS.md`](docs/DEVICE_CHECKS.md): what only a real phone can confirm.
+- [`docs/PLAY_LISTING.md`](docs/PLAY_LISTING.md): the Play Store listing, permission declarations and data safety answers.
+
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
