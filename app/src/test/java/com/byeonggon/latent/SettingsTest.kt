@@ -101,4 +101,20 @@ class SettingsTest {
         // The trash holds photos for a month until told otherwise.
         assertEquals(30, AppSettings().trashKeptDays)
     }
+
+    @Test
+    fun showsWhichTimeZoneTheCameraIsSetToAndKeepsTheChoice() {
+        openSettings()
+        // Until one is chosen, the camera is taken to keep the phone's zone.
+        compose.onNodeWithText("카메라 시간대").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("휴대전화와 같음").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("보관함 사진의 시각 다시 읽기").performScrollTo().assertIsDisplayed()
+
+        runBlocking { container.settings.update { it.copy(cameraZoneId = "Asia/Tokyo") } }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); compose.onAllNodesWithText("Tokyo · UTC+09:00", substring = true).fetchSemanticsNodes().isNotEmpty() || compose.onAllNodesWithText("도쿄 · UTC+09:00", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        assertEquals("Asia/Tokyo", runBlocking { container.settings.settings.first() }.cameraZone().id)
+
+        runBlocking { container.settings.update { it.copy(cameraZoneId = null) } }
+        assertEquals(null, runBlocking { container.settings.settings.first() }.cameraZoneId)
+    }
 }

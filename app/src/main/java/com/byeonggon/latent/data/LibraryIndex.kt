@@ -14,11 +14,14 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.ZoneId
 
 /** Keeps what the database knows about the library and past imports in line with the files on the phone. */
 class LibraryIndex(
     private val storage: LibraryStorage,
     private val database: AppDatabase,
+    /** The zone to read the time of a photo in when it does not say which one it is: the camera's. */
+    private val cameraZone: suspend () -> ZoneId = { ZoneId.systemDefault() },
     /** The entries whose edits are being saved: saving moves a photo aside for a moment. */
     private val beingSaved: () -> Set<Long> = { emptySet() },
 ) {
@@ -44,6 +47,28 @@ class LibraryIndex(
     }
 
     /**
+     * Reads the time of each library photo again, in [zone] where the photo does not say which zone it
+     * was taken in; for after the camera's time zone has been set or corrected. Returns how many changed.
+     */
+    suspend fun rereadCaptureTimes(zone: ZoneId): Int = withContext(Dispatchers.IO) {
+        if (!storage.isAvailable()) return@withContext 0
+        val dao = database.mediaDao()
+        var changed = 0
+        // Videos carry their time in UTC already.
+        for (item in dao.all().filter { it.origin == MediaOrigin.LIBRARY && it.kind != MediaKind.VIDEO && it.trashedAt == null }) {
+            ensureActive()
+            val file = File(item.path)
+            if (!storage.exists(file)) continue
+            val time = MediaMetadataReader.read(file, item.kind, zone).capturedAt ?: continue
+            if (time != item.capturedAt) {
+                dao.setCapturedAt(item.id, time)
+                changed++
+            }
+        }
+        changed
+    }
+
+    /**
      * Adds the photos and videos in the library's folder that the library does not know yet: copied
      * there from another phone, say, or left behind by an earlier installation. The time and place of
      * each are read from the file; a raw file without a place takes its JPEG's. Returns how many.
@@ -51,6 +76,7 @@ class LibraryIndex(
     suspend fun adoptUnknownFiles(): Int = withContext(Dispatchers.IO) {
         if (!storage.isAvailable()) return@withContext 0
         val dao = database.mediaDao()
+        val zone = cameraZone()
         val known = dao.all().mapTo(HashSet()) { it.path }
         val found = storage.root.walkTopDown()
             // Staging, kept originals and the trash live in folders whose names start with a dot.
@@ -65,7 +91,7 @@ class LibraryIndex(
         for (batch in found.chunked(BATCH)) {
             ensureActive()
             val items = batch.map { (file, kind) ->
-                val metadata = MediaMetadataReader.read(file, kind)
+                val metadata = MediaMetadataReader.read(file, kind, zone)
                 val shot = File(file.parentFile, file.nameWithoutExtension.lowercase()).path
                 val place = metadata.location ?: places[shot].takeIf { kind == MediaKind.RAW }
                 if (kind == MediaKind.PHOTO && metadata.location != null) places[shot] = metadata.location

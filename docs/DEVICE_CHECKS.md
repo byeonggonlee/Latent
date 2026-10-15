@@ -18,6 +18,8 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Light or dark (like the phone, light, dark): the app follows at once, status and navigation bar icons stay readable in each; dark in a light phone and light in a dark one in particular. Colours come from the wallpaper.
 - [ ] Size of the pictures in the library (small, medium, large) changes the grid at once, on the phone and in a wide window.
 - [ ] Trash: 7, 30 or 90 days. Choosing fewer days deletes older trash the next time the library opens (not tried on a real trash).
+- [ ] Camera time zone: "Change" lists every zone (west to east), typing a city narrows the list (also in Korean or Japanese), and the first entry is "Same as the phone". Choose a zone other than the phone's, sync or adopt a photo from the camera, and check its time in the viewer and where the Location matching puts it. "Read the times of photos in the library again" changes the times of the photos already there; then "Match items without a location again" on the Location tab.
+- [ ] Does the ZV-E10 write `OffsetTimeOriginal` in its JPEGs and raw files? (`exiftool -OffsetTimeOriginal DSC*.JPG`.) If it does, the setting is only a fallback; if not, it is what keeps locations right abroad. Does a video's creation time (UTC in the file) agree with the stills?
 - [ ] Online maps switch: turning it on asks first, off does not; Photos on this phone opens the folder question in the library.
 
 ## Languages

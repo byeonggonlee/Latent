@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,8 +47,10 @@ import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.GridSize
 import com.byeonggon.latent.data.TabPosition
 import com.byeonggon.latent.data.ThemeMode
+import com.byeonggon.latent.data.TimeZoneChoices
 import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.library.AboutDialog
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** What is set once and then left alone: where the tabs are, light or dark, the size of the grid, the language, how long the trash keeps photos, the internet for maps, which phone folders to list. */
@@ -61,6 +64,20 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
     val scope = rememberCoroutineScope()
     var askingMaps by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
+    var choosingZone by remember { mutableStateOf(false) }
+    var rereading by remember { mutableStateOf(false) }
+    var rereadMessage by remember { mutableStateOf<String?>(null) }
+    if (choosingZone) {
+        CameraZoneDialog(
+            chosen = current.cameraZoneId,
+            onChoose = { id ->
+                choosingZone = false
+                rereadMessage = null
+                scope.launch { settings.update { it.copy(cameraZoneId = id) } }
+            },
+            onDismiss = { choosingZone = false },
+        )
+    }
     if (about) AboutDialog(onDismiss = { about = false })
     if (askingMaps) {
         AlertDialog(
@@ -131,6 +148,31 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
             Hint(R.string.trash_kept_hint)
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Heading(R.string.settings_camera)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.camera_zone), style = MaterialTheme.typography.bodyLarge)
+                    val locale = LocalLocale.current.platformLocale
+                    val zoneText = remember(current.cameraZoneId, locale) { TimeZoneChoices.describe(current.cameraZoneId, TimeZoneChoices.all(locale)) }
+                    Text(zoneText ?: stringResource(R.string.camera_zone_phone), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                TextButton(onClick = { choosingZone = true }) { Text(stringResource(R.string.language_change)) }
+            }
+            Hint(R.string.camera_zone_hint)
+            TextButton(
+                enabled = !rereading,
+                onClick = {
+                    rereading = true
+                    scope.launch {
+                        val changed = context.appContainer.libraryIndex.rereadCaptureTimes(settings.settings.first().cameraZone())
+                        rereadMessage = context.resources.getQuantityString(R.plurals.camera_zone_reread_done, changed, changed)
+                        rereading = false
+                    }
+                },
+            ) { Text(stringResource(R.string.camera_zone_reread)) }
+            rereadMessage?.let { Hint(it) }
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Heading(R.string.settings_internet)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
@@ -192,6 +234,9 @@ private fun Heading(text: Int) {
 }
 
 @Composable
-private fun Hint(text: Int) {
-    Text(stringResource(text), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Hint(text: Int) = Hint(stringResource(text))
+
+@Composable
+private fun Hint(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

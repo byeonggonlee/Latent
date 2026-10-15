@@ -315,6 +315,21 @@ class SyncEngineTest {
     }
 
     @Test
+    fun readsATimeWithoutAZoneInTheZoneTheCameraIsSetTo() = runBlocking {
+        recordTrackAroundCapture()
+        // The photo says 12:00 and nothing else; the camera is set to Seoul, wherever the phone is.
+        settings.update { it.copy(cameraZoneId = "Asia/Seoul") }
+        val photo = jpegTakenAt("2026:10:01 12:00:00", null)
+        val files = mapOf(remote("DSC00030.JPG", MediaKind.PHOTO, photo) to photo)
+
+        engine.run(FakeCameraSource(files))
+
+        val stored = database.mediaDao().all().single()
+        assertEquals(capturedAt, stored.capturedAt)
+        assertEquals(GeoSource.TRACK, stored.geoSource)
+    }
+
+    @Test
     fun reportsFilesThatFailToTransferAndRetriesThemLater() = runBlocking {
         val broken = remote("DSC00003.JPG", MediaKind.PHOTO, ByteArray(10))
 
@@ -354,7 +369,7 @@ class SyncEngineTest {
         folder: String = "100MSDCF",
     ) = RemoteFile(nextHandle++, name, bytes.size.toLong(), modifiedAt, kind, folder = "$STORAGE:/$folder/")
 
-    private fun jpegTakenAt(dateTime: String, offset: String): ByteArray {
+    private fun jpegTakenAt(dateTime: String, offset: String?): ByteArray {
         val file = File.createTempFile("source", ".jpg", context.cacheDir)
         file.outputStream().use {
             Bitmap.createBitmap(64, 48, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it)

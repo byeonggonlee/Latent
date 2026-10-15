@@ -248,7 +248,7 @@ class SyncEngine(
 
     /** Moves a downloaded file into the library. Returns true when a location from the track was applied. */
     private suspend fun store(part: File, file: RemoteFile, cameraId: String, maxGapMs: Long, options: AppSettings): Boolean {
-        val metadata = MediaMetadataReader.read(part, file.kind)
+        val metadata = MediaMetadataReader.read(part, file.kind, options.cameraZone())
         val capturedAt = metadata.capturedAt ?: file.modifiedAt
         // Matched by when it really was, though it is filed under the time the camera gave it.
         val matched = if (metadata.location == null) geotagger.locate(options.realTimeOf(capturedAt), maxGapMs) else null

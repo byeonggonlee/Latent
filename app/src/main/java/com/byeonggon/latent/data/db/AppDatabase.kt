@@ -25,6 +25,9 @@ interface MediaDao {
     @Query("UPDATE media_items SET path = :path, trashedAt = :trashedAt, trashedFrom = :trashedFrom WHERE id = :id")
     suspend fun setPlace(id: Long, path: String, trashedAt: Long?, trashedFrom: String?)
 
+    @Query("UPDATE media_items SET capturedAt = :capturedAt WHERE id = :id")
+    suspend fun setCapturedAt(id: Long, capturedAt: Long)
+
     @Query("SELECT * FROM media_items WHERE id = :id")
     fun observeById(id: Long): Flow<MediaItemEntity?>
 

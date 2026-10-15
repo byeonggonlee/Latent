@@ -510,4 +510,13 @@
     <plurals name="days_count">
         <item quantity="other">%d 日</item>
     </plurals>
+    <string name="settings_camera">カメラ</string>
+    <string name="camera_zone">カメラのタイムゾーン</string>
+    <string name="camera_zone_phone">端末と同じ</string>
+    <string name="camera_zone_search">都市またはタイムゾーン</string>
+    <string name="camera_zone_hint">カメラの時計が合わせてあるタイムゾーンです。写真自体にタイムゾーンの情報がないときに使います。これから取り込む写真に適用され、カメラと端末のタイムゾーンが違う場合(海外など)でも、実際の時刻で位置を探します。</string>
+    <string name="camera_zone_reread">ライブラリの写真の時刻を読み直す</string>
+    <plurals name="camera_zone_reread_done">
+        <item quantity="other">写真 %d 枚の時刻が変わりました。位置タブの「位置情報のない項目をもう一度照合」で、位置のない写真に位置をつけられます。</item>
+    </plurals>
 </resources>

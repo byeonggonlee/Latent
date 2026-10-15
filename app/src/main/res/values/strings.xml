@@ -544,4 +544,14 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
     </plurals>
+    <string name="settings_camera">Camera</string>
+    <string name="camera_zone">Camera time zone</string>
+    <string name="camera_zone_phone">Same as the phone</string>
+    <string name="camera_zone_search">City or time zone</string>
+    <string name="camera_zone_hint">The time zone the camera\'s clock is set to, for photos that do not say it themselves. Used for photos brought in from now on: they are matched to where you were by the real time, which differs when the camera\'s zone is not the phone\'s, abroad say.</string>
+    <string name="camera_zone_reread">Read the times of photos in the library again</string>
+    <plurals name="camera_zone_reread_done">
+        <item quantity="one">The time of %d photo changed. \"Match items without a location again\" on the Location tab places the photos that still have none.</item>
+        <item quantity="other">The time of %d photos changed. \"Match items without a location again\" on the Location tab places the photos that still have none.</item>
+    </plurals>
 </resources>

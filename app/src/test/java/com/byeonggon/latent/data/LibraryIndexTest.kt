@@ -25,6 +25,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
+import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -137,5 +138,50 @@ class LibraryIndexTest {
 
         assertEquals(1, database.mediaDao().all().size)
         assertTrue(storage.originalOf(unreachable).exists())
+    }
+
+    private fun photoShotAt(name: String, wallClock: String, offset: String? = null): File {
+        val photo = File(storage.root, "2026/2026-10-09/$name").apply { parentFile!!.mkdirs() }
+        photo.outputStream().use { Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        ExifInterface(photo).apply {
+            setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, wallClock)
+            if (offset != null) setAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL, offset)
+            saveAttributes()
+        }
+        return photo
+    }
+
+    @Test
+    fun readsATimeWithoutAZoneInTheCamerasZone() = runBlocking {
+        val seoul = ZoneId.of("Asia/Seoul")
+        val abroad = LibraryIndex(storage, database, cameraZone = { seoul })
+        photoShotAt("DSC02001.JPG", "2026:10:09 15:42:00")
+        photoShotAt("DSC02002.JPG", "2026:10:09 15:42:00", offset = "+02:00")
+
+        abroad.adoptUnknownFiles()
+
+        val byName = database.mediaDao().all().associateBy { it.fileName }
+        assertEquals(OffsetDateTime.parse("2026-10-09T15:42:00+09:00").toInstant().toEpochMilli(), byName.getValue("DSC02001.JPG").capturedAt)
+        // A photo that says its own zone is not second-guessed.
+        assertEquals(OffsetDateTime.parse("2026-10-09T15:42:00+02:00").toInstant().toEpochMilli(), byName.getValue("DSC02002.JPG").capturedAt)
+    }
+
+    @Test
+    fun readsTheTimesOfPhotosAlreadyInTheLibraryAgainAndCountsTheOnesThatChanged() = runBlocking {
+        photoShotAt("DSC02003.JPG", "2026:10:09 15:42:00")
+        photoShotAt("DSC02004.JPG", "2026:10:09 15:42:00", offset = "+09:00")
+        // Read in the zone of the phone, wherever that is, as an earlier version did.
+        LibraryIndex(storage, database, cameraZone = { ZoneId.of("Europe/Paris") }).adoptUnknownFiles()
+        val parisAssumed = database.mediaDao().all().associateBy { it.fileName }.getValue("DSC02003.JPG").capturedAt
+
+        val changed = index.rereadCaptureTimes(ZoneId.of("Asia/Seoul"))
+
+        val byName = database.mediaDao().all().associateBy { it.fileName }
+        val seoul = OffsetDateTime.parse("2026-10-09T15:42:00+09:00").toInstant().toEpochMilli()
+        assertEquals(seoul, byName.getValue("DSC02003.JPG").capturedAt)
+        assertEquals(seoul, byName.getValue("DSC02004.JPG").capturedAt)
+        assertTrue(parisAssumed != seoul)
+        assertEquals(1, changed)
+        assertEquals(0, index.rereadCaptureTimes(ZoneId.of("Asia/Seoul")))
     }
 }

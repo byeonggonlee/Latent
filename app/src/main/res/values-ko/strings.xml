@@ -510,4 +510,13 @@
     <plurals name="days_count">
         <item quantity="other">%d일</item>
     </plurals>
+    <string name="settings_camera">카메라</string>
+    <string name="camera_zone">카메라 시간대</string>
+    <string name="camera_zone_phone">휴대전화와 같음</string>
+    <string name="camera_zone_search">도시 또는 시간대</string>
+    <string name="camera_zone_hint">카메라 시계가 맞춰진 시간대로, 사진에 시간대 정보가 없을 때 씁니다. 지금부터 가져오는 사진에 적용됩니다. 카메라 시간대가 휴대전화와 다르면(해외 등) 실제 시각이 달라지므로 그에 맞춰 위치를 찾습니다.</string>
+    <string name="camera_zone_reread">보관함 사진의 시각 다시 읽기</string>
+    <plurals name="camera_zone_reread_done">
+        <item quantity="other">사진 %d장의 시각이 바뀌었습니다. 위치 탭의 \"위치 없는 항목 다시 맞추기\"로 아직 위치가 없는 사진에 위치를 채울 수 있습니다.</item>
+    </plurals>
 </resources>

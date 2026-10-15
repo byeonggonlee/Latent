@@ -10,8 +10,9 @@ import java.time.ZoneId
 data class MediaMetadata(val capturedAt: Long?, val location: GeoPoint?)
 
 object MediaMetadataReader {
-    fun read(file: File, kind: MediaKind): MediaMetadata = try {
-        if (kind == MediaKind.VIDEO) readVideo(file) else readExif(file)
+    /** [cameraZone] is where a photo whose time has no zone of its own is taken to have been shot. */
+    fun read(file: File, kind: MediaKind, cameraZone: ZoneId = ZoneId.systemDefault()): MediaMetadata = try {
+        if (kind == MediaKind.VIDEO) readVideo(file) else readExif(file, cameraZone)
     } catch (e: IOException) {
         MediaMetadata(null, null)
     } catch (e: RuntimeException) {
@@ -19,14 +20,14 @@ object MediaMetadataReader {
         MediaMetadata(null, null)
     }
 
-    private fun readExif(file: File): MediaMetadata {
+    private fun readExif(file: File, cameraZone: ZoneId): MediaMetadata {
         val exif = ExifInterface(file)
         val capturedAt = MediaTime.parseExif(
             dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
                 ?: exif.getAttribute(ExifInterface.TAG_DATETIME),
             offset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL)
                 ?: exif.getAttribute(ExifInterface.TAG_OFFSET_TIME),
-            fallbackZone = ZoneId.systemDefault(),
+            fallbackZone = cameraZone,
         )
         val location = exif.latLong?.let { (latitude, longitude) ->
             GeoPoint(latitude, longitude, exif.getAltitude(Double.NaN).takeUnless { it.isNaN() })

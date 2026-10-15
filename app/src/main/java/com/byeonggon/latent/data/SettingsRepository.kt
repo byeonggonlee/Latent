@@ -11,6 +11,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.byeonggon.latent.data.db.MediaKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.DateTimeException
+import java.time.ZoneId
 
 /** Where the tabs stand in a wide window (landscape, a tablet, an unfolded foldable): a narrow one always has them at the bottom. */
 enum class TabPosition { AUTO, LEFT, RIGHT, BOTTOM }
@@ -40,7 +42,12 @@ data class AppSettings(
     val gridSize: GridSize = GridSize.MEDIUM,
     /** How many days a photo stays in the trash before it is deleted for good. */
     val trashKeptDays: Int = 30,
+    /** The time zone the camera's clock is set to ("Asia/Seoul"); null when it is the phone's own. */
+    val cameraZoneId: String? = null,
 ) {
+    /** The zone to read a photo's time in when the photo does not say which it is. */
+    fun cameraZone(): ZoneId = cameraZoneId?.let { id -> try { ZoneId.of(id) } catch (e: DateTimeException) { null } } ?: ZoneId.systemDefault()
+
     /** The moment a photo taken at [cameraTime] by the camera's clock was really taken. */
     fun realTimeOf(cameraTime: Long): Long = cameraTime - cameraClockOffsetMinutes * 60_000L
 
@@ -72,6 +79,7 @@ class SettingsRepository(private val context: Context) {
             preferences[THEME] = next.theme.name
             preferences[GRID_SIZE] = next.gridSize.name
             preferences[TRASH_KEPT_DAYS] = next.trashKeptDays
+            if (next.cameraZoneId == null) preferences.remove(CAMERA_ZONE_ID) else preferences[CAMERA_ZONE_ID] = next.cameraZoneId
         }
     }
 
@@ -91,6 +99,7 @@ class SettingsRepository(private val context: Context) {
             theme = this[THEME]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: defaults.theme,
             gridSize = this[GRID_SIZE]?.let { name -> GridSize.entries.firstOrNull { it.name == name } } ?: defaults.gridSize,
             trashKeptDays = this[TRASH_KEPT_DAYS] ?: defaults.trashKeptDays,
+            cameraZoneId = this[CAMERA_ZONE_ID],
         )
     }
 
@@ -108,5 +117,6 @@ class SettingsRepository(private val context: Context) {
         val THEME = stringPreferencesKey("theme")
         val GRID_SIZE = stringPreferencesKey("grid_size")
         val TRASH_KEPT_DAYS = intPreferencesKey("trash_kept_days")
+        val CAMERA_ZONE_ID = stringPreferencesKey("camera_zone_id")
     }
 }
