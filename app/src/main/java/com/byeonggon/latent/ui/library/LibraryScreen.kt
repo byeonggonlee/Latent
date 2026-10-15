@@ -48,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -200,7 +201,7 @@ private fun LibraryContent(
                 LargeTitle(state, viewModel)
                 KindFilters(state, viewModel)
             }
-            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash)
+            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash, onPhonePhotos = viewModel::choosePhoneFolders)
         } else {
             Box(Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
@@ -540,20 +541,26 @@ private fun dayTitle(date: LocalDate): String =
     date.format(localFormat(if (date.year == LocalDate.now().year) "MMMMdEEEE" else "yMMMMdEEEE"))
 
 @Composable
-private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean) {
+private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: () -> Unit) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Text(
-            text = if (trash) {
-                stringResource(R.string.trash_is_empty)
-            } else if (noItemsAtAll) {
-                stringResource(R.string.library_is_empty)
-            } else {
-                stringResource(R.string.nothing_of_kind)
-            },
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                text = if (trash) {
+                    stringResource(R.string.trash_is_empty)
+                } else if (noItemsAtAll) {
+                    stringResource(R.string.library_is_empty)
+                } else {
+                    stringResource(R.string.nothing_of_kind)
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            // The phone's own photos can fill an empty library without a camera.
+            if (noItemsAtAll && !trash) {
+                OutlinedButton(onClick = onPhonePhotos) { Text(stringResource(R.string.phone_folders)) }
+            }
+        }
     }
 }
 

@@ -118,7 +118,7 @@
     <string name="stars_or_more">%1$s or more</string>
     <string name="trash_is_empty">The trash is empty.</string>
     <string name="library_is_empty">No photos yet.
-Connect a camera on the Camera tab to bring photos in.</string>
+Connect a camera on the Camera tab to bring photos in, or list the photos on this phone.</string>
     <string name="nothing_of_kind">Nothing of this kind.</string>
     <string name="video">Video</string>
     <string name="item_selected">Selected</string>
