@@ -430,7 +430,7 @@
     <string name="about">Latent 정보</string>
     <string name="about_version">버전 %1$s</string>
     <string name="about_text">카메라와 휴대전화의 사진을 휴대전화에서 현상하고, 원하면 지도에 올려 봅니다. 모든 것은 휴대전화 안에 머뭅니다. 계정도, 광고도, 분석도 없습니다.</string>
-    <string name="about_built_from">Jetpack Compose, Room, Coil, Media3, AndroidX ExifInterface, Gson으로 만들었고, 모두 Apache License 2.0이며 Latent도 같습니다. 온라인 지도를 켜면 지도 그림은 OpenStreetMap(© OpenStreetMap contributors)에서 옵니다.</string>
+    <string name="about_built_from">Jetpack Compose, Room, Coil, Media3, AndroidX ExifInterface, Gson, LiteRT로 만들었고, 모두 Apache License 2.0이며 Latent도 같습니다. 피사체 마스크는 휴대전화 안에서 U²-Netp 모델(Qin 외, Apache License 2.0)로 찾습니다. 온라인 지도를 켜면 지도 그림은 OpenStreetMap(© OpenStreetMap contributors)에서 옵니다.</string>
     <string name="about_trademarks">Sony와 ZV-E10은 Sony Group Corporation의 상표이고, Google 타임라인은 Google LLC의 기능입니다. Latent는 두 회사와 관련이 없으며 보증을 받지 않았습니다.</string>
     <string name="about_privacy">개인정보 처리방침</string>
     <string name="about_source">소스 코드와 라이선스</string>

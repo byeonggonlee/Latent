@@ -70,6 +70,12 @@ android {
     }
 }
 
+configurations.configureEach {
+    // LiteRT can fetch models as Play AI packs, which Latent does not use; that library would bring
+    // Google Play services along, and with them code that talks to Google.
+    exclude(group = "com.google.android.play", module = "ai-delivery")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -93,6 +99,9 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.gson)
+    // Subject masks, worked out on the phone by a model in the app's assets: on the graphics processor, or the cores where it cannot.
+    implementation(libs.litert)
+    implementation(libs.litert.gpu)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

@@ -13,6 +13,7 @@ import com.byeonggon.latent.camera.UsbCameraConnector
 import com.byeonggon.latent.data.EditSaver
 import com.byeonggon.latent.data.ExifIndex
 import com.byeonggon.latent.data.LibraryEdits
+import com.byeonggon.latent.data.MaskDetector
 import com.byeonggon.latent.data.Thumbnails
 import com.byeonggon.latent.data.LibraryIndex
 import com.byeonggon.latent.data.LibraryStorage
@@ -20,7 +21,9 @@ import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.SettingsRepository
 import com.byeonggon.latent.data.Trash
 import com.byeonggon.latent.data.db.AppDatabase
+import com.byeonggon.latent.enhance.LiteRtSegmenter
 import com.byeonggon.latent.enhance.LutStore
+import com.byeonggon.latent.enhance.MaskStore
 import com.byeonggon.latent.location.Geotagger
 import com.byeonggon.latent.location.TimelineImporter
 import com.byeonggon.latent.map.MapTiles
@@ -52,6 +55,7 @@ class LatentApp : Application(), SingletonImageLoader.Factory {
 class AppContainer(private val context: Context) {
     init {
         LutStore.directory = File(context.filesDir, "luts")
+        MaskStore.directory = File(context.filesDir, "masks")
     }
 
     val database: AppDatabase =
@@ -73,6 +77,9 @@ class AppContainer(private val context: Context) {
         exportOptions = { settings.settings.first().exportOptions() },
     )
     val editSaver = EditSaver(context, libraryEdits)
+
+    /** Subject masks; the model is only made when one is first asked for. */
+    val maskDetector = MaskDetector { LiteRtSegmenter(context.assets) }
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())
     val onlineAccess = OnlineAccess(settings)

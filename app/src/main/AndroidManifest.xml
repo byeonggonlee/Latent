@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.usb.host" />
+    <!-- LiteRT names the neural processor for models compiled for it; Latent runs its model on the graphics processor or the cores. -->
+    <uses-feature android:name="android.hardware.npu" tools:node="remove" />
 
     <!-- The library's photos and videos are reached by path; the rest of its folder through the folder the person grants. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />

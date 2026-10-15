@@ -430,7 +430,7 @@
     <string name="about">Latent について</string>
     <string name="about_version">バージョン %1$s</string>
     <string name="about_text">カメラとスマートフォンの写真を、スマートフォンの中で現像し、お望みなら地図に載せます。すべてスマートフォンの中にとどまります。アカウントも広告も分析もありません。</string>
-    <string name="about_built_from">Jetpack Compose、Room、Coil、Media3、AndroidX ExifInterface、Gson で作られています。いずれも Apache License 2.0 で、Latent 自体も同じです。オンライン地図をオンにすると、地図の画像は OpenStreetMap(© OpenStreetMap contributors)から取得します。</string>
+    <string name="about_built_from">Jetpack Compose、Room、Coil、Media3、AndroidX ExifInterface、Gson、LiteRT で作られています。いずれも Apache License 2.0 で、Latent 自体も同じです。被写体マスクはスマートフォン上で U²-Netp モデル(Qin ほか、Apache License 2.0)が検出します。オンライン地図をオンにすると、地図の画像は OpenStreetMap(© OpenStreetMap contributors)から取得します。</string>
     <string name="about_trademarks">Sony と ZV-E10 は Sony Group Corporation の商標で、Google タイムラインは Google LLC の機能です。Latent はどちらとも提携しておらず、承認も受けていません。</string>
     <string name="about_privacy">プライバシーポリシー</string>
     <string name="about_source">ソースコードとライセンス</string>
