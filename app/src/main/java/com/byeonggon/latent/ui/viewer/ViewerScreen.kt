@@ -224,6 +224,9 @@ fun ViewerScreen(
     }
 
     val scope = rememberCoroutineScope()
+    // The video being played, if any: turning to another photo stops it.
+    var playing by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(item?.id) { playing = null }
     // The photo in front, zoomed by keys as well as fingers; each photo starts out as it fits.
     val zoom = rememberZoomState(item?.id ?: -1L)
     PhotoTheme {
@@ -311,8 +314,16 @@ fun ViewerScreen(
                             }
                         }
                         if (shown.kind == MediaKind.VIDEO) {
-                            FilledIconButton(onClick = { context.playVideo(shown) }, modifier = Modifier.size(64.dp)) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play), modifier = Modifier.size(40.dp))
+                            if (playing == shown.id) {
+                                // Plays here; if this phone cannot, the video goes to an app that can.
+                                VideoPlayer(shown.path, onFailed = {
+                                    playing = null
+                                    context.playVideo(shown)
+                                })
+                            } else {
+                                FilledIconButton(onClick = { playing = shown.id }, modifier = Modifier.size(64.dp)) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play), modifier = Modifier.size(40.dp))
+                                }
                             }
                         }
                     }
@@ -618,7 +629,12 @@ private fun Context.share(file: File, kind: MediaKind) {
 }
 
 private fun Context.playVideo(item: MediaItemEntity) {
-    val uri = FileProvider.getUriForFile(this, "$packageName.files", File(item.path))
+    // A file the provider has no folder for, such as one on another storage volume, cannot be handed over.
+    val uri = try {
+        FileProvider.getUriForFile(this, "$packageName.files", File(item.path))
+    } catch (e: IllegalArgumentException) {
+        return
+    }
     launch(
         Intent(Intent.ACTION_VIEW)
             .setDataAndType(uri, "video/*")
