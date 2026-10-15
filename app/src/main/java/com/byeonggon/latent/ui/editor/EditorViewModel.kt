@@ -30,6 +30,7 @@ import com.byeonggon.latent.enhance.ToneRenderer
 import com.byeonggon.latent.enhance.bitmapOf
 import com.byeonggon.latent.enhance.framed
 import com.byeonggon.latent.raw.RawRenderer
+import com.byeonggon.latent.enhance.ImportedPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -303,6 +304,37 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             edits.saveFilter(name.trim(), edit)
             ui.update { it.copy(message = text(R.string.filter_saved)) }
+        }
+    }
+
+    /** Adds the Lightroom presets in the files at [uris] to the user's own filters, and says what came of it. */
+    fun importPresets(uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val resolver = getApplication<Application>().contentResolver
+            val imported = ArrayList<ImportedPreset>()
+            var unreadable = 0
+            withContext(Dispatchers.IO) {
+                for (uri in uris) {
+                    val fileName = resolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) cursor.getString(0) else null
+                    } ?: uri.lastPathSegment.orEmpty()
+                    val preset = try {
+                        resolver.openInputStream(uri)?.use { edits.importPreset(it, fileName.substringBeforeLast('.')) }
+                    } catch (e: java.io.IOException) {
+                        null
+                    }
+                    if (preset != null) imported += preset else unreadable++
+                }
+            }
+            val app = getApplication<Application>()
+            val skipped = imported.flatMapTo(LinkedHashSet()) { it.skipped }.joinToString(", ") { text(it.label) }
+            val message = buildString {
+                append(app.resources.getQuantityString(R.plurals.presets_added, imported.size, imported.size))
+                if (skipped.isNotEmpty()) append(' ').append(text(R.string.presets_not_taken, skipped))
+                if (unreadable > 0) append(' ').append(app.resources.getQuantityString(R.plurals.presets_unreadable, unreadable, unreadable))
+            }
+            ui.update { it.copy(message = message) }
         }
     }
 

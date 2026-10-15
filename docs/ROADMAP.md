@@ -37,10 +37,10 @@ Each is small or medium, works offline, and needs no new permission.
    hue (eight swatches, the mixer's) with a range slider; any mask can be held to one colour the same way, like the
    tone range. Picked from swatches, not yet by tapping the picture. Grays are left alone. CPU and shader versions
    are written to agree; only a phone can check the shader.
-5. **Import Lightroom presets (`.xmp`)** and share one's own looks as files. Presets are the habit of
-   Lightroom Mobile users; the settings map onto ours (exposure, contrast, highlights, shadows, whites,
-   blacks, texture, clarity, dehaze, vibrance, saturation, HSL, colour grading, curves, vignette, grain).
-   What does not map is skipped and said so. Medium.
+5. ~~**Import Lightroom presets (`.xmp`).**~~ *Done 2026-10-15 (import only):* the settings that map are taken (exposure to
+   dehaze, vibrance, saturation, relative white balance, the eight colour bands, colour grading, point curves,
+   vignette, grain, sharpening and noise reduction), the rest is skipped and said so. Not done: sharing one's own
+   looks as `.xmp` files (the reverse mapping; Lightroom's reading of it cannot be tried here), `.lrtemplate`.
 
 ## Larger, to be settled first
 

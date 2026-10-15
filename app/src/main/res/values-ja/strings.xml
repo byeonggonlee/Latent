@@ -569,4 +569,23 @@
     <string name="colour_only">この色だけ</string>
     <string name="colour_any">すべて</string>
     <string name="colour_spread">色の範囲</string>
+    <string name="preset_skip_white_balance">ケルビン指定のホワイトバランス</string>
+    <string name="preset_skip_calibration">カメラキャリブレーション</string>
+    <string name="preset_skip_parametric">パラメトリックカーブ</string>
+    <string name="preset_skip_lens">レンズ補正</string>
+    <string name="preset_skip_geometry">切り抜きと遠近</string>
+    <string name="preset_skip_detail">シャープとノイズの詳細</string>
+    <string name="preset_skip_effects">ビネットと粒子の形</string>
+    <string name="preset_skip_grading">カラーグレーディングの詳細</string>
+    <string name="preset_skip_profile">プロファイルまたは LUT</string>
+    <string name="preset_skip_masks">部分補正</string>
+    <string name="preset_skip_other">その他の設定</string>
+    <string name="import_presets">Lightroom プリセットを読み込む…</string>
+    <plurals name="presets_added">
+        <item quantity="other">プリセット %d 件をマイフィルターに追加しました。</item>
+    </plurals>
+    <string name="presets_not_taken">取り込めなかった設定: %s。</string>
+    <plurals name="presets_unreadable">
+        <item quantity="other">%d 件のファイルには取り込めるプリセットがありませんでした。</item>
+    </plurals>
 </resources>

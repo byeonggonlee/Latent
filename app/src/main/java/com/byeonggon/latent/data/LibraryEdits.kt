@@ -8,6 +8,8 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.Filter
 import com.byeonggon.latent.enhance.Filters
+import com.byeonggon.latent.enhance.ImportedPreset
+import com.byeonggon.latent.enhance.LightroomPreset
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.location.GeoPoint
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 
 /**
  * Puts edits into effect on library files and takes them away again.
@@ -51,6 +54,17 @@ class LibraryEdits(
     /** Saves the look of [edit] as a filter of the user's own. */
     suspend fun saveFilter(name: String, edit: PhotoEdit) {
         filterDao.insert(FilterEntity(name = name, look = PhotoEdit().withLookOf(edit).toJson(), createdAt = System.currentTimeMillis()))
+    }
+
+    /**
+     * Keeps the look of the Lightroom preset read from [input] as a filter of the user's own, under the
+     * preset's name or else [fallbackName]. Null when [input] is no preset, or has nothing of a look to take.
+     */
+    suspend fun importPreset(input: InputStream, fallbackName: String): ImportedPreset? {
+        val preset = LightroomPreset.parse(input) ?: return null
+        if (!preset.edit.changesColors) return null
+        saveFilter((preset.name?.trim()?.takeIf { it.isNotEmpty() } ?: fallbackName).take(MOST_NAME), preset.edit)
+        return preset
     }
 
     /** Deletes a filter the user saved; the ones that come with the app stay. */
@@ -242,5 +256,6 @@ class LibraryEdits(
 
     private companion object {
         const val CUSTOM_PREFIX = "custom-"
+        const val MOST_NAME = 60
     }
 }

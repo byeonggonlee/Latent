@@ -8,7 +8,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,7 +61,10 @@ internal fun FilterPanel(
     onDone: () -> Unit,
     onSave: (String) -> Unit,
     onDelete: (Filter) -> Unit,
+    onImport: (List<Uri>) -> Unit,
 ) {
+    // Lightroom's presets are XMP files, which the phone has no type of its own for, so any file may be picked.
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments(), onImport)
     val listLabel = stringResource(R.string.filter_list)
     val nameLabel = stringResource(R.string.filter_name)
     var naming by rememberSaveable { mutableStateOf(false) }
@@ -104,11 +111,13 @@ internal fun FilterPanel(
             untouched = 1f,
         )
     }
-    TextButton(
-        onClick = { naming = true },
-        enabled = enabled && state.edit.changesColors,
-        modifier = Modifier.padding(horizontal = 8.dp),
-    ) { Text(stringResource(R.string.save_as_my_filter)) }
+    Row(Modifier.padding(horizontal = 8.dp)) {
+        TextButton(
+            onClick = { naming = true },
+            enabled = enabled && state.edit.changesColors,
+        ) { Text(stringResource(R.string.save_as_my_filter)) }
+        TextButton(onClick = { importer.launch(arrayOf("*/*")) }, enabled = enabled) { Text(stringResource(R.string.import_presets)) }
+    }
 
     if (naming) {
         var name by rememberSaveable { mutableStateOf("") }

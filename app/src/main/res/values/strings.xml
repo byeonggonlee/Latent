@@ -605,4 +605,25 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="colour_only">Only this colour</string>
     <string name="colour_any">Any</string>
     <string name="colour_spread">Colour range</string>
+    <string name="preset_skip_white_balance">white balance as a temperature</string>
+    <string name="preset_skip_calibration">calibration</string>
+    <string name="preset_skip_parametric">parametric curve</string>
+    <string name="preset_skip_lens">lens corrections</string>
+    <string name="preset_skip_geometry">crop and perspective</string>
+    <string name="preset_skip_detail">sharpening and noise details</string>
+    <string name="preset_skip_effects">vignette and grain shape</string>
+    <string name="preset_skip_grading">colour grading details</string>
+    <string name="preset_skip_profile">profile or LUT</string>
+    <string name="preset_skip_masks">local adjustments</string>
+    <string name="preset_skip_other">other settings</string>
+    <string name="import_presets">Import Lightroom presets…</string>
+    <plurals name="presets_added">
+        <item quantity="one">%d preset was added to your filters.</item>
+        <item quantity="other">%d presets were added to your filters.</item>
+    </plurals>
+    <string name="presets_not_taken">Not taken over: %s.</string>
+    <plurals name="presets_unreadable">
+        <item quantity="one">%d file had no preset to take.</item>
+        <item quantity="other">%d files had no preset to take.</item>
+    </plurals>
 </resources>

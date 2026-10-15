@@ -687,6 +687,7 @@ private fun EditorPanel(
                         onDone = viewModel::commit,
                         onSave = viewModel::saveFilter,
                         onDelete = viewModel::deleteFilter,
+                        onImport = viewModel::importPresets,
                     )
                     EditorTab.FRAMING -> FramingControls(
                         framing = edit.framing,

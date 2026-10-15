@@ -569,4 +569,23 @@
     <string name="colour_only">이 색상에만</string>
     <string name="colour_any">전체</string>
     <string name="colour_spread">색상 범위</string>
+    <string name="preset_skip_white_balance">켈빈 단위 화이트 밸런스</string>
+    <string name="preset_skip_calibration">캘리브레이션</string>
+    <string name="preset_skip_parametric">파라메트릭 곡선</string>
+    <string name="preset_skip_lens">렌즈 보정</string>
+    <string name="preset_skip_geometry">자르기와 원근</string>
+    <string name="preset_skip_detail">선명도와 노이즈 세부 설정</string>
+    <string name="preset_skip_effects">비네팅과 그레인의 모양</string>
+    <string name="preset_skip_grading">컬러 그레이딩 세부 설정</string>
+    <string name="preset_skip_profile">프로파일 또는 LUT</string>
+    <string name="preset_skip_masks">부분 보정</string>
+    <string name="preset_skip_other">그 밖의 설정</string>
+    <string name="import_presets">Lightroom 프리셋 가져오기…</string>
+    <plurals name="presets_added">
+        <item quantity="other">프리셋 %d개를 내 필터에 추가했습니다.</item>
+    </plurals>
+    <string name="presets_not_taken">가져오지 못한 설정: %s.</string>
+    <plurals name="presets_unreadable">
+        <item quantity="other">파일 %d개에는 가져올 프리셋이 없었습니다.</item>
+    </plurals>
 </resources>
