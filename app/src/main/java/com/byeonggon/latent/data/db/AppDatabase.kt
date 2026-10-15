@@ -64,6 +64,12 @@ interface MediaDao {
     @Query("UPDATE media_items SET rating = :rating WHERE id = :id")
     suspend fun setRating(id: Long, rating: Int)
 
+    @Query("UPDATE media_items SET flag = :flag WHERE id IN (:ids)")
+    suspend fun setFlag(ids: List<Long>, flag: Int)
+
+    @Query("SELECT id FROM media_items WHERE flag = $FLAG_REJECTED AND trashedAt IS NULL")
+    suspend fun rejectedIds(): List<Long>
+
     /** Adds [item] unless the library has its file already. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertUnlessKnown(item: MediaItemEntity): Long
@@ -197,7 +203,7 @@ interface LocationDao {
         AlbumItemEntity::class,
         EditVersionEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -286,7 +292,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `flag` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
     }
 }

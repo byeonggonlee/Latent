@@ -7,6 +7,7 @@ import com.byeonggon.latent.data.db.AlbumEntity
 import com.byeonggon.latent.data.db.AlbumItemEntity
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.EditVersionEntity
+import com.byeonggon.latent.data.db.FLAG_REJECTED
 import com.byeonggon.latent.data.db.FilterEntity
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncedFolderEntity
@@ -54,6 +55,11 @@ class MigrationTest {
             assertEquals(0, item.rating)
             assertNull(item.trashedAt)
             assertEquals(MediaOrigin.LIBRARY, item.origin)
+            // Flags came after: nothing is flagged, and a photo can be.
+            assertEquals(0, item.flag)
+            database.mediaDao().setFlag(listOf(item.id), FLAG_REJECTED)
+            assertEquals(listOf(item.id), database.mediaDao().rejectedIds())
+            database.mediaDao().setFlag(listOf(item.id), 0)
             database.mediaDao().setRating(item.id, 4)
             assertEquals(4, database.mediaDao().byId(item.id)!!.rating)
             database.mediaDao().setEdit(item.id, "{}")

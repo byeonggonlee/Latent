@@ -23,6 +23,9 @@ enum class MediaKind {
     }
 }
 
+const val FLAG_PICKED = 1
+const val FLAG_REJECTED = -1
+
 enum class GeoSource { NONE, CAMERA, TRACK }
 
 /**
@@ -61,6 +64,8 @@ data class MediaItemEntity(
     /** Where the file was in the library before it went into the trash, to put it back there. */
     val trashedFrom: String? = null,
     @ColumnInfo(defaultValue = "'LIBRARY'") val origin: MediaOrigin = MediaOrigin.LIBRARY,
+    /** The flag of a cull: [FLAG_PICKED], [FLAG_REJECTED], or 0 for neither. */
+    @ColumnInfo(defaultValue = "0") val flag: Int = 0,
 ) {
     /**
      * Whether what is done to this file is kept as settings, and applied whenever it is shown or

@@ -126,6 +126,18 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Flags the photo as picked or rejected for a cull; the flag it already has takes itself away again.
+     * [alsoId] is the other file of its raw and JPEG pair, which is flagged along.
+     */
+    fun setFlag(flag: Int, alsoId: Long?) {
+        val item = state.value.item ?: return
+        viewModelScope.launch {
+            val current = mediaDao.byId(item.id)?.flag ?: return@launch
+            mediaDao.setFlag(listOfNotNull(item.id, alsoId), if (flag == current) 0 else flag)
+        }
+    }
+
     /** Takes the corrections away again. A JPEG gets back the original that was kept when it was edited. */
     fun restoreOriginal() {
         val item = state.value.item ?: return

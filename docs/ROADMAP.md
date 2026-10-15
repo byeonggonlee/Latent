@@ -9,7 +9,7 @@ camera sync, all on the phone. Last revised 2026-10-15.
 | Stage | Lightroom Mobile | Snapseed | Latent today |
 |---|---|---|---|
 | Import | Photos, camera card | Open | USB sync (MTP), phone folders, Quick Share copies |
-| **Cull** | Flags (pick, reject), stars, compare | – | Stars, trash. **No flags, no compare** |
+| **Cull** | Flags (pick, reject), stars, compare | – | Flags, stars, trash. **No compare** |
 | Global tone and colour | Light, colour mixer, grading, curves, detail, effects | Tune, curves, white balance, details, vignette, grain | All of these, with raw development |
 | Crop and geometry | Crop, upright, perspective | Crop, rotate, perspective | All of these, with auto level |
 | **Local edits** | Masks: **subject, sky, background**, linear, radial, brush, **colour range**, luminance range, healing | Selective, brush, healing | Linear, radial, brush, luminance range, healing. **No AI masks, no colour range** |
@@ -22,7 +22,7 @@ camera sync, all on the phone. Last revised 2026-10-15.
 
 Each is small or medium, works offline, and needs no new permission.
 
-1. **Pick and reject flags** (cull). The step every shoot starts with; Lightroom users do it with `P`/`X`
+1. ~~**Pick and reject flags** (cull).~~ *Done 2026-10-15.* The step every shoot starts with; Lightroom users do it with `P`/`X`
    before touching a slider. Flags in the viewer and the selection bar, keys `P`, `X`, `U`, a filter, and
    "trash the rejected" (to the trash, so it can be undone). Small.
 2. **Export options.** Size (long side), quality, JPEG or PNG, and an optional "remove location" switch,

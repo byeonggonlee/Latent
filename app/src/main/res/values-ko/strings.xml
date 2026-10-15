@@ -466,4 +466,21 @@
     <string name="version_opened">“%1$s” 버전을 열었습니다. 완료를 눌러야 적용됩니다.</string>
     <string name="version_delete">버전 삭제</string>
     <string name="version_default_name">버전 %1$d</string>
+    <string name="flag_pick">채택</string>
+    <string name="flag_reject">제외</string>
+    <string name="flag_clear">플래그 해제</string>
+    <string name="flags">플래그</string>
+    <string name="flags_menu">플래그로 보기</string>
+    <string name="flag_all">모두</string>
+    <string name="flag_picked">채택</string>
+    <string name="flag_not_rejected">제외 안 한 것</string>
+    <string name="flag_rejected">제외한 것</string>
+    <string name="flag_filter_clear">모든 플래그 다시 보기</string>
+    <string name="trash_rejected">제외한 사진 휴지통으로…</string>
+    <string name="trash_rejected_question">제외한 사진을 휴지통에 넣을까요?</string>
+    <string name="trash_rejected_detail">휴지통에 30일 동안 보관됩니다. 다른 앱의 사진은 시스템이 먼저 확인합니다.</string>
+    <string name="no_rejected">제외한 사진이 없습니다.</string>
+    <plurals name="flagged_count">
+        <item quantity="other">사진 %1$d장에 플래그를 표시했습니다.</item>
+    </plurals>
 </resources>

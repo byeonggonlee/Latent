@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.ViewModelProvider
 import com.byeonggon.latent.data.db.MediaItemEntity
@@ -92,7 +93,7 @@ class AlbumFlowTest {
 
         // One of them leaves the album, and so the view of it.
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
-        compose.onNodeWithText("앨범에서 빼기").performClick()
+        compose.onNodeWithText("앨범에서 빼기").performScrollTo().performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); members(albumId) == listOf(ids[1]) }
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); compose.onAllNodesWithContentDescription("DSC00001.JPG").fetchSemanticsNodes().isEmpty() }
 

@@ -498,4 +498,22 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="version_opened">Version “%1$s” opened. Tap Done to keep it.</string>
     <string name="version_delete">Delete version</string>
     <string name="version_default_name">Version %1$d</string>
+    <string name="flag_pick">Pick</string>
+    <string name="flag_reject">Reject</string>
+    <string name="flag_clear">Clear flag</string>
+    <string name="flags">Flag</string>
+    <string name="flags_menu">Show flagged</string>
+    <string name="flag_all">All</string>
+    <string name="flag_picked">Picked</string>
+    <string name="flag_not_rejected">Not rejected</string>
+    <string name="flag_rejected">Rejected</string>
+    <string name="flag_filter_clear">Show every flag again</string>
+    <string name="trash_rejected">Trash rejected photos…</string>
+    <string name="trash_rejected_question">Trash the rejected photos?</string>
+    <string name="trash_rejected_detail">They go to the trash, where they stay for 30 days. Photos of other apps are asked about by the system first.</string>
+    <string name="no_rejected">No photos are rejected.</string>
+    <plurals name="flagged_count">
+        <item quantity="one">%1$d photo flagged.</item>
+        <item quantity="other">%1$d photos flagged.</item>
+    </plurals>
 </resources>

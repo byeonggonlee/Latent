@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -83,6 +84,8 @@ import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.latent.R
 import com.byeonggon.latent.data.Trash
+import com.byeonggon.latent.data.db.FLAG_PICKED
+import com.byeonggon.latent.data.db.FLAG_REJECTED
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
@@ -298,6 +301,9 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = viewModel::clearSelection) { Text(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size)) }
+        // What is done most comes first: the rest is a scroll away on a narrow screen.
+        TextButton(onClick = viewModel::shareSelected) { Text(stringResource(R.string.share)) }
+        TextButton(onClick = viewModel::trashSelected) { Text(stringResource(R.string.delete)) }
         Box {
             TextButton(onClick = { rating = true }) { Text(stringResource(R.string.rating)) }
             DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
@@ -312,12 +318,25 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
                 }
             }
         }
+        Box {
+            var flagging by remember { mutableStateOf(false) }
+            TextButton(onClick = { flagging = true }) { Text(stringResource(R.string.flags)) }
+            DropdownMenu(expanded = flagging, onDismissRequest = { flagging = false }) {
+                listOf(R.string.flag_pick to FLAG_PICKED, R.string.flag_reject to FLAG_REJECTED, R.string.flag_clear to 0).forEach { (label, flag) ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(label)) },
+                        onClick = {
+                            flagging = false
+                            viewModel.flagSelected(flag)
+                        },
+                    )
+                }
+            }
+        }
         TextButton(onClick = { choosingAlbum = true }) { Text(stringResource(R.string.album_add)) }
         if (state.album != null) TextButton(onClick = viewModel::removeSelectedFromAlbum) { Text(stringResource(R.string.album_remove)) }
         TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text(stringResource(R.string.paste_edit)) }
         TextButton(onClick = viewModel::exportSelected) { Text(stringResource(R.string.raw_to_jpeg)) }
-        TextButton(onClick = viewModel::shareSelected) { Text(stringResource(R.string.share)) }
-        TextButton(onClick = viewModel::trashSelected) { Text(stringResource(R.string.delete)) }
     }
 }
 
@@ -459,6 +478,15 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 ),
             )
         }
+        if (state.flagFilter != FlagFilter.ALL) {
+            InputChip(
+                selected = true,
+                onClick = { viewModel.setFlagFilter(FlagFilter.ALL) },
+                label = { Text(stringResource(state.flagFilter.label)) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.flag_filter_clear), modifier = Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(50),
+            )
+        }
         // The album the library is narrowed to shows too, and can be left.
         state.album?.let { shown ->
             InputChip(
@@ -489,6 +517,14 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     var rating by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
     var albums by remember { mutableStateOf(false) }
+    var trashingRejected by remember { mutableStateOf(false) }
+    if (trashingRejected) {
+        ConfirmDeletion(
+            stringResource(R.string.trash_rejected_question),
+            stringResource(R.string.trash_rejected_detail),
+            { trashingRejected = false },
+        ) { viewModel.trashRejected() }
+    }
     if (about) AboutDialog(onDismiss = { about = false })
     if (albums) AlbumsDialog(state, viewModel, onDismiss = { albums = false })
     Box {
@@ -518,6 +554,31 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
                     },
                 )
             }
+            HorizontalDivider()
+            Text(
+                stringResource(R.string.flags_menu),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+            FlagFilter.entries.forEach { entry ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(entry.label)) },
+                    trailingIcon = { RadioButton(selected = state.flagFilter == entry, onClick = null) },
+                    onClick = {
+                        open = false
+                        viewModel.setFlagFilter(entry)
+                    },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.trash_rejected)) },
+                onClick = {
+                    open = false
+                    trashingRejected = true
+                },
+            )
+            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.phone_folders)) },
                 onClick = {
@@ -651,8 +712,24 @@ private fun MediaCell(
             model = rememberThumbnailModel(item),
             contentDescription = item.fileName,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
+            // A rejected photo is dimmed, so that what is left stands out.
+            modifier = Modifier.fillMaxSize().alpha(if (item.flag == FLAG_REJECTED) 0.4f else 1f),
         )
+        if (item.flag == FLAG_PICKED) {
+            Icon(
+                painterResource(R.drawable.ic_flag),
+                contentDescription = stringResource(R.string.flag_picked),
+                tint = Color.White,
+                modifier = Modifier.align(Alignment.TopCenter).padding(4.dp).size(16.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)).padding(1.dp),
+            )
+        } else if (item.flag == FLAG_REJECTED) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = stringResource(R.string.flag_rejected),
+                tint = Color.White,
+                modifier = Modifier.align(Alignment.TopCenter).padding(4.dp).size(16.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(4.dp)).padding(1.dp),
+            )
+        }
         when (item.kind) {
             MediaKind.RAW, MediaKind.PHOTO -> if (item.kind == MediaKind.RAW || withRaw) Text(
                 text = if (withRaw) "RAW+J" else "RAW",

@@ -15,6 +15,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.TopAppBarDefaults
@@ -46,6 +47,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -91,6 +93,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import com.byeonggon.latent.data.db.FLAG_PICKED
+import com.byeonggon.latent.data.db.FLAG_REJECTED
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
@@ -225,6 +229,8 @@ fun ViewerScreen(
     }
 
     val scope = rememberCoroutineScope()
+    // The other file of a raw and JPEG pair is flagged along with the one in front.
+    val flagPartner = item?.let { partners[it.id] }?.takeIf { stacked }
     // The video being played, if any: turning to another photo stops it.
     var playing by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(item?.id) { playing = null }
@@ -233,9 +239,17 @@ fun ViewerScreen(
     PhotoTheme {
     Scaffold(
         // With a keyboard: arrows turn the page, Delete puts the photo in the trash, Escape closes,
-        // plus and minus zoom and 0 shows the whole photo.
+        // plus and minus zoom and 0 shows the whole photo, 1 to 5 give stars, and P, X and U pick, reject and clear.
         modifier = Modifier.keys { event ->
             when (event.key) {
+                Key.P -> viewModel.setFlag(FLAG_PICKED, flagPartner).let { true }
+                Key.X -> viewModel.setFlag(FLAG_REJECTED, flagPartner).let { true }
+                Key.U -> item?.flag?.let { viewModel.setFlag(it, flagPartner) }.let { true }
+                Key.One, Key.NumPad1 -> viewModel.setRating(1).let { true }
+                Key.Two, Key.NumPad2 -> viewModel.setRating(2).let { true }
+                Key.Three, Key.NumPad3 -> viewModel.setRating(3).let { true }
+                Key.Four, Key.NumPad4 -> viewModel.setRating(4).let { true }
+                Key.Five, Key.NumPad5 -> viewModel.setRating(5).let { true }
                 Key.Zero, Key.NumPad0 -> zoom.reset().let { true }
                 Key.Equals, Key.Plus, Key.NumPadAdd -> zoom.zoomBy(ZOOM_KEY_STEP).let { true }
                 Key.Minus, Key.NumPadSubtract -> zoom.zoomBy(1f / ZOOM_KEY_STEP).let { true }
@@ -280,7 +294,12 @@ fun ViewerScreen(
             if (!window.sidePanel && item != null) {
                 Column(Modifier.background(Color.Black).navigationBarsPadding()) {
                     Strip(state, item, onRestore = { confirmingRestore = true })
-                    AnimatedVisibility(rating) { Stars(item.rating, viewModel::setRating, Modifier.align(Alignment.CenterHorizontally)) }
+                    AnimatedVisibility(rating) {
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Stars(item.rating, viewModel::setRating)
+                            Flags(item.flag, onFlag = { viewModel.setFlag(it, flagPartner) })
+                        }
+                    }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     actions()
                 }
@@ -351,6 +370,7 @@ fun ViewerScreen(
                             state = state,
                             item = item,
                             onRate = viewModel::setRating,
+                            onFlag = { viewModel.setFlag(it, flagPartner) },
                             onRestore = { confirmingRestore = true },
                             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                         )
@@ -364,7 +384,7 @@ fun ViewerScreen(
 
     if (showingInfo && item != null) {
         ModalBottomSheet(onDismissRequest = { showingInfo = false }) {
-            Details(state, item, onRate = viewModel::setRating, onRestore = { confirmingRestore = true }, modifier = Modifier.navigationBarsPadding())
+            Details(state, item, onRate = viewModel::setRating, onFlag = { viewModel.setFlag(it, flagPartner) }, onRestore = { confirmingRestore = true }, modifier = Modifier.navigationBarsPadding())
         }
     }
     if (confirmingRestore) {
@@ -463,12 +483,32 @@ private fun Stars(rating: Int, onRate: (Int) -> Unit, modifier: Modifier = Modif
     }
 }
 
+/** Pick and reject for a cull; the one that is set is marked, and tapping it again takes it back. */
+@Composable
+private fun Flags(flag: Int, onFlag: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        FilterChip(
+            selected = flag == FLAG_PICKED,
+            onClick = { onFlag(FLAG_PICKED) },
+            label = { Text(stringResource(R.string.flag_pick)) },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_flag), contentDescription = null, modifier = Modifier.size(16.dp)) },
+        )
+        FilterChip(
+            selected = flag == FLAG_REJECTED,
+            onClick = { onFlag(FLAG_REJECTED) },
+            label = { Text(stringResource(R.string.flag_reject)) },
+            leadingIcon = { Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp)) },
+        )
+    }
+}
+
 /** Everything known about the photo: when, how, where, and its stars. */
 @Composable
 private fun Details(
     state: ViewerUiState,
     item: MediaItemEntity,
     onRate: (Int) -> Unit,
+    onFlag: (Int) -> Unit,
     onRestore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -492,6 +532,7 @@ private fun Details(
             if (item.geoSource != GeoSource.NONE) TextButton(onClick = { context.showOnMap(item) }) { Text(stringResource(R.string.show_on_map)) }
         }
         Stars(item.rating, onRate, Modifier.offset(x = (-10).dp))
+        Flags(item.flag, onFlag = onFlag)
         if (state.edited && item.kind != MediaKind.VIDEO) {
             OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text(stringResource(R.string.restore_original)) }
         }

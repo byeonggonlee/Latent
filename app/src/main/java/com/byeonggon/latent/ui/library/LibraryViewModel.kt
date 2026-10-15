@@ -11,6 +11,8 @@ import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.db.AlbumEntity
 import com.byeonggon.latent.data.db.AlbumItemEntity
 import com.byeonggon.latent.data.db.AlbumSummary
+import com.byeonggon.latent.data.db.FLAG_PICKED
+import com.byeonggon.latent.data.db.FLAG_REJECTED
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.PhotoEdit
@@ -65,6 +67,14 @@ enum class LibraryFilter(@StringRes val label: Int, val kind: MediaKind?) {
     VIDEO(R.string.filter_videos, MediaKind.VIDEO),
 }
 
+/** Which photos of a cull are shown. */
+enum class FlagFilter(@StringRes val label: Int, val accepts: (Int) -> Boolean) {
+    ALL(R.string.flag_all, { true }),
+    PICKED(R.string.flag_picked, { it == FLAG_PICKED }),
+    NOT_REJECTED(R.string.flag_not_rejected, { it != FLAG_REJECTED }),
+    REJECTED(R.string.flag_rejected, { it == FLAG_REJECTED }),
+}
+
 /** Whose photos are shown: those of the library's own folder, those listed from the phone, or both. */
 enum class LibrarySource(@StringRes val label: Int) {
     ALL(R.string.source_all),
@@ -103,6 +113,7 @@ data class LibraryUiState(
     val showingTrash: Boolean = false,
     val trashCount: Int = 0,
     val source: LibrarySource = LibrarySource.ALL,
+    val flagFilter: FlagFilter = FlagFilter.ALL,
     /** Every album, with how many it holds, and the one the library is narrowed to, if any. */
     val albums: List<AlbumSummary> = emptyList(),
     val album: AlbumSummary? = null,
@@ -120,6 +131,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val leastRating = MutableStateFlow(0)
     private val stacked = MutableStateFlow(true)
     private val source = MutableStateFlow(LibrarySource.ALL)
+    private val flagFilter = MutableStateFlow(FlagFilter.ALL)
     private val showingTrash = MutableStateFlow(false)
     private val trash = container.trash
 
@@ -134,18 +146,28 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     @OptIn(ExperimentalCoroutinesApi::class)
     private val albumMembers = album.flatMapLatest { id -> if (id == null) flowOf(null) else albumDao.observeMembers(id).map { it.toSet() } }
 
-    private data class Narrowing(val filter: LibraryFilter, val leastRating: Int, val stacked: Boolean, val source: LibrarySource, val members: Set<Long>?)
+    private data class Narrowing(
+        val filter: LibraryFilter,
+        val leastRating: Int,
+        val stacked: Boolean,
+        val source: LibrarySource,
+        val members: Set<Long>?,
+        val flags: FlagFilter,
+    )
 
-    private val narrowing = combine(filter, leastRating, stacked, source, albumMembers) { filter, leastRating, stacked, source, members ->
-        Narrowing(filter, leastRating, stacked, source, members)
-    }
+    private val narrowing = combine(
+        combine(filter, leastRating, stacked, source, albumMembers) { filter, leastRating, stacked, source, members ->
+            Narrowing(filter, leastRating, stacked, source, members, FlagFilter.ALL)
+        },
+        flagFilter,
+    ) { narrowed, flags -> narrowed.copy(flags = flags) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val listed = combine(
         showingTrash.flatMapLatest { inTrash -> if (inTrash) trash.items else mediaDao.observeAll() },
         narrowing,
     ) { items, narrowed ->
-        val (filter, leastRating, stacked, source, members) = narrowed
+        val (filter, leastRating, stacked, source, members, flags) = narrowed
         val zone = ZoneId.systemDefault()
         val partners = partnersOf(items)
         // Only the JPEG of a pair is listed, unless raw files are what is asked for.
@@ -158,9 +180,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             .filter { (filter.kind == null || it.kind == filter.kind) && it.rating >= leastRating && it.id !in hidden }
             .filter { source == LibrarySource.ALL || (source == LibrarySource.PHONE) == (it.origin == MediaOrigin.PHONE) }
             .filter { members == null || it.id in members }
+            .filter { flags.accepts(it.flag) }
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
-        LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source)
+        LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags)
     }.flowOn(Dispatchers.Default)
 
     val state: StateFlow<LibraryUiState> =
@@ -262,6 +285,34 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     fun setSource(value: LibrarySource) {
         source.value = value
+    }
+
+    fun setFlagFilter(value: FlagFilter) {
+        flagFilter.value = value
+    }
+
+    /** Flags every selected photo, with the other file of each raw and JPEG pair, as picked, rejected, or (0) neither. */
+    fun flagSelected(flag: Int) {
+        viewModelScope.launch {
+            val current = state.value
+            val chosen = selectedItems()
+            val partners = mediaDao.byIds(chosen.mapNotNull { current.partners[it.id] })
+            mediaDao.setFlag((chosen + partners).map { it.id }.distinct(), flag)
+            activity.update { it.copy(selected = emptySet(), message = plural(R.plurals.flagged_count, chosen.size)) }
+        }
+    }
+
+    /** Puts every rejected photo in the trash, as selecting and deleting them would. */
+    fun trashRejected() {
+        viewModelScope.launch {
+            val rejected = mediaDao.rejectedIds()
+            if (rejected.isEmpty()) {
+                activity.update { it.copy(message = text(R.string.no_rejected)) }
+                return@launch
+            }
+            activity.update { it.copy(selected = rejected.toSet()) }
+            trashSelected()
+        }
     }
 
     /** Narrows the library to an album, or back to all of it for null. */
