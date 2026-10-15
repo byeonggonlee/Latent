@@ -75,6 +75,39 @@ interface MediaDao {
     suspend fun deleteByIds(ids: List<Long>)
 }
 
+/** An album with how many photos and videos it holds. */
+data class AlbumSummary(
+    @androidx.room.Embedded val album: AlbumEntity,
+    val count: Int,
+)
+
+@Dao
+interface AlbumDao {
+    @Query(
+        "SELECT albums.*, COUNT(album_items.mediaId) AS count FROM albums " +
+            "LEFT JOIN album_items ON album_items.albumId = albums.id GROUP BY albums.id ORDER BY albums.name COLLATE NOCASE, albums.id",
+    )
+    fun observeAll(): Flow<List<AlbumSummary>>
+
+    @Query("SELECT mediaId FROM album_items WHERE albumId = :albumId")
+    fun observeMembers(albumId: Long): Flow<List<Long>>
+
+    @Insert
+    suspend fun insert(album: AlbumEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addItems(items: List<AlbumItemEntity>)
+
+    @Query("DELETE FROM album_items WHERE albumId = :albumId AND mediaId IN (:mediaIds)")
+    suspend fun removeItems(albumId: Long, mediaIds: List<Long>)
+
+    @Query("UPDATE albums SET name = :name WHERE id = :albumId")
+    suspend fun rename(albumId: Long, name: String)
+
+    @Query("DELETE FROM albums WHERE id = :albumId")
+    suspend fun delete(albumId: Long)
+}
+
 @Dao
 interface SyncRecordDao {
     @Query("SELECT sourceKey FROM sync_records")
@@ -148,8 +181,10 @@ interface LocationDao {
         SyncedFolderEntity::class,
         LocationPointEntity::class,
         FilterEntity::class,
+        AlbumEntity::class,
+        AlbumItemEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -158,6 +193,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncedFolderDao(): SyncedFolderDao
     abstract fun locationDao(): LocationDao
     abstract fun filterDao(): FilterDao
+    abstract fun albumDao(): AlbumDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -209,7 +245,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `albums` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `album_items` (`albumId` INTEGER NOT NULL, `mediaId` INTEGER NOT NULL, " +
+                        "`addedAt` INTEGER NOT NULL, PRIMARY KEY(`albumId`, `mediaId`), " +
+                        "FOREIGN KEY(`albumId`) REFERENCES `albums`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                        "FOREIGN KEY(`mediaId`) REFERENCES `media_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_album_items_mediaId` ON `album_items` (`mediaId`)")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
     }
 }

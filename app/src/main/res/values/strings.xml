@@ -464,4 +464,28 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="about_trademarks">Sony and ZV-E10 are trademarks of Sony Group Corporation; Google Timeline is a feature of Google LLC. Latent is not affiliated with or endorsed by either.</string>
     <string name="about_privacy">Privacy policy</string>
     <string name="about_source">Source code and license</string>
+    <string name="albums">Albums…</string>
+    <string name="albums_title">Albums</string>
+    <string name="album_all_photos">All photos</string>
+    <string name="album_new">New album…</string>
+    <string name="album_name">Name</string>
+    <string name="album_none">No albums yet. Pick photos, then choose Add to album.</string>
+    <string name="album_made">Album “%1$s” made.</string>
+    <string name="album_add">Add to album</string>
+    <string name="album_remove">Take out of album</string>
+    <string name="album_delete">Delete album</string>
+    <string name="album_delete_question">Delete this album?</string>
+    <string name="album_delete_detail">The photos stay in the library.</string>
+    <string name="album_choose">Add to which album?</string>
+    <string name="album_count">%1$s (%2$s)</string>
+    <string name="album_filter_clear">Show everything again</string>
+    <string name="create">Create</string>
+    <plurals name="added_to_album">
+        <item quantity="one">%1$d photo added to the album.</item>
+        <item quantity="other">%1$d photos added to the album.</item>
+    </plurals>
+    <plurals name="removed_from_album">
+        <item quantity="one">%1$d photo taken out of the album.</item>
+        <item quantity="other">%1$d photos taken out of the album.</item>
+    </plurals>
 </resources>

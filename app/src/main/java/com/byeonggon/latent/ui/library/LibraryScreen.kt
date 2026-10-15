@@ -286,6 +286,8 @@ internal fun monthsAlongTheGrid(days: List<LibraryDay>, leading: Int): MonthsAlo
 @Composable
 private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
     var rating by remember { mutableStateOf(false) }
+    var choosingAlbum by remember { mutableStateOf(false) }
+    if (choosingAlbum) AlbumPickDialog(state, viewModel, onDismiss = { choosingAlbum = false })
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -306,6 +308,8 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
                 }
             }
         }
+        TextButton(onClick = { choosingAlbum = true }) { Text(stringResource(R.string.album_add)) }
+        if (state.album != null) TextButton(onClick = viewModel::removeSelectedFromAlbum) { Text(stringResource(R.string.album_remove)) }
         TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text(stringResource(R.string.paste_edit)) }
         TextButton(onClick = viewModel::exportSelected) { Text(stringResource(R.string.raw_to_jpeg)) }
         TextButton(onClick = viewModel::shareSelected) { Text(stringResource(R.string.share)) }
@@ -451,6 +455,16 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 ),
             )
         }
+        // The album the library is narrowed to shows too, and can be left.
+        state.album?.let { shown ->
+            InputChip(
+                selected = true,
+                onClick = { viewModel.showAlbum(null) },
+                label = { Text(shown.album.name) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.album_filter_clear), modifier = Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(50),
+            )
+        }
         // Narrowing by stars is chosen from the menu; here it shows, and can be taken off.
         if (state.leastRating > 0) {
             InputChip(
@@ -470,7 +484,9 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
     var open by remember { mutableStateOf(false) }
     var rating by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
+    var albums by remember { mutableStateOf(false) }
     if (about) AboutDialog(onDismiss = { about = false })
+    if (albums) AlbumsDialog(state, viewModel, onDismiss = { albums = false })
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -512,6 +528,13 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel) {
                 onClick = {
                     open = false
                     viewModel.setStacked(!state.stacked)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.albums)) },
+                onClick = {
+                    open = false
+                    albums = true
                 },
             )
             DropdownMenuItem(

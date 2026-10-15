@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.PhoneLibrary
+import com.byeonggon.latent.data.db.AlbumEntity
+import com.byeonggon.latent.data.db.AlbumItemEntity
+import com.byeonggon.latent.data.db.AlbumSummary
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.PhotoEdit
@@ -21,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
@@ -99,6 +103,9 @@ data class LibraryUiState(
     val showingTrash: Boolean = false,
     val trashCount: Int = 0,
     val source: LibrarySource = LibrarySource.ALL,
+    /** Every album, with how many it holds, and the one the library is narrowed to, if any. */
+    val albums: List<AlbumSummary> = emptyList(),
+    val album: AlbumSummary? = null,
     /** Set while the person is choosing which folders of the phone to list. */
     val phoneChoice: PhoneFolderChoice? = null,
     /** Photos of other apps picked out for deletion: the system asks the person, with this, before it does. */
@@ -120,14 +127,25 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val activity = MutableStateFlow(LibraryUiState())
     private var batch: Job? = null
 
+    private val albumDao = container.database.albumDao()
+    private val album = MutableStateFlow<Long?>(null)
+
+    /** The photos of the album the library is narrowed to; null when it is not. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val albumMembers = album.flatMapLatest { id -> if (id == null) flowOf(null) else albumDao.observeMembers(id).map { it.toSet() } }
+
+    private data class Narrowing(val filter: LibraryFilter, val leastRating: Int, val stacked: Boolean, val source: LibrarySource, val members: Set<Long>?)
+
+    private val narrowing = combine(filter, leastRating, stacked, source, albumMembers) { filter, leastRating, stacked, source, members ->
+        Narrowing(filter, leastRating, stacked, source, members)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private val listed = combine(
         showingTrash.flatMapLatest { inTrash -> if (inTrash) trash.items else mediaDao.observeAll() },
-        filter,
-        leastRating,
-        stacked,
-        source,
-    ) { items, filter, leastRating, stacked, source ->
+        narrowing,
+    ) { items, narrowed ->
+        val (filter, leastRating, stacked, source, members) = narrowed
         val zone = ZoneId.systemDefault()
         val partners = partnersOf(items)
         // Only the JPEG of a pair is listed, unless raw files are what is asked for.
@@ -139,13 +157,15 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         val days = items
             .filter { (filter.kind == null || it.kind == filter.kind) && it.rating >= leastRating && it.id !in hidden }
             .filter { source == LibrarySource.ALL || (source == LibrarySource.PHONE) == (it.origin == MediaOrigin.PHONE) }
+            .filter { members == null || it.id in members }
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
         LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source)
     }.flowOn(Dispatchers.Default)
 
     val state: StateFlow<LibraryUiState> =
-        combine(listed, activity, edits.copied, showingTrash, trash.items.map { it.size }) { listed, activity, copied, inTrash, trashCount ->
+        combine(listed, activity, edits.copied, showingTrash, combine(trash.items.map { it.size }, albumDao.observeAll(), album) { trashCount, albums, shown -> Triple(trashCount, albums, shown) }) { listed, activity, copied, inTrash, extras ->
+            val (trashCount, albums, shownAlbum) = extras
             // A photo that is no longer listed, deleted or filtered out, is no longer selected either.
             val shown = listed.days.flatMapTo(HashSet()) { day -> day.items.map { it.id } }
             listed.copy(
@@ -158,6 +178,8 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 deleteRequest = activity.deleteRequest,
                 showingTrash = inTrash,
                 trashCount = trashCount,
+                albums = albums,
+                album = albums.firstOrNull { it.album.id == shownAlbum },
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
@@ -240,6 +262,63 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     fun setSource(value: LibrarySource) {
         source.value = value
+    }
+
+    /** Narrows the library to an album, or back to all of it for null. */
+    fun showAlbum(id: Long?) {
+        album.value = id
+        clearSelection()
+    }
+
+    /** Makes an album called [name], with the selected photos in it if [withSelected]. */
+    fun createAlbum(name: String, withSelected: Boolean) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            val id = albumDao.insert(AlbumEntity(name = trimmed, createdAt = System.currentTimeMillis()))
+            if (withSelected) addToAlbum(id)
+            activity.update { it.copy(selected = emptySet(), message = text(R.string.album_made, trimmed)) }
+        }
+    }
+
+    /** Puts the selected photos in an album, along with the other file of each raw and JPEG pair. */
+    fun addSelectedToAlbum(albumId: Long) {
+        viewModelScope.launch {
+            val count = addToAlbum(albumId)
+            activity.update { it.copy(selected = emptySet(), message = plural(R.plurals.added_to_album, count)) }
+        }
+    }
+
+    private suspend fun addToAlbum(albumId: Long): Int {
+        val current = state.value
+        val chosen = selectedItems()
+        val partners = mediaDao.byIds(chosen.mapNotNull { current.partners[it.id] })
+        val now = System.currentTimeMillis()
+        albumDao.addItems((chosen + partners).distinctBy { it.id }.map { AlbumItemEntity(albumId, it.id, now) })
+        return chosen.size
+    }
+
+    /** Takes the selected photos out of the album that is shown; they stay in the library. */
+    fun removeSelectedFromAlbum() {
+        val albumId = album.value ?: return
+        viewModelScope.launch {
+            val current = state.value
+            val chosen = selectedItems()
+            val partners = mediaDao.byIds(chosen.mapNotNull { current.partners[it.id] })
+            albumDao.removeItems(albumId, (chosen + partners).map { it.id }.distinct())
+            activity.update { it.copy(selected = emptySet(), message = plural(R.plurals.removed_from_album, chosen.size)) }
+        }
+    }
+
+    fun renameAlbum(id: Long, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isNotEmpty()) viewModelScope.launch { albumDao.rename(id, trimmed) }
+    }
+
+    /** Deletes an album; its photos stay in the library. */
+    fun deleteAlbum(id: Long) {
+        if (album.value == id) album.value = null
+        viewModelScope.launch { albumDao.delete(id) }
     }
 
     /** Looks up the folders of the phone that hold photos, for the person to choose which to list. */
@@ -419,7 +498,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun text(@StringRes id: Int): String = getApplication<Application>().getString(id)
+    private fun text(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
 
     private fun plural(@PluralsRes id: Int, count: Int): String =
         getApplication<Application>().resources.getQuantityString(id, count, count)

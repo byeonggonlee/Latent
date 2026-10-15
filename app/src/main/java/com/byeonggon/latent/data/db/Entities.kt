@@ -2,6 +2,7 @@ package com.byeonggon.latent.data.db
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -67,6 +68,30 @@ data class MediaItemEntity(
      */
     val editsAsSettings: Boolean get() = kind == MediaKind.RAW || origin == MediaOrigin.PHONE
 }
+
+/** A named group of photos and videos the person put together, such as a trip. */
+@Entity(tableName = "albums")
+data class AlbumEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val createdAt: Long,
+)
+
+/** A photo or video in an album. It leaves the album when either is deleted. */
+@Entity(
+    tableName = "album_items",
+    primaryKeys = ["albumId", "mediaId"],
+    foreignKeys = [
+        ForeignKey(entity = AlbumEntity::class, parentColumns = ["id"], childColumns = ["albumId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = MediaItemEntity::class, parentColumns = ["id"], childColumns = ["mediaId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("mediaId")],
+)
+data class AlbumItemEntity(
+    val albumId: Long,
+    val mediaId: Long,
+    val addedAt: Long,
+)
 
 /** Remembers every camera file ever imported, so removing it from the library does not re-import it. */
 @Entity(tableName = "sync_records")

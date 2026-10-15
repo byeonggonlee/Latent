@@ -19,6 +19,8 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Selecting several photos: rating, paste edit, share, delete, RAW to JPEG.
 - [ ] Right click menu, with a mouse on a tablet or laptop window: open, select, paste, share, delete.
 
+- [ ] Albums: "Add to album" from the selection (also with the typed name of a new album: the name box could not be tried in the tests), "Albums…" in the menu to look at one, the chip that leaves it, "Take out of album", deleting an album.
+
 ## Photos on this phone (other apps' photos)
 
 - [ ] "Photos on this phone…" lists the folders with counts; `DCIM/Camera/` is pre-ticked the first time. A folder sorted into years and days (like `2026/2026-10-08/`) counts as one choice.
@@ -71,4 +73,4 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 
 ## Not yet decided
 
-- Albums and edit versions (virtual copies): how they should look and be stored.
+- Edit versions (virtual copies): how they should look and be stored. Albums are done.

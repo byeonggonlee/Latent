@@ -3,6 +3,8 @@ package com.byeonggon.latent.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import com.byeonggon.latent.data.db.AlbumEntity
+import com.byeonggon.latent.data.db.AlbumItemEntity
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.FilterEntity
 import com.byeonggon.latent.data.db.MediaOrigin
@@ -61,6 +63,13 @@ class MigrationTest {
             assertEquals(emptyList<FilterEntity>(), database.filterDao().observeAll().first())
             assertEquals(listOf("camera|DSC00001.JPG|10|1"), database.syncRecordDao().allKeys())
             assertEquals(37.5, database.locationDao().lastAtOrBefore(5)!!.latitude, 0.0)
+
+            // Albums came in the last version: the photo can be put in one and leaves it with the album.
+            val albumId = database.albumDao().insert(AlbumEntity(name = "Trip", createdAt = 1))
+            database.albumDao().addItems(listOf(AlbumItemEntity(albumId, item.id, 2)))
+            assertEquals(listOf(item.id), database.albumDao().observeMembers(albumId).first())
+            database.albumDao().delete(albumId)
+            assertEquals(emptyList<Long>(), database.albumDao().observeMembers(albumId).first())
 
             val folder = SyncedFolderEntity("camera", "10001:/2024-12-08/", "fingerprint", "PHOTO,RAW")
             database.syncedFolderDao().upsert(folder)

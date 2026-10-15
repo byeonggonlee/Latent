@@ -14,7 +14,7 @@ phone's location, and develops them: raw files included, without a cloud or an a
 - **Edits** with exposure and tone curves, colour mixer and grading, texture, clarity, dehaze,
   sharpening and noise reduction, filters, cropping and perspective, masks (linear, radial, brush)
   and spot healing. Edits stay editable; a JPEG's original is kept and can be restored.
-- **Keeps a library** by day, with ratings, raw and JPEG shown as one, a trash, and sharing. It can list
+- **Keeps a library** by day, with ratings, albums, raw and JPEG shown as one, a trash, and sharing. It can list
   the phone's own photos too, from the folders you choose, without ever changing them.
 - **Shows your photos on a map** (OpenStreetMap), once you turn online maps on.
 - Fits phones, foldables, tablets and laptop windows, with keyboard and mouse: arrow keys to turn pages,
