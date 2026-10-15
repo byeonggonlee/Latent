@@ -17,7 +17,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 
 ## Foldables
 
-- [ ] Galaxy Z Fold 8, unfolded, in portrait and in landscape, and folded: nothing (top bar buttons, the side panel, the map's menu, the viewer's bar) is under the camera. The screens now stay out of the display cutout as well as the system bars; check that landscape did not gain an odd margin on the camera's side.
+- [ ] Galaxy Z Fold 8, unfolded, in portrait and in landscape, and folded: nothing (top bar buttons, the side panel, the map's menu, the viewer's bar) is under the camera. The screens now stay out of the display cutout as well as the system bars; check that landscape did not gain an odd margin on the camera's side. The side tab rail's buttons (Library, Camera, Map, Location) now sit in the middle of the side, not at the top: the Map button was under the camera. If the camera still covers something, say which screen; the next step would be a setting to put the tabs along the bottom.
 
 ## Library
 

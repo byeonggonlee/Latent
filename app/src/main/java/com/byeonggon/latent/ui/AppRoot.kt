@@ -2,6 +2,7 @@ package com.byeonggon.latent.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -93,6 +94,8 @@ fun AppRoot(startOnSync: Boolean) {
         Scaffold(contentWindowInsets = SafeInsets) { padding ->
             Row(Modifier.fillMaxSize().padding(padding)) {
                 NavigationRail(windowInsets = SafeInsets) {
+                    // In the middle of the side, not at the top: a foldable's camera sits near the top corner of its inner screen.
+                    Spacer(Modifier.weight(1f))
                     Tab.entries.forEach { entry ->
                         NavigationRailItem(
                             selected = tab == entry,
@@ -101,6 +104,7 @@ fun AppRoot(startOnSync: Boolean) {
                             label = { Text(stringResource(entry.label)) },
                         )
                     }
+                    Spacer(Modifier.weight(1f))
                 }
                 Box(Modifier.weight(1f).fillMaxSize()) { content() }
             }
