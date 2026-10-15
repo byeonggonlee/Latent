@@ -14,7 +14,23 @@ enum class MaskShape {
 
     /** Full inside an ellipse, fading out towards its edge. */
     RADIAL,
+
+    /** What a model found in the picture, such as its subject; with [Mask.inverted], everything else. */
+    DETECTED,
 }
+
+/** What a model is asked to find in a picture. */
+enum class DetectedKind {
+    /** What stands out: a person, an animal, a thing in front of its background. */
+    SUBJECT,
+}
+
+/**
+ * Where a model found a [kind] of thing in a picture. Its outline is kept in [MaskStore] under [raster],
+ * not with the edit; [model] and [modelVersion] name what found it, so that a newer model never
+ * changes an edit by itself.
+ */
+data class Detection(val kind: DetectedKind, val raster: String, val model: String, val modelVersion: Int)
 
 /**
  * One movement of the brush: the places it went through, as pairs of fractions of the whole picture's
@@ -31,6 +47,8 @@ data class BrushStroke(val points: List<Float>, val radius: Float, val erasing: 
  * at the end point. A [MaskShape.RADIAL] mask is an ellipse around the start point whose edge reaches
  * the end point's distance across and down; [feather] is the share of the way from its centre to its
  * edge over which it fades out. [inverted] swaps the part it covers with the part it leaves alone.
+ * A [MaskShape.DETECTED] mask has no points: it covers what its [detection] found, its edge softened by
+ * [feather], and brush [strokes] add to it or take from it.
  */
 data class Mask(
     val shape: MaskShape,
@@ -40,14 +58,21 @@ data class Mask(
     val endY: Float,
     val feather: Float = 0.5f,
     val inverted: Boolean = false,
-    /** What was painted, for a [MaskShape.BRUSH] mask. */
+    /** What was painted, for a [MaskShape.BRUSH] mask, or painted onto a [MaskShape.DETECTED] one. */
     val strokes: List<BrushStroke> = emptyList(),
+    /** What a model found, for a [MaskShape.DETECTED] mask. */
+    val detection: Detection? = null,
 ) {
+    /** Whether the mask is laid out on a grid, as [BrushRaster] does, rather than worked out for each place. */
+    internal val isRaster: Boolean get() = shape == MaskShape.BRUSH || shape == MaskShape.DETECTED
+
     /**
      * How much of a local edit applies at ([x], [y]), from 0 to 1. The whole picture's size, in any
      * unit, gives distances across and down their true proportion.
      */
     fun weightAt(x: Float, y: Float, pictureWidth: Float, pictureHeight: Float): Float {
+        // The grid has the inversion in it already.
+        if (isRaster) return BrushRaster.of(this, pictureWidth / pictureHeight).weightAt(x, y)
         val across = (endX - startX) * pictureWidth
         val down = (endY - startY) * pictureHeight
         val covered = when (shape) {
@@ -55,7 +80,7 @@ data class Mask(
                 val length = across * across + down * down
                 if (length <= 0f) 0f else 1f - eased(((x - startX) * pictureWidth * across + (y - startY) * pictureHeight * down) / length)
             }
-            MaskShape.BRUSH -> BrushRaster.of(this, pictureWidth / pictureHeight).weightAt(x, y)
+            MaskShape.BRUSH, MaskShape.DETECTED -> 0f
             MaskShape.EVERYWHERE -> 1f
             MaskShape.RADIAL -> {
                 if (across == 0f || down == 0f) {
@@ -80,16 +105,12 @@ data class Mask(
 
 /**
  * Looks up how much of [mask] covers each pixel of a picture [pictureWidth] by [pictureHeight] in any
- * unit. Made once for a rendering: a painted mask is laid out on its grid here, not for every pixel.
+ * unit. Made once for a rendering: a painted or detected mask is laid out on its grid here, not for every pixel.
  */
 internal class MaskWeights(private val mask: Mask, private val pictureWidth: Float, private val pictureHeight: Float) {
-    private val raster = if (mask.shape == MaskShape.BRUSH) BrushRaster.of(mask, pictureWidth / pictureHeight) else null
+    private val raster = if (mask.isRaster) BrushRaster.of(mask, pictureWidth / pictureHeight) else null
 
-    fun at(x: Float, y: Float): Float {
-        if (raster == null) return mask.weightAt(x, y, pictureWidth, pictureHeight)
-        val covered = raster.weightAt(x, y)
-        return if (mask.inverted) 1f - covered else covered
-    }
+    fun at(x: Float, y: Float): Float = raster?.weightAt(x, y) ?: mask.weightAt(x, y, pictureWidth, pictureHeight)
 }
 
 /**

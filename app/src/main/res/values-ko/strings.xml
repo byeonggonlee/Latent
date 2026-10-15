@@ -276,7 +276,7 @@
     <string name="add_brush">+ 브러시</string>
     <string name="add_linear">+ 선형</string>
     <string name="add_radial">+ 원형</string>
-    <string name="masks_hint">사진의 일부분만 보정하려면 마스크를 추가하세요. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에, 색상은 하늘의 파랑처럼 고른 색에만 씁니다. 어떤 마스크든 한 가지 색으로 한정할 수 있습니다.</string>
+    <string name="masks_hint">사진의 일부분만 보정하려면 마스크를 추가하세요. 피사체는 눈에 띄는 사람·동물·사물을, 배경은 그 나머지를 휴대전화 안에서 찾아 줍니다. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에, 색상은 하늘의 파랑처럼 고른 색에만 씁니다. 어떤 마스크든 한 가지 색으로 한정할 수 있습니다.</string>
     <string name="invert">반전</string>
     <string name="delete_mask">마스크 삭제</string>
     <string name="paint">칠하기</string>
@@ -566,6 +566,16 @@
     </plurals>
     <string name="mask_colour">색상 %1$d</string>
     <string name="add_colour">+ 색상</string>
+    <string name="add_subject">+ 피사체</string>
+    <string name="add_background">+ 배경</string>
+    <string name="mask_subject">피사체 %1$d</string>
+    <string name="mask_background">배경 %1$d</string>
+    <string name="finding_subject">피사체를 찾는 중…</string>
+    <string name="subject_not_found">이 사진에서는 피사체로 삼을 만큼 뚜렷하게 드러나는 것을 찾지 못했습니다.</string>
+    <string name="subject_failed">피사체를 찾지 못했습니다. 다시 시도해 보세요.</string>
+    <string name="subject_unavailable">이 휴대전화에서는 피사체·배경 마스크를 쓸 수 없어 버튼을 숨겼습니다. 다른 마스크는 그대로 쓸 수 있습니다.</string>
+    <string name="mask_outline_lost">이 마스크의 윤곽이 없어져서 아무것도 바뀌지 않습니다.</string>
+    <string name="detect_again">다시 찾기</string>
     <string name="colour_only">이 색상에만</string>
     <string name="colour_any">전체</string>
     <string name="colour_spread">색상 범위</string>

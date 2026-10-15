@@ -125,12 +125,14 @@ internal object GpuTone {
                 val mask = local.mask
                 localInts[base] = when (mask.shape) {
                     MaskShape.LINEAR -> 0
-                    MaskShape.BRUSH -> 1
+                    // Painted and detected masks are both looked up on their grid, as on the processor.
+                    MaskShape.BRUSH, MaskShape.DETECTED -> 1
                     MaskShape.RADIAL -> 2
                     MaskShape.EVERYWHERE -> 3
                 }
-                localInts[base + 1] = if (mask.inverted) 1 else 0
-                if (mask.shape == MaskShape.BRUSH) {
+                // A grid has the inversion in it already.
+                localInts[base + 1] = if (mask.inverted && !mask.isRaster) 1 else 0
+                if (mask.isRaster) {
                     val placement = Placement(renderer.edit.framing, frameWidth, frameHeight)
                     val raster = BrushRaster.of(mask, placement.wholeWidth / placement.wholeHeight)
                     localInts[base + 2] = add(raster.coverage)
