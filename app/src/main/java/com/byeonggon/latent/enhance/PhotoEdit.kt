@@ -107,6 +107,13 @@ data class ColorGrading(
 )
 
 /**
+ * A LUT the person imported, by the [id] it is kept under in [LutStore], and how much of it to take,
+ * from 0 to 1. The table itself is kept in a file of its own, not with the edit; without that file, the
+ * edit looks as if it had no LUT.
+ */
+data class LutLook(val id: String, val intensity: Float = 1f)
+
+/**
  * Everything chosen for one photo. It is kept with the photo's library entry while the original
  * stays untouched, so an edit can be reopened, changed and undone at any time.
  */
@@ -125,9 +132,12 @@ data class PhotoEdit(
     val locals: List<LocalEdit> = emptyList(),
     /** Blemishes taken out. */
     val spots: List<Spot> = emptyList(),
+    /** A LUT laid over the colours, after the mixer and the grading. */
+    val lut: LutLook? = null,
 ) {
     /** Whether the picture's tones and colours come out any different from the original's. */
-    val changesColors: Boolean get() = copy(lensCorrection = true, framing = Framing()) != PhotoEdit()
+    val changesColors: Boolean
+        get() = copy(lensCorrection = true, framing = Framing(), lut = lut?.takeIf { it.intensity > 0f }) != PhotoEdit()
 
     /** Whether the picture comes out any different from the original at all. */
     val changesPicture: Boolean get() = changesColors || framing != Framing()
@@ -155,6 +165,8 @@ data class PhotoEdit(
             mixer = ColorMixer(mixer.hue.map(::dosed), mixer.saturation.map(::dosed), mixer.luminance.map(::dosed)),
             grading = ColorGrading(dosed(grading.shadows), dosed(grading.midtones), dosed(grading.highlights), dosed(grading.balance)),
             monochrome = monochrome && amount > 0f,
+            // A LUT is kept at no strength rather than dropped, so that it is still the one dosed; it cannot be more than all of it.
+            lut = lut?.let { it.copy(intensity = (it.intensity * amount).coerceIn(0f, 1f)) },
         )
     }
 
@@ -231,6 +243,10 @@ data class PhotoEdit(
             stored.addProperty(BALANCE, grading.balance)
             add(GRADING, stored)
         }
+        lut?.takeIf { it.intensity > 0f }?.let {
+            addProperty(LUT, it.id)
+            if (it.intensity != 1f) addProperty(LUT_INTENSITY, it.intensity)
+        }
     }
 
     companion object {
@@ -269,6 +285,8 @@ data class PhotoEdit(
         private const val RADIUS = "radius"
         private const val ERASING = "erasing"
         private const val POINTS = "points"
+        private const val LUT = "lut"
+        private const val LUT_INTENSITY = "lutIntensity"
 
         /**
          * Reads what [toJson] wrote. Settings that a stored edit does not mention, because they were
@@ -349,6 +367,7 @@ data class PhotoEdit(
                     val values = each.asJsonArray.map { it.asFloat }
                     Spot(values[0], values[1], values[2], values[3], values[4])
                 } ?: emptyList(),
+                lut = stored.get(LUT)?.asString?.let { LutLook(it, (stored.get(LUT_INTENSITY)?.asFloat ?: 1f).coerceIn(0f, 1f)) },
             )
         }
 

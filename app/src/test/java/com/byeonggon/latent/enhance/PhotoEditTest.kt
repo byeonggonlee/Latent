@@ -119,4 +119,32 @@ class PhotoEditTest {
         // At no strength at all nothing of the look is left, not even a colour that no longer tints anything.
         assertEquals(PhotoEdit(), elaborate.lookAt(0f))
     }
+
+    private val lutId = "0123456789abcdef0123456789abcdef"
+
+    @Test
+    fun keepsOnlyWhichLutItTakesAndHowMuchOfIt() {
+        val edit = elaborate.copy(lut = LutLook(lutId, 0.6f))
+
+        assertEquals(edit, PhotoEdit.fromJson(edit.toJson()))
+        assertEquals("""{"lut":"$lutId"}""", PhotoEdit(lut = LutLook(lutId)).toJson())
+        assertEquals("""{"lut":"$lutId","lutIntensity":0.25}""", PhotoEdit(lut = LutLook(lutId, 0.25f)).toJson())
+        // At no strength a LUT is as good as none.
+        assertEquals("{}", PhotoEdit(lut = LutLook(lutId, 0f)).toJson())
+        assertFalse(PhotoEdit(lut = LutLook(lutId, 0f)).changesColors)
+        assertTrue(PhotoEdit(lut = LutLook(lutId, 0.1f)).changesColors)
+        // Edits stored before LUTs have none; more than all of a LUT is all of it.
+        assertNull(PhotoEdit.fromJson("""{"exposure":0.5,"monochrome":true}""")!!.lut)
+        assertEquals(LutLook(lutId, 1f), PhotoEdit.fromJson("""{"lut":"$lutId","lutIntensity":3}""")!!.lut)
+    }
+
+    @Test
+    fun aLutIsPartOfALookAndIsDosedWithIt() {
+        val look = PhotoEdit(Adjustments(contrast = 0.2f), lut = LutLook(lutId, 0.8f))
+
+        assertEquals(LutLook(lutId, 0.4f), look.lookAt(0.5f).lut)
+        assertEquals(LutLook(lutId, 1f), look.lookAt(1.5f).lut)
+        assertEquals(LutLook(lutId, 0f), look.lookAt(0f).lut)
+        assertEquals(look.lut, PhotoEdit(framing = Framing(quarterTurns = 1)).withLookOf(look).lut)
+    }
 }
