@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.exifinterface.media.ExifInterface
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
@@ -100,7 +101,8 @@ class FindFlowTest {
         waitUntilShown("조건에 맞는 사진이 없습니다.")
         assertTrue(photosShown().isEmpty())
 
-        compose.onNodeWithText("지우기").performClick()
+        // The search is still up, and the empty library has a clear button of its own: either takes the conditions off.
+        compose.onAllNodesWithText("지우기")[0].performClick()
         waitForPhotos("DSC00001.JPG", "DSC00002.JPG", "DSC00003.JPG")
     }
 
@@ -113,6 +115,24 @@ class FindFlowTest {
         compose.onNodeWithText("파일 이름의 일부").performTextInput("0002")
         waitForPhotos("DSC00002.JPG")
         // With a condition set, the library says so beside its filters.
+        assertTrue(compose.onAllNodesWithText("찾기 · 조건 1개").fetchSemanticsNodes().isNotEmpty())
+    }
+
+    @Test
+    fun keepsTheSearchOpenWhenNothingMatchesAnymoreAndWhenSomethingDoesAgain() {
+        waitForPhotos("DSC00001.JPG", "DSC00002.JPG", "DSC00003.JPG")
+        openFind()
+        waitUntilShown("파일 이름의 일부")
+
+        // Nothing matches: the library behind says so, and the search stays up to be corrected.
+        compose.onNodeWithText("파일 이름의 일부").performTextInput("zzz")
+        waitUntilShown("조건에 맞는 사진이 없습니다.")
+        assertTrue(compose.onAllNodesWithText("파일 이름의 일부").fetchSemanticsNodes().isNotEmpty())
+
+        // Corrected, photos match again, and the search is still there.
+        compose.onNodeWithText("zzz").performTextReplacement("0002")
+        waitForPhotos("DSC00002.JPG")
+        assertTrue(compose.onAllNodesWithText("파일 이름의 일부").fetchSemanticsNodes().isNotEmpty())
         assertTrue(compose.onAllNodesWithText("찾기 · 조건 1개").fetchSemanticsNodes().isNotEmpty())
     }
 }

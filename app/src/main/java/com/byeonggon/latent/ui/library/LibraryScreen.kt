@@ -60,6 +60,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -141,10 +142,13 @@ fun LibraryScreen(
     val deletion = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { viewModel.deletionDone() }
     LaunchedEffect(state.deleteRequest) { state.deleteRequest?.let { deletion.launch(IntentSenderRequest.Builder(it).build()) } }
 
+    // Kept here, not in the title: the title is rebuilt when the list empties or fills again, which must not close the search.
+    var finding by rememberSaveable { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
-        LibraryContent(state, storageGranted, selecting, gridState, onOpen, onSettings, onCompare, viewModel)
+        LibraryContent(state, storageGranted, selecting, gridState, onOpen, onSettings, onCompare, { finding = true }, viewModel)
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
+    if (finding) FindSheet(state, viewModel, onDismiss = { finding = false })
     state.phoneChoice?.let { choice -> PhoneFoldersDialog(choice, viewModel) }
 }
 
@@ -188,6 +192,7 @@ private fun LibraryContent(
     onOpen: (Long) -> Unit,
     onSettings: () -> Unit,
     onCompare: (List<Long>) -> Unit,
+    onFind: () -> Unit,
     viewModel: LibraryViewModel,
 ) {
     val gridSize = LocalContext.current.appContainer.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.gridSize
@@ -205,14 +210,14 @@ private fun LibraryContent(
         } else {
             // Once the large title has scrolled away, a small one stays at the top with the menu.
             val titleGone by remember(gridState) { derivedStateOf { gridState.firstVisibleItemIndex > 0 } }
-            if (titleGone && state.days.isNotEmpty()) CompactTitle(state, viewModel, onSettings)
+            if (titleGone && state.days.isNotEmpty()) CompactTitle(state, viewModel, onSettings, onFind)
         }
         val withTitle = !selecting && !state.showingTrash && state.batch == null
         if (state.loading) {
             // Nothing to show until the first query returns; it is too quick to warrant a spinner.
         } else if (state.days.isEmpty()) {
             if (withTitle) {
-                LargeTitle(state, viewModel, onSettings)
+                LargeTitle(state, viewModel, onSettings, onFind)
                 KindFilters(state, viewModel)
             }
             EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash, onPhonePhotos = viewModel::choosePhoneFolders, searching = state.query.isActive, onClearSearch = viewModel::clearQuery)
@@ -227,7 +232,7 @@ private fun LibraryContent(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     if (withTitle) {
-                        item(key = "title", span = { GridItemSpan(maxLineSpan) }, contentType = "title") { LargeTitle(state, viewModel, onSettings) }
+                        item(key = "title", span = { GridItemSpan(maxLineSpan) }, contentType = "title") { LargeTitle(state, viewModel, onSettings, onFind) }
                         item(key = "kinds", span = { GridItemSpan(maxLineSpan) }, contentType = "kinds") { KindFilters(state, viewModel) }
                     }
                     state.days.forEach { day ->
@@ -430,7 +435,7 @@ private fun BatchBar(batch: BatchProgress, onCancel: () -> Unit) {
 
 /** The library's name in large type with what it holds, scrolling away with the photos. */
 @Composable
-private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit) {
+private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit, onFind: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 40.dp)) {
         Text(stringResource(R.string.library), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -440,17 +445,17 @@ private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel, onSet
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            LibraryMenu(state, viewModel, onSettings)
+            LibraryMenu(state, viewModel, onSettings, onFind)
         }
     }
 }
 
 /** What stays at the top once [LargeTitle] has scrolled away. */
 @Composable
-private fun CompactTitle(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit) {
+private fun CompactTitle(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit, onFind: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.library), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        LibraryMenu(state, viewModel, onSettings)
+        LibraryMenu(state, viewModel, onSettings, onFind)
     }
 }
 
@@ -532,14 +537,12 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
 
 /** How the library is shown, and the trash. */
 @Composable
-private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit) {
+private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit, onFind: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     var rating by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
     var albums by remember { mutableStateOf(false) }
     var trashingRejected by remember { mutableStateOf(false) }
-    var finding by remember { mutableStateOf(false) }
-    if (finding) FindSheet(state, viewModel, onDismiss = { finding = false })
     if (trashingRejected) {
         ConfirmDeletion(
             stringResource(R.string.trash_rejected_question),
@@ -550,7 +553,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
     if (about) AboutDialog(onDismiss = { about = false })
     if (albums) AlbumsDialog(state, viewModel, onDismiss = { albums = false })
     Row(verticalAlignment = Alignment.CenterVertically) {
-    IconButton(onClick = { finding = true }) { Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.find)) }
+    IconButton(onClick = onFind) { Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.find)) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
