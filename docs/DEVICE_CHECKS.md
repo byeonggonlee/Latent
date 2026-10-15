@@ -59,6 +59,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 
 ## Viewer and video
 
+- [x] Pressing play no longer leaves the video black until a seek (S26, 2026-10-15: the picture's surface was only made once playback ended; the video is now drawn on a texture). [ ] No flash and no stretched first frames at the start: the view stays hidden until the picture's size is known. Check with a portrait video, a 4K one and one with a rotation flag, and a video with a non-square pixel shape.
 - [ ] A video plays in the viewer with the player's controls; swiping to another photo stops it; rotating the phone keeps working.
 - [ ] A video the phone cannot play is offered to another app instead of leaving the viewer stuck.
 - [ ] Share and delete of a video.
