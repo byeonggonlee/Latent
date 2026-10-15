@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -95,6 +97,7 @@ import com.byeonggon.latent.enhance.Mask
 import com.byeonggon.latent.ui.common.PhotoTheme
 import com.byeonggon.latent.ui.common.PictureBackground
 import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
+import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.common.ZoomableBox
 import com.byeonggon.latent.ui.common.rememberZoomState
 import com.byeonggon.latent.ui.common.keys
@@ -226,6 +229,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     }
     PhotoTheme {
     Scaffold(
+        contentWindowInsets = SafeInsets,
         // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes;
         // a letter for each tool, J for marking clipped tones, plus, minus and 0 to zoom, and the original shown while the backslash is held.
         modifier = Modifier.keys(
@@ -248,6 +252,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
         },
         topBar = {
             TopAppBar(
+                windowInsets = SafeInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = closeUnlessChanged) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close)) }

@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byeonggon.latent.R
 import com.byeonggon.latent.ui.common.ReadableWidth
+import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.common.rememberWindowLayout
 import com.byeonggon.latent.ui.editor.EditorScreen
 import com.byeonggon.latent.ui.library.LibraryScreen
@@ -89,9 +90,9 @@ fun AppRoot(startOnSync: Boolean) {
     }
     if (window.sideNavigation) {
         // A wide window has height to spare less than width: the tabs go down the side.
-        Scaffold { padding ->
+        Scaffold(contentWindowInsets = SafeInsets) { padding ->
             Row(Modifier.fillMaxSize().padding(padding)) {
-                NavigationRail {
+                NavigationRail(windowInsets = SafeInsets) {
                     Tab.entries.forEach { entry ->
                         NavigationRailItem(
                             selected = tab == entry,
@@ -107,8 +108,9 @@ fun AppRoot(startOnSync: Boolean) {
         return
     }
     Scaffold(
+        contentWindowInsets = SafeInsets,
         bottomBar = {
-            NavigationBar {
+            NavigationBar(windowInsets = SafeInsets) {
                 Tab.entries.forEach { entry ->
                     NavigationBarItem(
                         selected = tab == entry,

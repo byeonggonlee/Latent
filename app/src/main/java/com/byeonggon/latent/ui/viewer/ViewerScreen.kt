@@ -40,7 +40,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -100,6 +102,7 @@ import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
+import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.common.ZoomableBox
 import com.byeonggon.latent.ui.common.rememberZoomState
 import com.byeonggon.latent.ui.common.keys
@@ -238,6 +241,7 @@ fun ViewerScreen(
     val zoom = rememberZoomState(item?.id ?: -1L)
     PhotoTheme {
     Scaffold(
+        contentWindowInsets = SafeInsets,
         // With a keyboard: arrows turn the page, Delete puts the photo in the trash, Escape closes,
         // plus and minus zoom and 0 shows the whole photo, 1 to 5 give stars, and P, X and U pick, reject and clear.
         modifier = Modifier.keys { event ->
@@ -262,6 +266,7 @@ fun ViewerScreen(
         },
         topBar = {
             TopAppBar(
+                windowInsets = SafeInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
                 title = {
                     Column {
                         Text(

@@ -11,6 +11,10 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Nothing was lost: 210 files in `DCIM/Latent` before and after.
 - [ ] Same on the S26: a fresh install, no photos, first-run card, then a sync.
 
+## Foldables
+
+- [ ] Galaxy Z Fold 8, unfolded, in portrait and in landscape, and folded: nothing (top bar buttons, the side panel, the map's menu, the viewer's bar) is under the camera. The screens now stay out of the display cutout as well as the system bars; check that landscape did not gain an odd margin on the camera's side.
+
 ## Library
 
 - [ ] The fast scroller handle appears when scrolling a long library, follows it, and dragging it names the month. Tapping elsewhere on the right edge still opens photos.

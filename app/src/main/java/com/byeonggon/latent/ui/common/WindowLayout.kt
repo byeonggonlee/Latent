@@ -1,5 +1,9 @@
 package com.byeonggon.latent.ui.common
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +50,13 @@ fun ReadableWidth(modifier: Modifier = Modifier, content: @Composable BoxScope.(
         Box(Modifier.widthIn(max = 720.dp).fillMaxWidth(), content = content)
     }
 }
+
+/**
+ * Where content has to stay out to remain visible and tappable: the system bars, and the camera's
+ * cutout, which on a foldable's inner screen sits in a corner that changes as the phone is turned.
+ */
+val SafeInsets: WindowInsets
+    @Composable get() = WindowInsets.systemBars.union(WindowInsets.displayCutout)
 
 /** Width of a side panel next to the picture. */
 val SIDE_PANEL_WIDTH = 380.dp
