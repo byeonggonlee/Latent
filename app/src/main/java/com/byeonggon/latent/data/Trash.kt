@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Where deleted photos go first, as in a gallery app: out of the library and out of other apps'
- * sight, but not gone. They can be put back, or deleted for good; after [KEPT_DAYS] that happens by
+ * sight, but not gone. They can be put back, or deleted for good; after the days set in the settings ([KEPT_DAYS] at first) that happens by
  * itself. Along with a file go the original kept for an edited JPEG and a raw file's location sidecar.
  */
 class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao) {
@@ -64,17 +64,18 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
         items.filter { it.trashedAt != null }.map { it.id }.chunked(500).forEach { mediaDao.deleteByIds(it) }
     }
 
-    /** Deletes what has been in the trash for longer than [KEPT_DAYS]. */
-    suspend fun emptyExpired(now: Long = System.currentTimeMillis()) {
+    /** Deletes what has been in the trash for longer than [keptDays]. */
+    suspend fun emptyExpired(now: Long = System.currentTimeMillis(), keptDays: Int = KEPT_DAYS) {
         // While storage cannot be reached the files cannot be deleted either; their entries wait.
         if (!storage.isAvailable()) return
-        deleteForever(mediaDao.trashedBefore(now - TimeUnit.DAYS.toMillis(KEPT_DAYS)))
+        deleteForever(mediaDao.trashedBefore(now - TimeUnit.DAYS.toMillis(keptDays.toLong())))
     }
 
     private fun sidecarOf(file: File) = File(file.parentFile, "${file.nameWithoutExtension}.xmp")
 
     companion object {
-        const val KEPT_DAYS = 30L
+        /** How long, in days, photos stay unless the settings say otherwise. */
+        const val KEPT_DAYS = 30
         private const val ORIGINAL = "original-"
     }
 }

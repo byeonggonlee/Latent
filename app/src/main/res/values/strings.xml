@@ -530,4 +530,18 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="language_change">Change</string>
     <string name="online_maps">Online maps</string>
     <string name="online_maps_hint">Downloads map pictures from OpenStreetMap. Off, the app makes no network request.</string>
+    <string name="theme">Light or dark</string>
+    <string name="theme_system">Like the phone</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="grid_size">Size of the pictures in the library</string>
+    <string name="grid_small">Small</string>
+    <string name="grid_medium">Medium</string>
+    <string name="grid_large">Large</string>
+    <string name="trash_kept">Keep deleted photos in the trash for</string>
+    <string name="trash_kept_hint">After this, they are deleted for good. Choosing fewer days deletes what has been there longer than that the next time the library opens.</string>
+    <plurals name="days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
 </resources>

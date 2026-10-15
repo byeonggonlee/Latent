@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -42,12 +43,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.byeonggon.latent.R
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.AppSettings
+import com.byeonggon.latent.data.GridSize
 import com.byeonggon.latent.data.TabPosition
+import com.byeonggon.latent.data.ThemeMode
 import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.library.AboutDialog
 import kotlinx.coroutines.launch
 
-/** What is set once and then left alone: where the tabs are, the language, the internet for maps, which phone folders to list. */
+/** What is set once and then left alone: where the tabs are, light or dark, the size of the grid, the language, how long the trash keeps photos, the internet for maps, which phone folders to list. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
@@ -95,6 +98,8 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
                 }
             }
             Hint(R.string.tab_position_hint)
+            Choice(R.string.theme, ThemeMode.entries, current.theme, { it.label }) { mode -> scope.launch { settings.update { it.copy(theme = mode) } } }
+            Choice(R.string.grid_size, GridSize.entries, current.gridSize, { it.label }) { size -> scope.launch { settings.update { it.copy(gridSize = size) } } }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Text(stringResource(R.string.language), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = {
@@ -113,6 +118,17 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
                 Text(stringResource(R.string.phone_folders), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = onChoosePhoneFolders) { Text(stringResource(R.string.choose_folder)) }
             }
+            Text(stringResource(R.string.trash_kept), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TRASH_DAYS.forEach { days ->
+                    FilterChip(
+                        selected = current.trashKeptDays == days,
+                        onClick = { scope.launch { settings.update { it.copy(trashKeptDays = days) } } },
+                        label = { Text(pluralStringResource(R.plurals.days_count, days, days)) },
+                    )
+                }
+            }
+            Hint(R.string.trash_kept_hint)
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Heading(R.string.settings_internet)
@@ -130,6 +146,34 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             TextButton(onClick = { about = true }) { Text(stringResource(R.string.about)) }
+        }
+    }
+}
+
+/** How long the trash can keep photos. */
+private val TRASH_DAYS = listOf(7, 30, 90)
+
+private val ThemeMode.label: Int
+    get() = when (this) {
+        ThemeMode.SYSTEM -> R.string.theme_system
+        ThemeMode.LIGHT -> R.string.theme_light
+        ThemeMode.DARK -> R.string.theme_dark
+    }
+
+private val GridSize.label: Int
+    get() = when (this) {
+        GridSize.SMALL -> R.string.grid_small
+        GridSize.MEDIUM -> R.string.grid_medium
+        GridSize.LARGE -> R.string.grid_large
+    }
+
+/** A setting with a few named values, one of them chosen. */
+@Composable
+private fun <T> Choice(title: Int, options: List<T>, selected: T, label: (T) -> Int, onSelect: (T) -> Unit) {
+    Text(stringResource(title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEach { option ->
+            FilterChip(selected = option == selected, onClick = { onSelect(option) }, label = { Text(stringResource(label(option))) })
         }
     }
 }

@@ -125,4 +125,15 @@ class TrashTest {
         runBlocking { trash.emptyExpired(now + TimeUnit.DAYS.toMillis(31)) }
         assertEquals(0, runBlocking { trash.items.first() }.size)
     }
+
+    @Test
+    fun keepsPhotosForAsManyDaysAsItIsTold() {
+        runBlocking { trash.throwAway(listOf(item())) }
+        val now = System.currentTimeMillis()
+
+        runBlocking { trash.emptyExpired(now + TimeUnit.DAYS.toMillis(6), keptDays = 7) }
+        assertEquals(1, runBlocking { trash.items.first() }.size)
+        runBlocking { trash.emptyExpired(now + TimeUnit.DAYS.toMillis(8), keptDays = 7) }
+        assertEquals(0, runBlocking { trash.items.first() }.size)
+    }
 }

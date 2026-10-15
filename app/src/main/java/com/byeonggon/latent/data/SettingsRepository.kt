@@ -15,6 +15,12 @@ import kotlinx.coroutines.flow.map
 /** Where the tabs stand in a wide window (landscape, a tablet, an unfolded foldable): a narrow one always has them at the bottom. */
 enum class TabPosition { AUTO, LEFT, RIGHT, BOTTOM }
 
+/** Light or dark; [SYSTEM] follows the phone. */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+/** How large the pictures of the library grid are: [factor] times the size a window would give them. */
+enum class GridSize(val factor: Float) { SMALL(0.75f), MEDIUM(1f), LARGE(1.4f) }
+
 data class AppSettings(
     val syncPhotos: Boolean = true,
     val syncRaw: Boolean = true,
@@ -30,6 +36,10 @@ data class AppSettings(
     val onlineMaps: Boolean = false,
     /** For one hand, or for the other: the side the tabs are on. [TabPosition.AUTO] is the left. */
     val tabPosition: TabPosition = TabPosition.AUTO,
+    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val gridSize: GridSize = GridSize.MEDIUM,
+    /** How many days a photo stays in the trash before it is deleted for good. */
+    val trashKeptDays: Int = 30,
 ) {
     /** The moment a photo taken at [cameraTime] by the camera's clock was really taken. */
     fun realTimeOf(cameraTime: Long): Long = cameraTime - cameraClockOffsetMinutes * 60_000L
@@ -59,6 +69,9 @@ class SettingsRepository(private val context: Context) {
             preferences[PHONE_FOLDERS] = next.phoneFolders
             preferences[ONLINE_MAPS] = next.onlineMaps
             preferences[TAB_POSITION] = next.tabPosition.name
+            preferences[THEME] = next.theme.name
+            preferences[GRID_SIZE] = next.gridSize.name
+            preferences[TRASH_KEPT_DAYS] = next.trashKeptDays
         }
     }
 
@@ -75,6 +88,9 @@ class SettingsRepository(private val context: Context) {
             phoneFolders = this[PHONE_FOLDERS] ?: defaults.phoneFolders,
             onlineMaps = this[ONLINE_MAPS] ?: defaults.onlineMaps,
             tabPosition = this[TAB_POSITION]?.let { name -> TabPosition.entries.firstOrNull { it.name == name } } ?: defaults.tabPosition,
+            theme = this[THEME]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: defaults.theme,
+            gridSize = this[GRID_SIZE]?.let { name -> GridSize.entries.firstOrNull { it.name == name } } ?: defaults.gridSize,
+            trashKeptDays = this[TRASH_KEPT_DAYS] ?: defaults.trashKeptDays,
         )
     }
 
@@ -89,5 +105,8 @@ class SettingsRepository(private val context: Context) {
         val PHONE_FOLDERS = stringSetPreferencesKey("phone_folders")
         val ONLINE_MAPS = booleanPreferencesKey("online_maps")
         val TAB_POSITION = stringPreferencesKey("tab_position")
+        val THEME = stringPreferencesKey("theme")
+        val GRID_SIZE = stringPreferencesKey("grid_size")
+        val TRASH_KEPT_DAYS = intPreferencesKey("trash_kept_days")
     }
 }

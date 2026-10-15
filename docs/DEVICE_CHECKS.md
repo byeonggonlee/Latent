@@ -15,6 +15,9 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 
 - [ ] Library menu → Settings. Tab position (Automatic, Left, Right, Bottom) on a wide window: landscape on a phone, an unfolded Fold. Right and bottom suit one hand or the other; a narrow screen keeps the tabs at the bottom whatever is chosen.
 - [ ] Language → Change opens the phone's per-app language list with English, 한국어 and 日本語; the app follows.
+- [ ] Light or dark (like the phone, light, dark): the app follows at once, status and navigation bar icons stay readable in each; dark in a light phone and light in a dark one in particular. Colours come from the wallpaper.
+- [ ] Size of the pictures in the library (small, medium, large) changes the grid at once, on the phone and in a wide window.
+- [ ] Trash: 7, 30 or 90 days. Choosing fewer days deletes older trash the next time the library opens (not tried on a real trash).
 - [ ] Online maps switch: turning it on asks first, off does not; Photos on this phone opens the folder question in the library.
 
 ## Languages

@@ -83,7 +83,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.latent.R
-import com.byeonggon.latent.data.Trash
+import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.db.FLAG_PICKED
 import com.byeonggon.latent.data.db.FLAG_REJECTED
 import com.byeonggon.latent.data.db.GeoSource
@@ -186,6 +187,7 @@ private fun LibraryContent(
     onSettings: () -> Unit,
     viewModel: LibraryViewModel,
 ) {
+    val gridSize = LocalContext.current.appContainer.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.gridSize
     Column(Modifier.fillMaxSize()) {
         if (!storageGranted) StorageAccessCard(Modifier.padding(16.dp))
         val batch = state.batch
@@ -215,7 +217,7 @@ private fun LibraryContent(
             Box(Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     // Larger thumbnails where the window has room for them, as on a tablet or a laptop.
-                    columns = GridCells.Adaptive(if (rememberWindowLayout().sideNavigation) 160.dp else 108.dp),
+                    columns = GridCells.Adaptive((if (rememberWindowLayout().sideNavigation) 160.dp else 108.dp) * gridSize.factor),
                     state = gridState,
                     contentPadding = PaddingValues(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -346,6 +348,7 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel) {
 @Composable
 private fun TrashBar(state: LibraryUiState, viewModel: LibraryViewModel) {
     var confirming by remember { mutableStateOf(false) }
+    val keptDays = LocalContext.current.appContainer.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.trashKeptDays
     Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { viewModel.showTrash(false) }) { Text(stringResource(R.string.back_to_library)) }
@@ -353,7 +356,7 @@ private fun TrashBar(state: LibraryUiState, viewModel: LibraryViewModel) {
             TextButton(onClick = { confirming = true }, enabled = state.trashCount > 0) { Text(stringResource(R.string.empty_trash)) }
         }
         Text(
-            pluralStringResource(R.plurals.trash_explained, Trash.KEPT_DAYS.toInt(), Trash.KEPT_DAYS.toInt()),
+            pluralStringResource(R.plurals.trash_explained, keptDays, keptDays),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp),

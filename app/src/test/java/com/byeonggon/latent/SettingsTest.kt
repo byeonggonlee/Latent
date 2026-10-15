@@ -8,9 +8,12 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.data.AppSettings
+import com.byeonggon.latent.data.GridSize
 import com.byeonggon.latent.data.TabPosition
+import com.byeonggon.latent.data.ThemeMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -69,6 +72,7 @@ class SettingsTest {
 
         openSettings()
         compose.onNodeWithText("아래").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runBlocking { container.settings.settings.first().tabPosition } == TabPosition.BOTTOM }
         compose.onNodeWithContentDescription("닫기").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); compose.onAllNodesWithText("지도").fetchSemanticsNodes().isNotEmpty() && mapTabBounds().top > 500.dp }
     }
@@ -76,11 +80,25 @@ class SettingsTest {
     @Test
     fun asksBeforeTurningOnTheInternetAndNotBeforeTurningItOff() {
         openSettings()
-        compose.onNodeWithText("온라인 지도").assertIsDisplayed()
+        compose.onNodeWithText("온라인 지도").performScrollTo().assertIsDisplayed()
         assertEquals(false, runBlocking { container.settings.settings.first().onlineMaps })
 
         compose.onNodeWithText("온라인 지도").performClick()
         // The switch itself, not its label, is what is tapped: this only checks nothing was turned on by the label.
         assertEquals(false, runBlocking { container.settings.settings.first().onlineMaps })
+    }
+
+    @Test
+    fun keepsTheChosenThemeGridSizeAndDaysInTheTrash() {
+        openSettings()
+        compose.onNodeWithText("어둡게").performScrollTo().performClick()
+        compose.onNodeWithText("크게").performScrollTo().performClick()
+        compose.onNodeWithText("7일").performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.waitForIdle()
+            runBlocking { container.settings.settings.first() }.let { it.theme == ThemeMode.DARK && it.gridSize == GridSize.LARGE && it.trashKeptDays == 7 }
+        }
+        // The trash holds photos for a month until told otherwise.
+        assertEquals(30, AppSettings().trashKeptDays)
     }
 }

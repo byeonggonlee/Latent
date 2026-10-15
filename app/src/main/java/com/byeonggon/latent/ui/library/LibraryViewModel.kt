@@ -225,7 +225,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             val added = if (container.syncEngine.state.value.isRunning) 0 else container.libraryIndex.adoptUnknownFiles()
             if (added > 0) activity.update { it.copy(message = plural(R.plurals.library_adopted, added)) }
             container.refreshPhoneLibrary()
-            trash.emptyExpired()
+            trash.emptyExpired(keptDays = container.settings.settings.first().trashKeptDays)
             makeThumbnails()
         }
     }

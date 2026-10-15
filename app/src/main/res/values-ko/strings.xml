@@ -497,4 +497,17 @@
     <string name="language_change">변경</string>
     <string name="online_maps">온라인 지도</string>
     <string name="online_maps_hint">OpenStreetMap에서 지도 그림을 내려받습니다. 끄면 앱은 네트워크 요청을 하지 않습니다.</string>
+    <string name="theme">밝기 모드</string>
+    <string name="theme_system">휴대전화 설정</string>
+    <string name="theme_light">밝게</string>
+    <string name="theme_dark">어둡게</string>
+    <string name="grid_size">보관함 사진 크기</string>
+    <string name="grid_small">작게</string>
+    <string name="grid_medium">보통</string>
+    <string name="grid_large">크게</string>
+    <string name="trash_kept">삭제한 사진을 휴지통에 보관하는 기간</string>
+    <string name="trash_kept_hint">기간이 지나면 완전히 삭제됩니다. 기간을 줄이면 다음에 보관함을 열 때 그보다 오래된 사진이 삭제됩니다.</string>
+    <plurals name="days_count">
+        <item quantity="other">%d일</item>
+    </plurals>
 </resources>
