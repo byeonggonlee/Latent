@@ -17,7 +17,9 @@ phone's location, and develops them: raw files included, without a cloud or an a
 - **Keeps a library** by day, with ratings, raw and JPEG shown as one, a trash, and sharing. It can list
   the phone's own photos too, from the folders you choose, without ever changing them.
 - **Shows your photos on a map** (OpenStreetMap), once you turn online maps on.
-- Fits phones, foldables, tablets and laptop windows, with keyboard and mouse.
+- Fits phones, foldables, tablets and laptop windows, with keyboard and mouse: arrow keys to turn pages,
+  a letter for each editing tool, `+`, `-` and `0` to zoom, `J` for clipped tones, `\` to see the original,
+  and a right click on a photo for a menu.
 
 It has been used with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may
 work; raw development currently reads Sony ARW only.
