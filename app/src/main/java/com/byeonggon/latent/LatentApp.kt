@@ -21,6 +21,8 @@ import com.byeonggon.latent.data.Trash
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.location.Geotagger
 import com.byeonggon.latent.location.TimelineImporter
+import com.byeonggon.latent.map.MapTiles
+import com.byeonggon.latent.map.OnlineAccess
 import com.byeonggon.latent.raw.RawCache
 import com.byeonggon.latent.ui.common.ThumbnailFetcher
 
@@ -62,6 +64,8 @@ class AppContainer(private val context: Context) {
     val editSaver = EditSaver(context, libraryEdits)
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())
+    val onlineAccess = OnlineAccess(settings)
+    val mapTiles = MapTiles(context, onlineAccess)
 
     /** Brings the photos and videos listed from the phone in line with the folders chosen; how many were added. */
     suspend fun refreshPhoneLibrary(): Int =

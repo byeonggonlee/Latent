@@ -14,7 +14,9 @@ phone's location, and develops them: raw files included, without a cloud or an a
 - **Edits** with exposure and tone curves, colour mixer and grading, texture, clarity, dehaze,
   sharpening and noise reduction, filters, cropping and perspective, masks (linear, radial, brush)
   and spot healing. Edits stay editable; a JPEG's original is kept and can be restored.
-- **Keeps a library** by day, with ratings, raw and JPEG shown as one, a trash, and sharing.
+- **Keeps a library** by day, with ratings, raw and JPEG shown as one, a trash, and sharing. It can list
+  the phone's own photos too, from the folders you choose, without ever changing them.
+- **Shows your photos on a map** (OpenStreetMap), once you turn online maps on.
 - Fits phones, foldables, tablets and laptop windows, with keyboard and mouse.
 
 It has been used with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may
@@ -22,8 +24,9 @@ work; raw development currently reads Sony ARW only.
 
 ## Privacy
 
-Everything stays on the phone. The app has no network access, no account and no analytics. Photos
-live as ordinary files in `DCIM/Latent`, where gallery and backup apps can see them. See the [privacy policy](PRIVACY.md).
+Everything stays on the phone. The app has no account and no analytics, and it uses the internet only for
+the optional map, which is off until you turn it on. Photos live as ordinary files in `DCIM/Latent`, where
+gallery and backup apps can see them. See the [privacy policy](PRIVACY.md).
 
 ## Building
 

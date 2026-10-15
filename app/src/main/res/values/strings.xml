@@ -437,4 +437,21 @@ Connect a camera on the Camera tab to bring photos in.</string>
         <item quantity="one">%d star</item>
         <item quantity="other">%d stars</item>
     </plurals>
+    <string name="tab_map">Map</string>
+    <string name="map_off_title">Your photos on a map</string>
+    <string name="map_off_text">Latent does not use the internet unless you let it. To show where your photos were taken on a map, it has to download map pictures from OpenStreetMap. The map server learns which areas you look at, and your IP address; it is never sent your photos, their names or their places as a list.</string>
+    <string name="map_turn_on">Turn on online maps</string>
+    <string name="map_turn_off">Turn off online maps</string>
+    <string name="map_ask_title">Use the internet for maps?</string>
+    <string name="map_ask_text">Latent will download map pictures from OpenStreetMap while the map is open. Nothing else is sent. You can turn this off again from the map\'s menu.</string>
+    <string name="map_ask_yes">Turn on</string>
+    <string name="map_menu">Map options</string>
+    <string name="map_zoom_in">Zoom in</string>
+    <string name="map_zoom_out">Zoom out</string>
+    <string name="map_attribution">© OpenStreetMap contributors</string>
+    <string name="map_no_places">None of your photos have a place yet.</string>
+    <plurals name="map_photos_here">
+        <item quantity="one">%1$d photo here</item>
+        <item quantity="other">%1$d photos here</item>
+    </plurals>
 </resources>

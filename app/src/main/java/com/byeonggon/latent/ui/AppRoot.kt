@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,6 +32,7 @@ import com.byeonggon.latent.ui.editor.EditorScreen
 import com.byeonggon.latent.ui.library.LibraryScreen
 import com.byeonggon.latent.ui.library.LibraryViewModel
 import com.byeonggon.latent.ui.location.LocationScreen
+import com.byeonggon.latent.ui.map.MapScreen
 import com.byeonggon.latent.ui.sync.SyncScreen
 import com.byeonggon.latent.ui.viewer.ViewerScreen
 import androidx.annotation.StringRes
@@ -39,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 private enum class Tab(@StringRes val label: Int) {
     LIBRARY(R.string.tab_library),
     SYNC(R.string.tab_camera),
+    MAP(R.string.tab_map),
     LOCATION(R.string.tab_location),
 }
 
@@ -80,6 +83,7 @@ fun AppRoot(startOnSync: Boolean) {
         when (tab) {
             Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it })
             Tab.SYNC -> ReadableWidth { SyncScreen() }
+            Tab.MAP -> MapScreen(onOpen = { viewerItemId = it })
             Tab.LOCATION -> ReadableWidth { LocationScreen() }
         }
     }
@@ -125,6 +129,7 @@ private fun TabIcon(tab: Tab) {
     when (tab) {
         Tab.LIBRARY -> Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null)
         Tab.SYNC -> Icon(painterResource(R.drawable.ic_camera), contentDescription = null)
+        Tab.MAP -> Icon(Icons.Default.Place, contentDescription = null)
         Tab.LOCATION -> Icon(Icons.Default.LocationOn, contentDescription = null)
     }
 }

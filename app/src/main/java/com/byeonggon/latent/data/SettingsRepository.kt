@@ -22,6 +22,8 @@ data class AppSettings(
     val cameraClockOffsetMinutes: Int = 0,
     /** The folders of the phone, as MediaStore names them ("DCIM/Camera/"), whose photos and videos are listed in the library too. */
     val phoneFolders: Set<String> = emptySet(),
+    /** Whether the app may use the internet, for the map. Off until the person turns it on. */
+    val onlineMaps: Boolean = false,
 ) {
     /** The moment a photo taken at [cameraTime] by the camera's clock was really taken. */
     fun realTimeOf(cameraTime: Long): Long = cameraTime - cameraClockOffsetMinutes * 60_000L
@@ -49,6 +51,7 @@ class SettingsRepository(private val context: Context) {
             preferences[GEOTAG_MAX_GAP_MINUTES] = next.geotagMaxGapMinutes
             preferences[CAMERA_CLOCK_OFFSET_MINUTES] = next.cameraClockOffsetMinutes
             preferences[PHONE_FOLDERS] = next.phoneFolders
+            preferences[ONLINE_MAPS] = next.onlineMaps
         }
     }
 
@@ -63,6 +66,7 @@ class SettingsRepository(private val context: Context) {
             geotagMaxGapMinutes = this[GEOTAG_MAX_GAP_MINUTES] ?: defaults.geotagMaxGapMinutes,
             cameraClockOffsetMinutes = this[CAMERA_CLOCK_OFFSET_MINUTES] ?: defaults.cameraClockOffsetMinutes,
             phoneFolders = this[PHONE_FOLDERS] ?: defaults.phoneFolders,
+            onlineMaps = this[ONLINE_MAPS] ?: defaults.onlineMaps,
         )
     }
 
@@ -75,5 +79,6 @@ class SettingsRepository(private val context: Context) {
         val GEOTAG_MAX_GAP_MINUTES = intPreferencesKey("geotag_max_gap_minutes")
         val CAMERA_CLOCK_OFFSET_MINUTES = intPreferencesKey("camera_clock_offset_minutes")
         val PHONE_FOLDERS = stringSetPreferencesKey("phone_folders")
+        val ONLINE_MAPS = booleanPreferencesKey("online_maps")
     }
 }

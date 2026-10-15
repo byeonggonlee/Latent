@@ -2,11 +2,15 @@
 
 *Latent, effective October 15, 2026*
 
-Latent keeps everything on your phone. It has no account, no ads and no analytics, and it does not
-have the permission to use the internet: nothing it reads or makes can leave the phone through it.
+Latent keeps everything on your phone. It has no account, no ads and no analytics, and it does not use
+the internet unless you turn on online maps, the one feature that needs it. With online maps off, which is
+how the app starts out, it makes no network request at all.
 
 ## What the app works with
 
+- **Photos and videos of other apps** in the folders of the phone that you choose, such as the phone's
+  camera: they are listed in the library where they are, never changed or copied. What you do to them is
+  kept as settings in the app's database; saving a copy as a JPEG makes a new file in `DCIM/Latent`.
 - **Photos and videos** that it copies from your camera over USB, into `DCIM/Latent` on the phone's
   storage, and the edits you make to them. They are ordinary files that gallery and backup apps on
   the phone can see.
@@ -28,7 +32,16 @@ have the permission to use the internet: nothing it reads or makes can leave the
 | Location while the app is in use, and media location | To record where you are while recording is on, and to read the locations in photos. |
 | Notifications | To show that location recording or a sync is running, or that recording stopped. |
 | USB | To read the camera. |
+| Internet | Only for online maps, and only after you turn them on: to download map pictures from OpenStreetMap. |
 | Foreground services, starting at boot | To keep recording and syncing running while the screen is off, and to tell you after a restart that recording stopped. |
+
+## Online maps
+
+Online maps are off until you turn them on, which the app asks you to confirm. While the map is open,
+the app downloads map pictures (tiles) from OpenStreetMap's servers. Like any web request, that tells the
+server your IP address and which map areas you look at. Nothing else is sent: not your photos, their names,
+or a list of where they were taken. Map pictures are kept on the phone for a week to save requests. You can
+turn online maps off again from the map's menu. Map data © OpenStreetMap contributors.
 
 ## Backups
 
