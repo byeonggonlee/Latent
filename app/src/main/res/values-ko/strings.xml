@@ -204,6 +204,9 @@
     <string name="control_noise_reduction">노이즈 감소</string>
     <string name="control_color_noise_reduction">색상 노이즈 감소</string>
     <string name="reset_setting">%1$s 되돌리기</string>
+    <string name="type_value">%1$s 값 입력</string>
+    <string name="reset_value">되돌리기</string>
+    <string name="ok">확인</string>
     <string name="tool_filters">필터</string>
     <string name="tool_crop">자르기</string>
     <string name="tool_light">밝기</string>

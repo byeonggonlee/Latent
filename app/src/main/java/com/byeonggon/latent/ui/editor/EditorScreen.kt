@@ -776,6 +776,8 @@ private fun Sliders(controls: List<Control>, adjustments: Adjustments, enabled: 
             enabled = enabled,
             onChange = { position -> viewModel.adjust { control.setting.set(it, control.valueAt(position)) } },
             onDone = viewModel::commit,
+            // Exposure is typed in stops, the others as the percentage the slider shows.
+            parseEntry = { text -> readEntry(text, if (control == Control.EXPOSURE) 1f else 0.01f, control.range) },
         )
     }
 }
@@ -855,6 +857,7 @@ private fun FramingControls(
             if (angle != framing.angle) reframed(framing.copy(angle = angle))
         },
         onDone = onDone,
+        parseEntry = { text -> readEntry(text, 1f, -MAX_ANGLE..MAX_ANGLE) },
     )
     SettingSlider(
         label = stringResource(R.string.vertical_perspective),
@@ -864,6 +867,7 @@ private fun FramingControls(
         enabled = enabled,
         onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.vertical) reframed(framing.copy(vertical = it)) } },
         onDone = onDone,
+        parseEntry = { text -> readEntry(text, 0.01f, -1f..1f) },
     )
     SettingSlider(
         label = stringResource(R.string.horizontal_perspective),
@@ -873,6 +877,7 @@ private fun FramingControls(
         enabled = enabled,
         onChange = { position -> snapped(position, 1f, 100).let { if (it != framing.horizontal) reframed(framing.copy(horizontal = it)) } },
         onDone = onDone,
+        parseEntry = { text -> readEntry(text, 0.01f, -1f..1f) },
     )
 }
 

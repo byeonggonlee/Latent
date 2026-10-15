@@ -2,7 +2,9 @@ package com.byeonggon.latent.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,21 +14,37 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.enhance.Adjustment
@@ -88,10 +106,11 @@ internal fun signed(value: Float): String = String.format(Locale.US, "%+d", valu
 private const val SNAP_TO_ZERO = 0.03f
 
 /**
- * A slider under its name and value. Tapping the value puts it back to [untouched].
+ * A slider under its name and value. Tapping the value puts it back to [untouched], or, where
+ * [parseEntry] says how to read a typed number, opens a box to type one in and a double tap puts it back.
  * [onDone] is called when the slider is let go of. [hues] gives the track the colours of the rainbow.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun SettingSlider(
     label: String,
@@ -103,7 +122,25 @@ internal fun SettingSlider(
     onDone: () -> Unit,
     untouched: Float = 0f,
     hues: Boolean = false,
+    parseEntry: ((String) -> Float?)? = null,
 ) {
+    var typing by remember { mutableStateOf(false) }
+    if (typing && parseEntry != null) {
+        ValueEntryDialog(
+            label = label,
+            initial = valueText.removePrefix("+").removeSuffix("°"),
+            parse = parseEntry,
+            onEntered = { entered ->
+                onChange(entered)
+                onDone()
+            },
+            onReset = {
+                onChange(untouched)
+                onDone()
+            },
+            onDismiss = { typing = false },
+        )
+    }
     Column(Modifier.padding(horizontal = 20.dp, vertical = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
@@ -114,9 +151,26 @@ internal fun SettingSlider(
                 color = if (value == untouched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .clickable(enabled = enabled && value != untouched, onClickLabel = stringResource(R.string.reset_setting, label)) {
-                        onChange(untouched)
-                        onDone()
+                    .let { base ->
+                        if (parseEntry == null) {
+                            base.clickable(enabled = enabled && value != untouched, onClickLabel = stringResource(R.string.reset_setting, label)) {
+                                onChange(untouched)
+                                onDone()
+                            }
+                        } else {
+                            // A tap types a value in; two taps put the setting back.
+                            base.combinedClickable(
+                                enabled = enabled,
+                                onClickLabel = stringResource(R.string.type_value, label),
+                                onClick = { typing = true },
+                                onDoubleClick = {
+                                    if (value != untouched) {
+                                        onChange(untouched)
+                                        onDone()
+                                    }
+                                },
+                            )
+                        }
                     }
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             )
@@ -168,3 +222,57 @@ private fun SettingTrack(from: Float, to: Float, enabled: Boolean, hues: Boolean
         drawLine(filled, Offset(size.width * from, middle), Offset(size.width * to, middle), strokeWidth = line)
     }
 }
+
+/** A box to type a setting's value into, in the units its slider shows: [initial] is how it reads now. */
+@Composable
+private fun ValueEntryDialog(
+    label: String,
+    initial: String,
+    parse: (String) -> Float?,
+    onEntered: (Float) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(TextFieldValue(initial, selection = TextRange(0, initial.length))) }
+    val entered = parse(text.text)
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(label) },
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    isError = entered == null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { entered?.let { onEntered(it); onDismiss() } }),
+                    modifier = Modifier.weight(1f).focusRequester(focus),
+                )
+                // Number keypads often have no minus sign.
+                TextButton(onClick = { text = text.flipSign() }) { Text("±") }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = entered != null, onClick = { entered?.let(onEntered); onDismiss() }) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { onReset(); onDismiss() }) { Text(stringResource(R.string.reset_value)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            }
+        },
+    )
+}
+
+private fun TextFieldValue.flipSign(): TextFieldValue {
+    val flipped = if (text.startsWith("-")) text.removePrefix("-") else "-$text"
+    return copy(text = flipped, selection = TextRange(flipped.length))
+}
+
+/** Reads a number typed in the units of a setting's slider, in the setting's own units, kept within [range]. */
+internal fun readEntry(text: String, unit: Float, range: ClosedFloatingPointRange<Float>): Float? =
+    text.trim().replace(',', '.').replace('−', '-').removePrefix("+").toFloatOrNull()?.takeIf { it.isFinite() }
+        ?.let { (it * unit).coerceIn(range) }

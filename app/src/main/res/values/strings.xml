@@ -228,6 +228,9 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="control_noise_reduction">Noise reduction</string>
     <string name="control_color_noise_reduction">Color noise reduction</string>
     <string name="reset_setting">Reset %1$s</string>
+    <string name="type_value">Type a value for %1$s</string>
+    <string name="reset_value">Reset</string>
+    <string name="ok">OK</string>
     <string name="tool_filters">Filters</string>
     <string name="tool_crop">Crop</string>
     <string name="tool_light">Light</string>
