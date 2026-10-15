@@ -46,6 +46,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] "Swipe to edit" (editor menu): up and down pick a setting, left and right change it. Is a swipe across the whole width (the setting's full reach) too much or too little? Is 40 dp a good step between settings? Does a second finger still pinch to zoom?
 - [ ] Clipping marks (menu, or `J`): red where bright detail is gone, blue where dark is, on a real photo.
 - [ ] "Auto level" in the crop tool on photos with a horizon or building edges; on one with none it says so.
+- [ ] "Versions…" (editor menu): keep the edit under a name (the name box with the keyboard), open it later, delete it; opening one is a single undoable change and counts after Done.
 - [ ] Speed with every tool, glow, painted mask and healing at once: preview about 340 ms a step, a JPEG saved in about 4 s, a raw exported in about 6 s on the S24 Ultra (measured); the S26 not yet.
 
 ## Location
@@ -75,4 +76,4 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 
 ## Not yet decided
 
-- Edit versions (virtual copies): how they should look and be stored. Albums are done.
+- Versions as separate photos in the grid (Lightroom's virtual copies). Versions are kept as named looks of one photo for now; albums are done.

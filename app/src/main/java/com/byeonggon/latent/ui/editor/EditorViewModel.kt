@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.data.db.EditVersionEntity
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustment
@@ -32,6 +33,11 @@ import com.byeonggon.latent.raw.RawRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -104,6 +110,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val edits = container.libraryEdits
     private val ui = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = ui.asStateFlow()
+    private val versionDao = container.database.editVersionDao()
+
+    /** The versions of this photo's edit that were kept under a name. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val versions: StateFlow<List<EditVersionEntity>> = ui.map { it.item?.id }.distinctUntilChanged()
+        .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else versionDao.observeFor(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val source = MutableStateFlow<Source?>(null)
     private var session: Long? = null
@@ -295,6 +308,28 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteFilter(filter: Filter) {
         viewModelScope.launch { edits.deleteFilter(filter) }
+    }
+
+    /** Keeps the edit as it is now under [name], to come back to it later. */
+    fun saveVersion(name: String) {
+        val item = ui.value.item ?: return
+        val edit = ui.value.edit
+        val trimmed = name.trim().ifEmpty { return }
+        viewModelScope.launch {
+            versionDao.insert(EditVersionEntity(mediaId = item.id, name = trimmed, edit = edit.toJson(), createdAt = System.currentTimeMillis()))
+            ui.update { it.copy(message = text(R.string.version_saved, trimmed)) }
+        }
+    }
+
+    /** Takes a kept version as the edit, as one change that can be undone; it counts once Done is tapped. */
+    fun openVersion(version: EditVersionEntity) {
+        val edit = PhotoEdit.fromJson(version.edit) ?: return
+        changeOnce { edit }
+        ui.update { it.copy(message = text(R.string.version_opened, version.name)) }
+    }
+
+    fun deleteVersion(version: EditVersionEntity) {
+        viewModelScope.launch { versionDao.delete(version.id) }
     }
 
     /** Puts every setting back to where it leaves the picture alone. */
@@ -554,7 +589,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun text(@StringRes id: Int): String = getApplication<Application>().getString(id)
+    private fun text(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
 
     companion object {
         /** The key of the picture without any filter among [EditorUiState.filterPreviews]. */

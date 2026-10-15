@@ -185,6 +185,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
     var showHistogram by rememberSaveable { mutableStateOf(false) }
     var gestureMode by rememberSaveable { mutableStateOf(false) }
+    var showingVersions by rememberSaveable { mutableStateOf(false) }
+    val versions by viewModel.versions.collectAsStateWithLifecycle()
     val zoom = rememberZoomState(itemId)
     LaunchedEffect(tab) { viewModel.show(tab.view) }
 
@@ -265,6 +267,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         onHistogram = { showHistogram = it },
                         clipping = state.clipping,
                         onClipping = viewModel::setClipping,
+                        onVersions = { showingVersions = true },
                         onGestures = if (window.sidePanel || gestureMode) null else {
                             {
                                 if (tab !in SWIPE_TABS) tab = EditorTab.LIGHT
@@ -380,6 +383,16 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     }
     }
 
+    if (showingVersions) {
+        VersionsDialog(
+            versions = versions,
+            onKeep = viewModel::saveVersion,
+            onOpen = viewModel::openVersion,
+            onDelete = viewModel::deleteVersion,
+            onDismiss = { showingVersions = false },
+        )
+    }
+
     if (confirmingDiscard) {
         AlertDialog(
             onDismissRequest = { confirmingDiscard = false },
@@ -403,6 +416,7 @@ private fun MoreMenu(
     onHistogram: (Boolean) -> Unit,
     clipping: Boolean,
     onClipping: (Boolean) -> Unit,
+    onVersions: () -> Unit,
     onGestures: (() -> Unit)?,
     onReset: () -> Unit,
     onCopy: () -> Unit,
@@ -439,6 +453,13 @@ private fun MoreMenu(
                     },
                 )
             }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.versions)) },
+                onClick = {
+                    open = false
+                    onVersions()
+                },
+            )
             val items = listOf(
                 Triple(stringResource(R.string.reset), true, onReset),
                 Triple(stringResource(R.string.copy_edit), true, onCopy),

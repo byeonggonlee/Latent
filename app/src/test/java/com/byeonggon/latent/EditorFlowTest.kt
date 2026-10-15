@@ -358,6 +358,35 @@ class EditorFlowTest {
     }
 
     @Test
+    fun keepsAnEditAsAVersionAndComesBackToIt() {
+        openEditor("DSC00001.JPG")
+        val editor = ViewModelProvider(compose.activity)[EditorViewModel::class.java]
+        slide("노출", to = 1f)
+        // The name box is not driven through the screen (a text field never lets the screen go idle).
+        compose.runOnUiThread { editor.saveVersion("따뜻함") }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runBlocking { container.database.editVersionDao().observeFor(photoId).first() }.size == 1 }
+
+        // Starting over, and then back to the version.
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("초기화").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); editor.state.value.edit.adjustments.exposure == 0f }
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("버전…").performClick()
+        compose.onNodeWithText("따뜻함").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); editor.state.value.edit.adjustments.exposure == 1f }
+
+        // The version is one change, which can be undone.
+        compose.runOnUiThread { editor.undo() }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); editor.state.value.edit.adjustments.exposure == 0f }
+
+        // Deleting it.
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("버전…").performClick()
+        compose.onNodeWithContentDescription("버전 삭제").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runBlocking { container.database.editVersionDao().observeFor(photoId).first() }.isEmpty() }
+    }
+
+    @Test
     fun undoesAndRedoesOneChangeAtATime() {
         openEditor("DSC00001.JPG")
         compose.onNodeWithContentDescription("실행 취소").assertIsNotEnabled()

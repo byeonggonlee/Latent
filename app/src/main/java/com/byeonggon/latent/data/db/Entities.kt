@@ -93,6 +93,21 @@ data class AlbumItemEntity(
     val addedAt: Long,
 )
 
+/** A look of one photo kept under a name, to come back to: a version of its edit. It goes when the photo does. */
+@Entity(
+    tableName = "edit_versions",
+    foreignKeys = [ForeignKey(entity = MediaItemEntity::class, parentColumns = ["id"], childColumns = ["mediaId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("mediaId")],
+)
+data class EditVersionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val mediaId: Long,
+    val name: String,
+    /** The edit, as written by PhotoEdit.toJson. */
+    val edit: String,
+    val createdAt: Long,
+)
+
 /** Remembers every camera file ever imported, so removing it from the library does not re-import it. */
 @Entity(tableName = "sync_records")
 data class SyncRecordEntity(

@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.byeonggon.latent.data.db.AlbumEntity
 import com.byeonggon.latent.data.db.AlbumItemEntity
 import com.byeonggon.latent.data.db.AppDatabase
+import com.byeonggon.latent.data.db.EditVersionEntity
 import com.byeonggon.latent.data.db.FilterEntity
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncedFolderEntity
@@ -70,6 +71,10 @@ class MigrationTest {
             assertEquals(listOf(item.id), database.albumDao().observeMembers(albumId).first())
             database.albumDao().delete(albumId)
             assertEquals(emptyList<Long>(), database.albumDao().observeMembers(albumId).first())
+
+            // Versions of an edit came after that: kept per photo, and gone with it.
+            database.editVersionDao().insert(EditVersionEntity(mediaId = item.id, name = "Warm", edit = "{}", createdAt = 3))
+            assertEquals(listOf("Warm"), database.editVersionDao().observeFor(item.id).first().map { it.name })
 
             val folder = SyncedFolderEntity("camera", "10001:/2024-12-08/", "fingerprint", "PHOTO,RAW")
             database.syncedFolderDao().upsert(folder)

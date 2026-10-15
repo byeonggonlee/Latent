@@ -457,4 +457,13 @@
         <item quantity="other">사진 %1$d장을 앨범에서 뺐습니다.</item>
     </plurals>
     <string name="edit_elsewhere">다른 앱에서 편집…</string>
+    <string name="versions">버전…</string>
+    <string name="versions_title">이 보정의 버전</string>
+    <string name="versions_hint">버전은 지금의 보정을 그대로 보관합니다. 나중에 열면 그 모습으로 돌아옵니다.</string>
+    <string name="version_save">지금 보정을 버전으로 보관…</string>
+    <string name="version_none">아직 버전이 없습니다.</string>
+    <string name="version_saved">“%1$s” 버전을 보관했습니다.</string>
+    <string name="version_opened">“%1$s” 버전을 열었습니다. 완료를 눌러야 적용됩니다.</string>
+    <string name="version_delete">버전 삭제</string>
+    <string name="version_default_name">버전 %1$d</string>
 </resources>

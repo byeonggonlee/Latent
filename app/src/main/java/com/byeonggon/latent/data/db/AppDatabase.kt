@@ -109,6 +109,18 @@ interface AlbumDao {
 }
 
 @Dao
+interface EditVersionDao {
+    @Query("SELECT * FROM edit_versions WHERE mediaId = :mediaId ORDER BY createdAt, id")
+    fun observeFor(mediaId: Long): Flow<List<EditVersionEntity>>
+
+    @Insert
+    suspend fun insert(version: EditVersionEntity): Long
+
+    @Query("DELETE FROM edit_versions WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
 interface SyncRecordDao {
     @Query("SELECT sourceKey FROM sync_records")
     suspend fun allKeys(): List<String>
@@ -183,8 +195,9 @@ interface LocationDao {
         FilterEntity::class,
         AlbumEntity::class,
         AlbumItemEntity::class,
+        EditVersionEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -194,6 +207,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun locationDao(): LocationDao
     abstract fun filterDao(): FilterDao
     abstract fun albumDao(): AlbumDao
+    abstract fun editVersionDao(): EditVersionDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -261,7 +275,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `edit_versions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`mediaId` INTEGER NOT NULL, `name` TEXT NOT NULL, `edit` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`mediaId`) REFERENCES `media_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_edit_versions_mediaId` ON `edit_versions` (`mediaId`)")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
     }
 }

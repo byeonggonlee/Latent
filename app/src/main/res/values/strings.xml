@@ -489,4 +489,13 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="other">%1$d photos taken out of the album.</item>
     </plurals>
     <string name="edit_elsewhere">Edit in another app…</string>
+    <string name="versions">Versions…</string>
+    <string name="versions_title">Versions of this edit</string>
+    <string name="versions_hint">A version keeps the edit as it is now. Open one later to come back to that look.</string>
+    <string name="version_save">Keep this edit as a version…</string>
+    <string name="version_none">No versions yet.</string>
+    <string name="version_saved">Version “%1$s” kept.</string>
+    <string name="version_opened">Version “%1$s” opened. Tap Done to keep it.</string>
+    <string name="version_delete">Delete version</string>
+    <string name="version_default_name">Version %1$d</string>
 </resources>
