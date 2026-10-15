@@ -37,7 +37,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.R
 
-private val MixerBand.label: String
+internal val MixerBand.label: String
     @Composable get() = stringResource(
         when (this) {
             MixerBand.RED -> R.string.color_red

@@ -126,6 +126,7 @@ internal object GpuTone {
                     MaskShape.LINEAR -> 0
                     MaskShape.BRUSH -> 1
                     MaskShape.RADIAL -> 2
+                    MaskShape.EVERYWHERE -> 3
                 }
                 localInts[base + 1] = if (mask.inverted) 1 else 0
                 if (mask.shape == MaskShape.BRUSH) {
@@ -135,6 +136,9 @@ internal object GpuTone {
                     localInts[base + 3] = raster.width
                     localInts[base + 4] = raster.height
                 }
+                localInts[base + 5] = java.lang.Float.floatToRawIntBits(local.hue ?: 0f)
+                localInts[base + 6] = java.lang.Float.floatToRawIntBits(local.hueSpread)
+                localInts[base + 7] = if (local.hue != null) 1 else 0
                 val floatsAt = floatArrayOf(mask.startX, mask.startY, mask.endX, mask.endY, mask.feather, local.darkest, local.brightest, 0f)
                 for (i in floatsAt.indices) localInts[base + 8 + i] = java.lang.Float.floatToRawIntBits(floatsAt[i])
             }

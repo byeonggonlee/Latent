@@ -33,8 +33,10 @@ Each is small or medium, works offline, and needs no new permission.
    days, a year), with or without a place, edited or not; flags, stars, kinds and albums are filters of their own.
    The Exif is read once per file in the background into the database (`ExifIndex`). Not done: place names (a
    network service), a range of dates picked on a calendar, shutter speed and aperture.
-4. **Colour range mask.** Select what is sky blue or foliage green by tapping it; Lightroom's colour range,
-   and what Snapseed's selective does by point. Needs the CPU and GPU renderers to agree, so medium.
+4. ~~**Colour range mask.**~~ *Done 2026-10-15, to be judged on a phone:* "+ Colour" is a mask of the whole picture held to a
+   hue (eight swatches, the mixer's) with a range slider; any mask can be held to one colour the same way, like the
+   tone range. Picked from swatches, not yet by tapping the picture. Grays are left alone. CPU and shader versions
+   are written to agree; only a phone can check the shader.
 5. **Import Lightroom presets (`.xmp`)** and share one's own looks as files. Presets are the habit of
    Lightroom Mobile users; the settings map onto ours (exposure, contrast, highlights, shadows, whites,
    blacks, texture, clarity, dehaze, vibrance, saturation, HSL, colour grading, curves, vignette, grain).

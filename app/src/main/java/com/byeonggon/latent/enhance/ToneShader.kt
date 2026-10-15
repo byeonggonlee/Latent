@@ -24,7 +24,7 @@ internal object ToneShader {
         };
         layout(std430, binding = 1) readonly buffer Stages { Stage stages[]; };
         struct Local {
-            int shape; int inverted; int raster; int rasterWidth; int rasterHeight; int unused0; int unused1; int unused2;
+            int shape; int inverted; int raster; int rasterWidth; int rasterHeight; float hue; float hueSpread; int hueOn;
             float startX; float startY; float endX; float endY; float feather; float darkest; float brightest; float unused3;
         };
         layout(std430, binding = 2) readonly buffer Locals { Local locals[]; };
@@ -142,7 +142,9 @@ internal object ToneShader {
 
         float maskWeight(Local m, float x, float y) {
             float covered;
-            if (m.shape == 1) {
+            if (m.shape == 3) {
+                covered = 1.0;
+            } else if (m.shape == 1) {
                 float column = clamp(x * float(m.rasterWidth) - 0.5, 0.0, float(m.rasterWidth - 1));
                 float row = clamp(y * float(m.rasterHeight) - 0.5, 0.0, float(m.rasterHeight - 1));
                 int left = int(column);
@@ -188,6 +190,20 @@ internal object ToneShader {
             else if (most == c.g) hue = 2.0 + (c.b - c.r) / chroma;
             else hue = 4.0 + (c.r - c.g) / chroma;
             return hue < 0.0 ? hue + 6.0 : hue;
+        }
+
+        float colourWeight(Local m, vec3 c) {
+            if (m.hueOn == 0) return 1.0;
+            vec3 v = max(c, vec3(0.0));
+            float most = max(v.r, max(v.g, v.b));
+            float chroma = most - min(v.r, min(v.g, v.b));
+            if (most <= 0.0 || chroma <= 0.0) return 0.0;
+            float degrees = hueOf(v, most, chroma) * 60.0;
+            float apart = abs(degrees - m.hue);
+            apart = min(apart, 360.0 - apart);
+            float near = clamp((m.hueSpread + 20.0 - apart) / 20.0, 0.0, 1.0);
+            float vivid = clamp((chroma / most - 0.05) / 0.15, 0.0, 1.0);
+            return near * vivid;
         }
 
         vec3 colorOf(float hue, float vividness, float most) {
@@ -296,7 +312,7 @@ internal object ToneShader {
                 else { wholeX = tx / wholeWidth + 0.5; wholeY = ty / wholeHeight + 0.5; }
                 float luma = dot(rgb, LUMA);
                 for (int i = 0; i < localCount; i++) {
-                    float weight = maskWeight(locals[i], wholeX, wholeY) * toneWeight(locals[i], luma);
+                    float weight = maskWeight(locals[i], wholeX, wholeY) * toneWeight(locals[i], luma) * colourWeight(locals[i], rgb);
                     if (weight <= 0.0) continue;
                     vec3 part = shade(stages[i + 1], level);
                     rgb += (part - rgb) * weight;

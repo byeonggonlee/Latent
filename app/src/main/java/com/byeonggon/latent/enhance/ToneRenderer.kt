@@ -132,7 +132,7 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
                         // Tone ranges go by the picture as it is shown before any part has settings of its own.
                         val luma = LUMA_RED * rgb[0] + LUMA_GREEN * rgb[1] + LUMA_BLUE * rgb[2]
                         for (local in locals.indices) {
-                            val weight = weights[local].at(wholeX, wholeY) * localEdits[local].toneWeight(luma)
+                            val weight = weights[local].at(wholeX, wholeY) * localEdits[local].toneWeight(luma) * localEdits[local].colourWeight(rgb[0], rgb[1], rgb[2])
                             if (weight <= 0f) continue
                             locals[local].shade(redLevel, greenLevel, blueLevel, x, localRows[local], part)
                             rgb[0] += (part[0] - rgb[0]) * weight

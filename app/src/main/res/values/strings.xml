@@ -300,7 +300,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="add_brush">+ Brush</string>
     <string name="add_linear">+ Linear</string>
     <string name="add_radial">+ Radial</string>
-    <string name="masks_hint">Add a mask to edit only part of the photo. A brush covers where you paint, linear one side such as the sky, radial the area around a person or thing.</string>
+    <string name="masks_hint">Add a mask to edit only part of the photo. A brush covers where you paint, linear one side such as the sky, radial the area around a person or thing, colour only what is a chosen colour, such as the blue of the sky. Any mask can also be held to one colour.</string>
     <string name="invert">Invert</string>
     <string name="delete_mask">Delete mask</string>
     <string name="paint">Paint</string>
@@ -600,4 +600,9 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">Find · %d condition</item>
         <item quantity="other">Find · %d conditions</item>
     </plurals>
+    <string name="mask_colour">Colour %1$d</string>
+    <string name="add_colour">+ Colour</string>
+    <string name="colour_only">Only this colour</string>
+    <string name="colour_any">Any</string>
+    <string name="colour_spread">Colour range</string>
 </resources>

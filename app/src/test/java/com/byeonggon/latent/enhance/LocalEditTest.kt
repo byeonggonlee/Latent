@@ -156,4 +156,67 @@ class LocalEditTest {
         val stored = PhotoEdit(locals = listOf(brightOnly.copy(brightest = 0.9f)))
         assertEquals(stored, PhotoEdit.fromJson(stored.toJson()))
     }
+
+    private val everywhere = Mask(MaskShape.EVERYWHERE, 0.5f, 0.5f, 0.5f, 0.5f)
+
+    @Test
+    fun theWholePictureIsFullEverywhereUnlessInverted() {
+        assertEquals(1f, everywhere.weightAt(0.01f, 0.99f, 300f, 200f), 0f)
+        assertEquals(0f, everywhere.copy(inverted = true).weightAt(0.5f, 0.5f, 300f, 200f), 0f)
+    }
+
+    @Test
+    fun aColourRangeTakesColoursNearItsHueAndLeavesGraysAndOtherColoursAlone() {
+        val blues = LocalEdit(everywhere, hue = 240f)
+
+        assertEquals(1f, blues.colourWeight(0.1f, 0.1f, 0.9f), 0f)
+        // Anywhere within the spread (30 degrees) of blue, all of it.
+        assertEquals(1f, blues.colourWeight(0.1f, 0.5f, 0.9f), 0f)
+        assertEquals(0f, blues.colourWeight(0.9f, 0.1f, 0.1f), 0f)
+        assertEquals(0f, blues.colourWeight(0.4f, 0.4f, 0.4f), 0f)
+        assertEquals(0f, blues.colourWeight(0f, 0f, 0f), 0f)
+        // A hint of colour in a gray is not enough; a clear one is.
+        assertEquals(0f, blues.colourWeight(0.5f, 0.5f, 0.52f), 0f)
+        assertEquals(1f, blues.colourWeight(0.5f, 0.5f, 0.7f), 0f)
+        // Without a hue every colour counts, grays too.
+        assertEquals(1f, LocalEdit(everywhere).colourWeight(0.4f, 0.4f, 0.4f), 0f)
+        // Light beyond white or below black does not confuse it.
+        assertEquals(1f, blues.colourWeight(-0.2f, 0.1f, 1.4f), 0f)
+    }
+
+    @Test
+    fun aColourRangeFadesOutBeyondItsSpreadAndFindsRedAroundTheWheel() {
+        val red = LocalEdit(everywhere, hue = 350f, hueSpread = 20f)
+
+        // Orange at 10 degrees is 20 away from 350: still all of it, red at 0 is 10 away.
+        assertEquals(1f, red.colourWeight(1f, 0f, 0f), 0f)
+        assertEquals(1f, red.colourWeight(1f, 10f / 60f, 0f), 1e-4f)
+        // Half way down the fade, 10 degrees beyond the spread.
+        assertEquals(0.5f, red.colourWeight(1f, 20f / 60f, 0f), 0.02f)
+        assertEquals(0f, red.colourWeight(1f, 60f / 60f * 0.8f, 0f), 0f)
+    }
+
+    @Test
+    fun keepsALocalEditToTheColourItIsHeldTo() {
+        // Red on the left, blue on the right, under a mask that covers everything.
+        val picture = LinearImage.fromArgb(IntArray(100 * 20) { if (it % 100 < 50) rgb(200, 40, 40) else rgb(40, 40, 200) }, 100, 20)
+        val darkerBlues = LocalEdit(everywhere, Adjustments(exposure = -1f), hue = 240f)
+
+        val untouched = picture.render(PhotoEdit())
+        val rendered = picture.render(PhotoEdit(locals = listOf(darkerBlues)))
+
+        assertEquals(untouched[10 * 100 + 10], rendered[10 * 100 + 10])
+        val blueBefore = untouched[10 * 100 + 90] and 0xFF
+        val blueAfter = rendered[10 * 100 + 90] and 0xFF
+        assertTrue("$blueBefore -> $blueAfter", blueAfter < blueBefore - 20)
+    }
+
+    @Test
+    fun storesTheColourOfAColourRange() {
+        val edit = PhotoEdit(locals = listOf(LocalEdit(everywhere, Adjustments(saturation = 0.5f), hue = 120f, hueSpread = 45f), LocalEdit(topDown, Adjustments(exposure = 0.3f), hue = 215f)))
+
+        assertEquals(edit, PhotoEdit.fromJson(edit.toJson()))
+        // Edits stored before colour ranges existed have none.
+        assertEquals(null, PhotoEdit.fromJson(PhotoEdit(locals = listOf(LocalEdit(topDown, Adjustments(exposure = 1f)))).toJson())!!.locals.single().hue)
+    }
 }

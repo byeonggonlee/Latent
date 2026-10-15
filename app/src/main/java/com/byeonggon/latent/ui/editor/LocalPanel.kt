@@ -1,6 +1,19 @@
 package com.byeonggon.latent.ui.editor
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.byeonggon.latent.enhance.MixerBand
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -39,7 +52,11 @@ private fun newMask(shape: MaskShape) = when (shape) {
     MaskShape.LINEAR -> Mask(shape, startX = 0.5f, startY = 0.25f, endX = 0.5f, endY = 0.6f)
     MaskShape.RADIAL -> Mask(shape, startX = 0.5f, startY = 0.5f, endX = 0.75f, endY = 0.8f)
     MaskShape.BRUSH -> Mask(shape, startX = 0f, startY = 0f, endX = 0f, endY = 0f, feather = 0.5f)
+    MaskShape.EVERYWHERE -> Mask(shape, startX = 0.5f, startY = 0.5f, endX = 0.5f, endY = 0.5f)
 }
+
+/** The blue of a sky, which is what a colour range is first put on. */
+private const val FIRST_HUE = 215f
 
 @Composable
 private fun nameOf(local: LocalEdit, index: Int) = stringResource(
@@ -47,6 +64,7 @@ private fun nameOf(local: LocalEdit, index: Int) = stringResource(
         MaskShape.LINEAR -> R.string.mask_linear
         MaskShape.RADIAL -> R.string.mask_radial
         MaskShape.BRUSH -> R.string.mask_brush
+        MaskShape.EVERYWHERE -> R.string.mask_colour
     },
     index + 1,
 )
@@ -79,10 +97,10 @@ internal fun LocalPanel(
         locals.forEachIndexed { index, local ->
             FilterChip(selected = index == selected, onClick = { onSelect(index) }, enabled = enabled, label = { Text(nameOf(local, index)) })
         }
-        for ((shape, label) in listOf(MaskShape.BRUSH to R.string.add_brush, MaskShape.LINEAR to R.string.add_linear, MaskShape.RADIAL to R.string.add_radial)) {
+        for ((shape, label) in listOf(MaskShape.BRUSH to R.string.add_brush, MaskShape.LINEAR to R.string.add_linear, MaskShape.RADIAL to R.string.add_radial, MaskShape.EVERYWHERE to R.string.add_colour)) {
             OutlinedButton(
                 onClick = {
-                    onChange(locals + LocalEdit(newMask(shape)))
+                    onChange(locals + LocalEdit(newMask(shape), hue = FIRST_HUE.takeIf { shape == MaskShape.EVERYWHERE }))
                     onDone()
                     onSelect(locals.size)
                 },
@@ -104,15 +122,18 @@ internal fun LocalPanel(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilterChip(
-            selected = current.mask.inverted,
-            onClick = {
-                onChange(replaced(current.copy(mask = current.mask.copy(inverted = !current.mask.inverted))))
-                onDone()
-            },
-            enabled = enabled,
-            label = { Text(stringResource(R.string.invert)) },
-        )
+        // The whole picture has no other side to swap to.
+        if (current.mask.shape != MaskShape.EVERYWHERE) {
+            FilterChip(
+                selected = current.mask.inverted,
+                onClick = {
+                    onChange(replaced(current.copy(mask = current.mask.copy(inverted = !current.mask.inverted))))
+                    onDone()
+                },
+                enabled = enabled,
+                label = { Text(stringResource(R.string.invert)) },
+            )
+        }
         TextButton(
             onClick = {
                 onChange(locals.filterIndexed { index, _ -> index != selected })
@@ -172,6 +193,59 @@ internal fun LocalPanel(
         onChange = { onChange(replaced(current.copy(brightest = (1f - (it * 100).roundToInt() / 100f).coerceAtLeast(current.darkest + 0.05f).coerceAtMost(1f)))) },
         onDone = onDone,
     )
+    // The colour within the mask that the edit applies to: a sky's blue, the green of leaves.
+    Text(
+        stringResource(R.string.colour_only),
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FilterChip(
+            selected = current.hue == null,
+            onClick = {
+                onChange(replaced(current.copy(hue = null)))
+                onDone()
+            },
+            enabled = enabled && current.mask.shape != MaskShape.EVERYWHERE,
+            label = { Text(stringResource(R.string.colour_any)) },
+        )
+        MixerBand.entries.forEach { band ->
+            val name = band.label
+            val chosen = current.hue?.let { kotlin.math.abs(it - band.hue) < 1f } == true
+            Box(
+                Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(Color.hsv(band.hue, 0.75f, 0.9f))
+                    .border(
+                        width = if (chosen) 3.dp else 0.dp,
+                        color = if (chosen) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                        shape = CircleShape,
+                    )
+                    .clickable(enabled = enabled, role = Role.RadioButton) {
+                        onChange(replaced(current.copy(hue = band.hue)))
+                        onDone()
+                    }
+                    .semantics { contentDescription = name },
+            )
+        }
+    }
+    if (current.hue != null) {
+        SettingSlider(
+            label = stringResource(R.string.colour_spread),
+            value = current.hueSpread,
+            range = 5f..90f,
+            valueText = "${current.hueSpread.roundToInt()}°",
+            enabled = enabled,
+            onChange = { onChange(replaced(current.copy(hueSpread = it.roundToInt().toFloat()))) },
+            onDone = onDone,
+            untouched = LocalEdit.DEFAULT_HUE_SPREAD,
+        )
+    }
     LOCAL_CONTROLS.forEach { control ->
         val value = control.setting.get(current.adjustments)
         SettingSlider(

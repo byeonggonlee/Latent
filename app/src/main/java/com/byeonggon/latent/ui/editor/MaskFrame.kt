@@ -74,6 +74,8 @@ internal class MaskLayout(canvas: Size, margin: Float, pictureWidth: Float, pict
 
     /** What of [mask] a finger at [position] takes hold of, reaching [reach] far; the nearer of the two if both are in reach. */
     fun gripAt(mask: Mask, position: Offset, reach: Float): MaskGrip? {
+        // The whole picture has nothing to take hold of.
+        if (mask.shape == MaskShape.EVERYWHERE) return null
         val toStart = (position - startOf(mask)).getDistance()
         val toEnd = (position - endOf(mask)).getDistance()
         return when {
@@ -211,6 +213,7 @@ internal fun MaskFrame(
         locals.forEachIndexed { index, local ->
             val mask = local.mask
             when {
+                mask.shape == MaskShape.EVERYWHERE -> Unit
                 mask.shape == MaskShape.BRUSH -> if (index != selected) {
                     mask.strokes.firstOrNull()?.let { drawCircle(Color.White.copy(alpha = 0.7f), 7.dp.toPx(), layout.onCanvas(it.points[0], it.points[1])) }
                 }
@@ -223,6 +226,7 @@ internal fun MaskFrame(
 
 /** The selected mask: a solid line where it is full, a dashed one where it has faded out, and a handle for each. */
 private fun DrawScope.drawMask(layout: MaskLayout, mask: Mask) {
+    if (mask.shape == MaskShape.EVERYWHERE) return
     val start = layout.startOf(mask)
     val end = layout.endOf(mask)
     val solid = Stroke(2.dp.toPx())
@@ -240,7 +244,7 @@ private fun DrawScope.drawMask(layout: MaskLayout, mask: Mask) {
                     drawLine(Color.White, end - side, end + side, strokeWidth = dashed.width, pathEffect = dashed.pathEffect)
                 }
             }
-            MaskShape.BRUSH -> Unit
+            MaskShape.BRUSH, MaskShape.EVERYWHERE -> Unit
             MaskShape.RADIAL -> {
                 val radii = Size(abs(end.x - start.x), abs(end.y - start.y))
                 val inner = Size(radii.width * (1f - mask.feather), radii.height * (1f - mask.feather))

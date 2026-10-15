@@ -9,6 +9,9 @@ enum class MaskShape {
     /** Painted on with a brush. */
     BRUSH,
 
+    /** The whole picture; what a colour range is held to by its colour alone. */
+    EVERYWHERE,
+
     /** Full inside an ellipse, fading out towards its edge. */
     RADIAL,
 }
@@ -53,6 +56,7 @@ data class Mask(
                 if (length <= 0f) 0f else 1f - eased(((x - startX) * pictureWidth * across + (y - startY) * pictureHeight * down) / length)
             }
             MaskShape.BRUSH -> BrushRaster.of(this, pictureWidth / pictureHeight).weightAt(x, y)
+            MaskShape.EVERYWHERE -> 1f
             MaskShape.RADIAL -> {
                 if (across == 0f || down == 0f) {
                     0f
@@ -101,7 +105,36 @@ data class LocalEdit(
      */
     val darkest: Float = 0f,
     val brightest: Float = 1f,
+    /**
+     * The colour the edit is held to, as a hue in degrees around the colour wheel (0 red, 120 green,
+     * 240 blue): within the mask, other colours are left alone, and so are grays. Null for any colour.
+     */
+    val hue: Float? = null,
+    /** How far from [hue], in degrees, a colour still takes all of the edit; it fades out over the [HUE_FADE] degrees beyond. */
+    val hueSpread: Float = DEFAULT_HUE_SPREAD,
 ) {
+    /** How much of the edit a pixel of this colour (each channel from 0 to 1, as shown) takes, from 0 to 1. */
+    fun colourWeight(red: Float, green: Float, blue: Float): Float {
+        val wanted = hue ?: return 1f
+        val r = if (red > 0f) red else 0f
+        val g = if (green > 0f) green else 0f
+        val b = if (blue > 0f) blue else 0f
+        val most = maxOf(r, g, b)
+        val chroma = most - minOf(r, g, b)
+        if (most <= 0f || chroma <= 0f) return 0f
+        val sector = when {
+            most == r -> (g - b) / chroma
+            most == g -> 2f + (b - r) / chroma
+            else -> 4f + (r - g) / chroma
+        }
+        val degrees = (if (sector < 0f) sector + 6f else sector) * 60f
+        val apart = Math.abs(degrees - wanted).let { minOf(it, 360f - it) }
+        val near = ((hueSpread + HUE_FADE - apart) / HUE_FADE).coerceIn(0f, 1f)
+        // Colours close to gray have no hue worth speaking of.
+        val vivid = ((chroma / most - LEAST_VIVID) / VIVID_FADE).coerceIn(0f, 1f)
+        return near * vivid
+    }
+
     /** How much of the edit a pixel of brightness [luma] takes, from 0 to 1, fading out over a little beyond the range. */
     fun toneWeight(luma: Float): Float {
         if (darkest <= 0f && brightest >= 1f) return 1f
@@ -110,8 +143,12 @@ data class LocalEdit(
         return below * above
     }
 
-    private companion object {
-        const val TONE_FADE = 0.1f
+    companion object {
+        private const val TONE_FADE = 0.1f
+        const val HUE_FADE = 20f
+        const val DEFAULT_HUE_SPREAD = 30f
+        private const val LEAST_VIVID = 0.05f
+        private const val VIVID_FADE = 0.15f
     }
 }
 

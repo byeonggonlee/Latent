@@ -276,7 +276,7 @@
     <string name="add_brush">+ ブラシ</string>
     <string name="add_linear">+ 線形</string>
     <string name="add_radial">+ 円形</string>
-    <string name="masks_hint">マスクを追加すると、写真の一部だけを編集できます。ブラシは塗った部分、線形は空のような片側、円形は人や物の周りに効きます。</string>
+    <string name="masks_hint">マスクを追加すると、写真の一部だけを編集できます。ブラシは塗った部分、線形は空のような片側、円形は人や物の周りに、カラーは空の青のように選んだ色だけに効きます。どのマスクも一つの色に限定できます。</string>
     <string name="invert">反転</string>
     <string name="delete_mask">マスクを削除</string>
     <string name="paint">塗る</string>
@@ -564,4 +564,9 @@
     <plurals name="find_conditions">
         <item quantity="other">検索 · 条件 %d 件</item>
     </plurals>
+    <string name="mask_colour">カラー %1$d</string>
+    <string name="add_colour">+ カラー</string>
+    <string name="colour_only">この色だけ</string>
+    <string name="colour_any">すべて</string>
+    <string name="colour_spread">色の範囲</string>
 </resources>

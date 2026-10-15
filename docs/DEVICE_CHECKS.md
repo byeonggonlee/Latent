@@ -72,6 +72,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Clipping marks (menu, or `J`): red where bright detail is gone, blue where dark is, on a real photo.
 - [ ] "Auto level" in the crop tool on photos with a horizon or building edges; on one with none it says so.
 - [ ] "Versions…" (editor menu): keep the edit under a name (the name box with the keyboard), open it later, delete it; opening one is a single undoable change and counts after Done.
+- [ ] Colour range ("부분" / Masks → "+ Colour", and the swatches under "Only this colour" of any mask): the blue of a sky or the green of leaves is changed and nothing else; grays stay; the range slider widens and narrows it. The graphics processor's shader and the CPU renderer must agree: compare the editor's preview (graphics processor) with the saved picture, and watch for a shader that fails to compile on the phone (the editor would still work, slowly, on the CPU; look in logcat for GpuTone). Time of a full-size save with a colour range.
 - [ ] Speed with every tool, glow, painted mask and healing at once: preview about 340 ms a step, a JPEG saved in about 4 s, a raw exported in about 6 s on the S24 Ultra (measured); the S26 not yet.
 
 ## Location

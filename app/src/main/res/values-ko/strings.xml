@@ -276,7 +276,7 @@
     <string name="add_brush">+ 브러시</string>
     <string name="add_linear">+ 선형</string>
     <string name="add_radial">+ 원형</string>
-    <string name="masks_hint">사진의 일부분만 보정하려면 마스크를 추가하세요. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에 씁니다.</string>
+    <string name="masks_hint">사진의 일부분만 보정하려면 마스크를 추가하세요. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에, 색상은 하늘의 파랑처럼 고른 색에만 씁니다. 어떤 마스크든 한 가지 색으로 한정할 수 있습니다.</string>
     <string name="invert">반전</string>
     <string name="delete_mask">마스크 삭제</string>
     <string name="paint">칠하기</string>
@@ -564,4 +564,9 @@
     <plurals name="find_conditions">
         <item quantity="other">찾기 · 조건 %d개</item>
     </plurals>
+    <string name="mask_colour">색상 %1$d</string>
+    <string name="add_colour">+ 색상</string>
+    <string name="colour_only">이 색상에만</string>
+    <string name="colour_any">전체</string>
+    <string name="colour_spread">색상 범위</string>
 </resources>

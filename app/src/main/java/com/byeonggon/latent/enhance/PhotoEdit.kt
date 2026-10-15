@@ -210,6 +210,10 @@ data class PhotoEdit(
                 for (setting in Adjustment.entries) setting.get(local.adjustments).takeIf { it != 0f }?.let { each.addProperty(setting.key, it) }
                 if (local.darkest > 0f) each.addProperty(DARKEST, local.darkest)
                 if (local.brightest < 1f) each.addProperty(BRIGHTEST, local.brightest)
+                local.hue?.let {
+                    each.addProperty(COLOUR_HUE, it)
+                    if (local.hueSpread != LocalEdit.DEFAULT_HUE_SPREAD) each.addProperty(COLOUR_SPREAD, local.hueSpread)
+                }
                 stored.add(each)
             }
             add(LOCALS, stored)
@@ -260,6 +264,8 @@ data class PhotoEdit(
         private const val STROKES = "strokes"
         private const val DARKEST = "darkest"
         private const val BRIGHTEST = "brightest"
+        private const val COLOUR_HUE = "colourHue"
+        private const val COLOUR_SPREAD = "colourSpread"
         private const val RADIUS = "radius"
         private const val ERASING = "erasing"
         private const val POINTS = "points"
@@ -335,6 +341,8 @@ data class PhotoEdit(
                         Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.asFloat ?: 0f) },
                         darkest = local.get(DARKEST)?.asFloat ?: 0f,
                         brightest = local.get(BRIGHTEST)?.asFloat ?: 1f,
+                        hue = local.get(COLOUR_HUE)?.asFloat,
+                        hueSpread = local.get(COLOUR_SPREAD)?.asFloat ?: LocalEdit.DEFAULT_HUE_SPREAD,
                     )
                 } ?: emptyList(),
                 spots = stored.getAsJsonArray(SPOTS)?.map { each ->

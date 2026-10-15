@@ -120,6 +120,15 @@ class EditorFlowTest {
         container.editSaver.saving.value.isEmpty()
     }
 
+    /** The viewer's "More" button, once it is no longer disabled by a picture being drawn or saved; a click before then is lost. */
+    private fun clickMoreWhenReady() {
+        compose.waitUntil(timeoutMillis = 20_000) {
+            compose.waitForIdle()
+            compose.onAllNodesWithText("더 보기").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
+        }
+        compose.onNodeWithText("더 보기").performClick()
+    }
+
     private fun openEditor(fileName: String) {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithContentDescription(fileName).fetchSemanticsNodes().isNotEmpty()
@@ -226,7 +235,7 @@ class EditorFlowTest {
 
         waitForText("원본으로 되돌리기")
         waitForSaved()
-        compose.onNodeWithText("더 보기").performClick()
+        clickMoreWhenReady()
         // The menu opens with an animation; it is shown once it has grown to its size.
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runCatching { compose.onNodeWithText("JPEG로 저장").assertIsDisplayed() }.isSuccess }
         assertArrayEquals(original, raw.readBytes())
@@ -544,6 +553,24 @@ class EditorFlowTest {
         val before = BitmapFactory.decodeFile(container.storage.originalOf(photo).path)
         assertTrue((saved.getPixel(48, 4) and 0xFF) < (before.getPixel(48, 4) and 0xFF) - 15)
         assertEquals((before.getPixel(48, 60) and 0xFF).toDouble(), (saved.getPixel(48, 60) and 0xFF).toDouble(), 3.0)
+    }
+
+    @Test
+    fun editsOneColourOfThePictureWithoutAnyMaskToMove() {
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 색상").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("이 색상에만").fetchSemanticsNodes().isNotEmpty() }
+        slide("노출", to = -1f)
+        // It starts out on the blue of a sky; another colour is picked from the swatches.
+        compose.onNodeWithContentDescription("초록").performScrollTo().performClick()
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val local = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.locals.single()
+        assertEquals(MaskShape.EVERYWHERE, local.mask.shape)
+        assertEquals(120f, local.hue!!, 0f)
+        assertEquals(Adjustments(exposure = -1f), local.adjustments)
     }
 
     @Test
