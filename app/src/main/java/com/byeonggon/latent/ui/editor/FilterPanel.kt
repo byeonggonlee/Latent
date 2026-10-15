@@ -89,7 +89,8 @@ internal fun FilterPanel(
         item(key = "none") {
             FilterTile(
                 name = stringResource(R.string.no_filter),
-                selected = state.filter == null && !state.edit.changesColors,
+                // A LUT is chosen in a row of its own.
+                selected = state.filter == null && !state.edit.copy(lut = null).changesColors,
                 modifier = Modifier.combinedClickable(enabled = enabled, role = Role.Button, onClick = { onApply(null) }),
             ) {
                 state.filterPreviews[EditorViewModel.NO_FILTER]
