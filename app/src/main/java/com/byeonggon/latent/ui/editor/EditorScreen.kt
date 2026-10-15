@@ -667,6 +667,7 @@ private fun EditorPanel(
                         onShape = onShape,
                         onFraming = viewModel::setFraming,
                         onLensCorrection = viewModel::setLensCorrection,
+                        onLevel = viewModel::levelBy,
                         onDone = viewModel::commit,
                     )
                     EditorTab.LIGHT -> {
@@ -834,6 +835,8 @@ private fun FramingControls(
     onShape: (CropShape) -> Unit,
     onFraming: (Framing) -> Unit,
     onLensCorrection: (Boolean) -> Unit,
+    /** Works out how far to turn the picture to level it, and hands that over. */
+    onLevel: ((Float) -> Unit) -> Unit,
     onDone: () -> Unit,
 ) {
     val sideways = framing.quarterTurns % 2 != 0
@@ -884,6 +887,17 @@ private fun FramingControls(
                 label = { Text(entry.label) },
             )
         }
+    }
+    ToolRow {
+        OutlinedButton(
+            onClick = {
+                onLevel { angle ->
+                    reframed(framing.copy(angle = angle))
+                    onDone()
+                }
+            },
+            enabled = enabled,
+        ) { Text(stringResource(R.string.auto_level)) }
     }
     SettingSlider(
         label = stringResource(R.string.straighten),

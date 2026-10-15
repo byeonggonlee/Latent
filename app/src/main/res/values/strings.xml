@@ -264,6 +264,8 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="gesture_show_sliders">Show sliders</string>
     <string name="gesture_previous_tool">Previous tool</string>
     <string name="gesture_next_tool">Next tool</string>
+    <string name="auto_level">Auto level</string>
+    <string name="auto_level_none">No clear horizon or vertical lines to level by.</string>
     <string name="reset">Reset</string>
     <string name="copy_edit">Copy edit</string>
     <string name="hold_for_original">Hold to see the original</string>

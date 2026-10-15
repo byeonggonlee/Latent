@@ -9,6 +9,7 @@ import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustment
 import com.byeonggon.latent.enhance.Adjustments
+import com.byeonggon.latent.enhance.AutoLevel
 import com.byeonggon.latent.enhance.AutoSettings
 import com.byeonggon.latent.enhance.ClippingMarks
 import com.byeonggon.latent.enhance.ColorGrading
@@ -339,6 +340,23 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun consumeMessage() = ui.update { it.copy(message = null) }
+
+    /**
+     * Measures how far the picture leans and hands over how far to turn it, in degrees, to level it; says
+     * so instead when it shows no clear horizon or vertical lines.
+     */
+    fun levelBy(onAngle: (Float) -> Unit) {
+        val picture = source.value?.image ?: return
+        viewModelScope.launch {
+            val tilt = withContext(Dispatchers.Default) { AutoLevel.tiltOf(picture) }
+            if (tilt == null) {
+                ui.update { it.copy(message = text(R.string.auto_level_none)) }
+            } else {
+                // Turned about the picture clockwise; a mirrored picture leans the other way round.
+                onAngle(if (ui.value.edit.framing.flipped) tilt else -tilt)
+            }
+        }
+    }
 
     /** A change that is complete in itself, such as flipping a switch. */
     private fun changeOnce(transform: (PhotoEdit) -> PhotoEdit) {

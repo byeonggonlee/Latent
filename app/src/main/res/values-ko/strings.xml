@@ -240,6 +240,8 @@
     <string name="gesture_show_sliders">슬라이더 보기</string>
     <string name="gesture_previous_tool">이전 도구</string>
     <string name="gesture_next_tool">다음 도구</string>
+    <string name="auto_level">자동 수평</string>
+    <string name="auto_level_none">기준이 될 뚜렷한 수평선이나 수직선을 찾지 못했습니다.</string>
     <string name="reset">초기화</string>
     <string name="copy_edit">보정 값 복사</string>
     <string name="hold_for_original">누르고 있으면 원본</string>
