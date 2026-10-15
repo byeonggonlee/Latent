@@ -125,8 +125,8 @@ class BrushRaster private constructor(mask: Mask, aspect: Float) {
         /** How far a detected mask's edge spreads at full feather, as a fraction of the picture's long side. */
         private const val FEATHER_REACH = 0.03f
 
-        /** Grids kept: a subject, its background and a brush or two are looked up in turn for every rendering. */
-        private const val KEPT = 4
+        /** Grids kept: as many as a photo can have masks, all looked up in turn for every rendering. */
+        private const val KEPT = 6
 
         // In the order they were last asked for.
         private val kept = LinkedHashMap<Pair<Mask, Float>, BrushRaster>(8, 0.75f, true)
