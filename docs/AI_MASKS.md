@@ -194,6 +194,19 @@ Stages 1 to 3 together: about 23 to 40 MB installed (*estimate*), no new permiss
    GPU agree by construction; keep guided upsampling at full size (option B) for later.
 5. Keep the privacy promise word for word; add one sentence about on-device masks.
 
+## Decisions of the owner (2026-10-15)
+
+- **Training-data risk (question 3): accepted.** The app is not a commercial release; models with Apache or MIT
+  weights trained on research datasets (DUTS, ADE20K) are used. If a rights holder asks for a model to be taken
+  out, it is replaced then. Keep the model behind an interface and its source, licence and checksum written down
+  here, so that this stays a one-file swap. This does *not* open the non-commercial models (RMBG, EdgeSAM,
+  SegFormer) or the AGPL ones: the app's code is Apache 2.0 and public, and a free app can still be monetised
+  later, so they stay out.
+- Models are bundled in the base APK, no ML Kit and no MediaPipe Tasks library (question 1, as recommended).
+- Order (question 4): as the stages below say, subject and background first, since they share the runtime,
+  the mask type, the stored raster and the rendering with everything that follows.
+- Size budget, mask resolution and builds without Google Play (questions 2, 5, 6): as recommended.
+
 ## Open questions for the owner
 
 1. **Privacy line:** accept ML Kit's Play-services download and Google telemetry for its better-known

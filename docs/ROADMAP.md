@@ -50,8 +50,8 @@ Each is small or medium, works offline, and needs no new permission.
    with LiteRT and models shipped in the app (about 9 MB of runtime and 14 to 30 MB of models, no new
    permission; Google's ML Kit and MediaPipe Tasks libraries are ruled out by their telemetry and Play services
    download). Stages: a bake-off on the owner's photos, then subject and background (U2-Netp), sky (EfficientViT
-   ADE20K), tap to select (MagicTouch). Waiting for the owner's answers to the questions at the end of that
-   document (privacy line, size budget, training-data risk, order). Large. **For Opus.**
+   ADE20K), tap to select (MagicTouch). The owner has answered the questions (2026-10-15): training-data risk
+   accepted, bundled models only, subject and background first. Large. **For Opus.**
 7. **LUTs (`.cube`)** as looks with an intensity slider. *Stills done 2026-10-15, to be judged on a phone;
    the same stage for video (Log footage) is next, with item 12.* "Import LUT…" in the filter panel reads
    Adobe's and Resolve's 3D `.cube` files (2 to 65 points a side, `DOMAIN_MIN`/`DOMAIN_MAX`, up to 20 MB) and
