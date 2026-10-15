@@ -23,6 +23,12 @@ enum class MediaKind {
     }
 }
 
+/** The extensions of HEIF pictures. */
+val HEIF_EXTENSIONS = setOf("heic", "heif", "hif")
+
+/** Whether a file with this name is a HEIF picture. */
+fun isHeifName(fileName: String): Boolean = fileName.substringAfterLast('.', "").lowercase() in HEIF_EXTENSIONS
+
 const val FLAG_PICKED = 1
 const val FLAG_REJECTED = -1
 
@@ -78,7 +84,16 @@ data class MediaItemEntity(
      * Whether what is done to this file is kept as settings, and applied whenever it is shown or
      * exported, instead of being written into the file: raw files, and files that are not the app's.
      */
-    val editsAsSettings: Boolean get() = kind == MediaKind.RAW || origin == MediaOrigin.PHONE
+    val editsAsSettings: Boolean get() = kind == MediaKind.RAW || origin == MediaOrigin.PHONE || isHeif
+
+    /** Whether the file is a HEIF picture (HEIC, HIF), which the app reads and draws but does not write. */
+    val isHeif: Boolean get() = isHeifName(fileName)
+
+    /**
+     * A photo that stays as it is when it is edited: another app's, or a HEIF one. Its edit is kept as
+     * settings, and saving it makes a JPEG copy.
+     */
+    val photoKeptAsIs: Boolean get() = kind == MediaKind.PHOTO && (origin == MediaOrigin.PHONE || isHeif)
 }
 
 /** A named group of photos and videos the person put together, such as a trip. */

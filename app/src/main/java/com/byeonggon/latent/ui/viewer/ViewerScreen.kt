@@ -623,9 +623,9 @@ private fun ActionBar(
                 val entries = listOfNotNull(
                     onInfo?.let { Triple(stringResource(R.string.info), true, it) },
                     Triple(stringResource(R.string.paste_edit), state.canPaste, onPaste).takeIf { photo },
-                    Triple(stringResource(if (item.origin == MediaOrigin.PHONE) R.string.save_copy else R.string.save_as_jpeg), true, onExport)
+                    Triple(stringResource(if (item.photoKeptAsIs) R.string.save_copy else R.string.save_as_jpeg), true, onExport)
                         // A raw file is developed into a JPEG; an edited photo of another app, which stays as it is, into a copy.
-                        .takeIf { item.kind == MediaKind.RAW || (item.origin == MediaOrigin.PHONE && state.edited && photo) },
+                        .takeIf { item.kind == MediaKind.RAW || (item.photoKeptAsIs && state.edited) },
                     Triple(stringResource(R.string.edit_elsewhere), true, onEditElsewhere).takeIf { photo },
                     Triple(stringResource(R.string.show_on_map), true, onShowMap).takeIf { item.geoSource != GeoSource.NONE },
                 )

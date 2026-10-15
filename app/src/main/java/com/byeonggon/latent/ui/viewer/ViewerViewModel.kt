@@ -173,9 +173,9 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
      * another app, which stays as it is, is saved as an edited copy in the library.
      */
     fun exportRaw() {
-        val item = state.value.item?.takeIf { it.kind == MediaKind.RAW || it.origin == MediaOrigin.PHONE } ?: return
+        val item = state.value.item?.takeIf { it.kind == MediaKind.RAW || it.origin == MediaOrigin.PHONE || it.isHeif } ?: return
         runTask(failure = R.string.save_as_jpeg_failed) {
-            text(R.string.saved_as_jpeg, (if (item.origin == MediaOrigin.PHONE && item.kind == MediaKind.PHOTO) edits.saveCopy(item) else edits.exportRaw(item)).name)
+            text(R.string.saved_as_jpeg, (if (item.photoKeptAsIs) edits.saveCopy(item) else edits.exportRaw(item)).name)
         }
     }
 

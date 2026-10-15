@@ -91,8 +91,8 @@ fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
 @Composable
 fun rememberThumbnailModel(item: MediaItemEntity): ImageRequest {
     val context = LocalContext.current
-    // A photo of another app stays as it is; what was done to it shows in its thumbnail all the same.
-    val edit = item.edit.takeIf { item.origin == MediaOrigin.PHONE }
+    // A photo that stays as it is (another app\'s, a HEIF one); what was done to it shows in its thumbnail all the same.
+    val edit = item.edit.takeIf { item.photoKeptAsIs }
     return remember(item.path, item.sizeBytes, item.kind, edit) {
         ImageRequest.Builder(context)
             .data(if (item.kind == MediaKind.VIDEO) File(item.path) else Thumbnail(item.path, item.sizeBytes, edit))

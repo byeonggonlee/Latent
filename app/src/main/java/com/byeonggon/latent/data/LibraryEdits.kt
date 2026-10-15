@@ -82,8 +82,8 @@ class LibraryEdits(
     /** Puts [edit] into effect on [item], in place of any earlier edit. */
     @Throws(IOException::class)
     suspend fun apply(item: MediaItemEntity, edit: PhotoEdit) {
-        if (item.origin == MediaOrigin.PHONE) {
-            // The photo is another app's and stays as it is; an edit that changes nothing is no edit.
+        if (item.origin == MediaOrigin.PHONE || item.isHeif) {
+            // The photo is another app's, or one that cannot be written, and stays as it is; an edit that changes nothing is no edit.
             mediaDao.setEdit(item.id, edit.takeIf { it.changesPicture }?.toJson())
             return
         }
@@ -177,7 +177,7 @@ class LibraryEdits(
         val source = File(item.path)
         val options = exportOptions()
         val leaveOutPlace = options.removeLocation && !forceCopy
-        val phoneEdit = if (item.origin == MediaOrigin.PHONE) editOf(item) else null
+        val phoneEdit = if (item.origin == MediaOrigin.PHONE || item.isHeif) editOf(item) else null
         if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null) {
             if (!forceCopy && !leaveOutPlace) return source
             // A copy of the file as it is, for an app that may do what it likes with it.

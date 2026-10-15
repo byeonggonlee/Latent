@@ -9,6 +9,7 @@ import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.isHeifName
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncRecordEntity
 import com.byeonggon.latent.data.db.SyncedFolderEntity
@@ -254,10 +255,11 @@ class SyncEngine(
         val matched = if (metadata.location == null) geotagger.locate(options.realTimeOf(capturedAt), maxGapMs) else null
 
         // EXIF is written before the file becomes visible, so gallery and backup apps never see an untagged copy.
-        if (matched != null && file.kind == MediaKind.PHOTO) geotagger.writeExif(part, matched)
+        if (matched != null && file.kind == MediaKind.PHOTO && !isHeifName(file.name)) geotagger.writeExif(part, matched)
         val target = storage.targetFor(file.name, capturedAt)
         if (!part.renameTo(target)) throw IOException("Cannot move ${file.name} into the library")
-        if (matched != null && file.kind == MediaKind.RAW) geotagger.writeSidecar(target, matched)
+        // A raw file and a HEIF picture are not written to; the place goes in a sidecar beside them.
+        if (matched != null && (file.kind == MediaKind.RAW || isHeifName(file.name))) geotagger.writeSidecar(target, matched)
         storage.publish(target)
 
         val location = metadata.location ?: matched

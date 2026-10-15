@@ -265,10 +265,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         // Photos of other apps are many and come in their own time, as the grid asks for them; only the newest are made ahead.
         val (library, phone) = mediaDao.all().filter { it.kind != MediaKind.VIDEO }.partition { it.origin == MediaOrigin.LIBRARY }
         val photos = (library + phone.sortedByDescending { it.capturedAt }.take(PHONE_THUMBNAILS_AHEAD)).sortedByDescending { it.capturedAt }
-        thumbnails.keepOnly((library + phone).map { thumbnails.fileFor(it.path, it.sizeBytes, it.edit.takeIf { _ -> it.origin == MediaOrigin.PHONE }) })
+        thumbnails.keepOnly((library + phone).map { thumbnails.fileFor(it.path, it.sizeBytes, it.edit.takeIf { _ -> it.photoKeptAsIs }) })
         for (photo in photos) {
             ensureActive()
-            thumbnails.of(File(photo.path), photo.sizeBytes, photo.edit.takeIf { photo.origin == MediaOrigin.PHONE })
+            thumbnails.of(File(photo.path), photo.sizeBytes, photo.edit.takeIf { photo.photoKeptAsIs })
         }
     }
 
@@ -507,10 +507,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         runBatch(
             R.string.batch_exporting,
             // A photo of another app is saved as a copy when it has an edit to put into one.
-            { it.kind == MediaKind.RAW || (it.origin == MediaOrigin.PHONE && it.kind == MediaKind.PHOTO && edits.isEdited(it)) },
+            { it.kind == MediaKind.RAW || (it.photoKeptAsIs && edits.isEdited(it)) },
             done = R.plurals.batch_exported,
         ) { item ->
-            if (item.origin == MediaOrigin.PHONE && item.kind == MediaKind.PHOTO) edits.saveCopy(item) else edits.exportRaw(item)
+            if (item.photoKeptAsIs) edits.saveCopy(item) else edits.exportRaw(item)
         }
     }
 

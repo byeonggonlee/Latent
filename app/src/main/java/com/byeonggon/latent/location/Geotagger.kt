@@ -70,7 +70,7 @@ class Geotagger(
             // A photo that another app made is not written to; the place is kept in the database only.
             if (item.origin == MediaOrigin.LIBRARY) {
                 when (item.kind) {
-                    MediaKind.PHOTO -> if (writeExif(file, point)) storage.publish(file)
+                    MediaKind.PHOTO -> if (item.isHeif) writeSidecar(file, point) else if (writeExif(file, point)) storage.publish(file)
                     MediaKind.RAW -> writeSidecar(file, point)
                     MediaKind.VIDEO -> Unit
                 }

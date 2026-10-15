@@ -106,17 +106,24 @@ object PhotoEnhancer {
         target.parentFile?.mkdirs()
         try {
             target.writeBytes(bytes)
+            // Only a JPEG's Exif block can be moved over as it is; that of any other picture (HEIF) is copied tag by tag.
+            if (!isJpeg(original)) copyExif(original, target, upright = bakesOrientation(original, edit))
         } catch (e: IOException) {
             target.delete()
             throw e
         }
     }
 
+    private fun isJpeg(file: File): Boolean = file.inputStream().use { it.read() == 0xFF && it.read() == 0xD8 }
+
+    private fun bakesOrientation(original: File, edit: PhotoEdit) =
+        edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+
     /** The JPEG file of [original] edited as [edit] says, with the camera's Exif carried over to it. */
     private fun editedBytes(original: File, edit: PhotoEdit, name: String, quality: Int): ByteArray {
         // Masks are placed on the upright picture; one that is stored on its side is turned upright for them too.
         // Blemishes are taken out of the whole picture at once, which the strip by strip way cannot do.
-        val reframed = edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+        val reframed = bakesOrientation(original, edit)
         val bitmap = if (reframed) reframed(original, edit) else retoned(original, edit)
         val encoded = ByteArrayOutputStream()
         try {
@@ -128,7 +135,8 @@ object PhotoEnhancer {
         } finally {
             bitmap.recycle()
         }
-        return JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed)
+        // A picture that is not a JPEG has no Exif block to move over; the caller copies its Exif afterwards.
+        return if (isJpeg(original)) JpegMetadata.withExifOf(original.readBytes(), encoded.toByteArray(), upright = reframed) else encoded.toByteArray()
     }
 
     /** Puts the original kept at [backup] back in place of the enhanced [photo]. */
