@@ -16,6 +16,7 @@ Phone screenshots still have to be taken on a phone, with photos the owner is ha
 
 English: `Bring in camera photos over USB, edit raw and JPEG, map them. No account.`
 한국어: `카메라 사진을 USB로 가져와 RAW·JPEG를 보정하고 지도에서 봅니다. 계정 없음.`
+日本語: `カメラの写真をUSBで取り込み、RAWとJPEGを現像して地図で見る。アカウント不要。`
 
 ## Full description
 

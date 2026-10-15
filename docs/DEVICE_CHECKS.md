@@ -11,6 +11,10 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Nothing was lost: 210 files in `DCIM/Latent` before and after.
 - [ ] Same on the S26: a fresh install, no photos, first-run card, then a sync.
 
+## Languages
+
+- [ ] Set the phone to Japanese: no text is cut off or English where Japanese should be (longest: the setup card, the Map tab's explanation, the editor's panel tabs), and the wording reads naturally to a Japanese speaker (the translation was written without one checking it; the Lightroom terms for the sliders are used).
+
 ## Foldables
 
 - [ ] Galaxy Z Fold 8, unfolded, in portrait and in landscape, and folded: nothing (top bar buttons, the side panel, the map's menu, the viewer's bar) is under the camera. The screens now stay out of the display cutout as well as the system bars; check that landscape did not gain an odd margin on the camera's side.

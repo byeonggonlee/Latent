@@ -21,6 +21,8 @@ phone's location, and develops them: raw files included, without a cloud or an a
   a letter for each editing tool, `+`, `-` and `0` to zoom, `P`, `X`, `U` and `1`–`5` to cull, `J` for clipped tones, `\` to see the original,
   and a right click on a photo for a menu.
 
+The app speaks English, Korean and Japanese, following the phone's language.
+
 It has been used with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may
 work; raw development currently reads Sony ARW only.
 
