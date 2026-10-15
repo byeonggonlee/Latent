@@ -15,6 +15,7 @@ import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.ImportedPreset
 import com.byeonggon.latent.enhance.LightroomPreset
 import com.byeonggon.latent.enhance.LutStore
+import com.byeonggon.latent.enhance.MaskStore
 import com.byeonggon.latent.enhance.UnusableLutException
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
@@ -107,6 +108,19 @@ class LibraryEdits(
         lutDao.delete(lut.hash)
         for (id in LutStore.ids()) {
             if (lutDao.byHash(id) == null && !isLutInUse(id)) LutStore.delete(id)
+        }
+    }
+
+    /**
+     * Deletes the outlines of detected masks that no photo's edit and no kept version uses any more. One is
+     * left alone for a day after it was made: until then an editor may still be able to undo back to it,
+     * or its edit may be waiting to be saved. Filters never hold masks.
+     */
+    suspend fun forgetUnusedMasks(now: Long = System.currentTimeMillis()) {
+        for ((id, made) in MaskStore.kept()) {
+            if (now - made < UNUSED_MASK_KEPT) continue
+            val pattern = "%\"$id\"%"
+            if (mediaDao.countEditsLike(pattern) == 0 && versionDao.countLike(pattern) == 0) MaskStore.delete(id)
         }
     }
 
@@ -301,5 +315,6 @@ class LibraryEdits(
     private companion object {
         const val CUSTOM_PREFIX = "custom-"
         const val MOST_NAME = 60
+        const val UNUSED_MASK_KEPT = 24 * 60 * 60 * 1000L
     }
 }
