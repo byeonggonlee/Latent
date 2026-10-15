@@ -1,9 +1,120 @@
 # Subject, background and sky masks on the phone (spike)
 
-Roadmap item 6. Research only, no app code changed. Written 2026-10-15; every fact carries a source number
+Roadmap item 6. The spike below was research only, written 2026-10-15; every fact carries a source number
 (list at the end). Sizes marked *measured* were read here from the published Maven AARs (ELF program headers
 of the arm64 `.so`, read in a scratch folder outside the repo). Everything marked *estimate* is a guess to be
-checked on the S24 Ultra.
+checked on the S24 Ultra. **Stage 1 (subject and background) is built**; what was built, and where the model
+came from, is in the next section.
+
+## Stage 1 as built (2026-10-16)
+
+"+ Subject" and "+ Background" in the Masks panel (after "+ Colour"). Nothing runs at import or at start:
+the model is set up the first time one of them is tapped, and kept while the app runs.
+
+### The model
+
+| | |
+|---|---|
+| Model | U²-Netp, the small U²-Net (Qin et al., *Pattern Recognition* 106, 2020), salient object detection |
+| Licence | Apache 2.0 (repository licence, [22]); weights trained on DUTS-TR (owner's decision on training data, below) |
+| Weights used | `u2netp.pth` from the Google Drive link in the official README (https://github.com/xuebinqin/U-2-Net, file id `1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy`), 4,683,258 bytes, SHA-256 `e7567cde013fb64813973ce6e1ecc25a80c05c3ca7adbc5a54f3c3d90991b854` |
+| Conversion | Done here, no ready-made `.tflite` with a clear source was found (PINTO's model zoo only as a 10 GB archive; the one Hugging Face copy has no licence or provenance). `litert-torch` 0.9.4 (torch 2.13.0, ai-edge-litert 2.2.0) in a throwaway venv outside the repo, model code `model/u2net.py` from the same repository, channels-last input and output (`to_channel_last_io`), only the fused output `d0` kept. Weights unchanged |
+| File | `app/src/main/assets/u2netp.tflite`, 4,776,700 bytes, SHA-256 `f491640e47ddf93365f3961e8df2500b0bc3d44c2b2c0fa2065cc765dca8bd3b`, float32, stored uncompressed in the APK |
+| Checked | Against PyTorch on random input: largest difference 7.9e-6. Against rembg's independent ONNX export of the same weights (`u2netp.onnx`, https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx, SHA-256 `309c8469…ddd8`) on a synthetic picture: largest difference 6.5e-6 |
+| Input (read from the model) | `serving_default_args_0` (signature name `args_0`), `[1, 320, 320, 3]` float32, RGB, no quantisation |
+| Output (read from the model) | `serving_default_output_0_output` (`output_0`), `[1, 320, 320, 1]` float32, **sigmoid already applied** (the graph ends in `LOGISTIC`), 0 to 1 |
+| Ops | `CONV_2D` 119, `CONCATENATION` 51, `RESIZE_BILINEAR` 38, `MAX_POOL_2D` 33, `ADD` 11, `LOGISTIC` 1: all on the LiteRT GPU delegate's supported list; whether all run there is for the phone to say |
+| Preparation (as `u2net_test.py`) | The picture stretched to 320 × 320 (not letterboxed), divided by its brightest value, then `(v − mean) / std` with ImageNet's mean `0.485, 0.456, 0.406` and std `0.229, 0.224, 0.225` |
+| Reading the answer | As the authors' test script and rembg do: stretched so that its least and most certain cells are 0 and 1. Two choices of ours: if the most certain cell is below 0.2, "nothing stands out" is said instead of stretching noise; if all cells lie within 0.2 of each other (all subject, or all ground), the answer is taken as it is |
+
+Conversion script (run with `python -I`, after `pip install litert-torch` in a venv):
+
+```python
+import sys, torch, litert_torch
+sys.path.insert(0, CODE_DIR)            # a checkout of xuebinqin/U-2-Net/model
+from u2net import U2NETP
+
+class Fused(torch.nn.Module):
+    def __init__(self, net): super().__init__(); self.net = net
+    def forward(self, x): return self.net(x)[0]          # d0, sigmoid applied
+
+net = U2NETP(3, 1)
+net.load_state_dict(torch.load("u2netp.pth", map_location="cpu", weights_only=True))
+model = litert_torch.to_channel_last_io(Fused(net.eval()).eval(), args=[0], outputs=[0])
+litert_torch.convert(model, (torch.randn(1, 320, 320, 3),)).export("u2netp.tflite")
+```
+
+The licence texts ship in the APK under `assets/licenses/` (`NOTICE.txt` with the source, change and
+checksums above, U²-Net's licence, LiteRT's licence and its third-party notices); the About dialog names
+LiteRT and U²-Netp.
+
+### Runtime
+
+- LiteRT 2.3.0 `litert` and `litert-gpu`, `CompiledModel` API. `SegmenterAccelerator` (GPU, CPU) is the one
+  place the choice is made: `LiteRtSegmenter` tries the GPU first and falls back to the CPU (XNNPACK) when
+  the GPU model cannot be created, or when a run throws or gives non-finite values; the fallback lasts as long
+  as that segmenter. If every accelerator fails, the next tap makes a fresh one. Where nothing can be set up
+  (no native library for the phone's ABI, a LiteRT error), the buttons are hidden for the rest of the run with
+  a one-time explanation.
+- Logcat tag `SubjectMask`: set-up time per accelerator, `first (cold)` and `warm` run times, fallbacks, and
+  the whole outline's time split into picture, model and edges.
+- `litert-api` depends on Play's `ai-delivery` (AI packs), which brings `play-services-basement` and
+  `-tasks`; it is excluded in `app/build.gradle.kts` (only `ModelProvider`/`AiPackModelProvider` use it,
+  which Latent never calls). Release dependency tree checked: no `com.google.android.play`, no
+  `com.google.android.gms`, no `datatransport`, no Firebase. Merged manifest: the same permissions as
+  before (LiteRT's manifest asks for `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_DATA_SYNC`, which the app
+  had already); optional `uses-native-library` entries for OpenCL and vendor NPU libraries; LiteRT's
+  `android.hardware.npu` feature is removed.
+- R8: `-keep class com.google.ai.edge.litert.** { *; }` (the JNI library builds `TensorType`,
+  `TensorBufferRequirements` and `LiteRtException` by name), `-dontwarn` for the excluded Play classes.
+- 16 KB pages: all six 64-bit LiteRT libraries in the built release APK have `LOAD` alignment 2^14
+  (`objdump -p`), and `zipalign -c -P 16 4` passes (stored uncompressed, page-aligned).
+- Size: release APK (all ABIs, debug-signed) 5.54 MB before, 38.67 MB after: LiteRT's native code for
+  arm64-v8a, armeabi-v7a and x86_64 (about 9.4, 6.3 and 12.2 MB), the model (4.78 MB) and the notices
+  (0.23 MB compressed). Per 64-bit ARM phone (what Play delivers from a bundle) about +14.5 MB on disk and
+  about +8.6 MB to download (gzip estimate). LiteRT ships no 32-bit x86 library: there the buttons hide.
+
+### How a mask is made
+
+1. The editor's own picture (raw files from the raw path, JPEGs from `PhotoEnhancer.load`; whole, upright,
+   uncropped, lens corrected as the edit says, blemishes not taken out) is rendered with default settings.
+2. It is resampled to at most 1024 px on the long side (area average), and the model gets that, stretched
+   to 320 × 320.
+3. **Edges:** a guided filter (`GuidedMap`) works out, at the model's size, how its answer follows the
+   picture's brightness (radius 1 % of the long side, about 3 cells; edge threshold 5e-4), and that slope and
+   offset are applied to the brightness at the outline's size. On a synthetic edge that the model puts in the
+   right place but spreads over one of its cells, this takes most of the softness out (the error against a
+   hard step falls below 40 % in `SubjectMaskTest`, to about a fifth in a 1-D simulation); a blur of two or
+   more model cells is only slightly improved. It cannot move an edge the model put in the wrong place, and
+   colour edges of equal brightness stay as soft as the model's.
+4. The outline is kept as 8-bit levels, deflated, in `files/masks/<32 hex>.mask` (magic `MSK1`, width,
+   height): typically tens of kilobytes. `files/` is already out of cloud backup and goes along on a device
+   transfer (`data_extraction_rules.xml`).
+
+### In the edit and in the renderers
+
+- `MaskShape.DETECTED` with a `Detection(kind = SUBJECT, raster = id, model = "u2netp", modelVersion = 1)`;
+  the edit JSON holds only that (`"detected": {...}`). Background is the same outline with `inverted`; the
+  model is asked once per photo and session (Background after Subject reuses the outline).
+- Both renderers use the brush mask's grid (`BrushRaster`; GPU shape id 1, the shader's coverage buffer),
+  so CPU and GPU read the same numbers. The grid now carries the inversion itself (for brush masks this is
+  the same result as before); for a detected mask the inversion comes before the strokes, so painting on a
+  Background mask adds to the background. Feather softens the outline's edge (up to 3 % of the long side)
+  and, as for brushes, the strokes' edges. A new detected mask starts with feather 0.
+- **Brush add/erase on top** is in: the panel shows Paint/Erase and the brush size for detected masks, and
+  strokes are drawn onto the outline's grid (1024 cells, so a stroke costs more there than on a brush mask's
+  384).
+- A lost outline (file gone) or a kind this version does not know covers nothing, inverted or not, and the
+  panel says so with "Find again", which keeps strokes and settings. Old edits read as before.
+- Outlines that no photo's edit and no kept version name are deleted a day after they were made (checked when
+  the editor first opens a photo). Copying a look (`withLookOf`), filters and presets never carry masks.
+
+### Not verified (no phone was attached)
+
+Whether LiteRT loads and the model runs on the S24/S26 at all, on the GPU and on the CPU; the times; the
+memory; whether every op stays on the GPU; the quality on real photos; GPU and CPU agreement on the outline;
+the shader with a detected mask. `SubjectMaskOnDeviceTest` checks the shapes, the sigmoid range and a plain
+subject on both accelerators and logs their times; see `DEVICE_CHECKS.md`.
 
 ## The answer
 

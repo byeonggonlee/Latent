@@ -36,6 +36,12 @@ import com.byeonggon.latent.enhance.CubeLut
 import com.byeonggon.latent.enhance.LutLook
 import com.byeonggon.latent.enhance.LutProblem
 import com.byeonggon.latent.enhance.UnusableLutException
+import com.byeonggon.latent.data.DetectionResult
+import com.byeonggon.latent.enhance.DetectedKind
+import com.byeonggon.latent.enhance.Detection
+import com.byeonggon.latent.enhance.Mask
+import com.byeonggon.latent.enhance.MaskShape
+import com.byeonggon.latent.enhance.MaskStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,6 +111,12 @@ data class EditorUiState(
     /** The LUTs the person imported, and the picture with each of them on it, by its hash. */
     val luts: List<LutEntity> = emptyList(),
     val lutPreviews: Map<String, Bitmap> = emptyMap(),
+    /** Whether subject and background masks can be made on this phone, as far as is known. */
+    val canDetect: Boolean = false,
+    /** A model is looking for the subject. */
+    val detecting: Boolean = false,
+    /** The ids of outlines that masks of the edit refer to but that are gone: those masks change nothing. */
+    val lostOutlines: Set<String> = emptySet(),
     /** The picture is still being read. */
     val loading: Boolean = true,
     val saving: Boolean = false,
@@ -120,6 +132,11 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val ui = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = ui.asStateFlow()
     private val versionDao = container.database.editVersionDao()
+    private val detector = container.maskDetector
+
+    /** The subject found in the photo being edited, and for which lens correction, so that it is looked for only once. */
+    private var subject: Pair<Boolean, Detection>? = null
+    private var sweptMasks = false
 
     /** The versions of this photo's edit that were kept under a name. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -155,6 +172,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { edits.copied.collect { copied -> ui.update { it.copy(canPaste = copied != null) } } }
         viewModelScope.launch { edits.filters.collect { filters -> ui.update { it.copy(filters = filters).checked() } } }
         viewModelScope.launch { edits.luts.collect { luts -> ui.update { it.copy(luts = luts) } } }
+        viewModelScope.launch { detector.available.collect { available -> ui.update { it.copy(canDetect = available) } } }
         // The filters and LUTs are shown on the picture itself; drawing them all takes a moment.
         viewModelScope.launch {
             combine(source, edits.filters, edits.luts) { source, filters, luts -> Triple(source, filters, luts) }.collectLatest { (source, filters, luts) ->
@@ -205,6 +223,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         if (session == id) return
         close()
         session = id
+        if (!sweptMasks) {
+            sweptMasks = true
+            viewModelScope.launch(Dispatchers.IO) { edits.forgetUnusedMasks() }
+        }
         loading = viewModelScope.launch {
             val item = mediaDao.byId(id)?.takeIf { it.kind != MediaKind.VIDEO }
             if (item == null) {
@@ -229,8 +251,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         loading?.cancel()
         session = null
         source.value = null
+        subject = null
         detailCentre.value = 0.5f to 0.5f
-        ui.update { EditorUiState(canPaste = edits.copied.value != null, filters = it.filters, luts = it.luts) }
+        ui.update { EditorUiState(canPaste = edits.copied.value != null, filters = it.filters, luts = it.luts, canDetect = it.canDetect) }
     }
 
     /** Remembers this photo's tones and colours, to be given to other photos. */
@@ -270,6 +293,65 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             val spots = ui.value.edit.spots
             changeOnce { it.copy(spots = spots + Spot(x, y, radius, fromX, fromY)) }
             onAdded(spots.size)
+        }
+    }
+
+    /**
+     * Adds a mask of the photo's subject, found by a model on the phone, or with [background] of everything
+     * but its subject. [onAdded] is told the new mask's place among the others.
+     */
+    fun addSubjectMask(background: Boolean, onAdded: (Int) -> Unit) {
+        withSubject { detection ->
+            val locals = ui.value.edit.locals
+            changeOnce {
+                it.copy(locals = it.locals + LocalEdit(Mask(MaskShape.DETECTED, 0f, 0f, 0f, 0f, feather = 0f, inverted = background, detection = detection)))
+            }
+            onAdded(locals.size)
+        }
+    }
+
+    /** Finds the subject again for the mask at [index], whose outline is gone; what was painted on it and its settings stay. */
+    fun findOutlineAgain(index: Int) {
+        val lost = ui.value.edit.locals.getOrNull(index)?.mask?.detection ?: return
+        if (lost.raster !in ui.value.lostOutlines) return
+        withSubject { detection ->
+            changeOnce { edit ->
+                edit.copy(locals = edit.locals.map { local -> if (local.mask.detection == lost) local.copy(mask = local.mask.copy(detection = detection)) else local })
+            }
+        }
+    }
+
+    /** Hands [use] the photo's subject: the one found already, or else one the model finds now, saying why when there is none. */
+    private fun withSubject(use: (Detection) -> Unit) {
+        val forSource = source.value ?: return
+        if (ui.value.detecting) return
+        val lens = ui.value.edit.lensCorrection
+        val known = subject?.takeIf { it.first == lens }?.second?.takeIf { MaskStore.isKept(it.raster) }
+            ?: ui.value.edit.locals.firstNotNullOfOrNull { local ->
+                local.mask.detection?.takeIf { it.kind == DetectedKind.SUBJECT && MaskStore.isKept(it.raster) }
+            }
+        if (known != null) {
+            use(known)
+            return
+        }
+        ui.update { it.copy(detecting = true) }
+        viewModelScope.launch {
+            val result = try {
+                detector.detect(forSource.image, DetectedKind.SUBJECT)
+            } finally {
+                ui.update { it.copy(detecting = false) }
+            }
+            // The editor may have moved on to another photo meanwhile.
+            if (source.value !== forSource) return@launch
+            when (result) {
+                is DetectionResult.Found -> {
+                    subject = lens to result.detection
+                    use(result.detection)
+                }
+                DetectionResult.NothingFound -> ui.update { it.copy(message = text(R.string.subject_not_found)) }
+                DetectionResult.Failed -> ui.update { it.copy(message = text(R.string.subject_failed)) }
+                DetectionResult.Unavailable -> ui.update { it.copy(message = text(R.string.subject_unavailable)) }
+            }
         }
     }
 
@@ -551,6 +633,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         val current = filter?.takeIf { it in filters && edit == edit.withFilterLook(it.look.lookAt(filterAmount)) }
         return copy(
             filter = current,
+            lostOutlines = edit.locals.mapNotNullTo(HashSet()) { local -> local.mask.detection?.raster?.takeUnless(MaskStore::isKept) },
             changed = changed,
             canSave = changed || !stored,
             canUndo = position > 0,

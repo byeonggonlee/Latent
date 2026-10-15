@@ -34,6 +34,11 @@ import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustments
 import com.byeonggon.latent.enhance.ClippingMarks
+import com.byeonggon.latent.enhance.DetectedKind
+import com.byeonggon.latent.enhance.MaskStore
+import com.byeonggon.latent.enhance.Segmentation
+import com.byeonggon.latent.enhance.Segmenter
+import com.byeonggon.latent.enhance.ShownPicture
 import com.byeonggon.latent.enhance.Filters
 import com.byeonggon.latent.enhance.Framing
 import com.byeonggon.latent.enhance.LutLook
@@ -594,6 +599,65 @@ class EditorFlowTest {
         assertEquals(MaskShape.EVERYWHERE, local.mask.shape)
         assertEquals(120f, local.hue!!, 0f)
         assertEquals(Adjustments(exposure = -1f), local.adjustments)
+    }
+
+    /** Stands in for the model, which is native code: sees the right half of any picture as its subject. */
+    private class RightHalfIsSubject : Segmenter {
+        override val model = "right"
+        override val modelVersion = 1
+        var calls = 0
+
+        override fun segment(picture: ShownPicture): Segmentation {
+            calls++
+            return Segmentation(32, 32, FloatArray(32 * 32) { if (it % 32 >= 16) 0.97f else 0.02f })
+        }
+    }
+
+    @Test
+    fun editsTheSubjectFoundOnThePhoneAndThenItsBackground() {
+        val model = RightHalfIsSubject()
+        container.maskDetector.makeSegmenter = { model }
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 피사체").performScrollTo().performClick()
+        waitForText("피사체 1")
+        slide("노출", to = -1f)
+        // The background is the same outline the other way round: the model is not asked again.
+        compose.onNodeWithText("+ 배경").performScrollTo().performClick()
+        waitForText("배경 2")
+        slide("노출", to = 1f)
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val locals = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.locals
+        assertEquals(listOf(MaskShape.DETECTED, MaskShape.DETECTED), locals.map { it.mask.shape })
+        assertEquals(listOf(false, true), locals.map { it.mask.inverted })
+        assertEquals(listOf(Adjustments(exposure = -1f), Adjustments(exposure = 1f)), locals.map { it.adjustments })
+        val detection = locals[0].mask.detection!!
+        assertEquals(detection, locals[1].mask.detection)
+        assertEquals(DetectedKind.SUBJECT, detection.kind)
+        assertEquals("right", detection.model)
+        assertTrue(MaskStore.isKept(detection.raster))
+        assertEquals(1, model.calls)
+        // The right of the saved picture is darker than it was, the left brighter.
+        val saved = BitmapFactory.decodeFile(photo.path)
+        val before = BitmapFactory.decodeFile(container.storage.originalOf(photo).path)
+        assertTrue((saved.getPixel(88, 32) and 0xFF) < (before.getPixel(88, 32) and 0xFF) - 15)
+        assertTrue((saved.getPixel(6, 32) and 0xFF) > (before.getPixel(6, 32) and 0xFF) + 15)
+    }
+
+    @Test
+    fun hidesSubjectMasksOnAPhoneWhereTheModelCannotRun() {
+        // On the JVM, LiteRT's native code cannot load, as on a phone it does not support.
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 피사체").performScrollTo().performClick()
+
+        waitForText("이 휴대전화에서는 피사체·배경 마스크를 쓸 수 없어 버튼을 숨겼습니다. 다른 마스크는 그대로 쓸 수 있습니다.")
+        compose.onAllNodesWithText("+ 피사체").assertCountEquals(0)
+        compose.onAllNodesWithText("+ 배경").assertCountEquals(0)
+        compose.onNodeWithText("+ 선형").assertIsDisplayed()
+        assertTrue(PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit }) == null)
     }
 
     @Test

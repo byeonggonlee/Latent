@@ -276,7 +276,7 @@
     <string name="add_brush">+ ブラシ</string>
     <string name="add_linear">+ 線形</string>
     <string name="add_radial">+ 円形</string>
-    <string name="masks_hint">マスクを追加すると、写真の一部だけを編集できます。ブラシは塗った部分、線形は空のような片側、円形は人や物の周りに、カラーは空の青のように選んだ色だけに効きます。どのマスクも一つの色に限定できます。</string>
+    <string name="masks_hint">マスクを追加すると、写真の一部だけを編集できます。被写体は目立つ人・動物・物を、背景はそれ以外をスマートフォン上で検出します。ブラシは塗った部分、線形は空のような片側、円形は人や物の周りに、カラーは空の青のように選んだ色だけに効きます。どのマスクも一つの色に限定できます。</string>
     <string name="invert">反転</string>
     <string name="delete_mask">マスクを削除</string>
     <string name="paint">塗る</string>
@@ -430,7 +430,7 @@
     <string name="about">Latent について</string>
     <string name="about_version">バージョン %1$s</string>
     <string name="about_text">カメラとスマートフォンの写真を、スマートフォンの中で現像し、お望みなら地図に載せます。すべてスマートフォンの中にとどまります。アカウントも広告も分析もありません。</string>
-    <string name="about_built_from">Jetpack Compose、Room、Coil、Media3、AndroidX ExifInterface、Gson で作られています。いずれも Apache License 2.0 で、Latent 自体も同じです。オンライン地図をオンにすると、地図の画像は OpenStreetMap(© OpenStreetMap contributors)から取得します。</string>
+    <string name="about_built_from">Jetpack Compose、Room、Coil、Media3、AndroidX ExifInterface、Gson、LiteRT で作られています。いずれも Apache License 2.0 で、Latent 自体も同じです。被写体マスクはスマートフォン上で U²-Netp モデル(Qin ほか、Apache License 2.0)が検出します。オンライン地図をオンにすると、地図の画像は OpenStreetMap(© OpenStreetMap contributors)から取得します。</string>
     <string name="about_trademarks">Sony と ZV-E10 は Sony Group Corporation の商標で、Google タイムラインは Google LLC の機能です。Latent はどちらとも提携しておらず、承認も受けていません。</string>
     <string name="about_privacy">プライバシーポリシー</string>
     <string name="about_source">ソースコードとライセンス</string>
@@ -566,6 +566,16 @@
     </plurals>
     <string name="mask_colour">カラー %1$d</string>
     <string name="add_colour">+ カラー</string>
+    <string name="add_subject">+ 被写体</string>
+    <string name="add_background">+ 背景</string>
+    <string name="mask_subject">被写体 %1$d</string>
+    <string name="mask_background">背景 %1$d</string>
+    <string name="finding_subject">被写体を検出しています…</string>
+    <string name="subject_not_found">この写真には、被写体として選べるほどはっきり目立つものが見つかりませんでした。</string>
+    <string name="subject_failed">被写体を検出できませんでした。もう一度お試しください。</string>
+    <string name="subject_unavailable">このスマートフォンでは被写体・背景マスクを使えないため、ボタンを非表示にしました。ほかのマスクはこれまでどおり使えます。</string>
+    <string name="mask_outline_lost">このマスクの輪郭が失われたため、何も変わりません。</string>
+    <string name="detect_again">再検出</string>
     <string name="colour_only">この色だけ</string>
     <string name="colour_any">すべて</string>
     <string name="colour_spread">色の範囲</string>

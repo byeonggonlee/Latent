@@ -219,6 +219,17 @@ data class PhotoEdit(
                     }
                     each.add(STROKES, strokes)
                 }
+                local.mask.detection?.let { detection ->
+                    each.add(
+                        DETECTED,
+                        JsonObject().apply {
+                            addProperty(KIND, detection.kind.name)
+                            addProperty(RASTER, detection.raster)
+                            addProperty(MODEL, detection.model)
+                            addProperty(MODEL_VERSION, detection.modelVersion)
+                        },
+                    )
+                }
                 for (setting in Adjustment.entries) setting.get(local.adjustments).takeIf { it != 0f }?.let { each.addProperty(setting.key, it) }
                 if (local.darkest > 0f) each.addProperty(DARKEST, local.darkest)
                 if (local.brightest < 1f) each.addProperty(BRIGHTEST, local.brightest)
@@ -285,6 +296,11 @@ data class PhotoEdit(
         private const val RADIUS = "radius"
         private const val ERASING = "erasing"
         private const val POINTS = "points"
+        private const val DETECTED = "detected"
+        private const val KIND = "kind"
+        private const val RASTER = "raster"
+        private const val MODEL = "model"
+        private const val MODEL_VERSION = "modelVersion"
         private const val LUT = "lut"
         private const val LUT_INTENSITY = "lutIntensity"
 
@@ -355,6 +371,7 @@ data class PhotoEdit(
                                     erasing = stroke.get(ERASING)?.asBoolean ?: false,
                                 )
                             } ?: emptyList(),
+                            detection = local.getAsJsonObject(DETECTED)?.let(::detection),
                         ),
                         Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.asFloat ?: 0f) },
                         darkest = local.get(DARKEST)?.asFloat ?: 0f,
@@ -368,6 +385,17 @@ data class PhotoEdit(
                     Spot(values[0], values[1], values[2], values[3], values[4])
                 } ?: emptyList(),
                 lut = stored.get(LUT)?.asString?.let { LutLook(it, (stored.get(LUT_INTENSITY)?.asFloat ?: 1f).coerceIn(0f, 1f)) },
+            )
+        }
+
+        /** What a model found, as [toJson] wrote it; null for a kind of thing that this version of the app does not know, which then covers nothing. */
+        private fun detection(stored: JsonObject): Detection? {
+            val kind = DetectedKind.entries.firstOrNull { it.name == stored.get(KIND)?.asString } ?: return null
+            return Detection(
+                kind = kind,
+                raster = stored.get(RASTER)?.asString ?: return null,
+                model = stored.get(MODEL)?.asString.orEmpty(),
+                modelVersion = stored.get(MODEL_VERSION)?.asInt ?: 0,
             )
         }
 

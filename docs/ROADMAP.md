@@ -12,7 +12,7 @@ camera sync, all on the phone. Last revised 2026-10-15 (items 1 to 5 and 8 done,
 | **Cull** | Flags (pick, reject), stars, compare | – | Flags, stars, compare, trash |
 | Global tone and colour | Light, colour mixer, grading, curves, detail, effects | Tune, curves, white balance, details, vignette, grain | All of these, with raw development |
 | Crop and geometry | Crop, upright, perspective | Crop, rotate, perspective | All of these, with auto level |
-| **Local edits** | Masks: **subject, sky, background**, linear, radial, brush, colour range, luminance range, healing | Selective, brush, healing | Linear, radial, brush, colour range, luminance range, healing. **No AI masks** |
+| **Local edits** | Masks: **subject, sky, background**, linear, radial, brush, colour range, luminance range, healing | Selective, brush, healing | Subject and background (on the phone), linear, radial, brush, colour range, luminance range, healing. **No sky mask yet** |
 | **Looks** | Presets (own and imported), profiles, **LUTs** | Looks, HDR, glow, drama | 16 built-in looks, own looks, Lightroom presets and `.cube` LUTs imported (LUTs on stills only) |
 | **Export** | Size, quality, format, metadata, watermark | Save, export, share | Share at a size, JPEG quality, place left out, save a copy. **JPEG only** |
 | **Organise** | Albums, search, keywords, flags | – | Albums, ratings, versions, search by Exif, date, place |
@@ -52,6 +52,12 @@ Each is small or medium, works offline, and needs no new permission.
    download). Stages: a bake-off on the owner's photos, then subject and background (U2-Netp), sky (EfficientViT
    ADE20K), tap to select (MagicTouch). The owner has answered the questions (2026-10-15): training-data risk
    accepted, bundled models only, subject and background first. Large. **For Opus.**
+   *Stage 1 (subject and background) built 2026-10-16, to be judged on a phone:* "+ Subject" and "+ Background"
+   in the Masks panel run U²-Netp (converted from the authors' weights, 4.8 MB, in the APK) with LiteRT 2.3.0,
+   on the GPU or else the CPU, once per photo and only when tapped; the outline is refined along the picture's
+   edges and kept in a file of its own, rendered through the brush mask's path in both renderers, and can be
+   painted on with the brush. About +14.5 MB installed on a 64-bit phone. Next: the bake-off on the owner's
+   photos (stage 0, which was skipped), then sky (stage 2). Details and provenance in `AI_MASKS.md`.
 7. **LUTs (`.cube`)** as looks with an intensity slider. *Stills done 2026-10-15, to be judged on a phone;
    the same stage for video (Log footage) is next, with item 12.* "Import LUT…" in the filter panel reads
    Adobe's and Resolve's 3D `.cube` files (2 to 65 points a side, `DOMAIN_MIN`/`DOMAIN_MAX`, up to 20 MB) and

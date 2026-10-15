@@ -1,0 +1,28 @@
+Latent
+Licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+Source: https://github.com/byeonggonlee/Latent
+
+Besides the libraries named in the app's About dialog, Latent contains the following works of others.
+
+
+U²-Netp salient object model (assets/u2netp.tflite)
+---------------------------------------------------
+U²-Net by Xuebin Qin, Zichen Zhang, Chenyang Huang, Masood Dehghan, Osmar R. Zaiane and
+Martin Jagersand. Licensed under the Apache License, Version 2.0; see u2net-LICENSE.txt.
+Source: https://github.com/xuebinqin/U-2-Net (weights u2netp.pth, 4,683,258 bytes,
+SHA-256 e7567cde013fb64813973ce6e1ecc25a80c05c3ca7adbc5a54f3c3d90991b854, from the link in the
+project's README).
+Paper: Qin et al., "U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection",
+Pattern Recognition 106, 2020.
+
+Changed for Latent: converted from PyTorch to the LiteRT (.tflite) format with litert-torch 0.9.4,
+with input and output laid out channels last (1 x 320 x 320 x 3 in, 1 x 320 x 320 x 1 out) and only
+the fused output (d0, after its sigmoid) kept. The weights are unchanged. The converted file is
+4,776,700 bytes, SHA-256 f491640e47ddf93365f3961e8df2500b0bc3d44c2b2c0fa2065cc765dca8bd3b.
+
+
+LiteRT 2.3.0 (com.google.ai.edge.litert:litert, litert-gpu)
+-----------------------------------------------------------
+Copyright Google LLC. Licensed under the Apache License, Version 2.0; see litert-LICENSE.txt.
+Its native libraries contain the third-party code whose notices are in
+litert-THIRD_PARTY_NOTICE.txt, as shipped by Google with LiteRT.

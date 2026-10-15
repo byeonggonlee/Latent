@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -53,6 +54,8 @@ private fun newMask(shape: MaskShape) = when (shape) {
     MaskShape.RADIAL -> Mask(shape, startX = 0.5f, startY = 0.5f, endX = 0.75f, endY = 0.8f)
     MaskShape.BRUSH -> Mask(shape, startX = 0f, startY = 0f, endX = 0f, endY = 0f, feather = 0.5f)
     MaskShape.EVERYWHERE -> Mask(shape, startX = 0.5f, startY = 0.5f, endX = 0.5f, endY = 0.5f)
+    // Made by the view model once the model has found something; nothing to place by hand.
+    MaskShape.DETECTED -> Mask(shape, startX = 0f, startY = 0f, endX = 0f, endY = 0f, feather = 0f)
 }
 
 /** The blue of a sky, which is what a colour range is first put on. */
@@ -65,8 +68,22 @@ private fun nameOf(local: LocalEdit, index: Int) = stringResource(
         MaskShape.RADIAL -> R.string.mask_radial
         MaskShape.BRUSH -> R.string.mask_brush
         MaskShape.EVERYWHERE -> R.string.mask_colour
+        MaskShape.DETECTED -> if (local.mask.inverted) R.string.mask_background else R.string.mask_subject
     },
     index + 1,
+)
+
+/**
+ * What can be done about masks that a model finds: whether it can run here at all ([available]), whether
+ * it is at work right now ([busy]), which outlines are lost ([lost], by their ids), and how to ask for a
+ * subject mask, inverted for the background, or to find the selected mask's outline again.
+ */
+internal class Detecting(
+    val available: Boolean = false,
+    val busy: Boolean = false,
+    val lost: Set<String> = emptySet(),
+    val onAdd: (background: Boolean) -> Unit = {},
+    val onFindAgain: () -> Unit = {},
 )
 
 /**
@@ -85,6 +102,7 @@ internal fun LocalPanel(
     onBrushRadius: (Float) -> Unit = {},
     erasing: Boolean = false,
     onErasing: (Boolean) -> Unit = {},
+    detecting: Detecting = Detecting(),
 ) {
     fun replaced(local: LocalEdit) = locals.toMutableList().apply { this[selected] = local }
     val current = locals.getOrNull(selected)
@@ -106,6 +124,24 @@ internal fun LocalPanel(
                 },
                 enabled = enabled && locals.size < MOST_MASKS,
             ) { Text(stringResource(label)) }
+        }
+        if (detecting.available) {
+            for ((background, label) in listOf(false to R.string.add_subject, true to R.string.add_background)) {
+                OutlinedButton(
+                    onClick = { detecting.onAdd(background) },
+                    enabled = enabled && !detecting.busy && locals.size < MOST_MASKS,
+                ) { Text(stringResource(label)) }
+            }
+        }
+    }
+    if (detecting.busy) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text(stringResource(R.string.finding_subject), style = MaterialTheme.typography.bodyMedium)
         }
     }
     if (current == null) {
@@ -143,7 +179,26 @@ internal fun LocalPanel(
             enabled = enabled,
         ) { Text(stringResource(R.string.delete_mask)) }
     }
-    if (current.mask.shape == MaskShape.BRUSH) {
+    val outline = current.mask.detection?.raster
+    if (current.mask.shape == MaskShape.DETECTED && (outline == null || outline in detecting.lost)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.mask_outline_lost),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f),
+            )
+            if (detecting.available) {
+                TextButton(onClick = detecting.onFindAgain, enabled = enabled && !detecting.busy) { Text(stringResource(R.string.detect_again)) }
+            }
+        }
+    }
+    // A detected mask is touched up with the brush, which adds to it or takes from it.
+    if (current.mask.shape == MaskShape.BRUSH || current.mask.shape == MaskShape.DETECTED) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
