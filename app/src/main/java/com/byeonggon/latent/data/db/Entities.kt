@@ -169,6 +169,21 @@ data class LocationPointEntity(
     val source: LocationSource,
 )
 
+/**
+ * A colour lookup table (a .cube file) the person imported, to give photos its look. Its table is kept
+ * in a file of its own, under [hash], which is also what edits refer to it by.
+ */
+@Entity(tableName = "luts", indices = [Index(value = ["hash"], unique = true)])
+data class LutEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    /** Points along each side of the cube. */
+    val size: Int,
+    /** The id of the table in LutStore: a digest of the imported file. */
+    val hash: String,
+    val createdAt: Long,
+)
+
 /** A look the user saved under a name, to give to other photos: a filter of their own. */
 @Entity(tableName = "filters")
 data class FilterEntity(
