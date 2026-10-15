@@ -75,6 +75,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.FileProvider
@@ -107,6 +109,8 @@ fun LibraryScreen(
     val storageGranted = rememberStorageAccess()
     // Access given after the library opened: what is in the folder can be read now.
     LaunchedEffect(storageGranted) { if (storageGranted) viewModel.refresh() }
+    // Coming back to the app: photos taken or deleted meanwhile, by the phone's camera say, are taken into account.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val selecting = state.selected.isNotEmpty()
     BackHandler(enabled = selecting, onBack = viewModel::clearSelection)
 

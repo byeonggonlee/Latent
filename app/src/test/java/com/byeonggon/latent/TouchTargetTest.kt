@@ -77,6 +77,8 @@ class TouchTargetTest {
         found["library"] = tooSmall()
         compose.onNodeWithText("카메라").performClick()
         found["camera"] = tooSmall()
+        compose.onNodeWithText("지도").performClick()
+        found["map"] = tooSmall()
         compose.onNodeWithText("위치").performClick()
         found["location"] = tooSmall()
         compose.onNodeWithText("보관함").performClick()
