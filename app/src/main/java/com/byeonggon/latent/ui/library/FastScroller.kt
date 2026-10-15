@@ -19,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +53,8 @@ private val HANDLE_GRIP = 28.dp
  */
 @Composable
 fun FastScroller(state: LazyGridState, labelAt: (Int) -> String?, modifier: Modifier = Modifier) {
-    val total = state.layoutInfo.totalItemsCount
+    // Read only as it changes in kind: the handle itself follows the grid in the layout phase, below.
+    val total by remember(state) { derivedStateOf { state.layoutInfo.totalItemsCount } }
     if (total < LONG_ENOUGH) return
     val scope = rememberCoroutineScope()
     var dragging by remember { mutableStateOf(false) }
@@ -70,8 +72,8 @@ fun FastScroller(state: LazyGridState, labelAt: (Int) -> String?, modifier: Modi
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val track = with(LocalDensity.current) { (maxHeight - HANDLE_HEIGHT).toPx() }.coerceAtLeast(1f)
-        val following = state.firstVisibleItemIndex.toFloat() / (total - 1).coerceAtLeast(1)
-        val fraction = if (dragging) dragFraction else following.coerceIn(0f, 1f)
+        val following = { (state.firstVisibleItemIndex.toFloat() / (total - 1).coerceAtLeast(1)).coerceIn(0f, 1f) }
+        val fraction = { if (dragging) dragFraction else following() }
         val shown = dragging || recentlyMoved
 
         AnimatedVisibility(
@@ -80,11 +82,11 @@ fun FastScroller(state: LazyGridState, labelAt: (Int) -> String?, modifier: Modi
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset { IntOffset(0, (fraction * track).roundToInt()) },
+                .offset { IntOffset(0, (fraction() * track).roundToInt()) },
         ) {
             Box(contentAlignment = Alignment.CenterEnd) {
                 if (dragging) {
-                    labelAt((fraction * (total - 1)).roundToInt())?.let { label ->
+                    labelAt((dragFraction * (total - 1)).roundToInt())?.let { label ->
                         Surface(
                             color = MaterialTheme.colorScheme.inverseSurface,
                             contentColor = MaterialTheme.colorScheme.inverseOnSurface,

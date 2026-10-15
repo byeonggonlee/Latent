@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -159,7 +160,7 @@ private data class TileKey(val zoom: Int, val x: Int, val y: Int)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PhotoMap(points: List<MapPoint>, tiles: MapTiles, viewModel: MapViewModel, onOpen: (Long) -> Unit) {
+internal fun PhotoMap(points: List<MapPoint>, tiles: MapTiles, viewModel: MapViewModel, onOpen: (Long) -> Unit) {
     val density = LocalDensity.current
     // Tiles are 256 pixels; drawn at more than twice that on a dense screen they would blur.
     val tilePixels = 256f * min(density.density, 2f)
@@ -206,7 +207,7 @@ private fun PhotoMap(points: List<MapPoint>, tiles: MapTiles, viewModel: MapView
         zoom = newZoom
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFFE5E3DF)).clip(androidx.compose.ui.graphics.RectangleShape)) {
+    BoxWithConstraints(Modifier.fillMaxSize().onSizeChanged { size = it }.background(Color(0xFFE5E3DF)).clip(androidx.compose.ui.graphics.RectangleShape)) {
         val worldPixels = tilePixels * 2f.pow(zoom)
         val tileZoom = floor(zoom).toInt().coerceIn(0, 19)
         val tileSide = worldPixels / MapMath.tilesAcross(tileZoom)
@@ -343,7 +344,7 @@ private fun Marker(cluster: Cluster, modifier: Modifier, onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shadowElevation = 3.dp,
-        modifier = modifier.size(36.dp),
+        modifier = modifier.size(36.dp).semantics { contentDescription = description },
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(

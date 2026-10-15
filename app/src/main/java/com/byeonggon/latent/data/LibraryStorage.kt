@@ -33,6 +33,7 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     fun isAvailable(): Boolean = hasAccess() && Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
 
     /** How many bytes shared storage has left for the library. */
+    @Suppress("UsableSpace") // Shared storage is not what StorageManager frees by clearing caches.
     fun freeBytes(): Long = generateSequence(root) { it.parentFile }.firstOrNull { it.exists() }?.usableSpace ?: 0L
 
     /**
