@@ -627,4 +627,27 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="other">%d files had no preset to take.</item>
     </plurals>
     <string name="compare">Compare</string>
+    <string name="lut_problem_unreadable">The file could not be read.</string>
+    <string name="lut_problem_too_large">The file is larger than 20 MB, too large for a LUT.</string>
+    <string name="lut_problem_not_a_lut">There is no LUT in this file.</string>
+    <string name="lut_problem_one_dimensional">It is a 1D LUT; only 3D LUTs can be used.</string>
+    <string name="lut_problem_no_size">It does not say how large it is (LUT_3D_SIZE).</string>
+    <string name="lut_problem_bad_size">Its size (LUT_3D_SIZE) is not a whole number from 2 to 65.</string>
+    <string name="lut_problem_bad_domain">Its input range (DOMAIN_MIN, DOMAIN_MAX) cannot be used.</string>
+    <string name="lut_problem_not_a_number">A line of its table is not three numbers.</string>
+    <string name="lut_problem_not_finite">Its table holds a value that is not a finite number.</string>
+    <string name="lut_problem_wrong_count">Its table does not have as many lines as its size asks for.</string>
+    <string name="lut_problem_at_line">%1$s (line %2$d)</string>
+    <string name="lut_not_imported">%1$s: %2$s</string>
+    <string name="import_lut">Import LUT…</string>
+    <string name="lut_list">LUTs</string>
+    <string name="no_lut">No LUT</string>
+    <string name="lut_intensity">LUT intensity</string>
+    <string name="lut_log_hint">LUTs made for Log video (such as S-Log3 to Rec.709) expect a Log picture and look wrong on ordinary photos.</string>
+    <plurals name="luts_added">
+        <item quantity="one">%d LUT was added.</item>
+        <item quantity="other">%d LUTs were added.</item>
+    </plurals>
+    <string name="delete_lut_question">Remove the LUT \'%1$s\'?</string>
+    <string name="delete_lut_detail">Photos already edited with it keep their look.</string>
 </resources>

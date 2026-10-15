@@ -589,4 +589,26 @@
         <item quantity="other">%d 件のファイルには取り込めるプリセットがありませんでした。</item>
     </plurals>
     <string name="compare">比較</string>
+    <string name="lut_problem_unreadable">ファイルを読み込めませんでした。</string>
+    <string name="lut_problem_too_large">ファイルが 20 MB を超えていて、LUT としては大きすぎます。</string>
+    <string name="lut_problem_not_a_lut">このファイルには LUT がありません。</string>
+    <string name="lut_problem_one_dimensional">1D LUT です。使えるのは 3D LUT だけです。</string>
+    <string name="lut_problem_no_size">サイズ（LUT_3D_SIZE）が書かれていません。</string>
+    <string name="lut_problem_bad_size">サイズ（LUT_3D_SIZE）が 2〜65 の整数ではありません。</string>
+    <string name="lut_problem_bad_domain">入力範囲（DOMAIN_MIN、DOMAIN_MAX）が使えません。</string>
+    <string name="lut_problem_not_a_number">表の行が 3 つの数値になっていません。</string>
+    <string name="lut_problem_not_finite">表に有限でない値があります。</string>
+    <string name="lut_problem_wrong_count">表の行数がサイズと合いません。</string>
+    <string name="lut_problem_at_line">%1$s（%2$d 行目）</string>
+    <string name="lut_not_imported">%1$s: %2$s</string>
+    <string name="import_lut">LUT を読み込む…</string>
+    <string name="lut_list">LUT</string>
+    <string name="no_lut">LUT なし</string>
+    <string name="lut_intensity">LUT の強さ</string>
+    <string name="lut_log_hint">Log 動画用の LUT（S-Log3 → Rec.709 など）は Log で撮った映像を前提にしているため、普通の写真では色がおかしく見えます。</string>
+    <plurals name="luts_added">
+        <item quantity="other">LUT を %d 件追加しました。</item>
+    </plurals>
+    <string name="delete_lut_question">LUT「%1$s」を削除しますか？</string>
+    <string name="delete_lut_detail">この LUT で編集済みの写真はそのままです。</string>
 </resources>
