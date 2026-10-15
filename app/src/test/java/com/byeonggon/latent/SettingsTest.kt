@@ -103,6 +103,16 @@ class SettingsTest {
     }
 
     @Test
+    fun turnsOnEveryExifValueAndKeepsTheChoice() {
+        openSettings()
+        assertEquals(false, runBlocking { container.settings.settings.first() }.allExif)
+        compose.onNodeWithText("모든 EXIF 값").performScrollTo().assertIsDisplayed()
+
+        runBlocking { container.settings.update { it.copy(allExif = true) } }
+        assertEquals(true, runBlocking { container.settings.settings.first() }.allExif)
+    }
+
+    @Test
     fun showsWhichTimeZoneTheCameraIsSetToAndKeepsTheChoice() {
         openSettings()
         // Until one is chosen, the camera is taken to keep the phone's zone.

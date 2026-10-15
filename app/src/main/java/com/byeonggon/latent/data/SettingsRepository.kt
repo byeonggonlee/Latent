@@ -44,6 +44,8 @@ data class AppSettings(
     val trashKeptDays: Int = 30,
     /** The time zone the camera's clock is set to ("Asia/Seoul"); null when it is the phone's own. */
     val cameraZoneId: String? = null,
+    /** Whether the details of a photo list every EXIF value the file has, not only how it was taken. */
+    val allExif: Boolean = false,
 ) {
     /** The zone to read a photo's time in when the photo does not say which it is. */
     fun cameraZone(): ZoneId = cameraZoneId?.let { id -> try { ZoneId.of(id) } catch (e: DateTimeException) { null } } ?: ZoneId.systemDefault()
@@ -79,6 +81,7 @@ class SettingsRepository(private val context: Context) {
             preferences[THEME] = next.theme.name
             preferences[GRID_SIZE] = next.gridSize.name
             preferences[TRASH_KEPT_DAYS] = next.trashKeptDays
+            preferences[ALL_EXIF] = next.allExif
             if (next.cameraZoneId == null) preferences.remove(CAMERA_ZONE_ID) else preferences[CAMERA_ZONE_ID] = next.cameraZoneId
         }
     }
@@ -100,6 +103,7 @@ class SettingsRepository(private val context: Context) {
             gridSize = this[GRID_SIZE]?.let { name -> GridSize.entries.firstOrNull { it.name == name } } ?: defaults.gridSize,
             trashKeptDays = this[TRASH_KEPT_DAYS] ?: defaults.trashKeptDays,
             cameraZoneId = this[CAMERA_ZONE_ID],
+            allExif = this[ALL_EXIF] ?: defaults.allExif,
         )
     }
 
@@ -118,5 +122,6 @@ class SettingsRepository(private val context: Context) {
         val GRID_SIZE = stringPreferencesKey("grid_size")
         val TRASH_KEPT_DAYS = intPreferencesKey("trash_kept_days")
         val CAMERA_ZONE_ID = stringPreferencesKey("camera_zone_id")
+        val ALL_EXIF = booleanPreferencesKey("all_exif")
     }
 }

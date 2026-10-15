@@ -519,4 +519,11 @@
     <plurals name="camera_zone_reread_done">
         <item quantity="other">사진 %d장의 시각이 바뀌었습니다. 위치 탭의 \"위치 없는 항목 다시 맞추기\"로 아직 위치가 없는 사진에 위치를 채울 수 있습니다.</item>
     </plurals>
+    <string name="all_exif">모든 EXIF 값</string>
+    <string name="all_exif_hint">사진 상세정보에 파일에 기록된 값을 기록된 그대로 모두 보여 줍니다. 끄면 카메라, 렌즈, 노출만 보입니다.</string>
+    <string name="exif_camera">카메라와 렌즈</string>
+    <string name="exif_exposure">노출</string>
+    <string name="exif_image">이미지</string>
+    <string name="exif_time">시각</string>
+    <string name="exif_place">위치</string>
 </resources>

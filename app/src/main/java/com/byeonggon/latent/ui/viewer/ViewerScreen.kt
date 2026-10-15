@@ -389,7 +389,7 @@ fun ViewerScreen(
 
     if (showingInfo && item != null) {
         ModalBottomSheet(onDismissRequest = { showingInfo = false }) {
-            Details(state, item, onRate = viewModel::setRating, onFlag = { viewModel.setFlag(it, flagPartner) }, onRestore = { confirmingRestore = true }, modifier = Modifier.navigationBarsPadding())
+            Details(state, item, onRate = viewModel::setRating, onFlag = { viewModel.setFlag(it, flagPartner) }, onRestore = { confirmingRestore = true }, modifier = Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()))
         }
     }
     if (confirmingRestore) {
@@ -541,8 +541,34 @@ private fun Details(
         if (state.edited && item.kind != MediaKind.VIDEO) {
             OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text(stringResource(R.string.restore_original)) }
         }
+        AllExif(state.allDetails)
     }
 }
+
+/** Every EXIF value the file has, in parts, for those who asked for them in the settings. */
+@Composable
+private fun AllExif(groups: List<ExifGroup>) {
+    if (groups.isEmpty()) return
+    HorizontalDivider(Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+    groups.forEach { group ->
+        Text(stringResource(group.section.title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+        group.rows.forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(row.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.45f))
+                Text(row.value, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(0.55f))
+            }
+        }
+    }
+}
+
+private val ExifSection.title: Int
+    get() = when (this) {
+        ExifSection.CAMERA -> R.string.exif_camera
+        ExifSection.EXPOSURE -> R.string.exif_exposure
+        ExifSection.IMAGE -> R.string.exif_image
+        ExifSection.TIME -> R.string.exif_time
+        ExifSection.PLACE -> R.string.exif_place
+    }
 
 /**
  * Along the bottom, as in a gallery app: stars, edit, share, delete and the rest in a menu. [onRating]

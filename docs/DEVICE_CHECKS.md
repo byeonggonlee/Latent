@@ -20,6 +20,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] Trash: 7, 30 or 90 days. Choosing fewer days deletes older trash the next time the library opens (not tried on a real trash).
 - [ ] Camera time zone: "Change" lists every zone (west to east), typing a city narrows the list (also in Korean or Japanese), and the first entry is "Same as the phone". Choose a zone other than the phone's, sync or adopt a photo from the camera, and check its time in the viewer and where the Location matching puts it. "Read the times of photos in the library again" changes the times of the photos already there; then "Match items without a location again" on the Location tab.
 - [ ] Does the ZV-E10 write `OffsetTimeOriginal` in its JPEGs and raw files? (`exiftool -OffsetTimeOriginal DSC*.JPG`.) If it does, the setting is only a fallback; if not, it is what keeps locations right abroad. Does a video's creation time (UTC in the file) agree with the stills?
+- [ ] "Every EXIF value": off, the photo's details show only camera, lens and exposure in one line; on, the sheet under the photo (phone) or the panel beside it (wide window) also lists the values in parts, scrolling on a phone. Compare a ZV-E10 JPEG and raw file with `exiftool`: values as recorded (codes such as Flash 16 are not spelled out), no row missing that matters, nothing odd on a phone's own photos. Sony's MakerNote is not listed.
 - [ ] Online maps switch: turning it on asks first, off does not; Photos on this phone opens the folder question in the library.
 
 ## Languages

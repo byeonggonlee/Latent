@@ -48,6 +48,8 @@ data class ViewerUiState(
     val toEdit: Boolean = false,
     /** How the photo was taken, as far as the file says. */
     val details: String? = null,
+    /** Every EXIF value of the photo, when the settings ask for them; empty otherwise. */
+    val allDetails: List<ExifGroup> = emptyList(),
     /** A raw file as its corrections make it look, shown in place of the preview the camera embedded. */
     val rendered: Bitmap? = null,
     /** Set while the person is to be asked by the system whether a photo of another app may be deleted. */
@@ -80,15 +82,23 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         .map { path -> path?.let { PhotoDetails.of(File(it)) } }
         .flowOn(Dispatchers.IO)
 
+    // Only read when the settings ask for it.
+    private val allDetails = combine(
+        item.map { it?.takeIf { item -> item.kind != MediaKind.VIDEO }?.path }.distinctUntilChanged(),
+        container.settings.settings.map { it.allExif }.distinctUntilChanged(),
+    ) { path, wanted -> if (path != null && wanted) PhotoDetails.all(File(path)) else emptyList() }
+        .flowOn(Dispatchers.IO)
+
     val state: StateFlow<ViewerUiState> = combine(
         item.map { item -> item to (item != null && edits.isEdited(item)) }.flowOn(Dispatchers.IO),
         status,
         combine(edits.copied, container.editSaver.saving) { copied, saving -> copied to saving },
         details,
-    ) { (item, edited), status, (copied, saving), details ->
+        allDetails,
+    ) { (item, edited), status, (copied, saving), details, allDetails ->
         val beingSaved = item != null && item.id in saving
         // Nothing else is done to a photo while its edit is being saved.
-        status.copy(item = item, edited = edited, canPaste = copied != null, details = details, saving = beingSaved, busy = status.busy || beingSaved)
+        status.copy(item = item, edited = edited, canPaste = copied != null, details = details, allDetails = allDetails, saving = beingSaved, busy = status.busy || beingSaved)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ViewerUiState())
 

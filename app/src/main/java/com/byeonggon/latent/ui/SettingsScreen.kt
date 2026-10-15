@@ -135,6 +135,13 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
                 Text(stringResource(R.string.phone_folders), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = onChoosePhoneFolders) { Text(stringResource(R.string.choose_folder)) }
             }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.all_exif), style = MaterialTheme.typography.bodyLarge)
+                    Hint(R.string.all_exif_hint)
+                }
+                Switch(checked = current.allExif, onCheckedChange = { on -> scope.launch { settings.update { it.copy(allExif = on) } } })
+            }
             Text(stringResource(R.string.trash_kept), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TRASH_DAYS.forEach { days ->

@@ -554,4 +554,11 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">The time of %d photo changed. \"Match items without a location again\" on the Location tab places the photos that still have none.</item>
         <item quantity="other">The time of %d photos changed. \"Match items without a location again\" on the Location tab places the photos that still have none.</item>
     </plurals>
+    <string name="all_exif">Every EXIF value</string>
+    <string name="all_exif_hint">The details of a photo list all that its file records, as recorded. Off, they show the camera, the lens and the exposure.</string>
+    <string name="exif_camera">Camera and lens</string>
+    <string name="exif_exposure">Exposure</string>
+    <string name="exif_image">Picture</string>
+    <string name="exif_time">Time</string>
+    <string name="exif_place">Place</string>
 </resources>

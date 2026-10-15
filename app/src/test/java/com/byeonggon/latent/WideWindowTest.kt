@@ -1,6 +1,7 @@
 package com.byeonggon.latent
 
 import android.graphics.Bitmap
+import androidx.exifinterface.media.ExifInterface
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.withKeyDown
+import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.PhotoEdit
@@ -55,6 +57,11 @@ class WideWindowTest {
                 // Dark, so that auto has something to do.
                 for (x in 0 until 96) for (y in 0 until 64) bitmap.setPixel(x, y, (0xFF shl 24) or ((10 + x / 3) * 0x010101))
                 photo.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                ExifInterface(photo).apply {
+                    setAttribute(ExifInterface.TAG_MODEL, "ZV-E10")
+                    setAttribute(ExifInterface.TAG_F_NUMBER, "4")
+                    saveAttributes()
+                }
                 val item = MediaItemEntity(path = photo.absolutePath, fileName = photo.name, kind = MediaKind.PHOTO, sizeBytes = photo.length(), capturedAt = 10L - number, importedAt = 1)
                 ids[number - 1] = runBlocking { container.database.mediaDao().insert(item) }
             }
@@ -94,6 +101,23 @@ class WideWindowTest {
         val picture = compose.onNodeWithContentDescription("DSC00001.JPG").fetchSemanticsNode().boundsInRoot
         val slider = compose.onNodeWithContentDescription("노출").fetchSemanticsNode().boundsInRoot
         assertTrue("picture $picture, slider $slider", slider.left >= picture.right - 1f)
+    }
+
+    @Test
+    fun listsEveryExifValueBesideThePhotoOnlyWhenTheSettingIsOn() {
+        try {
+            open("DSC00001.JPG")
+            compose.onNodeWithText("ZV-E10 · f/4").assertIsDisplayed()
+            assertTrue(compose.onAllNodesWithText("FNumber").fetchSemanticsNodes().isEmpty())
+
+            runBlocking { container.settings.update { it.copy(allExif = true) } }
+            waitForText("FNumber")
+            // Under the name the standard gives it, in the part it belongs to.
+            assertTrue(compose.onAllNodesWithText("카메라와 렌즈").fetchSemanticsNodes().isNotEmpty())
+            assertTrue(compose.onAllNodesWithText("LensModel").fetchSemanticsNodes().isEmpty())
+        } finally {
+            runBlocking { container.settings.update { AppSettings() } }
+        }
     }
 
     @Test

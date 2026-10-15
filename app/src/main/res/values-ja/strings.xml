@@ -519,4 +519,11 @@
     <plurals name="camera_zone_reread_done">
         <item quantity="other">写真 %d 枚の時刻が変わりました。位置タブの「位置情報のない項目をもう一度照合」で、位置のない写真に位置をつけられます。</item>
     </plurals>
+    <string name="all_exif">すべての EXIF 値</string>
+    <string name="all_exif_hint">写真の詳細に、ファイルに記録されている値を記録のまま、すべて表示します。オフのときは、カメラ、レンズ、露出だけを表示します。</string>
+    <string name="exif_camera">カメラとレンズ</string>
+    <string name="exif_exposure">露出</string>
+    <string name="exif_image">画像</string>
+    <string name="exif_time">日時</string>
+    <string name="exif_place">位置</string>
 </resources>
