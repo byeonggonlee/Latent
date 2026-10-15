@@ -227,7 +227,8 @@ class EditorFlowTest {
         waitForText("원본으로 되돌리기")
         waitForSaved()
         compose.onNodeWithText("더 보기").performClick()
-        compose.onNodeWithText("JPEG로 저장").assertIsDisplayed()
+        // The menu opens with an animation; it is shown once it has grown to its size.
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runCatching { compose.onNodeWithText("JPEG로 저장").assertIsDisplayed() }.isSuccess }
         assertArrayEquals(original, raw.readBytes())
         val stored = PhotoEdit.fromJson(runBlocking { mediaDao.byId(rawId)!!.edit })
         assertEquals(PhotoEdit(Adjustments(shadows = 0.5f)), stored)
