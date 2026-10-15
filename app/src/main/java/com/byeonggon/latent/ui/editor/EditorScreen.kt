@@ -124,6 +124,9 @@ private enum class EditorTab(@StringRes val label: Int, @DrawableRes val icon: I
         }
 }
 
+/** The tools whose settings can be changed by swiping on the picture; the others have more than values. */
+private val SWIPE_TABS = listOf(EditorTab.LIGHT, EditorTab.COLOR, EditorTab.EFFECTS)
+
 private enum class LightTools(@StringRes val label: Int) { SLIDERS(R.string.tools_sliders), CURVE(R.string.tools_curve) }
 
 private enum class ColorTools(@StringRes val label: Int) { SLIDERS(R.string.tools_sliders), MIXER(R.string.tools_mixer), GRADING(R.string.tools_grading) }
@@ -180,6 +183,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     var erasing by rememberSaveable { mutableStateOf(false) }
     var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
     var showHistogram by rememberSaveable { mutableStateOf(false) }
+    var gestureMode by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(tab) { viewModel.show(tab.view) }
 
     /** Changes the mask of the part that is selected, as dragging it on the picture does. */
@@ -192,6 +196,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
 
     val ready = state.preview != null && !state.saving
     val window = rememberWindowLayout()
+    // Swiping on the picture is for a phone held upright; a mouse and a side panel have no use for it.
+    val gestures = gestureMode && !window.sidePanel && tab in SWIPE_TABS
     val editorPanel: @Composable (Modifier) -> Unit = { modifier ->
         EditorPanel(
             modifier = modifier,
@@ -254,6 +260,12 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         onHistogram = { showHistogram = it },
                         clipping = state.clipping,
                         onClipping = viewModel::setClipping,
+                        onGestures = if (window.sidePanel || gestureMode) null else {
+                            {
+                                if (tab !in SWIPE_TABS) tab = EditorTab.LIGHT
+                                gestureMode = true
+                            }
+                        },
                         onReset = viewModel::reset,
                         onCopy = viewModel::copyEdit,
                         onPaste = viewModel::pasteEdit,
@@ -273,7 +285,15 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
             )
         },
         bottomBar = {
-            if (!window.sidePanel) {
+            if (gestures) {
+                GestureBar(
+                    tool = stringResource(tab.label),
+                    icon = tab.icon,
+                    onPrevious = { tab = SWIPE_TABS[(SWIPE_TABS.indexOf(tab) + SWIPE_TABS.size - 1) % SWIPE_TABS.size] },
+                    onNext = { tab = SWIPE_TABS[(SWIPE_TABS.indexOf(tab) + 1) % SWIPE_TABS.size] },
+                    onSliders = { gestureMode = false },
+                )
+            } else if (!window.sidePanel) {
                 Column {
                     editorPanel(Modifier)
                     ToolStrip(tab, onTab = { tab = it })
@@ -320,14 +340,23 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                         )
                         tab == EditorTab.DETAIL && state.previewView == EditorView.DETAIL ->
                             DetailView(preview.asImageBitmap(), onMove = viewModel::moveDetail)
-                        else -> ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing) {
-                            // Holding the picture shows it without its corrections, the same as the button below does.
-                            Image(
-                                bitmap = preview.asImageBitmap(),
-                                contentDescription = state.item?.fileName,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                        else -> GestureLayer(
+                            active = gestures,
+                            controls = tab.controls,
+                            adjustments = state.edit.adjustments,
+                            enabled = ready,
+                            onAdjust = { control, position -> viewModel.adjust { control.setting.set(it, control.valueAt(position)) } },
+                            onDone = viewModel::commit,
+                        ) {
+                            ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing) {
+                                // Holding the picture shows it without its corrections, the same as the button below does.
+                                Image(
+                                    bitmap = preview.asImageBitmap(),
+                                    contentDescription = state.item?.fileName,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         }
                     }
                 }
@@ -369,6 +398,7 @@ private fun MoreMenu(
     onHistogram: (Boolean) -> Unit,
     clipping: Boolean,
     onClipping: (Boolean) -> Unit,
+    onGestures: (() -> Unit)?,
     onReset: () -> Unit,
     onCopy: () -> Unit,
     onPaste: () -> Unit,
@@ -395,6 +425,15 @@ private fun MoreMenu(
                     onClipping(!clipping)
                 },
             )
+            if (onGestures != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.gesture_mode)) },
+                    onClick = {
+                        open = false
+                        onGestures()
+                    },
+                )
+            }
             val items = listOf(
                 Triple(stringResource(R.string.reset), true, onReset),
                 Triple(stringResource(R.string.copy_edit), true, onCopy),

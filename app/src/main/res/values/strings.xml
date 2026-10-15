@@ -258,6 +258,12 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="histogram_show">Show histogram</string>
     <string name="clipping_show">Show clipping</string>
     <string name="clipping_hide">Hide clipping</string>
+    <string name="gesture_mode">Swipe to edit</string>
+    <string name="gesture_hint_vertical">Swipe up or down to pick a setting</string>
+    <string name="gesture_hint_horizontal">Swipe left or right to change it</string>
+    <string name="gesture_show_sliders">Show sliders</string>
+    <string name="gesture_previous_tool">Previous tool</string>
+    <string name="gesture_next_tool">Next tool</string>
     <string name="reset">Reset</string>
     <string name="copy_edit">Copy edit</string>
     <string name="hold_for_original">Hold to see the original</string>

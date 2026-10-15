@@ -25,6 +25,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import com.byeonggon.latent.data.db.MediaItemEntity
@@ -324,6 +327,34 @@ class EditorFlowTest {
         compose.onNodeWithContentDescription("더 보기").performClick()
         compose.onNodeWithText("클리핑 숨기기").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { marked(ClippingMarks.HIGHLIGHT) == 0 }
+    }
+
+    @Test
+    fun editsBySwipingOnThePicture() {
+        openEditor("DSC00001.JPG")
+        val editor = ViewModelProvider(compose.activity)[EditorViewModel::class.java]
+        compose.onNodeWithContentDescription("더 보기").performClick()
+        compose.onNodeWithText("스와이프로 보정").performClick()
+        // The sliders make way for a bar with the tool, and a way back.
+        compose.onNodeWithContentDescription("슬라이더 보기").assertIsDisplayed()
+
+        // Sideways changes the first setting, the exposure.
+        compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { swipeRight() }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); editor.state.value.edit.adjustments.exposure > 0.5f }
+        assertEquals(0f, editor.state.value.edit.adjustments.blacks, 0f)
+
+        // Down picks a later setting (far enough to reach the last, the blacks), and then sideways changes that.
+        compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { swipeDown() }
+        compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { swipeLeft() }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); editor.state.value.edit.adjustments.blacks < -0.1f }
+
+        // One change per swipe, each undone separately.
+        compose.runOnUiThread { editor.undo() }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); editor.state.value.edit.adjustments.blacks == 0f }
+        assertTrue(editor.state.value.edit.adjustments.exposure > 0.5f)
+
+        compose.onNodeWithContentDescription("슬라이더 보기").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithContentDescription("슬라이더 보기").fetchSemanticsNodes().isEmpty() }
     }
 
     @Test
