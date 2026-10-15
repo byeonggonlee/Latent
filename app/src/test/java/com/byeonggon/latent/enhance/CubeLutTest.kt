@@ -2,6 +2,7 @@ package com.byeonggon.latent.enhance
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -191,6 +192,14 @@ class CubeLutTest {
             assertEquals(wrong, LutProblem.NOT_FINITE, problem.problem)
             assertEquals(wrong, 2, problem.line)
         }
+    }
+
+    @Test
+    fun tellsLutsForLogVideoByTheirNames() {
+        for (name in listOf("SLog3SGamut3.CineToLC-709", "S-Log3 to Rec.709", "VLog_to_V709", "F-Log", "LogC to Rec709", "ZV-E10 LOG", "slog2", "Log3G10"))
+            assertTrue(name, CubeLut.isForLogFootage(name))
+        for (name in listOf("Teal and orange", "Analog film", "Catalog look", "Blog warm", "Kodak 2383"))
+            assertFalse(name, CubeLut.isForLogFootage(name))
     }
 
     @Test

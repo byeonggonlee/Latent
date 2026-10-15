@@ -138,6 +138,12 @@ object CubeLut {
     }
 
     /**
+     * Whether a LUT by this name seems made for Log video (S-Log3, V-Log, F-Log, LogC...). Such a LUT
+     * expects the flat picture of a Log recording, and makes an ordinary photo look wrong.
+     */
+    fun isForLogFootage(name: String): Boolean = LOG_NAME.containsMatchIn(name)
+
+    /**
      * Splits the line from [start] to [end] into [tokens] at white space, up to a comment. A `#` inside a
      * number is not one: it is how some programs write what is not a number, such as `1.#INF`.
      */
@@ -182,6 +188,8 @@ object CubeLut {
 
     private fun isSpace(byte: Byte) = byte == SPACE || byte == TAB || byte == CR || byte == FORM_FEED
 
+    // "Log" as a word or after a maker's letter (S-Log3, VLog, LogC), not inside one such as "Analog".
+    private val LOG_NAME = Regex("""(^|[^a-z]|[svfcnd]-?)log(\d|c|[^a-z]|$)""", RegexOption.IGNORE_CASE)
     private val NON_FINITE = setOf("nan", "inf", "infinity", "1.#inf", "1.#qnan", "1.#ind")
     private val BOM = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
     private const val ZERO: Byte = 0

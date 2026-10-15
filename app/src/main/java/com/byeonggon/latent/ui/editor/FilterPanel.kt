@@ -8,11 +8,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.byeonggon.latent.data.db.LutEntity
+import com.byeonggon.latent.enhance.CubeLut
 import com.byeonggon.latent.enhance.Filter
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
@@ -49,9 +52,10 @@ import com.byeonggon.latent.R
 /**
  * The filters, each shown on the picture itself. Tapping one gives the photo its look, which can then
  * be dosed; holding one of the user's own offers to delete it. The look the photo has can be saved
- * as a new filter.
+ * as a new filter. Under them, the LUTs the person imported, chosen apart from the filters and dosed
+ * on their own, and taken off the list the same way.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun FilterPanel(
     state: EditorUiState,
@@ -62,13 +66,20 @@ internal fun FilterPanel(
     onSave: (String) -> Unit,
     onDelete: (Filter) -> Unit,
     onImport: (List<Uri>) -> Unit,
+    onApplyLut: (LutEntity?) -> Unit,
+    onLutIntensity: (Float) -> Unit,
+    onDeleteLut: (LutEntity) -> Unit,
+    onImportLuts: (List<Uri>) -> Unit,
 ) {
-    // Lightroom's presets are XMP files, which the phone has no type of its own for, so any file may be picked.
+    // Lightroom's presets are XMP files, and LUTs .cube files, which the phone has no type of its own for, so any file may be picked.
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments(), onImport)
+    val lutImporter = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments(), onImportLuts)
     val listLabel = stringResource(R.string.filter_list)
+    val lutListLabel = stringResource(R.string.lut_list)
     val nameLabel = stringResource(R.string.filter_name)
     var naming by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<Filter?>(null) }
+    var deletingLut by remember { mutableStateOf<LutEntity?>(null) }
 
     LazyRow(
         modifier = Modifier.semantics { contentDescription = listLabel },
@@ -111,12 +122,67 @@ internal fun FilterPanel(
             untouched = 1f,
         )
     }
-    Row(Modifier.padding(horizontal = 8.dp)) {
+
+    val lut = state.edit.lut
+    if (state.luts.isNotEmpty()) {
+        LazyRow(
+            modifier = Modifier.semantics { contentDescription = lutListLabel },
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item(key = "none") {
+                FilterTile(
+                    name = stringResource(R.string.no_lut),
+                    selected = lut == null,
+                    modifier = Modifier.combinedClickable(enabled = enabled, role = Role.Button, onClick = { onApplyLut(null) }),
+                ) {
+                    state.filterPreviews[EditorViewModel.NO_FILTER]
+                }
+            }
+            items(state.luts, key = { it.hash }) { each ->
+                FilterTile(
+                    name = each.name,
+                    selected = lut?.id == each.hash,
+                    modifier = Modifier.combinedClickable(
+                        enabled = enabled,
+                        role = Role.Button,
+                        onLongClick = { deletingLut = each },
+                        onClick = { onApplyLut(each) },
+                    ),
+                ) {
+                    state.lutPreviews[each.hash]
+                }
+            }
+        }
+    }
+    if (lut != null) {
+        SettingSlider(
+            label = stringResource(R.string.lut_intensity),
+            value = lut.intensity,
+            range = 0f..1f,
+            valueText = (lut.intensity * 100).roundToInt().toString(),
+            enabled = enabled,
+            onChange = { onLutIntensity((it * 100).roundToInt() / 100f) },
+            onDone = onDone,
+            untouched = 1f,
+        )
+    }
+    // Said before the first LUT is imported, and again when the one chosen seems to be for Log video.
+    if (state.luts.isEmpty() || state.luts.any { it.hash == lut?.id && CubeLut.isForLogFootage(it.name) }) {
+        Text(
+            stringResource(R.string.lut_log_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        )
+    }
+    FlowRow(Modifier.padding(horizontal = 8.dp)) {
         TextButton(
             onClick = { naming = true },
             enabled = enabled && state.edit.changesColors,
         ) { Text(stringResource(R.string.save_as_my_filter)) }
         TextButton(onClick = { importer.launch(arrayOf("*/*")) }, enabled = enabled) { Text(stringResource(R.string.import_presets)) }
+        TextButton(onClick = { lutImporter.launch(arrayOf("*/*")) }, enabled = enabled) { Text(stringResource(R.string.import_lut)) }
     }
 
     if (naming) {
@@ -159,6 +225,22 @@ internal fun FilterPanel(
                 ) { Text(stringResource(R.string.forget)) }
             },
             dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    deletingLut?.let { each ->
+        AlertDialog(
+            onDismissRequest = { deletingLut = null },
+            title = { Text(stringResource(R.string.delete_lut_question, each.name)) },
+            text = { Text(stringResource(R.string.delete_lut_detail)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deletingLut = null
+                        onDeleteLut(each)
+                    },
+                ) { Text(stringResource(R.string.forget)) }
+            },
+            dismissButton = { TextButton(onClick = { deletingLut = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
