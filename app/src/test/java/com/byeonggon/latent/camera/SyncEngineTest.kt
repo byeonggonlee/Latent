@@ -293,6 +293,28 @@ class SyncEngineTest {
     }
 
     @Test
+    fun placesPhotosByTheRealTimeWhenTheCamerasClockIsOff() = runBlocking {
+        recordTrackAroundCapture()
+        // The camera's clock runs 40 minutes ahead: its photo of 12:00 was really taken at 11:20, when no position was recorded.
+        val photo = jpegTakenAt("2026:10:01 12:40:00", "+09:00")
+        val files = mapOf(remote("DSC00020.JPG", MediaKind.PHOTO, photo, modifiedAt = capturedAt + 40 * minute) to photo)
+
+        engine.run(FakeCameraSource(files))
+        assertEquals(GeoSource.NONE, database.mediaDao().all().single().geoSource)
+
+        // With the offset known, the same kind of photo is matched to where the phone was at the real time.
+        settings.update { it.copy(cameraClockOffsetMinutes = 40) }
+        val other = jpegTakenAt("2026:10:01 12:40:00", "+09:00")
+        engine.run(FakeCameraSource(mapOf(remote("DSC00021.JPG", MediaKind.PHOTO, other, modifiedAt = capturedAt + 41 * minute) to other)))
+
+        val matched = database.mediaDao().all().single { it.fileName == "DSC00021.JPG" }
+        assertEquals(GeoSource.TRACK, matched.geoSource)
+        // It is still filed under the time the camera gave it.
+        assertEquals(capturedAt + 40 * minute, matched.capturedAt)
+        assertEquals(37.1, matched.latitude!!, 1e-6)
+    }
+
+    @Test
     fun reportsFilesThatFailToTransferAndRetriesThemLater() = runBlocking {
         val broken = remote("DSC00003.JPG", MediaKind.PHOTO, ByteArray(10))
 

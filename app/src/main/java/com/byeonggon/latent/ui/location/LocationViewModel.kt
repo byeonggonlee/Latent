@@ -84,8 +84,8 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         if (tasks.value.second.running) return
         viewModelScope.launch {
             tasks.update { it.copy(second = TaskState(running = true)) }
-            val maxGapMs = container.settings.settings.first().geotagMaxGapMinutes * 60_000L
-            val tagged = container.geotagger.tagPending(maxGapMs)
+            val settings = container.settings.settings.first()
+            val tagged = container.geotagger.tagPending(settings.geotagMaxGapMinutes * 60_000L, settings.cameraClockOffsetMinutes * 60_000L)
             val message = if (tagged > 0) plural(R.plurals.tagged_count, tagged) else text(R.string.tag_none_matched)
             tasks.update { it.copy(second = TaskState(message = message)) }
         }

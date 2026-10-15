@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -137,6 +140,10 @@ fun LocationScreen(viewModel: LocationViewModel = viewModel()) {
             Hint(
                 stringResource(R.string.tag_photos_hint),
             )
+            ClockOffsetRow(
+                minutes = state.settings.cameraClockOffsetMinutes,
+                onChange = { minutes -> viewModel.updateSettings { it.copy(cameraClockOffsetMinutes = minutes) } },
+            )
             Button(
                 onClick = viewModel::tagPending,
                 enabled = state.untaggedCount > 0 && !state.backfill.running,
@@ -147,6 +154,39 @@ fun LocationScreen(viewModel: LocationViewModel = viewModel()) {
         }
     }
 }
+
+/** How far the camera's clock is off, set in steps of a minute or an hour, for photos taken by it to be placed where they were really taken. */
+@Composable
+private fun ClockOffsetRow(minutes: Int, onChange: (Int) -> Unit) {
+    Text(stringResource(R.string.camera_clock), style = MaterialTheme.typography.labelLarge)
+    Text(
+        when {
+            minutes == 0 -> stringResource(R.string.camera_clock_same)
+            minutes > 0 -> stringResource(R.string.camera_clock_ahead, offsetText(minutes))
+            else -> stringResource(R.string.camera_clock_behind, offsetText(-minutes))
+        },
+    )
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        CLOCK_STEPS.forEach { step ->
+            AssistChip(
+                onClick = { onChange((minutes + step).coerceIn(-MAX_CLOCK_OFFSET, MAX_CLOCK_OFFSET)) },
+                label = { Text((if (step > 0) "+" else "−") + offsetText(kotlin.math.abs(step))) },
+            )
+        }
+    }
+    if (minutes != 0) TextButton(onClick = { onChange(0) }) { Text(stringResource(R.string.camera_clock_reset)) }
+}
+
+/** A number of minutes as "5 min" or "2 h 30 min". */
+@Composable
+private fun offsetText(minutes: Int): String = when {
+    minutes % 60 == 0 -> stringResource(R.string.hours, minutes / 60)
+    minutes < 60 -> stringResource(R.string.minutes, minutes)
+    else -> stringResource(R.string.hours, minutes / 60) + " " + stringResource(R.string.minutes, minutes % 60)
+}
+
+private val CLOCK_STEPS = listOf(-60, -10, -1, 1, 10, 60)
+private const val MAX_CLOCK_OFFSET = 14 * 60
 
 @Composable
 private fun TaskStatus(task: TaskState) {

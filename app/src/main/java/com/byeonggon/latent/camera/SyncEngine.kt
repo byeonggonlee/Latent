@@ -2,6 +2,7 @@ package com.byeonggon.latent.camera
 
 import android.util.Log
 import androidx.room.withTransaction
+import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.LibraryStorage
 import com.byeonggon.latent.data.SettingsRepository
 import com.byeonggon.latent.data.db.AppDatabase
@@ -156,7 +157,7 @@ class SyncEngine(
                 )
             }
             val stored = downloaded && try {
-                if (store(part, file, cameraId, maxGapMs)) geotagged++
+                if (store(part, file, cameraId, maxGapMs, options)) geotagged++
                 true
             } catch (e: IOException) {
                 Log.w(SYNC_LOG_TAG, "Cannot store ${file.name} in the library", e)
@@ -245,10 +246,11 @@ class SyncEngine(
     }
 
     /** Moves a downloaded file into the library. Returns true when a location from the track was applied. */
-    private suspend fun store(part: File, file: RemoteFile, cameraId: String, maxGapMs: Long): Boolean {
+    private suspend fun store(part: File, file: RemoteFile, cameraId: String, maxGapMs: Long, options: AppSettings): Boolean {
         val metadata = MediaMetadataReader.read(part, file.kind)
         val capturedAt = metadata.capturedAt ?: file.modifiedAt
-        val matched = if (metadata.location == null) geotagger.locate(capturedAt, maxGapMs) else null
+        // Matched by when it really was, though it is filed under the time the camera gave it.
+        val matched = if (metadata.location == null) geotagger.locate(options.realTimeOf(capturedAt), maxGapMs) else null
 
         // EXIF is written before the file becomes visible, so gallery and backup apps never see an untagged copy.
         if (matched != null && file.kind == MediaKind.PHOTO) geotagger.writeExif(part, matched)

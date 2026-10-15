@@ -59,12 +59,12 @@ class Geotagger(
         }
     }
 
-    /** Geotags library items that have no location yet. Returns how many got one. */
-    suspend fun tagPending(maxGapMs: Long): Int = withContext(Dispatchers.IO) {
+    /** Geotags library items that have no location yet, taking the camera's clock to run [clockOffsetMs] ahead. Returns how many got one. */
+    suspend fun tagPending(maxGapMs: Long, clockOffsetMs: Long = 0L): Int = withContext(Dispatchers.IO) {
         var tagged = 0
         for (item in mediaDao.withoutLocation()) {
             ensureActive()
-            val point = locate(item.capturedAt, maxGapMs) ?: continue
+            val point = locate(item.capturedAt - clockOffsetMs, maxGapMs) ?: continue
             val file = File(item.path)
             when (item.kind) {
                 MediaKind.PHOTO -> if (writeExif(file, point)) storage.publish(file)

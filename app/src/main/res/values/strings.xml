@@ -378,6 +378,12 @@ Connect a camera on the Camera tab to bring photos in.</string>
     <string name="no_location_permission">Recording cannot start without location access.</string>
     <string name="record_every">Record every</string>
     <string name="minutes">%1$d min</string>
+    <string name="hours">%1$d h</string>
+    <string name="camera_clock">Camera clock</string>
+    <string name="camera_clock_same">The camera\'s clock is right.</string>
+    <string name="camera_clock_ahead">The camera\'s clock is %1$s ahead.</string>
+    <string name="camera_clock_behind">The camera\'s clock is %1$s behind.</string>
+    <string name="camera_clock_reset">Set it right again</string>
     <string name="high_accuracy">High accuracy (GPS)</string>
     <string name="high_accuracy_hint">Off uses less battery but leans on Wi-Fi and cell towers, which are less accurate.</string>
     <string name="recording_stopped_hint">If the system stops recording, a notification says so. Tap it to start again.</string>

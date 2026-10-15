@@ -17,7 +17,12 @@ data class AppSettings(
     val locationIntervalMinutes: Int = 5,
     val highAccuracyLocation: Boolean = true,
     val geotagMaxGapMinutes: Int = 15,
+    /** How far ahead of the real time the camera's clock runs; below zero, how far behind. */
+    val cameraClockOffsetMinutes: Int = 0,
 ) {
+    /** The moment a photo taken at [cameraTime] by the camera's clock was really taken. */
+    fun realTimeOf(cameraTime: Long): Long = cameraTime - cameraClockOffsetMinutes * 60_000L
+
     fun accepts(kind: MediaKind): Boolean = when (kind) {
         MediaKind.PHOTO -> syncPhotos
         MediaKind.RAW -> syncRaw
@@ -39,6 +44,7 @@ class SettingsRepository(private val context: Context) {
             preferences[LOCATION_INTERVAL_MINUTES] = next.locationIntervalMinutes
             preferences[HIGH_ACCURACY_LOCATION] = next.highAccuracyLocation
             preferences[GEOTAG_MAX_GAP_MINUTES] = next.geotagMaxGapMinutes
+            preferences[CAMERA_CLOCK_OFFSET_MINUTES] = next.cameraClockOffsetMinutes
         }
     }
 
@@ -51,6 +57,7 @@ class SettingsRepository(private val context: Context) {
             locationIntervalMinutes = this[LOCATION_INTERVAL_MINUTES] ?: defaults.locationIntervalMinutes,
             highAccuracyLocation = this[HIGH_ACCURACY_LOCATION] ?: defaults.highAccuracyLocation,
             geotagMaxGapMinutes = this[GEOTAG_MAX_GAP_MINUTES] ?: defaults.geotagMaxGapMinutes,
+            cameraClockOffsetMinutes = this[CAMERA_CLOCK_OFFSET_MINUTES] ?: defaults.cameraClockOffsetMinutes,
         )
     }
 
@@ -61,5 +68,6 @@ class SettingsRepository(private val context: Context) {
         val LOCATION_INTERVAL_MINUTES = intPreferencesKey("location_interval_minutes")
         val HIGH_ACCURACY_LOCATION = booleanPreferencesKey("high_accuracy_location")
         val GEOTAG_MAX_GAP_MINUTES = intPreferencesKey("geotag_max_gap_minutes")
+        val CAMERA_CLOCK_OFFSET_MINUTES = intPreferencesKey("camera_clock_offset_minutes")
     }
 }
