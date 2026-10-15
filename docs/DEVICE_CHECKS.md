@@ -39,6 +39,7 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] "Show photos from" (everything, camera and Latent, this phone) filters as named.
 - [ ] Cull: `P`, `X`, `U` and `1`–`5` in the viewer with a keyboard; on the phone the Pick and Reject chips next to the stars; the flag badge and the dimmed rejected photos in the grid; "Flag" in the selection bar; "Show flagged" filters; "Trash rejected photos…" asks first and sends them to the trash (phone photos go through the system's question).
 - [ ] "About Latent" in the library menu shows the version; both links open in the browser.
+- [ ] Find (magnifying glass beside the library menu): the camera and lens lists fill in a moment after the library opens, the first time slowly on the S24 (9,000 phone photos read once in the background, 4 at a time: how long until `ZV-E10 (n)` and the phone's camera show, whether the library stays smooth meanwhile). Camera, lens, ISO and focal length (35 mm terms), when (7 and 30 days, years), with or without a place, edited or not, and part of the file name; the chip "Find · n conditions" beside the filters takes them off. A photo whose file says nothing (screenshots, downloads) is never found by a condition on it. Raw files are found by what their JPEG says; are Sony ARW's lens names read the same way as the JPEG's?
 - [ ] Selecting several photos: rating, paste edit, share, delete, RAW to JPEG.
 - [ ] Right click menu, with a mouse on a tablet or laptop window: open, select, paste, share, delete.
 

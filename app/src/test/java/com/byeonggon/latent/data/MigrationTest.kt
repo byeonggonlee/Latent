@@ -57,6 +57,12 @@ class MigrationTest {
             assertEquals(MediaOrigin.LIBRARY, item.origin)
             // Flags came after: nothing is flagged, and a photo can be.
             assertEquals(0, item.flag)
+            // How the photo was taken is read in later, once, and can be searched by then.
+            assertEquals(false, item.exifRead)
+            assertNull(item.camera)
+            database.mediaDao().setExif(item.id, "ZV-E10", null, 400, 35.0)
+            assertEquals("ZV-E10", database.mediaDao().byId(item.id)!!.camera)
+            assertEquals(true, database.mediaDao().byId(item.id)!!.exifRead)
             database.mediaDao().setFlag(listOf(item.id), FLAG_REJECTED)
             assertEquals(listOf(item.id), database.mediaDao().rejectedIds())
             database.mediaDao().setFlag(listOf(item.id), 0)

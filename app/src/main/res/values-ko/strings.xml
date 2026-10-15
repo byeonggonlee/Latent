@@ -535,4 +535,33 @@
     <string name="jpeg_quality_hint">공유하려고 만드는 JPEG와, RAW 파일이나 다른 앱의 사진에서 저장하는 사본에 적용됩니다. 보관함 사진을 그대로 공유할 때는 파일이 바뀌지 않습니다.</string>
     <string name="remove_location_when_sharing">공유할 때 위치 빼기</string>
     <string name="remove_location_when_sharing_hint">공유로 보내는 사진에는 GPS 위치가 들어 있지 않습니다. 보관함에 저장하는 사본, \"다른 앱에서 편집\", 동영상, 그대로 보내는 RAW 파일은 바뀌지 않습니다.</string>
+    <string name="find">찾기</string>
+    <string name="find_clear">지우기</string>
+    <string name="find_name">파일 이름의 일부</string>
+    <string name="find_camera">카메라</string>
+    <string name="find_lens">렌즈</string>
+    <string name="find_iso">ISO</string>
+    <string name="iso_low">400 이하</string>
+    <string name="iso_mid">401–1600</string>
+    <string name="iso_high">1601–6400</string>
+    <string name="iso_very_high">6400 초과</string>
+    <string name="find_focal">초점거리 (35mm 환산)</string>
+    <string name="focal_wide">광각, 24mm 미만</string>
+    <string name="focal_standard">24–70mm</string>
+    <string name="focal_tele">망원, 70mm 초과</string>
+    <string name="find_when">기간</string>
+    <string name="period_any">전체</string>
+    <string name="period_week">최근 7일</string>
+    <string name="period_month">최근 30일</string>
+    <string name="find_place">위치</string>
+    <string name="find_place_yes">위치 있음</string>
+    <string name="find_place_no">위치 없음</string>
+    <string name="find_edited">보정</string>
+    <string name="find_edited_yes">보정함</string>
+    <string name="find_edited_no">보정 안 함</string>
+    <string name="find_any">상관없음</string>
+    <string name="find_nothing">조건에 맞는 사진이 없습니다.</string>
+    <plurals name="find_conditions">
+        <item quantity="other">찾기 · 조건 %d개</item>
+    </plurals>
 </resources>

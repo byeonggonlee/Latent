@@ -7,7 +7,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.db.MediaItemEntity
+import com.byeonggon.latent.data.LibraryStorage
 import com.byeonggon.latent.data.PhoneLibrary
+import com.byeonggon.latent.data.db.NameCount
 import com.byeonggon.latent.data.db.AlbumEntity
 import com.byeonggon.latent.data.db.AlbumItemEntity
 import com.byeonggon.latent.data.db.AlbumSummary
@@ -85,6 +87,13 @@ enum class LibrarySource(@StringRes val label: Int) {
 /** The folders of the phone the person can choose from, and which are chosen. */
 data class PhoneFolderChoice(val folders: List<PhoneLibrary.Folder>, val chosen: Set<String>)
 
+/** The cameras, lenses and years of the library, to pick a search from. */
+data class FindOptions(
+    val cameras: List<NameCount> = emptyList(),
+    val lenses: List<NameCount> = emptyList(),
+    val years: List<Int> = emptyList(),
+)
+
 data class LibraryDay(val date: LocalDate, val items: List<MediaItemEntity>)
 
 /** Something being done to the selected photos one after the other, and how far it has got. */
@@ -117,6 +126,9 @@ data class LibraryUiState(
     /** Every album, with how many it holds, and the one the library is narrowed to, if any. */
     val albums: List<AlbumSummary> = emptyList(),
     val album: AlbumSummary? = null,
+    /** What the library is searched for, and what there is to choose from. */
+    val query: LibraryQuery = LibraryQuery(),
+    val findOptions: FindOptions = FindOptions(),
     /** Set while the person is choosing which folders of the phone to list. */
     val phoneChoice: PhoneFolderChoice? = null,
     /** Photos of other apps picked out for deletion: the system asks the person, with this, before it does. */
@@ -132,6 +144,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val stacked = MutableStateFlow(true)
     private val source = MutableStateFlow(LibrarySource.ALL)
     private val flagFilter = MutableStateFlow(FlagFilter.ALL)
+    private val query = MutableStateFlow(LibraryQuery())
     private val showingTrash = MutableStateFlow(false)
     private val trash = container.trash
 
@@ -153,22 +166,25 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         val source: LibrarySource,
         val members: Set<Long>?,
         val flags: FlagFilter,
+        val query: LibraryQuery,
     )
 
     private val narrowing = combine(
         combine(filter, leastRating, stacked, source, albumMembers) { filter, leastRating, stacked, source, members ->
-            Narrowing(filter, leastRating, stacked, source, members, FlagFilter.ALL)
+            Narrowing(filter, leastRating, stacked, source, members, FlagFilter.ALL, LibraryQuery())
         },
         flagFilter,
-    ) { narrowed, flags -> narrowed.copy(flags = flags) }
+        query,
+    ) { narrowed, flags, query -> narrowed.copy(flags = flags, query = query) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val listed = combine(
         showingTrash.flatMapLatest { inTrash -> if (inTrash) trash.items else mediaDao.observeAll() },
         narrowing,
     ) { items, narrowed ->
-        val (filter, leastRating, stacked, source, members, flags) = narrowed
+        val (filter, leastRating, stacked, source, members, flags, search) = narrowed
         val zone = ZoneId.systemDefault()
+        val now = Instant.now()
         val partners = partnersOf(items)
         // Only the JPEG of a pair is listed, unless raw files are what is asked for.
         val hidden = if (stacked && filter != LibraryFilter.RAW) {
@@ -181,14 +197,21 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             .filter { source == LibrarySource.ALL || (source == LibrarySource.PHONE) == (it.origin == MediaOrigin.PHONE) }
             .filter { members == null || it.id in members }
             .filter { flags.accepts(it.flag) }
+            .filter { !search.isActive || search.accepts(it, now, zone, edits::isEdited) }
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
-        LibraryUiState(loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags)
+        val years = items.mapTo(sortedSetOf<Int>(reverseOrder())) { Instant.ofEpochMilli(it.capturedAt).atZone(zone).year }.toList()
+        LibraryUiState(
+            loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags,
+            query = search, findOptions = FindOptions(years = years),
+        )
     }.flowOn(Dispatchers.Default)
 
+    private data class Extras(val trashCount: Int, val albums: List<AlbumSummary>, val shownAlbum: Long?, val cameras: List<NameCount>, val lenses: List<NameCount>)
+
     val state: StateFlow<LibraryUiState> =
-        combine(listed, activity, edits.copied, showingTrash, combine(trash.items.map { it.size }, albumDao.observeAll(), album) { trashCount, albums, shown -> Triple(trashCount, albums, shown) }) { listed, activity, copied, inTrash, extras ->
-            val (trashCount, albums, shownAlbum) = extras
+        combine(listed, activity, edits.copied, showingTrash, combine(combine(trash.items.map { it.size }, albumDao.observeAll(), album) { trashCount, albums, shown -> Triple(trashCount, albums, shown) }, mediaDao.observeCameras(), mediaDao.observeLenses()) { (trashCount, albums, shown), cameras, lenses -> Extras(trashCount, albums, shown, cameras, lenses) }) { listed, activity, copied, inTrash, extras ->
+            val (trashCount, albums, shownAlbum, cameras, lenses) = extras
             // A photo that is no longer listed, deleted or filtered out, is no longer selected either.
             val shown = listed.days.flatMapTo(HashSet()) { day -> day.items.map { it.id } }
             listed.copy(
@@ -203,6 +226,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 trashCount = trashCount,
                 albums = albums,
                 album = albums.firstOrNull { it.album.id == shownAlbum },
+                findOptions = listed.findOptions.copy(cameras = cameras, lenses = lenses),
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
@@ -225,6 +249,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             val added = if (container.syncEngine.state.value.isRunning) 0 else container.libraryIndex.adoptUnknownFiles()
             if (added > 0) activity.update { it.copy(message = plural(R.plurals.library_adopted, added)) }
             container.refreshPhoneLibrary()
+            container.exifIndex.run(canReadPhoneFiles = LibraryStorage.canReadMedia(getApplication()))
             trash.emptyExpired(keptDays = container.settings.settings.first().trashKeptDays)
             makeThumbnails()
         }
@@ -289,6 +314,15 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     fun setFlagFilter(value: FlagFilter) {
         flagFilter.value = value
+    }
+
+    /** Changes what the library is searched for. */
+    fun updateQuery(change: (LibraryQuery) -> LibraryQuery) {
+        query.update(change)
+    }
+
+    fun clearQuery() {
+        query.value = LibraryQuery()
     }
 
     /** Flags every selected photo, with the other file of each raw and JPEG pair, as picked, rejected, or (0) neither. */

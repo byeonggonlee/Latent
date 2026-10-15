@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import com.byeonggon.latent.camera.SyncEngine
 import com.byeonggon.latent.camera.UsbCameraConnector
 import com.byeonggon.latent.data.EditSaver
+import com.byeonggon.latent.data.ExifIndex
 import com.byeonggon.latent.data.LibraryEdits
 import com.byeonggon.latent.data.Thumbnails
 import com.byeonggon.latent.data.LibraryIndex
@@ -54,6 +55,7 @@ class AppContainer(private val context: Context) {
     val settings = SettingsRepository(context)
     val storage = LibraryStorage(context)
     val libraryIndex = LibraryIndex(storage, database, cameraZone = { settings.settings.first().cameraZone() }) { editSaver.saving.value }
+    val exifIndex = ExifIndex(storage, database)
     val trash = Trash(storage, database.mediaDao())
     val phoneLibrary = PhoneLibrary(context, database)
     val usb = UsbCameraConnector(context)

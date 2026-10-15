@@ -29,9 +29,10 @@ Each is small or medium, works offline, and needs no new permission.
    sharing", off by default (the owner wants places kept in photos), both in Settings; sizes were already in the
    Share menu. PNG left out: it would lose the camera's Exif, which is the point of a photo. A custom long side
    could come later. Small.
-3. **Find photos.** With the phone's whole camera roll listed, scrolling is not enough: filter by camera,
-   lens, ISO range, dates, has a place, edited, flag. Place names would need a geocoder (a network service),
-   so not those. Medium.
+3. ~~**Find photos.**~~ *Done 2026-10-15:* by file name, camera, lens, ISO range, focal length (35 mm terms), when (7 and 30
+   days, a year), with or without a place, edited or not; flags, stars, kinds and albums are filters of their own.
+   The Exif is read once per file in the background into the database (`ExifIndex`). Not done: place names (a
+   network service), a range of dates picked on a calendar, shutter speed and aperture.
 4. **Colour range mask.** Select what is sky blue or foliage green by tapping it; Lightroom's colour range,
    and what Snapseed's selective does by point. Needs the CPU and GPU renderers to agree, so medium.
 5. **Import Lightroom presets (`.xmp`)** and share one's own looks as files. Presets are the habit of

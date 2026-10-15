@@ -570,4 +570,34 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="jpeg_quality_hint">For JPEGs made to share, and for copies saved from raw files and other apps\' photos. Photos of the library that are shared as they are stay as they are.</string>
     <string name="remove_location_when_sharing">Leave out the place when sharing</string>
     <string name="remove_location_when_sharing_hint">Photos sent from Share carry no GPS position. Copies saved in the library, \"Edit in another app\", videos, and raw files sent as they are are not changed.</string>
+    <string name="find">Find</string>
+    <string name="find_clear">Clear</string>
+    <string name="find_name">Part of the file name</string>
+    <string name="find_camera">Camera</string>
+    <string name="find_lens">Lens</string>
+    <string name="find_iso">ISO</string>
+    <string name="iso_low">Up to 400</string>
+    <string name="iso_mid">401–1600</string>
+    <string name="iso_high">1601–6400</string>
+    <string name="iso_very_high">Above 6400</string>
+    <string name="find_focal">Focal length (35 mm)</string>
+    <string name="focal_wide">Wide, under 24 mm</string>
+    <string name="focal_standard">24–70 mm</string>
+    <string name="focal_tele">Long, over 70 mm</string>
+    <string name="find_when">When</string>
+    <string name="period_any">Any time</string>
+    <string name="period_week">Last 7 days</string>
+    <string name="period_month">Last 30 days</string>
+    <string name="find_place">Place</string>
+    <string name="find_place_yes">With a place</string>
+    <string name="find_place_no">Without a place</string>
+    <string name="find_edited">Edits</string>
+    <string name="find_edited_yes">Edited</string>
+    <string name="find_edited_no">Not edited</string>
+    <string name="find_any">Any</string>
+    <string name="find_nothing">No photo matches.</string>
+    <plurals name="find_conditions">
+        <item quantity="one">Find · %d condition</item>
+        <item quantity="other">Find · %d conditions</item>
+    </plurals>
 </resources>

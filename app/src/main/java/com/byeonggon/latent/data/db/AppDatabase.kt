@@ -10,6 +10,9 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
+/** A name found in the library, such as a camera, and how many photos have it. */
+data class NameCount(val name: String, val count: Int)
+
 @Dao
 interface MediaDao {
     /** Everything in the library, newest first; what is in the trash is not. */
@@ -27,6 +30,19 @@ interface MediaDao {
 
     @Query("UPDATE media_items SET capturedAt = :capturedAt WHERE id = :id")
     suspend fun setCapturedAt(id: Long, capturedAt: Long)
+
+    /** Items whose Exif has not been read yet, from [after] on in the order of their ids. */
+    @Query("SELECT * FROM media_items WHERE exifRead = 0 AND id > :after ORDER BY id LIMIT :limit")
+    suspend fun withoutExif(after: Long, limit: Int): List<MediaItemEntity>
+
+    @Query("UPDATE media_items SET camera = :camera, lens = :lens, iso = :iso, focalLength = :focalLength, exifRead = 1 WHERE id = :id")
+    suspend fun setExif(id: Long, camera: String?, lens: String?, iso: Int?, focalLength: Double?)
+
+    @Query("SELECT camera AS name, COUNT(*) AS count FROM media_items WHERE camera IS NOT NULL AND trashedAt IS NULL GROUP BY camera ORDER BY count DESC, camera")
+    fun observeCameras(): Flow<List<NameCount>>
+
+    @Query("SELECT lens AS name, COUNT(*) AS count FROM media_items WHERE lens IS NOT NULL AND trashedAt IS NULL GROUP BY lens ORDER BY count DESC, lens")
+    fun observeLenses(): Flow<List<NameCount>>
 
     @Query("SELECT * FROM media_items WHERE id = :id")
     fun observeById(id: Long): Flow<MediaItemEntity?>
@@ -206,7 +222,7 @@ interface LocationDao {
         AlbumItemEntity::class,
         EditVersionEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -301,7 +317,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `camera` TEXT")
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `lens` TEXT")
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `iso` INTEGER")
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `focalLength` REAL")
+                db.execSQL("ALTER TABLE `media_items` ADD COLUMN `exifRead` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         /** Every schema change since version 1. The library on the phone must survive app updates. */
-        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+        val MIGRATIONS = arrayOf<Migration>(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
     }
 }

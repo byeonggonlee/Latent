@@ -212,7 +212,7 @@ private fun LibraryContent(
                 LargeTitle(state, viewModel, onSettings)
                 KindFilters(state, viewModel)
             }
-            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash, onPhonePhotos = viewModel::choosePhoneFolders)
+            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash, onPhonePhotos = viewModel::choosePhoneFolders, searching = state.query.isActive, onClearSearch = viewModel::clearQuery)
         } else {
             Box(Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
@@ -502,6 +502,16 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 shape = RoundedCornerShape(50),
             )
         }
+        // A search shows as one chip, and is taken off with it; the magnifying glass changes it.
+        if (state.query.isActive) {
+            InputChip(
+                selected = true,
+                onClick = { viewModel.clearQuery() },
+                label = { Text(pluralStringResource(R.plurals.find_conditions, state.query.count, state.query.count)) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.find_clear), modifier = Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(50),
+            )
+        }
         // Narrowing by stars is chosen from the menu; here it shows, and can be taken off.
         if (state.leastRating > 0) {
             InputChip(
@@ -523,6 +533,8 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
     var about by remember { mutableStateOf(false) }
     var albums by remember { mutableStateOf(false) }
     var trashingRejected by remember { mutableStateOf(false) }
+    var finding by remember { mutableStateOf(false) }
+    if (finding) FindSheet(state, viewModel, onDismiss = { finding = false })
     if (trashingRejected) {
         ConfirmDeletion(
             stringResource(R.string.trash_rejected_question),
@@ -532,6 +544,8 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
     }
     if (about) AboutDialog(onDismiss = { about = false })
     if (albums) AlbumsDialog(state, viewModel, onDismiss = { albums = false })
+    Row(verticalAlignment = Alignment.CenterVertically) {
+    IconButton(onClick = { finding = true }) { Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.find)) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -643,6 +657,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
             }
         }
     }
+    }
 }
 
 /** A day as the phone's language names it, "Thursday, October 9", with the year only when it is not this one. */
@@ -650,7 +665,7 @@ private fun dayTitle(date: LocalDate): String =
     date.format(localFormat(if (date.year == LocalDate.now().year) "MMMMdEEEE" else "yMMMMdEEEE"))
 
 @Composable
-private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: () -> Unit) {
+private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: () -> Unit, searching: Boolean = false, onClearSearch: () -> Unit = {}) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
@@ -658,6 +673,8 @@ private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: (
                     stringResource(R.string.trash_is_empty)
                 } else if (noItemsAtAll) {
                     stringResource(R.string.library_is_empty)
+                } else if (searching) {
+                    stringResource(R.string.find_nothing)
                 } else {
                     stringResource(R.string.nothing_of_kind)
                 },
@@ -668,6 +685,9 @@ private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: (
             // The phone's own photos can fill an empty library without a camera.
             if (noItemsAtAll && !trash) {
                 OutlinedButton(onClick = onPhonePhotos) { Text(stringResource(R.string.phone_folders)) }
+            }
+            if (searching && !noItemsAtAll && !trash) {
+                OutlinedButton(onClick = onClearSearch) { Text(stringResource(R.string.find_clear)) }
             }
         }
     }

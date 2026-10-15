@@ -66,6 +66,13 @@ data class MediaItemEntity(
     @ColumnInfo(defaultValue = "'LIBRARY'") val origin: MediaOrigin = MediaOrigin.LIBRARY,
     /** The flag of a cull: [FLAG_PICKED], [FLAG_REJECTED], or 0 for neither. */
     @ColumnInfo(defaultValue = "0") val flag: Int = 0,
+    /** How the photo was taken, read from its Exif once ([exifRead]) so that the library can be searched by it; null where the file says nothing. */
+    val camera: String? = null,
+    val lens: String? = null,
+    val iso: Int? = null,
+    /** In 35 mm terms where the file says, the lens's own otherwise. */
+    val focalLength: Double? = null,
+    @ColumnInfo(defaultValue = "0") val exifRead: Boolean = false,
 ) {
     /**
      * Whether what is done to this file is kept as settings, and applied whenever it is shown or

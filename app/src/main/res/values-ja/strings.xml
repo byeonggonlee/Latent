@@ -535,4 +535,33 @@
     <string name="jpeg_quality_hint">共有用に作る JPEG と、RAW ファイルや他のアプリの写真から保存するコピーに適用されます。ライブラリの写真をそのまま共有するときは、ファイルは変わりません。</string>
     <string name="remove_location_when_sharing">共有するときに位置情報を除く</string>
     <string name="remove_location_when_sharing_hint">共有で送る写真には GPS の位置情報が入りません。ライブラリに保存するコピー、「他のアプリで編集」、動画、そのまま送る RAW ファイルは変わりません。</string>
+    <string name="find">検索</string>
+    <string name="find_clear">クリア</string>
+    <string name="find_name">ファイル名の一部</string>
+    <string name="find_camera">カメラ</string>
+    <string name="find_lens">レンズ</string>
+    <string name="find_iso">ISO</string>
+    <string name="iso_low">400 以下</string>
+    <string name="iso_mid">401–1600</string>
+    <string name="iso_high">1601–6400</string>
+    <string name="iso_very_high">6400 超</string>
+    <string name="find_focal">焦点距離 (35mm 換算)</string>
+    <string name="focal_wide">広角、24mm 未満</string>
+    <string name="focal_standard">24–70mm</string>
+    <string name="focal_tele">望遠、70mm 超</string>
+    <string name="find_when">期間</string>
+    <string name="period_any">すべて</string>
+    <string name="period_week">最近 7 日</string>
+    <string name="period_month">最近 30 日</string>
+    <string name="find_place">位置情報</string>
+    <string name="find_place_yes">あり</string>
+    <string name="find_place_no">なし</string>
+    <string name="find_edited">編集</string>
+    <string name="find_edited_yes">編集済み</string>
+    <string name="find_edited_no">未編集</string>
+    <string name="find_any">指定なし</string>
+    <string name="find_nothing">条件に合う写真がありません。</string>
+    <plurals name="find_conditions">
+        <item quantity="other">検索 · 条件 %d 件</item>
+    </plurals>
 </resources>
