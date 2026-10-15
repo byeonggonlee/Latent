@@ -454,4 +454,7 @@ Connect a camera on the Camera tab to bring photos in.</string>
         <item quantity="one">%1$d photo here</item>
         <item quantity="other">%1$d photos here</item>
     </plurals>
+    <string name="context_open">Open</string>
+    <string name="context_select">Select</string>
+    <string name="context_deselect">Deselect</string>
 </resources>

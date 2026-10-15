@@ -63,6 +63,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -241,6 +244,10 @@ private fun LibraryContent(
                                 // In the trash a photo is only picked, to be put back or deleted.
                                 onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(item.id) },
                                 onHold = { viewModel.toggle(item.id) },
+                                // With a mouse, a right click picks the photo and offers what can be done to it, as a file manager does.
+                                menuEnabled = !state.showingTrash,
+                                menu = { contextActions(item, state, onOpen, viewModel) },
+                                onMenuOpened = { if (item.id !in state.selected) viewModel.toggle(item.id) },
                             )
                         }
                     }
@@ -552,14 +559,51 @@ private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MediaCell(item: MediaItemEntity, withRaw: Boolean, selected: Boolean, onClick: () -> Unit, onHold: () -> Unit) {
+private fun MediaCell(
+    item: MediaItemEntity,
+    withRaw: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onHold: () -> Unit,
+    menuEnabled: Boolean = false,
+    menu: @Composable () -> List<Pair<String, () -> Unit>> = { emptyList() },
+    onMenuOpened: () -> Unit = {},
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     Box(
         Modifier
             .aspectRatio(1f)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .combinedClickable(onClick = onClick, onLongClick = onHold)
+            // After the click handling, so that a right click is taken here before that sees it.
+            .pointerInput(menuEnabled) {
+                if (!menuEnabled) return@pointerInput
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            event.changes.forEach { it.consume() }
+                            onMenuOpened()
+                            menuOpen = true
+                        }
+                    }
+                }
+            }
             .then(if (selected) Modifier.border(4.dp, MaterialTheme.colorScheme.primary) else Modifier),
     ) {
+        if (menuOpen && menuEnabled) {
+            DropdownMenu(expanded = true, onDismissRequest = { menuOpen = false }) {
+                for ((label, action) in menu()) {
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            menuOpen = false
+                            action()
+                        },
+                    )
+                }
+            }
+        }
         AsyncImage(
             model = rememberThumbnailModel(item),
             contentDescription = item.fileName,
@@ -644,3 +688,18 @@ private fun Context.shareAll(files: List<File>) {
         // No app on the device takes photos; nothing useful to do.
     }
 }
+
+/** What a right click on a photo offers: opening it, and what can be done to the photos picked, which it joins. */
+@Composable
+private fun contextActions(
+    item: MediaItemEntity,
+    state: LibraryUiState,
+    onOpen: (Long) -> Unit,
+    viewModel: LibraryViewModel,
+): List<Pair<String, () -> Unit>> = listOfNotNull(
+    stringResource(R.string.context_open) to { onOpen(item.id) },
+    (stringResource(if (item.id in state.selected) R.string.context_deselect else R.string.context_select)) to { viewModel.toggle(item.id) },
+    (stringResource(R.string.paste_edit) to { viewModel.pasteToSelected() }).takeIf { state.canPaste && item.kind != MediaKind.VIDEO },
+    stringResource(R.string.share) to { viewModel.shareSelected() },
+    stringResource(R.string.delete) to { viewModel.trashSelected() },
+)

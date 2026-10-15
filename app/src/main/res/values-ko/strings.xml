@@ -424,4 +424,7 @@
     <plurals name="map_photos_here">
         <item quantity="other">여기에서 찍은 사진 %1$d장</item>
     </plurals>
+    <string name="context_open">열기</string>
+    <string name="context_select">선택</string>
+    <string name="context_deselect">선택 해제</string>
 </resources>

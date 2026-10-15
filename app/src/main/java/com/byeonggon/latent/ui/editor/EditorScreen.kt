@@ -96,6 +96,7 @@ import com.byeonggon.latent.ui.common.PhotoTheme
 import com.byeonggon.latent.ui.common.PictureBackground
 import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.latent.ui.common.ZoomableBox
+import com.byeonggon.latent.ui.common.rememberZoomState
 import com.byeonggon.latent.ui.common.keys
 import com.byeonggon.latent.ui.common.rememberWindowLayout
 import java.util.Locale
@@ -184,6 +185,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     var spotRadius by rememberSaveable { mutableFloatStateOf(DEFAULT_SPOT_RADIUS) }
     var showHistogram by rememberSaveable { mutableStateOf(false) }
     var gestureMode by rememberSaveable { mutableStateOf(false) }
+    val zoom = rememberZoomState(itemId)
     LaunchedEffect(tab) { viewModel.show(tab.view) }
 
     /** Changes the mask of the part that is selected, as dragging it on the picture does. */
@@ -223,7 +225,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     PhotoTheme {
     Scaffold(
         // With a keyboard: Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, Ctrl+S saves, Escape closes;
-        // a letter for each tool, J for marking clipped tones, and the original shown while the backslash is held.
+        // a letter for each tool, J for marking clipped tones, plus, minus and 0 to zoom, and the original shown while the backslash is held.
         modifier = Modifier.keys(
             onRelease = { event -> (event.key == Key.Backslash).also { if (it) viewModel.setComparing(false) } },
         ) { event ->
@@ -235,6 +237,9 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 event.key == Key.Escape -> closeUnlessChanged().let { true }
                 plain && event.key == Key.Backslash -> viewModel.setComparing(true).let { true }
                 plain && event.key == Key.J -> viewModel.setClipping(!state.clipping).let { true }
+                plain && (event.key == Key.Zero || event.key == Key.NumPad0) -> zoom.reset().let { true }
+                plain && (event.key == Key.Equals || event.key == Key.Plus || event.key == Key.NumPadAdd) -> zoom.zoomBy(ZOOM_KEY_STEP).let { true }
+                plain && (event.key == Key.Minus || event.key == Key.NumPadSubtract) -> zoom.zoomBy(1f / ZOOM_KEY_STEP).let { true }
                 plain -> EditorTab.entries.firstOrNull { it.key == event.key }?.let { tab = it } != null
                 else -> false
             }
@@ -348,7 +353,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                             onAdjust = { control, position -> viewModel.adjust { control.setting.set(it, control.valueAt(position)) } },
                             onDone = viewModel::commit,
                         ) {
-                            ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing) {
+                            ZoomableBox(resetKey = itemId, onHold = viewModel::setComparing, state = zoom) {
                                 // Holding the picture shows it without its corrections, the same as the button below does.
                                 Image(
                                     bitmap = preview.asImageBitmap(),
@@ -937,5 +942,8 @@ private fun FramingControls(
 private val PANEL_HEIGHT = 268.dp
 private val EXPANDED_PANEL_HEIGHT = 420.dp
 private const val GRAB_THRESHOLD = 4f
+/** How much a press of plus or minus zooms. */
+private const val ZOOM_KEY_STEP = 1.25f
+
 private const val MAX_ANGLE = 30f
 private const val ANGLE_SNAP = 0.3f

@@ -97,6 +97,7 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.latent.ui.common.ZoomableBox
+import com.byeonggon.latent.ui.common.rememberZoomState
 import com.byeonggon.latent.ui.common.keys
 import com.byeonggon.latent.ui.common.rememberWindowLayout
 import com.byeonggon.latent.ui.common.rememberMediaModel
@@ -223,11 +224,17 @@ fun ViewerScreen(
     }
 
     val scope = rememberCoroutineScope()
+    // The photo in front, zoomed by keys as well as fingers; each photo starts out as it fits.
+    val zoom = rememberZoomState(item?.id ?: -1L)
     PhotoTheme {
     Scaffold(
-        // With a keyboard: arrows turn the page, Delete puts the photo in the trash, Escape closes.
+        // With a keyboard: arrows turn the page, Delete puts the photo in the trash, Escape closes,
+        // plus and minus zoom and 0 shows the whole photo.
         modifier = Modifier.keys { event ->
             when (event.key) {
+                Key.Zero, Key.NumPad0 -> zoom.reset().let { true }
+                Key.Equals, Key.Plus, Key.NumPadAdd -> zoom.zoomBy(ZOOM_KEY_STEP).let { true }
+                Key.Minus, Key.NumPadSubtract -> zoom.zoomBy(1f / ZOOM_KEY_STEP).let { true }
                 Key.DirectionRight -> scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }.let { true }
                 Key.DirectionLeft -> scope.launch { pager.animateScrollToPage(pager.currentPage - 1) }.let { true }
                 Key.Delete, Key.Backspace -> trashShown?.invoke().let { trashShown != null }
@@ -286,7 +293,7 @@ fun ViewerScreen(
                     // A raw file with corrections is drawn with them; that is only worked out for the photo in front.
                     val rendered = state.rendered.takeIf { shown.id == item?.id }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        ZoomableBox(resetKey = shown.id) {
+                        ZoomableBox(resetKey = shown.id, state = if (shown.id == item?.id) zoom else rememberZoomState(shown.id)) {
                             if (rendered != null) {
                                 Image(
                                     bitmap = rendered.asImageBitmap(),
@@ -588,6 +595,9 @@ private fun Context.showOnMap(item: MediaItemEntity) {
     val uri = "geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(item.fileName)})".toUri()
     launch(Intent(Intent.ACTION_VIEW, uri))
 }
+
+/** How much a press of plus or minus zooms. */
+private const val ZOOM_KEY_STEP = 1.25f
 
 /** What [onShare] is given to share a file just as it is stored. */
 private const val RAW_FILE = -1
