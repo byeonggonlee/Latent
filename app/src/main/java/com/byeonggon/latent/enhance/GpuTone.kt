@@ -80,6 +80,7 @@ internal object GpuTone {
         var mapHeight = 1
         val mixer: Int
         val grading: Int
+        val lut: Int
         val vignette: Int
         val grain: Grain?
 
@@ -144,6 +145,7 @@ internal object GpuTone {
             }
             mixer = renderer.mixer?.let { add(it.hueShift, it.saturation, it.luminance) } ?: -1
             grading = renderer.grading?.let { add(it.red, it.green, it.blue) } ?: -1
+            lut = renderer.lut?.let { add(it.table) } ?: -1
             vignette = renderer.vignette?.let { add(it.factor) } ?: -1
             grain = if (renderer.adjustments.grain > 0f) Grain(renderer.adjustments.grain, frameWidth, frameHeight) else null
 
@@ -222,6 +224,13 @@ internal object GpuTone {
             GLES31.glUniform1i(location("monochrome"), if (renderer.monochrome) 1 else 0)
             GLES31.glUniform1i(location("mixer"), tables.mixer)
             GLES31.glUniform1i(location("grading"), tables.grading)
+            GLES31.glUniform1i(location("lut"), tables.lut)
+            renderer.lut?.let { lut ->
+                GLES31.glUniform1i(location("lutSize"), lut.size)
+                GLES31.glUniform3f(location("lutScale"), lut.scale[0], lut.scale[1], lut.scale[2])
+                GLES31.glUniform3f(location("lutOffset"), lut.offset[0], lut.offset[1], lut.offset[2])
+                GLES31.glUniform1f(location("lutIntensity"), renderer.lutIntensity)
+            }
             GLES31.glUniform1i(location("vignette"), tables.vignette)
             GLES31.glUniform1i(location("grain"), if (tables.grain != null) 1 else 0)
             GLES31.glUniform1f(location("fleckSize"), tables.grain?.pixelsPerFleck ?: 1f)

@@ -52,6 +52,11 @@ internal object ToneShader {
         uniform int monochrome;
         uniform int mixer;
         uniform int grading;
+        uniform int lut;
+        uniform int lutSize;
+        uniform vec3 lutScale;
+        uniform vec3 lutOffset;
+        uniform float lutIntensity;
         uniform int vignette;
         uniform int grain;
         uniform float fleckSize;
@@ -243,6 +248,33 @@ internal object ToneShader {
             return luma * (1.0 + t[mixer + 722 + s] * chroma / most);
         }
 
+        vec3 lutPoint(int at) { return vec3(t[at], t[at + 1], t[at + 2]); }
+
+        // ColorLut.lookup: the eight points of the cube around the colour, mixed by how near it is to each.
+        vec3 looked(vec3 c) {
+            vec3 place = clamp(c * lutScale + lutOffset, vec3(0.0), vec3(float(lutSize - 1)));
+            ivec3 low = min(ivec3(place), ivec3(lutSize - 2));
+            vec3 f = place - vec3(low);
+            int nextGreen = lutSize * 3;
+            int nextBlue = lutSize * lutSize * 3;
+            int at = lut + ((low.z * lutSize + low.y) * lutSize + low.x) * 3;
+            vec3 c000 = lutPoint(at);
+            vec3 c100 = lutPoint(at + 3);
+            vec3 c010 = lutPoint(at + nextGreen);
+            vec3 c110 = lutPoint(at + nextGreen + 3);
+            vec3 c001 = lutPoint(at + nextBlue);
+            vec3 c101 = lutPoint(at + nextBlue + 3);
+            vec3 c011 = lutPoint(at + nextBlue + nextGreen);
+            vec3 c111 = lutPoint(at + nextBlue + nextGreen + 3);
+            vec3 c00 = c000 + (c100 - c000) * f.x;
+            vec3 c10 = c010 + (c110 - c010) * f.x;
+            vec3 c01 = c001 + (c101 - c001) * f.x;
+            vec3 c11 = c011 + (c111 - c011) * f.x;
+            vec3 c0 = c00 + (c10 - c00) * f.y;
+            vec3 c1 = c01 + (c11 - c01) * f.y;
+            return c0 + (c1 - c0) * f.z;
+        }
+
         float fleck(int x, int y) {
             uint hash = uint(x) * 374761393u + uint(y) * 668265263u;
             hash = (hash ^ (hash >> 13u)) * 1274126177u;
@@ -329,6 +361,10 @@ internal object ToneShader {
             if (grading >= 0) {
                 int s = stepOf(dot(rgb, LUMA), 256);
                 rgb += vec3(t[grading + s], t[grading + 257 + s], t[grading + 514 + s]);
+            }
+
+            if (lut >= 0) {
+                rgb += (looked(rgb) - rgb) * lutIntensity;
             }
 
             if (vignette >= 0) {

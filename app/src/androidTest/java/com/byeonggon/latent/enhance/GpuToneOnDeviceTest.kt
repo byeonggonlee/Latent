@@ -11,6 +11,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.pow
 
 /**
  * Tones rendered on the graphics processor against the same on the processor, on a real photo, for
@@ -20,10 +21,21 @@ import kotlin.math.max
 @RunWith(AndroidJUnit4::class)
 class GpuToneOnDeviceTest {
     private val sample = InstrumentationRegistry.getArguments().getString("jpegSample")?.let(::File)
+    private val appLuts = LutStore.directory
 
     @After
     fun backToDefault() {
         ToneRenderer.useGraphicsProcessor = true
+        LutStore.directory = appLuts
+    }
+
+    /** A LUT that bends every colour differently, so that mixing between its points shows. */
+    private fun twisted(size: Int) = ColorLut.of(size) { r, g, b ->
+        floatArrayOf(
+            0.95f * r.pow(0.8f) + 0.05f * g,
+            0.7f * g * g + 0.3f * b,
+            1f - (1f - b) * (0.6f + 0.4f * r),
+        )
     }
 
     private val tones = Adjustments(
@@ -99,6 +111,13 @@ class GpuToneOnDeviceTest {
         compare("levelled and tilted", proxy, everything.copy(framing = levelled))
         compare("turned", proxy, everything.copy(framing = Framing().turnedClockwise()))
 
+        // LUTs, kept aside from the app's own.
+        LutStore.directory = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "test-luts").apply { mkdirs() }
+        LutStore.save(USUAL_LUT, twisted(33))
+        LutStore.save(LARGEST_LUT, twisted(65))
+        compare("with a LUT", proxy, everything.copy(lut = LutLook(USUAL_LUT, 0.8f)))
+        compare("the largest LUT", proxy, PhotoEdit(lut = LutLook(LARGEST_LUT)))
+
         // Finished pixels straight from the camera, turned back into light on the graphics processor.
         val displayed = IntArray(proxy.width * proxy.height)
         android.graphics.BitmapFactory.decodeFile(sample.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }).let { bitmap ->
@@ -121,9 +140,12 @@ class GpuToneOnDeviceTest {
 
         val full = PhotoEnhancer.load(sample, 8000)
         compare("everything at full size", full, everything)
+        compare("the largest LUT at full size", full, PhotoEdit(lut = LutLook(LARGEST_LUT)))
     }
 
     private companion object {
         const val TAG = "GpuTone"
+        const val USUAL_LUT = "00000000000000000000000000000033"
+        const val LARGEST_LUT = "00000000000000000000000000000065"
     }
 }
