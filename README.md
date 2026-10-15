@@ -12,8 +12,9 @@ phone's location, and develops them: raw files included, without a cloud or an a
   GPS tags in their EXIF; raw files get an XMP sidecar.
 - **Develops raw files** (Sony ARW) with the camera's lens corrections, and edits JPEGs the same way.
 - **Edits** with exposure and tone curves, colour mixer and grading, texture, clarity, dehaze,
-  sharpening and noise reduction, filters, cropping and perspective, masks (linear, radial, brush)
-  and spot healing. Edits stay editable; a JPEG's original is kept and can be restored.
+  sharpening and noise reduction, filters (Lightroom presets and `.cube` LUTs can be imported), cropping
+  and perspective, masks (linear, radial, brush) and spot healing. Edits stay editable; a JPEG's original
+  is kept and can be restored.
 - **Keeps a library** by day, with ratings, albums, raw and JPEG shown as one, a trash, and sharing. It can list
   the phone's own photos too, from the folders you choose, without ever changing them.
 - **Shows your photos on a map** (OpenStreetMap), once you turn online maps on.
