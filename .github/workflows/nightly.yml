@@ -76,6 +76,7 @@ jobs:
           echo "name=$base-nightly.$day" >> "$GITHUB_OUTPUT"
           echo "tag=nightly-$day-$count" >> "$GITHUB_OUTPUT"
           echo "day=$day" >> "$GITHUB_OUTPUT"
+          echo "file=latent-$base-nightly.$day-$count.apk" >> "$GITHUB_OUTPUT"
 
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
@@ -101,12 +102,15 @@ jobs:
             echo "::warning::No signing key in the repository secrets: the APK is built and kept as an artifact, not published."
             ./gradlew assembleRelease -PdebugSignedRelease $versions --stacktrace
           fi
-          cp app/build/outputs/apk/release/app-release.apk "latent-${{ steps.version.outputs.name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "${{ steps.version.outputs.file }}"
+          sha256sum "${{ steps.version.outputs.file }}" > "${{ steps.version.outputs.file }}.sha256"
 
       - uses: actions/upload-artifact@v4
         with:
           name: latent-nightly-apk
-          path: latent-*.apk
+          path: |
+            latent-*.apk
+            latent-*.apk.sha256
           retention-days: 14
 
       - name: Publish
@@ -116,14 +120,14 @@ jobs:
         run: |
           if [ -n "$LAST" ]; then range="$LAST..HEAD"; else range="HEAD~30..HEAD"; fi
           {
-            echo "Nightly build ${{ steps.version.outputs.day }} of the \`main\` branch, version ${{ steps.version.outputs.name }} (code ${{ steps.version.outputs.code }})."
+            echo "Nightly build ${{ steps.version.outputs.day }} of the \`main\` branch at commit \`$(git rev-parse --short HEAD)\`, version ${{ steps.version.outputs.name }} (code ${{ steps.version.outputs.code }})."
             echo
             echo "Installs over the nightly before it, which was signed with the same key. A build only goes forward: an older one cannot be put back over a newer one without uninstalling the app, which takes its database along."
             echo
             echo "Changes since the last nightly:"
             git log --pretty='- %s' $range | head -80
           } > notes.md
-          gh release create "${{ steps.version.outputs.tag }}" "latent-${{ steps.version.outputs.name }}.apk" \
+          gh release create "${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.file }}" "${{ steps.version.outputs.file }}.sha256" \
             --prerelease --target "$GITHUB_SHA" \
             --title "Nightly ${{ steps.version.outputs.day }} (build ${{ steps.version.outputs.code }})" \
             --notes-file notes.md

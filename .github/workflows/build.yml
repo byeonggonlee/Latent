@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -39,16 +41,29 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The APK says which commit it was built from, in its name and in the version the About dialog shows.
+      - name: Version
+        id: version
+        run: |
+          count=$(git rev-list --count HEAD)
+          base=$(grep '^latent.versionBase=' gradle.properties | cut -d= -f2)
+          name="$base-ci.$(git rev-parse --short=7 HEAD)"
+          echo "code=$count" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "file=latent-$name-$count.apk" >> "$GITHUB_OUTPUT"
+
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
 
       - name: Release APK (signed with the debug key)
-        run: ./gradlew assembleRelease -PdebugSignedRelease --stacktrace
+        run: |
+          ./gradlew assembleRelease -PdebugSignedRelease -PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }} --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "${{ steps.version.outputs.file }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: latent-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: latent-*.apk
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
