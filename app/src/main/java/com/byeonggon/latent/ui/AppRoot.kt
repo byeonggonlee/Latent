@@ -33,6 +33,7 @@ import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.TabPosition
 import com.byeonggon.latent.ui.common.ReadableWidth
 import com.byeonggon.latent.ui.common.SafeInsets
+import com.byeonggon.latent.ui.common.forBottomBar
 import com.byeonggon.latent.ui.common.rememberWindowLayout
 import com.byeonggon.latent.ui.editor.EditorScreen
 import com.byeonggon.latent.ui.library.LibraryScreen
@@ -154,7 +155,7 @@ fun AppRoot(startOnSync: Boolean) {
     Scaffold(
         contentWindowInsets = SafeInsets,
         bottomBar = {
-            NavigationBar(windowInsets = SafeInsets) {
+            NavigationBar(windowInsets = SafeInsets.forBottomBar()) {
                 Tab.entries.forEach { entry ->
                     NavigationBarItem(
                         selected = tab == entry,

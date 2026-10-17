@@ -1,6 +1,8 @@
 package com.byeonggon.latent.ui.common
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
@@ -57,6 +59,12 @@ fun ReadableWidth(modifier: Modifier = Modifier, content: @Composable BoxScope.(
  */
 val SafeInsets: WindowInsets
     @Composable get() = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+
+/**
+ * What a bar along the bottom keeps clear of: the sides and the bottom. Given the top too, a bar pads itself
+ * by the height of the status bar, which shows as a wide empty band above its buttons.
+ */
+internal fun WindowInsets.forBottomBar(): WindowInsets = only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
 
 /** Width of a side panel next to the picture. */
 val SIDE_PANEL_WIDTH = 380.dp
