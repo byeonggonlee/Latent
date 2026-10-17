@@ -29,9 +29,13 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # Installs the command line tools into a folder that can be written to, and accepts the licences, so that the
-      # Android Gradle plugin can fetch the platform and build tools the project asks for.
-      - uses: android-actions/setup-android@v3
+      # The runner has an Android SDK. It is made writable and its licences are accepted, so that the Android Gradle
+      # plugin can fetch the platform and build tools that the project asks for and the image does not have.
+      - name: Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          sudo chown -R "$USER" "$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - uses: gradle/actions/setup-gradle@v4
 
