@@ -49,6 +49,20 @@ Unit and UI tests run on the JVM with Robolectric:
 ./gradlew testDebugUnitTest
 ```
 
+### On GitHub
+
+[![Build](https://github.com/byeonggonlee/Latent/actions/workflows/build.yml/badge.svg)](https://github.com/byeonggonlee/Latent/actions/workflows/build.yml)
+
+The workflow in `.github/workflows/build.yml` runs the tests and lint and builds the release APK on every push to
+`main`, and on request ("Run workflow" on the Actions tab, also from the GitHub app). It takes about 7 minutes. The
+APK is kept for 14 days as the `latent-release-apk` artifact (downloading needs a GitHub login), the test and lint
+reports for 7 days.
+
+That APK is signed with the runner's own debug key, which no phone's install has: it installs on a phone without
+the app, but not over a build made on another computer (uninstall first, which takes the app's database along). A
+build made to be updated over the ones already on the phones needs the same signing key in a repository secret;
+a build for Play needs the release key in one.
+
 Tests that time real photos on a device live in `app/src/androidTest`. Run them with
 `adb shell am instrument`, passing sample files with `-e jpegSample <path> -e arwSample <path>`;
 Gradle's `connectedAndroidTest` uninstalls the app afterwards, taking its database with it.
