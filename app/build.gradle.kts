@@ -14,8 +14,10 @@ android {
         applicationId = "com.byeonggon.latent"
         minSdk = 35
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // The nightly and stable builds on GitHub pass the number of commits and a name with the date (see docs/RELEASES.md);
+        // a build on this computer is version 1 of the base name, as it always was.
+        versionCode = (project.findProperty("latentVersionCode") as String?)?.toInt() ?: 1
+        versionName = (project.findProperty("latentVersionName") as String?) ?: (project.findProperty("latent.versionBase") as String)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

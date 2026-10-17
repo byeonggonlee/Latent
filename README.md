@@ -58,6 +58,9 @@ The workflow in `.github/workflows/build.yml` runs the tests and lint and builds
 APK is kept for 14 days as the `latent-release-apk` artifact (downloading needs a GitHub login), the test and lint
 reports for 7 days.
 
+Nightly builds, published for the phones, and the version numbers are described in
+[`docs/RELEASES.md`](docs/RELEASES.md).
+
 That APK is signed with the runner's own debug key, which no phone's install has: it installs on a phone without
 the app, but not over a build made on another computer (uninstall first, which takes the app's database along). A
 build made to be updated over the ones already on the phones needs the same signing key in a repository secret;
