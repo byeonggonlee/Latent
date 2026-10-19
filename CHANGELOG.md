@@ -15,8 +15,9 @@ with the phone's location, and develops them, without a cloud or an account.
   show as one.
 - **Geotags** from the phone's own location record or an exported Google Timeline: GPS tags in a JPEG's EXIF, an
   XMP sidecar for a raw file.
-- **Develops raw files** (Sony ARW) with the camera's lens corrections, and edits JPEGs the same way. A JPEG's
-  original is kept and can be restored.
+- **Develops raw files**: Sony ARW with the camera's lens corrections, and the DNGs of phones (such as a Galaxy's
+  Pro mode) with their shading corrections. JPEGs are edited the same way; a JPEG's original is kept and can be
+  restored.
 - **Edits**: exposure and tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise
   reduction, filters, cropping and perspective with auto level, spot healing, and masks (linear, radial, brush,
   colour range, tone range, and subject and background found on the phone). Edits stay editable and can be kept
@@ -33,7 +34,9 @@ with the phone's location, and develops them, without a cloud or an account.
 
 - Android 15 (API 35) or later.
 - Tried with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may work. Raw
-  development reads Sony ARW only.
+  development reads Sony ARW and DNG mosaics, uncompressed or in lossless JPEG. Linear DNGs (a Galaxy's Expert
+  RAW) and JPEG XL compressed DNGs cannot be developed yet. Phone DNGs are developed
+  without correcting the lens's distortion.
 - Everything stays on the phone: no account, no analytics, and the internet only for the optional map, which
   is off until you turn it on. See [`PRIVACY.md`](PRIVACY.md).
 - Export is JPEG only, on an 8-bit pipeline and an SDR screen. There is no sky mask yet.

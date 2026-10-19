@@ -10,7 +10,8 @@ phone's location, and develops them: raw files included, without a cloud or an a
 - **Imports from a camera over USB (MTP)**, only what is new, or only the days you pick.
 - **Geotags** photos from the phone's own location record or an exported Google Timeline. JPEGs get
   GPS tags in their EXIF; raw files get an XMP sidecar.
-- **Develops raw files** (Sony ARW) with the camera's lens corrections, and edits JPEGs the same way.
+- **Develops raw files**: Sony ARW with the camera's lens corrections, and the DNGs of phones such as a Galaxy's Pro
+  mode with their shading corrections. JPEGs are edited the same way.
 - **Edits** with exposure and tone curves, colour mixer and grading, texture, clarity, dehaze,
   sharpening and noise reduction, filters (Lightroom presets and `.cube` LUTs can be imported), cropping
   and perspective, masks (linear, radial, brush, colour) and spot healing. Edits stay editable; a JPEG's original
@@ -27,7 +28,8 @@ phone's location, and develops them: raw files included, without a cloud or an a
 The app speaks English, Korean and Japanese, following the phone's language.
 
 It has been used with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may
-work; raw development currently reads Sony ARW only.
+work. Raw development reads Sony ARW and DNG mosaics (uncompressed or lossless JPEG); linear DNGs, such as a
+Galaxy's Expert RAW, and JPEG XL compressed DNGs are not read yet.
 
 ## Privacy
 

@@ -101,6 +101,18 @@ Nothing of this has run on a phone yet. Read the times with `adb logcat -s Subje
 - [ ] A mask whose outline file is deleted (`adb shell run-as com.byeonggon.latent rm files/masks/<id>.mask`, then reopen the photo): "The outline of this mask is missing" and "Find again".
 - [ ] Release build: the R8 rules keep LiteRT's classes; "+ Subject" works in `assembleRelease -PdebugSignedRelease` (a missing class would show as a crash or "cannot run" in logcat).
 
+## Phone raw files (DNG)
+
+Written and tested against the DNG specification with made-up files only: no Galaxy DNG has been tried yet.
+
+- [ ] Pro mode on the S24 and the S26 with RAW (or RAW and JPEG) on: the `.dng` appears in "Photos on this phone" (`DCIM/Camera/`), with a thumbnail, and opens in the viewer and the editor. If it says it cannot be opened, keep the file for a test (`adb pull`) and note the message in logcat (`RawDevelop` and the exception).
+- [ ] Colours next to the phone's own JPEG of the same shot: white balance, skin, sky, greens. The DNG reader adds no extra saturation (`Dng.SATURATION`, 1.0, where Sony files get 1.45); is it too dull?
+- [ ] Corners and edges: no dark or tinted corners (the gain maps), on the main camera, the ultra wide and a telephoto. The ultra wide's distortion is not corrected (OpcodeList3 is not read).
+- [ ] The crop matches the phone's JPEG (no grey or black border, no colour fringe from a wrong mosaic start).
+- [ ] Expert RAW: it says it cannot develop it (linear DNG) rather than showing something wrong; the file still shows as itself in the viewer.
+- [ ] A 50 MP Pro mode or Expert RAW file: how long the editor takes to open it, and whether it runs out of memory (the file and the mosaic are both held: about 200 MB).
+- [ ] Save a copy as JPEG from a DNG: it lands in `DCIM/Latent` with the camera's Exif and the place.
+
 ## Location
 
 - [ ] "Camera clock" steps (±1 min, ±10 min, ±1 h) and the sentence under it; "Match again" for photos without a place uses the offset.

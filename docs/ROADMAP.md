@@ -43,6 +43,13 @@ Each is small or medium, works offline, and needs no new permission.
    vignette, grain, sharpening and noise reduction), the rest is skipped and said so. Not done: sharing one's own
    looks as `.xmp` files (the reverse mapping; Lightroom's reading of it cannot be tried here), `.lrtemplate`.
 
+- **Phone raw files (DNG)**, *stage 1 built 2026-10-19, to be judged on a phone:* Bayer DNGs (a Galaxy's Pro mode,
+  Android's own writer, Adobe's converter), uncompressed or in lossless JPEG, with black and white levels,
+  linearization, the daylight colour matrix with the camera's calibration, the as-shot white balance, the default
+  crop and the gain maps (lens shading). Next, once a real file has been tried: linear DNGs (Expert RAW, a path
+  around the demosaicing), the lens's distortion from OpcodeList3 (WarpRectilinear), JPEG XL compression (needs a
+  decoder), and a colour matrix interpolated between the two illuminants. Galaxy Log video belongs with item 12.
+
 ## Larger, to be settled first
 
 6. **Sky and subject masks** (on-device segmentation). The most used Lightroom mask, and what makes quick
