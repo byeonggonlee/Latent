@@ -17,10 +17,14 @@ internal object LosslessJpeg {
     /**
      * Decodes the stream of [length] bytes at [offset] in [file] into [into], an image [width] by [height].
      * Its samples, taken in order (row by row, the components of a column side by side), fill a tile [tileWidth]
-     * wide whose top left corner is at [left], [top]; samples beyond the image's edges are dropped.
+     * wide and at most [tileLength] long whose top left corner is at [left], [top]; samples beyond the image's
+     * edges are dropped.
      */
     @Throws(IOException::class)
-    fun decode(file: ByteArray, offset: Int, length: Int, into: ShortArray, width: Int, height: Int, left: Int, top: Int, tileWidth: Int) {
+    fun decode(
+        file: ByteArray, offset: Int, length: Int, into: ShortArray, width: Int, height: Int,
+        left: Int, top: Int, tileWidth: Int, tileLength: Int,
+    ) {
         val end = minOf(file.size.toLong(), offset.toLong() + length).toInt()
         if (offset < 0 || end - offset < 4 || u8(file, offset) != 0xFF || u8(file, offset + 1) != MARKER_START) {
             throw IOException("Not a lossless JPEG stream")
@@ -52,6 +56,10 @@ internal object LosslessJpeg {
                     val count = u8(file, body + 5)
                     if (precision !in 2..16 || lines <= 0 || samplesPerLine <= 0 || count !in 1..4) {
                         throw IOException("Unsupported lossless JPEG frame")
+                    }
+                    // A frame larger than its tile would only be decoded to be thrown away, for as long as it says.
+                    if (lines.toLong() * samplesPerLine * count > tileWidth.toLong() * tileLength) {
+                        throw IOException("The lossless JPEG frame does not fit its tile")
                     }
                     componentIds = IntArray(count) { u8(file, body + 6 + 3 * it) }
                 }

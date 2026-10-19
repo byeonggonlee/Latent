@@ -48,7 +48,10 @@ Each is small or medium, works offline, and needs no new permission.
   linearization, the daylight colour matrix with the camera's calibration, the as-shot white balance, the default
   crop and the gain maps (lens shading). Next, once a real file has been tried: linear DNGs (Expert RAW, a path
   around the demosaicing), the lens's distortion from OpcodeList3 (WarpRectilinear), JPEG XL compression (needs a
-  decoder), and a colour matrix interpolated between the two illuminants. Galaxy Log video belongs with item 12.
+  decoder), a colour matrix interpolated between the two illuminants, `BaselineExposure` in the tone stage's
+  exposure (with care not to add to the automatic correction twice), hiding the editor's lens correction chip for
+  files without a lens profile, and pairing a Pixel's `.RAW-02.ORIGINAL.dng` with its `.RAW-01.COVER.jpg`. Galaxy
+  Log video belongs with item 12.
 
 ## Larger, to be settled first
 

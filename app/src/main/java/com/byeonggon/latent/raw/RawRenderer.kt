@@ -21,7 +21,13 @@ object RawRenderer {
     @Throws(IOException::class)
     fun read(file: File): ArwImage = timed("decode ${file.name}") {
         val bytes = file.readBytes()
-        if (Dng.isDng(bytes)) Dng.read(bytes) else SonyArw.read(bytes)
+        try {
+            if (Dng.isDng(bytes)) Dng.read(bytes) else SonyArw.read(bytes)
+        } catch (e: IOException) {
+            // The screens only say that the photo could not be opened; why is kept here.
+            Log.w(TAG, "Cannot develop ${file.name}: ${e.message}")
+            throw e
+        }
     }
 
     /**

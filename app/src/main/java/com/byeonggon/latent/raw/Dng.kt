@@ -201,10 +201,13 @@ object Dng {
         val lengths = raw.ints(if (tiled) TAG_TILE_BYTE_COUNTS else TAG_STRIP_BYTE_COUNTS)?.takeIf { it.size == offsets.size }
             ?: throw IOException("Missing raw image data")
         val tileWidth = if (tiled) raw.int(TAG_TILE_WIDTH) ?: 0 else width
-        val tileLength = if (tiled) raw.int(TAG_TILE_LENGTH) ?: 0 else (raw.int(TAG_ROWS_PER_STRIP) ?: height).coerceAtMost(height)
+        // Rows per strip is unsigned, and its largest value, the default, means one strip for the whole image.
+        val rowsPerStrip = raw.int(TAG_ROWS_PER_STRIP)?.let { it.toLong() and 0xFFFFFFFFL } ?: height.toLong()
+        val tileLength = if (tiled) raw.int(TAG_TILE_LENGTH) ?: 0 else rowsPerStrip.coerceAtMost(height.toLong()).toInt()
         if (tileWidth <= 0 || tileLength <= 0) throw IOException("Damaged raw image layout")
         val across = (width + tileWidth - 1) / tileWidth
         val down = (height + tileLength - 1) / tileLength
+        if (across.toLong() * tileWidth * down * tileLength > 2 * MAX_PHOTOSITES) throw IOException("Damaged raw image layout")
         if (offsets.size < across * down) throw IOException("Missing raw image data")
         val compression = raw.int(TAG_COMPRESSION) ?: COMPRESSION_NONE
         for (index in 0 until across * down) {
@@ -212,7 +215,7 @@ object Dng {
             val top = index / across * tileLength
             when (compression) {
                 COMPRESSION_NONE -> unpack(file, order, offsets[index], lengths[index], into, width, height, left, top, tileWidth, tileLength, bits)
-                COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, width, height, left, top, tileWidth)
+                COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, width, height, left, top, tileWidth, tileLength)
                 COMPRESSION_JPEG_XL -> throw IOException("DNGs compressed with JPEG XL are not supported yet")
                 else -> throw IOException("Unsupported DNG compression: $compression")
             }
@@ -272,7 +275,9 @@ object Dng {
 
         fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int) {
             val highestBlack = black.max() + (deltaH?.max() ?: 0f) + (deltaV?.max() ?: 0f)
-            if (white - highestBlack < 16) throw IOException("Damaged black or white level")
+            if (!highestBlack.isFinite() || !(white - highestBlack >= 16f) || !(white - highestBlack).isFinite()) {
+                throw IOException("Damaged black or white level")
+            }
             val scale = WHITE / (white - highestBlack)
             sensor.fill(0, 0, activeTop * width)
             sensor.fill(0, (activeTop + activeHeight) * width, sensor.size)

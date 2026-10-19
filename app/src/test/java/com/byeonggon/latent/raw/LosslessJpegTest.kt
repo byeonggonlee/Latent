@@ -16,7 +16,7 @@ class LosslessJpegTest {
     }
 
     private fun decoded(stream: ByteArray, width: Int, height: Int, tileWidth: Int = width, left: Int = 0, top: Int = 0): ShortArray =
-        ShortArray(width * height).also { LosslessJpeg.decode(stream, 0, stream.size, it, width, height, left, top, tileWidth) }
+        ShortArray(width * height).also { LosslessJpeg.decode(stream, 0, stream.size, it, width, height, left, top, tileWidth, tileLength = 64) }
 
     private fun flat(rows: Array<IntArray>) = ShortArray(rows.size * rows[0].size) { rows[it / rows[0].size][it % rows[0].size].toShort() }
 
@@ -59,6 +59,14 @@ class LosslessJpegTest {
             val expected = if (inside) rows[y - 2][x - 6] else 0
             assertEquals("at $x, $y", expected, image[y * 10 + x].toInt())
         }
+    }
+
+    @Test
+    fun refusesAFrameLargerThanItsTile() {
+        val rows = picture(lines = 8, width = 8, precision = 10)
+        val stream = LosslessJpegEncoder.encode(rows, components = 1, precision = 10, predictor = 1)
+
+        assertThrows(IOException::class.java) { LosslessJpeg.decode(stream, 0, stream.size, ShortArray(64), 8, 8, 0, 0, tileWidth = 8, tileLength = 4) }
     }
 
     @Test
