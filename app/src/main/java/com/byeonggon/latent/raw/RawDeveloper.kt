@@ -203,7 +203,7 @@ object RawDeveloper {
         val green = balanced(image, image.whiteBalance[1])
         val blue = balanced(image, image.whiteBalance[2])
 
-        private val matrix = withSaturation(normalizedRows(image.colorMatrix), CAMERA_SATURATION)
+        private val matrix = withSaturation(normalizedRows(image.colorMatrix), image.saturation)
         private val toLevel = LinearImage.MAX_LEVEL.toFloat() / range
 
         fun store(index: Int, r: Int, g: Int, b: Int) {
@@ -233,8 +233,6 @@ object RawDeveloper {
         }
     }
 
-    /** How vivid the camera's JPEGs are relative to its colour matrix; this leaves the smallest difference from them. */
-    private const val CAMERA_SATURATION = 1.45f
     private const val SENSOR_VALUES = 1 shl 15
     private const val RED = 0
     private const val GREEN = 1

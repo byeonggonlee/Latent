@@ -18,7 +18,7 @@ class LensProfile(
     val blueAberration: IntArray,
 )
 
-/** A decoded raw file: what the sensor recorded plus what is needed to turn it into a picture. */
+/** A decoded raw file, a Sony ARW or a DNG: what the sensor recorded plus what is needed to turn it into a picture. */
 class ArwImage(
     /** Size of [sensor], which is slightly larger than the picture. */
     val width: Int,
@@ -34,10 +34,15 @@ class ArwImage(
     val whiteBalance: FloatArray,
     /** Row-major 3x3 matrix from white-balanced sensor colours to linear sRGB. */
     val colorMatrix: FloatArray,
+    /** How much more vivid than [colorMatrix] alone the colours are made, to come near the camera's own pictures. */
+    val saturation: Float,
     val lens: LensProfile?,
     /** How the camera was held, as an Exif orientation value; the sensor data itself is never rotated. */
     val orientation: Int,
-    /** One value per photosite, in rows, laid out as red/green over green/blue. */
+    /**
+     * One value per photosite, in rows. From the corner of the crop on, they are laid out as red/green over
+     * green/blue; values reach above [whiteLevel] only where a correction has brightened them.
+     */
     val sensor: ShortArray,
 ) {
     /**
@@ -46,7 +51,7 @@ class ArwImage(
      */
     fun part(left: Int, top: Int, width: Int, height: Int) = ArwImage(
         this.width, this.height, cropLeft + left, cropTop + top, width, height,
-        blackLevel, whiteLevel, whiteBalance, colorMatrix, lens, orientation, sensor,
+        blackLevel, whiteLevel, whiteBalance, colorMatrix, saturation, lens, orientation, sensor,
     )
 }
 
@@ -77,6 +82,9 @@ object SonyArw {
 
     private const val COMPRESSION_SONY = 32767
     private val RGGB = intArrayOf(0, 1, 1, 2)
+
+    /** How vivid the camera's JPEGs are relative to its colour matrix; this leaves the smallest difference from them. */
+    const val SATURATION = 1.45f
 
     // Used when the camera's own matrix cannot be read; measured from a ZV-E10 file.
     private val FALLBACK_COLOR_MATRIX = intArrayOf(1251, -211, 17, -100, 1315, -159, 62, -243, 1238)
@@ -135,6 +143,7 @@ object SonyArw {
                 whiteBalance[3].toFloat() / whiteBalance[1],
             ),
             colorMatrix = FloatArray(9) { colorMatrix[it] / 1024f },
+            saturation = SATURATION,
             lens = readLensProfile(raw),
             orientation = main.int(TAG_ORIENTATION) ?: 1,
             sensor = decode(file, stripOffset, width, height, toneCurve(raw.ints(TAG_TONE_CURVE))),

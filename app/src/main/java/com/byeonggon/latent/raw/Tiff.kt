@@ -22,12 +22,39 @@ internal class TiffDirectory private constructor(
             BYTE, UNDEFINED -> IntArray(entry.count) { data.get(position + it).toInt() and 0xFF }
             SHORT -> IntArray(entry.count) { data.getShort(position + 2 * it).toInt() and 0xFFFF }
             SIGNED_SHORT -> IntArray(entry.count) { data.getShort(position + 2 * it).toInt() }
-            LONG, SIGNED_LONG -> IntArray(entry.count) { data.getInt(position + 4 * it) }
+            LONG, SIGNED_LONG, IFD -> IntArray(entry.count) { data.getInt(position + 4 * it) }
             else -> null
         }
     }
 
     fun int(tag: Int): Int? = ints(tag)?.firstOrNull()
+
+    /** The numbers stored under [tag], fractions included; null when it is absent or holds text. A fraction over zero is NaN. */
+    fun floats(tag: Int): FloatArray? {
+        val entry = entries[tag] ?: return null
+        if (entry.count < 0 || entry.count > MAX_VALUES) return null
+        val position = entry.position
+        return when (entry.type) {
+            RATIONAL -> FloatArray(entry.count) {
+                fraction(data.getInt(position + 8 * it).toLong() and 0xFFFFFFFFL, data.getInt(position + 8 * it + 4).toLong() and 0xFFFFFFFFL)
+            }
+            SIGNED_RATIONAL -> FloatArray(entry.count) {
+                fraction(data.getInt(position + 8 * it).toLong(), data.getInt(position + 8 * it + 4).toLong())
+            }
+            FLOAT -> FloatArray(entry.count) { data.getFloat(position + 4 * it) }
+            DOUBLE -> FloatArray(entry.count) { data.getDouble(position + 8 * it).toFloat() }
+            else -> ints(tag)?.let { values -> FloatArray(values.size) { values[it].toFloat() } }
+        }
+    }
+
+    /** The bytes stored under [tag] as they are, for values of a structure of their own; null when it holds something else. */
+    fun bytes(tag: Int): ByteArray? {
+        val entry = entries[tag]?.takeIf { (it.type == BYTE || it.type == UNDEFINED) && it.count in 0..MAX_VALUES } ?: return null
+        return ByteArray(entry.count) { data.get(entry.position + it) }
+    }
+
+    private fun fraction(numerator: Long, denominator: Long): Float =
+        if (denominator == 0L) Float.NaN else (numerator.toDouble() / denominator).toFloat()
 
     fun text(tag: Int): String? {
         val entry = entries[tag]?.takeIf { it.type == ASCII && it.count in 0..MAX_VALUES } ?: return null
@@ -40,10 +67,15 @@ internal class TiffDirectory private constructor(
         private const val ASCII = 2
         private const val SHORT = 3
         private const val LONG = 4
+        private const val RATIONAL = 5
         private const val UNDEFINED = 7
         private const val SIGNED_SHORT = 8
         private const val SIGNED_LONG = 9
-        private val TYPE_SIZES = intArrayOf(1, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8)
+        private const val SIGNED_RATIONAL = 10
+        private const val FLOAT = 11
+        private const val DOUBLE = 12
+        private const val IFD = 13
+        private val TYPE_SIZES = intArrayOf(1, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8, 4)
         private const val MAX_VALUES = 1 shl 20
 
         /** Wraps a whole TIFF file and returns it with the offset of its first directory. */

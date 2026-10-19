@@ -105,8 +105,7 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
                 val path = cursor.getString(0) ?: continue
                 val folder = groupOf(cursor.getString(1) ?: continue)
                 val name = cursor.getString(2) ?: continue
-                // The raw files of phones are DNGs, which the app cannot develop; those of a Sony camera it can.
-                val kind = MediaKind.fromFileName(name)?.takeUnless { it == MediaKind.RAW && name.endsWith(".dng", ignoreCase = true) } ?: continue
+                val kind = MediaKind.fromFileName(name) ?: continue
                 if (folder.startsWith(LIBRARY_FOLDER)) continue
                 result += Row(path, folder, name, kind, cursor.getLong(3), cursor.getLong(4))
             }

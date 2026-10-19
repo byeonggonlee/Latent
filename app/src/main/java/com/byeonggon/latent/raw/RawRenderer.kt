@@ -17,8 +17,12 @@ import java.io.IOException
 object RawRenderer {
     private const val TAG = "RawDevelop"
 
+    /** Reads a raw file of either kind the app develops: a DNG, as phones write them, or a Sony ARW. */
     @Throws(IOException::class)
-    fun read(file: File): ArwImage = timed("decode ${file.name}") { SonyArw.read(file.readBytes()) }
+    fun read(file: File): ArwImage = timed("decode ${file.name}") {
+        val bytes = file.readBytes()
+        if (Dng.isDng(bytes)) Dng.read(bytes) else SonyArw.read(bytes)
+    }
 
     /**
      * The picture in a size for the screen, turned the way the camera was held. [cells] sets the size
