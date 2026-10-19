@@ -1,0 +1,11 @@
+name: Idea
+description: A feature or a change you would like
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like to do that you cannot?
+      description: Start from what you are trying to get done. See docs/ROADMAP.md for what is already planned.
+    validations:
+      required: true
