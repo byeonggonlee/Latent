@@ -8,7 +8,7 @@ How the app is built on GitHub, which builds there are, and how a phone gets the
 |---|---|---|---|
 | **CI** (`build.yml`) | every push to `main`, every pull request, "Run workflow" | tests, lint, release APK as an artifact | artifact 14 days, reports 7 days |
 | **Nightly** (`nightly.yml`) | 03:00 in Korea (18:00 UTC), when `main` has commits the last nightly lacks; "Run workflow" (with *force*) at any time | tests, lint, signed release APK, published as a **pre-release** `nightly-YYYYMMDD-<build>` with the commits since the last one as its notes | the last seven releases; older ones and their tags are deleted |
-| **Stable** (not built yet) | a tag `v0.x.y` that the owner puts on a commit | signed APK and the AAB for Play, published as a release | for good |
+| **Stable** (`release.yml`) | a tag `vX.Y.Z` (or `vX.Y.Z-rc.1`, a pre-release) that the owner pushes on a commit of `main` | tests, lint, signed release APK with its checksum, published as a release with the version's section of `CHANGELOG.md` as its notes | for good |
 
 A nightly is for the phones: open the release page in the phone's browser (no login needed), download the APK,
 install it over the one before. The owner can put one out at any time with *Run workflow*; the schedule only
@@ -31,7 +31,7 @@ download link and a file manager:
 |---|---|
 | CI, every push | `latent-0.1.0-ci.8c34842-4321.apk` (the commit) |
 | Nightly | `latent-0.1.0-nightly.20261017-4321.apk`, with `latent-0.1.0-nightly.20261017-4321.apk.sha256` beside it |
-| Stable | `latent-0.1.0-4321.apk` and `latent-0.1.0-4321.aab` |
+| Stable | `latent-0.1.0-4321.apk`, with `latent-0.1.0-4321.apk.sha256` beside it (an `.aab` for Play comes with the store, not before 1.0.0) |
 | A build on the owner's computer | Gradle's own `app-release.apk` / `app-debug.apk`, which scripts and docs refer to |
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
@@ -59,11 +59,38 @@ afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` al
   be uninstalled. It is a debug key, of no value to anyone, and **not** the key of a Play release.
 - **Without the secrets** the nightly builds, keeps the APK as an artifact (a login is needed to download it) and
   publishes nothing: an APK signed with a key no phone has would update nothing.
-- **At the first real release** a release key is made with `keytool`, kept in two places outside the repository
-  and put in the secrets in the same four; every phone then has to be reinstalled once, which takes the database
-  along unless the backup and restore (not built yet) is there. This happens at the same time as the package
-  name is settled (see the roadmap), as that makes a new app anyway. For Play the key is the *upload* key;
-  Google keeps the key that signs what people download, which is a different one from any here.
+- **At the first real release** a release key is made, kept in two places outside the repository and put in the
+  secrets in the same four; every phone then has to be reinstalled once, which takes the database along unless
+  the backup and restore (not built yet) is there. This happens at the same time as the package name is
+  settled, as that makes a new app anyway, so both are done before `v0.1.0`. The stable workflow refuses to run
+  without the secrets. Making the key:
+
+  ```bash
+  keytool -genkeypair -v -keystore latent-release.jks -alias latent -keyalg RSA -keysize 4096 -validity 36500
+  base64 -i latent-release.jks   # on Linux: base64 -w0 latent-release.jks; this is SIGNING_KEYSTORE_BASE64
+  keytool -list -v -keystore latent-release.jks   # note the SHA-256 fingerprint somewhere safe
+  ```
+
+  Losing the key or its passwords means that no phone can update to any later build; keep the file and both
+  passwords in a password manager and in one other place (for example an encrypted backup). `*.jks` and
+  `keystore.properties` are ignored by git. If the app ever goes to Play, this is the *upload* key; Google keeps
+  the key that signs what people download, which is a different one.
+
+## Making a stable release
+
+1. Everything wanted is in `main` and the CI of its head is green. Run the release build on a phone through
+   [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md) (a nightly signed with the release key is the same build).
+2. `CHANGELOG.md` has a `## [X.Y.Z] - date` section; write the date in. `latent.versionBase` in `gradle.properties` is `X.Y.Z`
+   (the workflow refuses a tag that disagrees, as it refuses a commit that is not on `main`).
+3. Tag and push: `git tag -a vX.Y.Z -m "Latent X.Y.Z" && git push origin vX.Y.Z`.
+4. The workflow publishes the release in about seven minutes. Download the APK on a phone, check the checksum, and
+   install it over the nightly before it.
+5. Raise `latent.versionBase` to the next release (`X.Y.Z+1`) in a commit of its own, and start the next section of
+   `CHANGELOG.md`, so that nightlies carry the new name.
+
+A fix to a release goes into `main` like any change and comes out as the next number; there are no release
+branches. A tag that has been pushed is not moved: if the release was wrong, delete the release and the tag, fix
+it in `main`, and tag again only if no one has installed it, otherwise issue the next number.
 
 ## Things to know
 
@@ -73,5 +100,5 @@ afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` al
 - Public repositories use standard GitHub-hosted runners for free; do not use "larger runners", which are paid.
 - A run takes about seven minutes. A failing nightly leaves no release behind and is shown red in the Actions
   tab; the day's change gets built the next night, or at once with *Run workflow*.
-- Not yet: the stable workflow (tag, AAB, release), version numbers shown in the app's About dialog beyond the
+- Not yet: an AAB for Play, version numbers shown in the app's About dialog beyond the
   name, an update check inside the app.

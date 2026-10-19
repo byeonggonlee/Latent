@@ -72,6 +72,8 @@ Gradle's `connectedAndroidTest` uninstalls the app afterwards, taking its databa
 
 ## Notes for contributors
 
+- [`CHANGELOG.md`](CHANGELOG.md): what each release changed.
+- [`docs/RELEASES.md`](docs/RELEASES.md): the builds, the version numbers, signing, and how a release is made.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): what comes next, and why in that order.
 - [`docs/DEVICE_CHECKS.md`](docs/DEVICE_CHECKS.md): what only a real phone can confirm.
 - [`docs/PLAY_LISTING.md`](docs/PLAY_LISTING.md): the Play Store listing, permission declarations and data safety answers.
