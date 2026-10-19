@@ -1,0 +1,112 @@
+name: Release
+
+# A stable build: a tag `vX.Y.Z` (or `vX.Y.Z-rc.1`, published as a pre-release) that the owner puts on a commit of
+# `main` builds the signed APK and publishes it as a release, for good. The policy is in docs/RELEASES.md.
+# Unlike a nightly, it refuses to run without the signing secrets: a release that no phone could update to is a mistake.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag
+        id: tag
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          name="${GITHUB_REF_NAME#v}"
+          base=$(grep '^latent.versionBase=' gradle.properties | cut -d= -f2)
+          if ! echo "$name" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::The tag $GITHUB_REF_NAME is not vX.Y.Z or vX.Y.Z-suffix."; exit 1
+          fi
+          if [ "${name%%-*}" != "$base" ]; then
+            echo "::error::The tag says $name, but latent.versionBase in gradle.properties is $base. Change the one that is wrong and tag again."; exit 1
+          fi
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::The tagged commit is not on main."; exit 1
+          fi
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The signing secrets are not set (see docs/RELEASES.md, Signing)."; exit 1
+          fi
+          count=$(git rev-list --count HEAD)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$count" >> "$GITHUB_OUTPUT"
+          echo "file=latent-$name-$count.apk" >> "$GITHUB_OUTPUT"
+          case "$name" in *-*) echo "pre=--prerelease" >> "$GITHUB_OUTPUT" ;; *) echo "pre=" >> "$GITHUB_OUTPUT" ;; esac
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Android SDK
+        run: |
+          sudo chown -R "$USER" "$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Tests and lint
+        run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
+
+      - name: Release APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.keystore"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+          ./gradlew assembleRelease -PlatentVersionCode=${{ steps.tag.outputs.code }} -PlatentVersionName=${{ steps.tag.outputs.name }} --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "${{ steps.tag.outputs.file }}"
+          sha256sum "${{ steps.tag.outputs.file }}" > "${{ steps.tag.outputs.file }}.sha256"
+
+      # The notes are the version's section of CHANGELOG.md; without one, the commits since the release before it.
+      - name: Notes
+        run: |
+          name="${{ steps.tag.outputs.name }}"
+          core="${name%%-*}"
+          awk -v v="$core" '
+            /^## / { if (found) exit; if (index($0, "[" v "]") || index($0, " " v " ") || $0 ~ ("^## " v "$")) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md 2>/dev/null > notes.md || true
+          if [ ! -s notes.md ]; then
+            prev=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -1)
+            if [ -n "$prev" ]; then range="$prev..$GITHUB_REF_NAME"; else range="$GITHUB_REF_NAME"; fi
+            { echo "Changes:"; echo; git log --pretty='- %s' "$range" | head -200; } > notes.md
+          fi
+          {
+            echo
+            echo "---"
+            echo "Version $name (code ${{ steps.tag.outputs.code }}), commit \`$(git rev-parse --short HEAD)\`. Check a download with \`shasum -a 256 -c ${{ steps.tag.outputs.file }}.sha256\`."
+          } >> notes.md
+
+      - name: Publish
+        run: |
+          gh release create "$GITHUB_REF_NAME" "${{ steps.tag.outputs.file }}" "${{ steps.tag.outputs.file }}.sha256" \
+            ${{ steps.tag.outputs.pre }} --verify-tag \
+            --title "Latent ${{ steps.tag.outputs.name }}" \
+            --notes-file notes.md
