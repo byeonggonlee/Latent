@@ -137,7 +137,7 @@ internal object SyntheticDng {
      */
     fun linear(
         red: Int, green: Int, blue: Int, lossless: Boolean = false, blacks: IntArray = intArrayOf(BLACK, BLACK + 8, BLACK + 16),
-        jpegXl: Boolean = false,
+        jpegXl: Boolean = false, baselineExposure: Float? = null,
     ): ByteArray {
         require(!jpegXl || (red == 192 && green == 380 && blue == 264 && blacks.contentEquals(intArrayOf(BLACK, BLACK + 8, BLACK + 16))))
         val levels = intArrayOf(red, green, blue)
@@ -185,7 +185,7 @@ internal object SyntheticDng {
                 rationals(0xC628, *NEUTRAL),
                 Entry.shorts(0xC65A, 21),
                 Entry.longs(0xC68D, *ACTIVE),
-            ).sortedBy { it.tag }.toTypedArray(),
+            ).plus(listOfNotNull(baselineExposure?.let { signedRationals(0xC62A, it) })).sortedBy { it.tag }.toTypedArray(),
         )
         tiff.write(dataAt, data)
         return tiff.bytes()

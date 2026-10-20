@@ -4,6 +4,10 @@ import java.io.IOException
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import com.byeonggon.latent.enhance.forRowBands
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -51,6 +55,7 @@ object Dng {
     private const val TAG_AS_SHOT_NEUTRAL = 0xC628
     private const val TAG_ILLUMINANT_1 = 0xC65A
     private const val TAG_ILLUMINANT_2 = 0xC65B
+    private const val TAG_BASELINE_EXPOSURE = 0xC62A
     private const val TAG_ACTIVE_AREA = 0xC68D
     private const val TAG_OPCODES_2 = 0xC741
 
@@ -146,6 +151,7 @@ object Dng {
         val sensor = ShortArray(width * height * channels)
         readSamples(file, data.order(), raw, sensor, width, height, bits, channels)
         Levels(raw, bits, activeWidth, activeHeight, channels).apply(sensor, width, activeLeft, activeTop)
+        floatsOf(TAG_BASELINE_EXPOSURE)?.firstOrNull()?.let { brighten(sensor, it) }
         gainMaps(raw.bytes(TAG_OPCODES_2), channels).forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels) }
 
         // The default crop, within the active area, moved by a photosite where needed so that it starts on a red one.
@@ -259,6 +265,24 @@ object Dng {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Brings the picture up by a positive baseline exposure of [stops], as far as its brightest sample stays within white.
+     * A Galaxy's Expert RAW keeps its merged exposures three stops under white (BaselineExposure +3), which would
+     * otherwise come out that much darker and on an eighth of the levels. A negative one is left to the tone stage
+     * and the person, as darkening here would only lose levels.
+     */
+    private fun brighten(sensor: ShortArray, stops: Float) {
+        if (!(stops > 0f) || !stops.isFinite()) return
+        var brightest = 0
+        for (value in sensor) brightest = max(brightest, value.toInt())
+        if (brightest == 0) return
+        val gain = min(2f.pow(stops), WHITE.toFloat() / brightest)
+        if (gain <= 1.001f) return
+        forRowBands(sensor.size) { from, until ->
+            for (at in from until until) sensor[at] = (sensor[at] * gain).roundToInt().coerceAtMost(WHITE).toShort()
         }
     }
 

@@ -159,6 +159,23 @@ class DngTest {
     }
 
     @Test
+    fun bringsUpTheBaselineExposureAsFarAsWhite() {
+        val plain = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264))
+        val oneStop = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264, baselineExposure = 1f))
+        val darker = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264, baselineExposure = -1f))
+        val tooFar = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264, baselineExposure = 6f))
+
+        for (at in plain.sensor.indices) {
+            assertEquals(at.toString(), plain.sensor[at] * 2f, oneStop.sensor[at].toFloat(), 1f)
+            assertEquals(plain.sensor[at], darker.sensor[at])
+        }
+        // Six stops would take the brightest far past white; it is brought to white and no further, the rest in proportion.
+        val brightest = plain.sensor.indices.maxBy { plain.sensor[it] }
+        assertEquals(16383, tooFar.sensor[brightest].toInt())
+        assertEquals(tooFar.sensor.max().toInt(), 16383)
+    }
+
+    @Test
     fun saysWhatItCannotRead() {
         // Not a JPEG XL stream where the file says one is.
         val jpegXl = assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, compression = 52546)) }
