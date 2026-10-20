@@ -44,6 +44,11 @@ class ArwImage(
      * green/blue; values reach above [whiteLevel] only where a correction has brightened them.
      */
     val sensor: ShortArray,
+    /**
+     * Values per pixel in [sensor]: 1 for a mosaic, 3 for a picture whose colours the camera has already filled in
+     * (a linear DNG), stored red, green, blue side by side. Such a picture has no mosaic pattern to keep to.
+     */
+    val channels: Int = 1,
 ) {
     /**
      * The same file with only a part of its picture: [width] by [height] pixels, [left] across and
@@ -51,7 +56,7 @@ class ArwImage(
      */
     fun part(left: Int, top: Int, width: Int, height: Int) = ArwImage(
         this.width, this.height, cropLeft + left, cropTop + top, width, height,
-        blackLevel, whiteLevel, whiteBalance, colorMatrix, saturation, lens, orientation, sensor,
+        blackLevel, whiteLevel, whiteBalance, colorMatrix, saturation, lens, orientation, sensor, channels,
     )
 }
 

@@ -115,9 +115,30 @@ class DngTest {
     }
 
     @Test
+    fun readsALinearDngWhoseColoursThePhoneFilledIn() {
+        for (lossless in listOf(false, true)) {
+            // In the proportions of the neutral the phone measured, each over its own black level.
+            val image = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264, lossless = lossless))
+
+            assertEquals(3, image.channels)
+            assertEquals(6, image.orientation)
+            assertEquals(28 to 20, image.cropWidth to image.cropHeight)
+            // Each sample loses its own black, and comes to the same scale as a mosaic's.
+            val at = ((image.cropTop + 5) * image.width + image.cropLeft + 5) * 3
+            assertEquals("lossless $lossless", listOf(scaled(192), scaled(380, SyntheticDng.BLACK + 8), scaled(264, SyntheticDng.BLACK + 16)), listOf(image.sensor[at], image.sensor[at + 1], image.sensor[at + 2]).map { it.toInt() })
+            // What the phone measured as neutral comes out gray, at full size and in the preview.
+            for (developed in listOf(RawDeveloper.develop(image), RawDeveloper.developPreview(image))) {
+                val middle = developed.height / 2 * developed.width + developed.width / 2
+                val green = developed.green[middle].toInt()
+                assertTrue(green > 0)
+                assertEquals(green.toFloat(), developed.red[middle].toFloat(), green * 0.01f)
+                assertEquals(green.toFloat(), developed.blue[middle].toFloat(), green * 0.01f)
+            }
+        }
+    }
+
+    @Test
     fun saysWhatItCannotReadYet() {
-        val linear = assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, photometric = 34892)) }
-        assertTrue(linear.message!!.contains("Linear"))
         val jpegXl = assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, compression = 52546)) }
         assertTrue(jpegXl.message!!.contains("JPEG XL"))
         assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, pattern = intArrayOf(0, 1, 2, 1))) }

@@ -129,6 +129,60 @@ internal object SyntheticDng {
         return tiff.bytes()
     }
 
+    /**
+     * A linear DNG, as a Galaxy writes in Pro mode: three samples a pixel, red, green and blue, already filled in, with
+     * [red], [green] and [blue] above black in the active area; as words or in lossless JPEG with three components.
+     */
+    fun linear(red: Int, green: Int, blue: Int, lossless: Boolean = false, blacks: IntArray = intArrayOf(BLACK, BLACK + 8, BLACK + 16)): ByteArray {
+        val levels = intArrayOf(red, green, blue)
+        val values = Array(HEIGHT) { y ->
+            IntArray(WIDTH * 3) { i ->
+                val x = i / 3
+                val inside = x >= ACTIVE[1] && y >= ACTIVE[0] && y < ACTIVE[2] && x < ACTIVE[3]
+                if (inside) levels[i % 3] + blacks[i % 3] else 0
+            }
+        }
+        val data = if (lossless) {
+            LosslessJpegEncoder.encode(values, components = 3, precision = 16, predictor = 1)
+        } else {
+            ByteBuffer.allocate(WIDTH * HEIGHT * 6).order(ByteOrder.LITTLE_ENDIAN).apply {
+                values.forEach { row -> row.forEach { putShort(it.toShort()) } }
+            }.array()
+        }
+        val tiff = SyntheticArw.Tiff()
+        // Three samples a pixel take more than one reserved block.
+        val dataAt = tiff.reserve().also { tiff.reserve() }
+        tiff.directory(
+            8,
+            *listOf(
+                Entry.longs(0x00FE, 0),
+                Entry.shorts(0x0100, WIDTH),
+                Entry.shorts(0x0101, HEIGHT),
+                Entry.shorts(0x0102, 16),
+                Entry.shorts(0x0103, if (lossless) 7 else 1),
+                Entry.shorts(0x0106, 34892),
+                Entry.ascii(0x010F, "samsung"),
+                Entry.longs(0x0111, dataAt),
+                Entry.shorts(0x0112, 6),
+                Entry.shorts(0x0115, 3),
+                Entry.shorts(0x0116, HEIGHT),
+                Entry.longs(0x0117, data.size),
+                Entry.bytes(0xC612, 1, 4, 0, 0),
+                Entry.shorts(0xC619, 1, 1),
+                rationals(0xC61A, *FloatArray(3) { blacks[it].toFloat() }),
+                Entry.shorts(0xC61D, WHITE),
+                Entry.longs(0xC61F, 0, 0),
+                Entry.longs(0xC620, 28, 20),
+                signedRationals(0xC621, *COLOR_MATRIX),
+                rationals(0xC628, *NEUTRAL),
+                Entry.shorts(0xC65A, 21),
+                Entry.longs(0xC68D, *ACTIVE),
+            ).sortedBy { it.tag }.toTypedArray(),
+        )
+        tiff.write(dataAt, data)
+        return tiff.bytes()
+    }
+
     /** One gain map over the whole active area, for every photosite. */
     class GainMap(val pointsDown: Int, val pointsAcross: Int, val gains: FloatArray) {
         fun bytes(): ByteArray {

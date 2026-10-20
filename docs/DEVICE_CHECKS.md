@@ -103,14 +103,14 @@ Nothing of this has run on a phone yet. Read the times with `adb logcat -s Subje
 
 ## Phone raw files (DNG)
 
-Written and tested against the DNG specification with made-up files only: no Galaxy DNG has been tried yet.
+Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (three samples a pixel). Pro mode (lossless JPEG, 4080x2298) now develops, upright and in plausible colours, in about 0.6 s to read on a computer. Expert RAW (JPEG XL, 4000x3000) is still refused: the pure-Java decoder tried (jxlatte, MIT) reads it but needs over 1 GB of heap.
 
 - [ ] Pro mode on the S24 and the S26 with RAW (or RAW and JPEG) on: the `.dng` appears in "Photos on this phone" (`DCIM/Camera/`), with a thumbnail, and opens in the viewer and the editor. If it says it cannot be opened, keep the file for a test (`adb pull`) and note why from logcat (`adb logcat -s RawDevelop`, "Cannot develop …").
 - [ ] Colours next to the phone's own JPEG of the same shot: white balance, skin, sky, greens. The DNG reader adds no extra saturation (`Dng.SATURATION`, 1.0, where Sony files get 1.45); is it too dull?
 - [ ] Corners and edges: no dark or tinted corners (the gain maps), on the main camera, the ultra wide and a telephoto. The ultra wide's distortion is not corrected (OpcodeList3 is not read).
 - [ ] The crop matches the phone's JPEG (no grey or black border, no colour fringe from a wrong mosaic start).
 - [ ] Brightness next to the phone's JPEG, with automatic correction off: the reader does not apply `BaselineExposure` (Android's own DNG writer stores the sensitivity boost there; Samsung's value is unknown). If DNGs come out darker, it goes into the tone stage's exposure, not into the development, which would clip highlights.
-- [ ] Expert RAW: "could not open" rather than something wrong, with "Linear DNGs … not supported yet" in logcat; the file still shows as itself in the viewer.
+- [ ] Pro mode linear DNG on the phone: time to open and to save, memory. Expert RAW: "could not open" rather than something wrong, with "Linear DNGs … not supported yet" in logcat; the file still shows as itself in the viewer.
 - [ ] Share → the RAW file itself, from a DNG: the chooser offers apps for DNG (sent as `image/x-adobe-dng`).
 - [ ] A 50 MP Pro mode or Expert RAW file: how long the editor takes to open it, and whether it runs out of memory (the file and the mosaic are both held: about 200 MB).
 - [ ] Save a copy as JPEG from a DNG: it lands in `DCIM/Latent` with the camera's Exif and the place.

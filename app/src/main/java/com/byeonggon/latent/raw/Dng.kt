@@ -10,8 +10,8 @@ import kotlin.math.roundToInt
  * Reads Adobe's Digital Negative (DNG), the raw format of phones such as a Galaxy's in Pro mode: the
  * sensor's mosaic of red, green and blue, uncompressed or in lossless JPEG, and what the DNG specification
  * says is needed to develop it (black and white levels, the colour matrices, white balance, the default crop
- * and the gain maps that undo the lens's shading). Linear DNGs, whose colours a phone has already filled in
- * (a Galaxy's Expert RAW), and JPEG XL compression are refused with a reason.
+ * and the gain maps that undo the lens's shading). Also linear DNGs, whose colours the phone has already filled in,
+ * as a Galaxy writes them in Pro mode (lossless JPEG) and in Expert RAW (JPEG XL, which is not read yet).
  */
 object Dng {
     private const val TAG_NEW_SUBFILE_TYPE = 0x00FE
@@ -23,6 +23,7 @@ object Dng {
     private const val TAG_STRIP_OFFSETS = 0x0111
     private const val TAG_ORIENTATION = 0x0112
     private const val TAG_SAMPLES_PER_PIXEL = 0x0115
+    private const val TAG_PLANAR_CONFIGURATION = 0x011C
     private const val TAG_ROWS_PER_STRIP = 0x0116
     private const val TAG_STRIP_BYTE_COUNTS = 0x0117
     private const val TAG_TILE_WIDTH = 0x0142
@@ -113,13 +114,10 @@ object Dng {
         // The full-size raw image is the first directory itself (as Android writes it) or one under it (as Adobe does).
         val directories = listOf(main) + (main.ints(TAG_SUB_IFDS)?.map { TiffDirectory.read(data, it) } ?: emptyList())
         val fullSize = directories.filter { (it.int(TAG_NEW_SUBFILE_TYPE) ?: 0) == 0 }
-        val raw = fullSize.firstOrNull { it.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_CFA } ?: throw IOException(
-            if (fullSize.any { it.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_LINEAR_RAW }) {
-                "Linear DNGs, whose colours are already filled in (such as Expert RAW), are not supported yet"
-            } else {
-                "The file holds no raw image"
-            },
-        )
+        val raw = fullSize.firstOrNull { it.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_CFA }
+            ?: fullSize.firstOrNull { it.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_LINEAR_RAW }
+            ?: throw IOException("The file holds no raw image")
+        val linear = raw.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_LINEAR_RAW
         // Colour settings belong in the first directory, but some writers put them with the raw image.
         fun floatsOf(tag: Int) = main.floats(tag) ?: raw.floats(tag)
         fun intOf(tag: Int) = main.int(tag) ?: raw.int(tag)
@@ -129,7 +127,9 @@ object Dng {
         if (width < 8 || height < 8 || width.toLong() * height > MAX_PHOTOSITES) throw IOException("Unsupported raw image size")
         val bits = raw.int(TAG_BITS_PER_SAMPLE) ?: 16
         if (bits !in 8..16) throw IOException("Unsupported raw sample size: $bits bits")
-        if ((raw.int(TAG_SAMPLES_PER_PIXEL) ?: 1) != 1) throw IOException("Unsupported raw image layout")
+        val channels = raw.int(TAG_SAMPLES_PER_PIXEL) ?: 1
+        if (channels != (if (linear) 3 else 1)) throw IOException("Unsupported raw image layout")
+        if (linear && (raw.int(TAG_PLANAR_CONFIGURATION) ?: 1) != 1) throw IOException("Unsupported raw image layout")
 
         val active = raw.ints(TAG_ACTIVE_AREA)?.takeIf { it.size == 4 } ?: intArrayOf(0, 0, height, width)
         val (activeTop, activeLeft, activeBottom, activeRight) = active
@@ -140,12 +140,13 @@ object Dng {
         }
         val activeWidth = activeRight - activeLeft
         val activeHeight = activeBottom - activeTop
-        val redAt = redSite(raw)
+        // A linear picture has no mosaic; its crop may start anywhere.
+        val redAt = if (linear) 0 to 0 else redSite(raw)
 
-        val sensor = ShortArray(width * height)
-        readSamples(file, data.order(), raw, sensor, width, height, bits)
-        Levels(raw, bits, activeWidth, activeHeight).apply(sensor, width, activeLeft, activeTop)
-        gainMaps(raw.bytes(TAG_OPCODES_2)).forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight) }
+        val sensor = ShortArray(width * height * channels)
+        readSamples(file, data.order(), raw, sensor, width, height, bits, channels)
+        Levels(raw, bits, activeWidth, activeHeight, channels).apply(sensor, width, activeLeft, activeTop)
+        gainMaps(raw.bytes(TAG_OPCODES_2), channels).forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels) }
 
         // The default crop, within the active area, moved by a photosite where needed so that it starts on a red one.
         val origin = raw.floats(TAG_CROP_ORIGIN)?.takeIf { it.size == 2 && it.all(Float::isFinite) } ?: floatArrayOf(0f, 0f)
@@ -175,6 +176,7 @@ object Dng {
             lens = null,
             orientation = main.int(TAG_ORIENTATION) ?: 1,
             sensor = sensor,
+            channels = channels,
         )
     }
 
@@ -195,7 +197,7 @@ object Dng {
     }
 
     /** Reads the strips or tiles of samples into [into], as they are stored. */
-    private fun readSamples(file: ByteArray, order: ByteOrder, raw: TiffDirectory, into: ShortArray, width: Int, height: Int, bits: Int) {
+    private fun readSamples(file: ByteArray, order: ByteOrder, raw: TiffDirectory, into: ShortArray, width: Int, height: Int, bits: Int, channels: Int) {
         val tiled = TAG_TILE_OFFSETS in raw
         val offsets = raw.ints(if (tiled) TAG_TILE_OFFSETS else TAG_STRIP_OFFSETS) ?: throw IOException("Missing raw image data")
         val lengths = raw.ints(if (tiled) TAG_TILE_BYTE_COUNTS else TAG_STRIP_BYTE_COUNTS)?.takeIf { it.size == offsets.size }
@@ -213,9 +215,11 @@ object Dng {
         for (index in 0 until across * down) {
             val left = index % across * tileWidth
             val top = index / across * tileLength
+            // The samples of a pixel lie side by side, so a row holds [channels] times as many as it has pixels.
+            val rowSamples = width * channels
             when (compression) {
-                COMPRESSION_NONE -> unpack(file, order, offsets[index], lengths[index], into, width, height, left, top, tileWidth, tileLength, bits)
-                COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, width, height, left, top, tileWidth, tileLength)
+                COMPRESSION_NONE -> unpack(file, order, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength, bits)
+                COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength)
                 COMPRESSION_JPEG_XL -> throw IOException("DNGs compressed with JPEG XL are not supported yet")
                 else -> throw IOException("Unsupported DNG compression: $compression")
             }
@@ -263,35 +267,60 @@ object Dng {
      * stores to light above black, scaled so that the sensor's white is [WHITE]. Photosites outside the active
      * area are set to black.
      */
-    private class Levels(raw: TiffDirectory, bits: Int, private val activeWidth: Int, private val activeHeight: Int) {
+    private class Levels(
+        raw: TiffDirectory, bits: Int, private val activeWidth: Int, private val activeHeight: Int, private val channels: Int,
+    ) {
         private val table = raw.ints(TAG_LINEARIZATION)?.takeIf { it.isNotEmpty() }
         private val repeat = raw.ints(TAG_BLACK_REPEAT)?.takeIf { it.size == 2 && it[0] in 1..16 && it[1] in 1..16 } ?: intArrayOf(1, 1)
-        private val black = raw.floats(TAG_BLACK_LEVEL)?.takeIf { it.size == repeat[0] * repeat[1] && it.all(Float::isFinite) }
-            ?: FloatArray(repeat[0] * repeat[1])
+
+        // One black level for each place in the repeat and each sample of a pixel; a file may give one for all samples.
+        private val black = raw.floats(TAG_BLACK_LEVEL)?.takeIf { it.all(Float::isFinite) }?.let { given ->
+            val wanted = repeat[0] * repeat[1] * channels
+            when (given.size) {
+                wanted -> given
+                repeat[0] * repeat[1] -> FloatArray(wanted) { given[it / channels] }
+                1 -> FloatArray(wanted) { given[0] }
+                else -> null
+            }
+        } ?: FloatArray(repeat[0] * repeat[1] * channels)
         private val deltaH = raw.floats(TAG_BLACK_DELTA_H)?.takeIf { it.size == activeWidth && it.all(Float::isFinite) }
         private val deltaV = raw.floats(TAG_BLACK_DELTA_V)?.takeIf { it.size == activeHeight && it.all(Float::isFinite) }
-        private val white = raw.floats(TAG_WHITE_LEVEL)?.firstOrNull()?.takeIf { it.isFinite() && it > 0 }
-            ?: ((table?.maxOrNull() ?: ((1 shl bits) - 1)).toFloat())
+
+        // A white level for each sample of a pixel, the first standing for all if only one is given.
+        private val white: FloatArray = run {
+            val fallback = (table?.maxOrNull() ?: ((1 shl bits) - 1)).toFloat()
+            val given = raw.floats(TAG_WHITE_LEVEL)?.filter { it.isFinite() && it > 0 }.orEmpty()
+            FloatArray(channels) { given.getOrNull(it) ?: given.firstOrNull() ?: fallback }
+        }
 
         fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int) {
-            val highestBlack = black.max() + (deltaH?.max() ?: 0f) + (deltaV?.max() ?: 0f)
-            if (!highestBlack.isFinite() || !(white - highestBlack >= 16f) || !(white - highestBlack).isFinite()) {
-                throw IOException("Damaged black or white level")
+            val rowDeltaMost = (deltaH?.max() ?: 0f) + (deltaV?.max() ?: 0f)
+            val scale = FloatArray(channels) { channel ->
+                val highestBlack = (0 until repeat[0] * repeat[1]).maxOf { black[it * channels + channel] } + rowDeltaMost
+                val range = white[channel] - highestBlack
+                if (!highestBlack.isFinite() || !(range >= 16f) || !range.isFinite()) throw IOException("Damaged black or white level")
+                WHITE / range
             }
-            val scale = WHITE / (white - highestBlack)
-            sensor.fill(0, 0, activeTop * width)
-            sensor.fill(0, (activeTop + activeHeight) * width, sensor.size)
+            val rowSamples = width * channels
+            sensor.fill(0, 0, activeTop * rowSamples)
+            sensor.fill(0, (activeTop + activeHeight) * rowSamples, sensor.size)
             for (y in 0 until activeHeight) {
-                val row = (activeTop + y) * width + activeLeft
+                val rowStart = (activeTop + y) * rowSamples
+                val row = rowStart + activeLeft * channels
                 val blackRow = y % repeat[0] * repeat[1]
                 val rowDelta = deltaV?.get(y) ?: 0f
-                sensor.fill(0, (activeTop + y) * width, row)
-                sensor.fill(0, row + activeWidth, (activeTop + y + 1) * width)
+                sensor.fill(0, rowStart, row)
+                sensor.fill(0, row + activeWidth * channels, rowStart + rowSamples)
                 for (x in 0 until activeWidth) {
-                    val stored = sensor[row + x].toInt() and 0xFFFF
-                    val linear = table?.let { it[stored.coerceAtMost(it.size - 1)] } ?: stored
-                    val level = black[blackRow + x % repeat[1]] + rowDelta + (deltaH?.get(x) ?: 0f)
-                    sensor[row + x] = ((linear - level) * scale).roundToInt().coerceIn(0, MAX_SENSOR).toShort()
+                    val blackAt = (blackRow + x % repeat[1]) * channels
+                    val delta = rowDelta + (deltaH?.get(x) ?: 0f)
+                    for (channel in 0 until channels) {
+                        val at = row + x * channels + channel
+                        val stored = sensor[at].toInt() and 0xFFFF
+                        val value = table?.let { it[stored.coerceAtMost(it.size - 1)] } ?: stored
+                        val level = black[blackAt + channel] + delta
+                        sensor[at] = ((value - level) * scale[channel]).roundToInt().coerceIn(0, MAX_SENSOR).toShort()
+                    }
                 }
             }
         }
@@ -308,9 +337,11 @@ object Dng {
         val spacingDown: Double, val spacingAcross: Double,
         val originDown: Double, val originAcross: Double,
         val mapPlanes: Int, val gains: FloatArray,
+        /** The samples of a pixel the map is for: from [plane] on, [planes] of them. A mosaic has one. */
+        val plane: Int = 0, val planes: Int = 1,
     ) {
         /** Multiplies the photosites of the active area, placed at [activeLeft], [activeTop] in [sensor], by the map. */
-        fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int, activeWidth: Int, activeHeight: Int) {
+        fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int, activeWidth: Int, activeHeight: Int, channels: Int = 1) {
             val columns = (left.coerceAtLeast(0) until right.coerceAtMost(activeWidth) step columnPitch).toList()
             // Where each column falls between the map's points, worked out once: the index of the point before and how far past it.
             val columnPoint = IntArray(columns.size)
@@ -325,28 +356,32 @@ object Dng {
                 val row = along.toInt().coerceAtMost(pointsDown - 2).coerceAtLeast(0)
                 val rowPast = (along - row).toFloat()
                 val nextRow = if (pointsDown > 1) row + 1 else row
-                val rowStart = (activeTop + y) * width + activeLeft
+                val rowStart = ((activeTop + y) * width + activeLeft) * channels
                 columns.forEachIndexed { index, x ->
                     val column = columnPoint[index]
                     val nextColumn = if (pointsAcross > 1) column + 1 else column
                     val past = columnPast[index]
-                    val upper = gain(row, column) + (gain(row, nextColumn) - gain(row, column)) * past
-                    val lower = gain(nextRow, column) + (gain(nextRow, nextColumn) - gain(nextRow, column)) * past
-                    val factor = upper + (lower - upper) * rowPast
-                    val at = rowStart + x
-                    sensor[at] = (sensor[at] * factor).roundToInt().coerceIn(0, MAX_SENSOR).toShort()
+                    for (sample in plane until minOf(plane + planes, channels)) {
+                        // A map with fewer planes than it covers uses its last one for the rest.
+                        val mapPlane = (sample - plane).coerceAtMost(mapPlanes - 1)
+                        val upper = gain(row, column, mapPlane) + (gain(row, nextColumn, mapPlane) - gain(row, column, mapPlane)) * past
+                        val lower = gain(nextRow, column, mapPlane) + (gain(nextRow, nextColumn, mapPlane) - gain(nextRow, column, mapPlane)) * past
+                        val factor = upper + (lower - upper) * rowPast
+                        val at = rowStart + x * channels + sample
+                        sensor[at] = (sensor[at] * factor).roundToInt().coerceIn(0, MAX_SENSOR).toShort()
+                    }
                 }
             }
         }
 
-        private fun gain(row: Int, column: Int) = gains[(row * pointsAcross + column) * mapPlanes]
+        private fun gain(row: Int, column: Int, mapPlane: Int) = gains[(row * pointsAcross + column) * mapPlanes + mapPlane]
     }
 
     /**
      * The gain maps among the opcodes that apply to the raw image (OpcodeList2), which phones use for the lens's
      * shading; other opcodes are left out. Opcode lists are big-endian whatever the file's byte order.
      */
-    private fun gainMaps(list: ByteArray?): List<GainMap> {
+    private fun gainMaps(list: ByteArray?, channels: Int): List<GainMap> {
         if (list == null || list.size < 4) return emptyList()
         val data = ByteBuffer.wrap(list).order(ByteOrder.BIG_ENDIAN)
         val result = ArrayList<GainMap>()
@@ -357,7 +392,7 @@ object Dng {
                 val size = data.getInt(at + 12)
                 val body = at + 16
                 if (size < 0 || body + size > list.size) return result
-                if (id == OPCODE_GAIN_MAP) gainMap(data, body, size)?.let(result::add)
+                if (id == OPCODE_GAIN_MAP) gainMap(data, body, size, channels)?.let(result::add)
                 at = body + size
             }
         } catch (e: IndexOutOfBoundsException) {
@@ -366,15 +401,15 @@ object Dng {
         return result
     }
 
-    private fun gainMap(data: ByteBuffer, at: Int, size: Int): GainMap? {
+    private fun gainMap(data: ByteBuffer, at: Int, size: Int, channels: Int): GainMap? {
         if (size < 76) return null
         val plane = data.getInt(at + 16)
         val planes = data.getInt(at + 20)
         val pointsDown = data.getInt(at + 32)
         val pointsAcross = data.getInt(at + 36)
         val mapPlanes = data.getInt(at + 72)
-        // A raw mosaic has one plane, so a map that does not cover the first is of no use here.
-        if (plane != 0 || planes < 1 || pointsDown < 1 || pointsAcross < 1 || mapPlanes < 1) return null
+        // A raw mosaic has one plane, a linear picture three; a map for a plane that is not there is of no use.
+        if (plane !in 0 until channels || planes < 1 || pointsDown < 1 || pointsAcross < 1 || mapPlanes < 1) return null
         val count = pointsDown.toLong() * pointsAcross * mapPlanes
         if (count > 1 shl 20 || 76 + 4 * count > size) return null
         val map = GainMap(
@@ -385,6 +420,8 @@ object Dng {
             originDown = data.getDouble(at + 56), originAcross = data.getDouble(at + 64),
             mapPlanes = mapPlanes,
             gains = FloatArray(count.toInt()) { data.getFloat(at + 76 + 4 * it) },
+            plane = plane,
+            planes = planes,
         )
         val usable = map.spacingDown > 0 && map.spacingAcross > 0 && map.spacingDown.isFinite() && map.spacingAcross.isFinite() &&
             map.originDown.isFinite() && map.originAcross.isFinite() && map.gains.all { it.isFinite() && it >= 0f }

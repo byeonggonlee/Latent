@@ -20,6 +20,30 @@ object RawDeveloper {
     fun developPreview(image: ArwImage, cells: Int = 1): LinearImage {
         val result = LinearImage(image.cropWidth / (2 * cells), image.cropHeight / (2 * cells))
         val color = ColorStage(image, result)
+        if (image.channels == 3) {
+            // Colours already filled in: each pixel of the result averages a block of the same size a mosaic would give.
+            val side = 2 * cells
+            val count = side * side
+            val sensor = image.sensor
+            forRowBands(result.height) { from, until ->
+                for (y in from until until) for (x in 0 until result.width) {
+                    var red = 0
+                    var green = 0
+                    var blue = 0
+                    for (row in 0 until side) {
+                        var at = ((image.cropTop + y * side + row) * image.width + image.cropLeft + x * side) * 3
+                        repeat(side) {
+                            red += color.red[sensor[at].toInt()]
+                            green += color.green[sensor[at + 1].toInt()]
+                            blue += color.blue[sensor[at + 2].toInt()]
+                            at += 3
+                        }
+                    }
+                    color.store(y * result.width + x, red / count, green / count, blue / count)
+                }
+            }
+            return result
+        }
         val sensor = image.sensor
         val perColor = cells * cells
         forRowBands(result.height) { from, until ->
@@ -55,6 +79,19 @@ object RawDeveloper {
         val height = image.cropHeight
         val result = LinearImage(width, height)
         val color = ColorStage(image, result)
+        if (image.channels == 3) {
+            val sensor = image.sensor
+            forRowBands(height) { from, until ->
+                for (y in from until until) {
+                    var at = ((image.cropTop + y) * image.width + image.cropLeft) * 3
+                    for (x in 0 until width) {
+                        color.store(y * width + x, color.red[sensor[at].toInt()], color.green[sensor[at + 1].toInt()], color.blue[sensor[at + 2].toInt()])
+                        at += 3
+                    }
+                }
+            }
+            return result
+        }
         // Until the colour stage at the end, the planes hold what the photosites recorded, white balanced.
         val red = result.red
         val green = result.green
