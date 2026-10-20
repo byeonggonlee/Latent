@@ -17,6 +17,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.io.File
 
 /** A location history of years: through a backup and back in a time to wait for, and without holding it all at once. */
 @RunWith(RobolectricTestRunner::class)
@@ -63,8 +64,15 @@ class BackupSizeTest {
         private val before = live()
         private var highest = 0L
 
+        /** The heap's largest classes when it held the most beyond [HELD_LIMIT], to say what it was if that is too much. */
+        var histogram = ""
+            private set
+
         fun sample() {
-            highest = maxOf(highest, live())
+            val now = live()
+            if (now <= highest) return
+            highest = now
+            if (now - before > HELD_LIMIT) histogram = classHistogram()
         }
 
         /**
@@ -111,8 +119,8 @@ class BackupSizeTest {
         )
         assertTrue("backup took ${seconds(started, backedUp)} s", seconds(started, backedUp) < 60)
         assertTrue("restore took ${seconds(backedUp, restored)} s", seconds(backedUp, restored) < 90)
-        assertTrue("the backup held ${written / KB} KB", written < HELD_LIMIT)
-        assertTrue("the restore held ${read / KB} KB", read < HELD_LIMIT)
+        assertTrue("the backup held ${written / KB} KB\n${writing.histogram}", written < HELD_LIMIT)
+        assertTrue("the restore held ${read / KB} KB\n${reading.histogram}", read < HELD_LIMIT)
 
         assertEquals(POINTS, target.database.backupDao().countLocations())
         var after = 0L
@@ -131,6 +139,14 @@ class BackupSizeTest {
     }
 
     private companion object {
+        /** The largest classes on the heap, from the JDK's jcmd; empty where there is none. */
+        private fun classHistogram(): String = runCatching {
+            val jcmd = File(System.getProperty("java.home"), "bin/jcmd")
+            val process = ProcessBuilder(jcmd.path, ProcessHandle.current().pid().toString(), "GC.class_histogram")
+                .redirectErrorStream(true).start()
+            process.inputStream.bufferedReader().useLines { it.take(28).joinToString("\n") }
+        }.getOrDefault("")
+
         const val POINTS = 150_000
         const val START = 1_700_000_000_000L
         const val KB = 1024
