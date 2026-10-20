@@ -10,8 +10,6 @@ Last updated 2026-10-20 (late night).
       `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md). Until they are there the nightly (it has run
       three nights, green) builds and publishes nothing. Then one manual *Run workflow* of **Nightly** with *force*
       to see the first pre-release, its checksum file and the clean-up of old ones.
-- [ ] **`gh`**: installed; `gh auth login` is left. Then builds can be started and their logs read from here, and
-      pull requests opened and read.
 - [ ] **On the phones**: the checks in DEVICE_CHECKS, the risky ones first: the colour range and LUT shaders against
       the CPU result, subject and background masks (log tag `SubjectMask`: GPU or CPU, cold and warm time), the
       settings, search, compare, HEIF, presets, and the tab bar after its fix (no empty band above the buttons).
@@ -25,6 +23,11 @@ Last updated 2026-10-20 (late night).
 
 ## Ready to do (this side)
 
+- [ ] **`BackupSizeTest` on CI**: failed twice on slow runners (restore 28 s instead of 7 s, 13.6 MB held where
+      the limit is 8 MB), passes locally (0.1 MB) and on the other runs. The test now prints the heap's largest
+      classes when it holds too much; read them from the next failure before changing the limit or the restore.
+- [x] **`gh`** installed and logged in (2026-10-20); its token is in the keychain, so it runs from the Terminal
+      panel, not from the agent's own shell.
 - [x] **Pull request #1** merged 2026-10-20: the `v*` release workflow, `CHANGELOG.md`, `SECURITY.md`, issue
       templates, and phones' DNGs (mosaics and linear, uncompressed, lossless JPEG or JPEG XL through
       `third_party/jxlatte`, with a positive `BaselineExposure`). To try on a phone: DEVICE_CHECKS, "Phone raw files".
