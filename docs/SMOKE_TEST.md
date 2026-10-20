@@ -30,5 +30,7 @@ adb logcat -c; adb logcat -v time SubjectMask:V GpuTone:V GpuDetail:V Graphics:V
    Messages: its details show no position. Turn it off again.
 9. **Settings (30 s).** Light and dark follow the choice and the bars' icons stay readable; the tab position moves
    in a wide window (landscape); the language list opens.
+10. **Backup (1 min).** Settings, *Back up…* into Downloads: the message gives counts. *Restore…* the same file: the
+    summary finds every photo and says none is left out; *Cancel*. (The file holds places: keep it private.)
 
 Anything wrong in one of these: `adb logcat -d > log.txt` straight afterwards, and tell what was tapped.

@@ -62,14 +62,31 @@ afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` al
   publishes nothing: an APK signed with a key no phone has would update nothing.
 - **At the first real release** a release key is made with `keytool`, kept in two places outside the repository
   and put in the secrets in the same four; every phone then has to be reinstalled once, which takes the database
-  along unless the backup and restore (not built yet) is there. This happens at the same time as the package
-  name is settled (see the roadmap), as that makes a new app anyway. For Play the key is the *upload* key;
-  Google keeps the key that signs what people download, which is a different one from any here.
+  along. This happens at the same time as the package name is settled (see the roadmap), as that makes a new app
+  anyway. For Play the key is the *upload* key; Google keeps the key that signs what people download, which is a
+  different one from any here.
+
+### Reinstalling a phone
+
+Whenever a phone has to take an app it cannot install over the one it has (a new key, a new package name, an older
+build), the database goes with the old app; the photos in `DCIM/Latent` and the phone's folders stay. The way across:
+
+1. In the old app: Settings, **Backup and restore**, **Back up…**, and save the file outside the app (Downloads, a
+   computer, a cloud folder of one's own). It holds places and the location history: keep it private.
+2. Uninstall the old app, install the new one, open it and give it access to the photos and to `DCIM/Latent`, as on
+   the first start; choose the phone folders again if they are wanted at once (the restore adds the backup's anyway).
+3. Settings, **Backup and restore**, **Restore…**, pick the file, read the summary (photos found, photos not found by
+   name, what replaces what), confirm.
+4. Online maps stay off until they are turned on again; location recording is started again by hand.
+
+The new app reads the backup of an older one; an older app refuses the backup of a newer one (see
+[`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).
 
 ## Things to know
 
 - A build only goes forward: a lower `versionCode` is refused by Android, and the database moves to the newer
-  schema, so going back to an older nightly means uninstalling, which loses the database.
+  schema, so going back to an older nightly means uninstalling, which loses the database unless it was backed up
+  (above); the older app then reads the backup only if its format is not newer than the one it knows.
 - Pre-releases are public downloads (the repository is public). That is a choice of the owner (2026-10-17).
 - Public repositories use standard GitHub-hosted runners for free; do not use "larger runners", which are paid.
 - A run takes about seven minutes. A failing nightly leaves no release behind and is shown red in the Actions

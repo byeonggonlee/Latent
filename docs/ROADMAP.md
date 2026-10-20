@@ -101,6 +101,13 @@ Each is small or medium, works offline, and needs no new permission.
 - Keywords and captions; place names (needs a network service).
 - Not planned: generative fill or remove, cloud sync, accounts.
 
+## Outside the ranking
+
+- **Backup and restore** of what lives only in the database, into one file the person keeps. *Done 2026-10-20, to be
+  tried on the phones:* the way across a reinstall, a new phone, the release key and the package name
+  ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)). Not done: the trash (its files stay in `DCIM/Latent/.trash`, unseen after
+  a reinstall), a backup made by itself now and then into a folder the person chose, a file with a password.
+
 ## How the work is split
 
 - Small and medium items: done in the main line, one commit each, tests first, pushed only when they pass.

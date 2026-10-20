@@ -1,7 +1,7 @@
 # Checks that need a real phone
 
 Everything here passes on the JVM (Robolectric), but only a phone can say how it feels, looks and
-performs. Tick them off as they are tried; add what a try turns up. Last updated 2026-10-16.
+performs. Tick them off as they are tried; add what a try turns up. Last updated 2026-10-20.
 
 ## First run on a phone that has the library folder (S24 Ultra, after the move)
 
@@ -24,6 +24,46 @@ performs. Tick them off as they are tried; add what a try turns up. Last updated
 - [ ] "Every EXIF value": off, the photo's details show only camera, lens and exposure in one line; on, the sheet under the photo (phone) or the panel beside it (wide window) also lists the values in parts, scrolling on a phone. Compare a ZV-E10 JPEG and raw file with `exiftool`: values as recorded (codes such as Flash 16 are not spelled out), no row missing that matters, nothing odd on a phone's own photos. Sony's MakerNote is not listed.
 - [ ] Sharing and saving: JPEG quality (80, 90, 95, 100) changes the size of what Share makes at a reduced size and of copies saved from raw files and phone photos (compare in a file manager). "Leave out the place when sharing" on: share a located photo to another app (Messages, a mail app) and look at its details there, or open the copy in a file manager / `exiftool`: no GPS. It cleans EXIF GPS tags only; a place written in a JPEG's XMP block is not looked for. Off, shares keep the place as before. A video and a raw file shared as they are are not changed either way.
 - [ ] Online maps switch: turning it on asks first, off does not; Photos on this phone opens the folder question in the library.
+
+## Backup and restore
+
+Nothing of this has run on a phone yet; the format is in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md). None of these checks
+needs the app uninstalled or its data cleared.
+
+- [ ] S24, Settings → 백업과 복원 → 백업…: the system's save dialog suggests `latent-backup-YYYYMMDD-HHMM.zip`; save it
+      in Downloads. Note how long it takes, what the progress line says on the way, the message's counts (photos,
+      albums, versions, my filters, LUTs, masks, timeline places, camera imports) against what the app shows, and the
+      **file's size** in a file manager. Open it on a computer: `manifest.json` first in a text editor, the entries
+      listed in BACKUP_FORMAT, no photo or thumbnail in it.
+- [ ] Restore that file onto the **same phone**, clearing nothing: the summary should find every photo (N of N, none
+      left out), say 0 replaced, and after confirming change nothing visible; a second restore of the same file the same
+      (versions, filters, places added: 0).
+- [ ] Then give one photo another rating, take one out of an album, delete a filter of one's own, and restore again: the
+      summary counts the rating as replaced; afterwards the rating is the backup's, the photo is back in the album, the
+      filter is back. Photos added to albums after the backup stay in them.
+- [ ] Cancel a restore while the timeline goes in (a long timeline makes this easy): the message says nothing was taken
+      over, and albums, versions and the place count on the Location tab are as before.
+- [ ] Restore the S24's file on the **second phone** (S26). Without copying any photos over, the S24's photos are listed
+      as not found and only the rest (filters, LUTs, the timeline, camera imports, settings) comes in. If the S26 is to
+      have some of the S24's library, copy a day's folder of `DCIM/Latent` (with the same folder under the hidden
+      `.originals`) over first: photos found and the names of those not found make sense; raw edits,
+      edited library JPEGs ("Back to original" offered, editor opens with the edit's sliders), phone photos' edits, LUTs
+      and subject masks render as on the S24 (a missing mask outline would say so in the editor); albums and versions are
+      there; the Location tab's place count equals the S24's.
+- [ ] On the S26, photos of `DCIM/Camera` on the S24 are not there: they are listed as not found, the message points to
+      "폰에서 지운 파일" under Camera, and nothing fails.
+- [ ] After the restore on the S26, connect the ZV-E10 and sync: nothing that was imported on the S24 is downloaded
+      again (logcat `CameraSync`: "… to import" counts only new files), also with the phone set to another time zone.
+- [ ] Online maps on on the S24, off on the S26: after the restore they are still off, and the message says so. With
+      them on on the S26, they stay on.
+- [ ] A backup saved to and restored from Google Drive (or another cloud folder in the file dialog): does the save work,
+      does the restore read it (it is copied into the app first), how long for a large file? Does cancelling a backup to
+      Drive delete the unfinished file, or say that it could not?
+- [ ] Big timeline: back up and restore with the real one (count on the Location tab, about how many years). Time of
+      each, the file's size (the JVM test makes 150,000 places into 1.6 MB), and whether the app stays smooth meanwhile.
+- [ ] Rotate the phone and leave Settings while a restore runs: it carries on, and its progress and message are there
+      when Settings is opened again.
+- [ ] Japanese and English: the section and the summary read well and nothing is cut off in the dialog.
 
 ## Languages
 

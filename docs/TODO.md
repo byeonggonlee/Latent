@@ -2,7 +2,7 @@
 
 What is open right now, by who has to move. The longer list of features is in [`ROADMAP.md`](ROADMAP.md), what only a
 phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md).
-Last updated 2026-10-20 (evening).
+Last updated 2026-10-20 (night).
 
 ## Waiting for the owner
 
@@ -23,17 +23,22 @@ Last updated 2026-10-20 (evening).
 - [ ] **On the phones**: the checks in DEVICE_CHECKS, the risky ones first: the colour range and LUT shaders against
       the CPU result, subject and background masks (log tag `SubjectMask`: GPU or CPU, cold and warm time), the
       settings, search, compare, HEIF, presets, and the tab bar after its fix (no empty band above the buttons).
-      Video: a portrait one, a 4K one, one with a rotation flag.
+      Video: a portrait one, a 4K one, one with a rotation flag. Then a backup and its restore on the same phone and on
+      the other one, before the first reinstall needs them (no uninstalling for the check).
 - [ ] **Decide when publishing is settled**: the package name (RELEASES.md and the notes on Play), then the first real
-      release key, which means every phone is reinstalled once.
+      release key, which means every phone is reinstalled once (with a backup first: RELEASES.md, "Reinstalling a
+      phone").
 - [ ] **OpenCode pilot** (optional): install it, connect a provider, and have a cheap model read the Japanese and
       Korean strings for wording that is off. Source is public; no photos or places are ever sent.
 
 ## Ready to do (this side)
 
-- [ ] **Backup and restore** of what lives only in the database (albums, picks and stars, edits and versions, own
-      filters, LUT files, the timeline) into one file: the way across a reinstall, a new phone, a new package name
-      and the first signed release. Medium. Not yet approved by the owner.
+- [x] **Backup and restore** of what lives only in the database (albums, picks and stars, edits and versions, own
+      filters, LUT files, detected masks, the timeline, camera imports) into one zip that the person keeps: the way
+      across a reinstall, a new phone, a new package name and the first signed release (RELEASES.md, "Reinstalling a
+      phone"). Settings → Backup and restore; format, matching rule and merge rules in
+      [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md). Built 2026-10-20, not yet tried on a phone (DEVICE_CHECKS, "Backup and
+      restore").
 - [x] The other dialogs of the library's title bar (About, albums, the confirmation to trash the rejected) now live
       above it, like the search sheet; a test shows About staying up while the library fills under it.
 - [x] A ten-minute check for the phone after each nightly: [`SMOKE_TEST.md`](SMOKE_TEST.md).
