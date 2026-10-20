@@ -29,15 +29,16 @@ download link and a file manager:
 
 | Build | Name |
 |---|---|
-| CI, every push | `latent-0.1.0-ci.8c34842-4321.apk` (the commit) |
-| Nightly | `latent-0.1.0-nightly.20261017-4321.apk`, with `latent-0.1.0-nightly.20261017-4321.apk.sha256` beside it |
+| CI, every push | `latent-0.1.0-ci.8c34842-4321-arm64-v8a.apk` (the commit) |
+| Nightly | `latent-0.1.0-nightly.20261017-4321-arm64-v8a.apk`, with the same name and `.sha256` beside it |
 | Stable | `latent-0.1.0-4321.apk` and `latent-0.1.0-4321.aab` |
 | A build on the owner's computer | Gradle's own `app-release.apk` / `app-debug.apk`, which scripts and docs refer to |
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
 from is the one in the CI name, or in the release notes for a nightly. The version name is also what the About
-dialog shows. A build for one processor kind only (not made yet: the APK holds all of them) would add it at the
-end, `-arm64-v8a`. The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
+dialog shows. The CI and nightly builds carry the code of 64-bit ARM only (`-PlatentAbis=arm64-v8a`, 20 MB instead
+of 39 MB; every phone of today is that kind) and say so at the end of the name. A build on the owner's computer, and
+the stable one, carry all the kinds unless told otherwise (for Play, the AAB is split by the store itself). The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
 
 ## Signing
 

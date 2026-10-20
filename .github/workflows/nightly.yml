@@ -76,7 +76,7 @@ jobs:
           echo "name=$base-nightly.$day" >> "$GITHUB_OUTPUT"
           echo "tag=nightly-$day-$count" >> "$GITHUB_OUTPUT"
           echo "day=$day" >> "$GITHUB_OUTPUT"
-          echo "file=latent-$base-nightly.$day-$count.apk" >> "$GITHUB_OUTPUT"
+          echo "file=latent-$base-nightly.$day-$count-arm64-v8a.apk" >> "$GITHUB_OUTPUT"
 
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
@@ -88,7 +88,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          versions="-PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }}"
+          versions="-PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }} -PlatentAbis=arm64-v8a"
           if [ "$SIGNED" = "true" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             {
