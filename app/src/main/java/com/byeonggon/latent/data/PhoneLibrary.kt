@@ -131,10 +131,17 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
          * Folders of years and days are counted with the folder they are kept in: see [groupOf].
          */
         fun folderOf(path: String): String {
-            val internal = Environment.getExternalStorageDirectory().path + "/"
-            val relative = if (path.startsWith(internal)) path.removePrefix(internal) else path.replace(VOLUME_PREFIX, "")
-            val folder = relative.substringBeforeLast('/', "")
+            val folder = relativePathOf(path).substringBeforeLast('/', "")
             return groupOf(if (folder.isEmpty()) "" else "$folder/")
+        }
+
+        /**
+         * Where a file is on its storage volume, as MediaStore's relative path and name put it: "DCIM/Camera/a.jpg"
+         * for ".../0/DCIM/Camera/a.jpg". The same on every phone and for every user of one.
+         */
+        fun relativePathOf(path: String): String {
+            val internal = Environment.getExternalStorageDirectory().path + "/"
+            return if (path.startsWith(internal)) path.removePrefix(internal) else path.replace(VOLUME_PREFIX, "")
         }
 
         private val DATED = Regex("^\\d{4}(-\\d{2}(-\\d{2})?)?$")

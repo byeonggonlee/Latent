@@ -2,12 +2,16 @@ package com.byeonggon.latent
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.video.VideoFrameDecoder
 import kotlinx.coroutines.flow.first
+import com.byeonggon.latent.backup.AppIdentity
+import com.byeonggon.latent.backup.BackupWriter
+import com.byeonggon.latent.backup.Restorer
 import com.byeonggon.latent.camera.SyncEngine
 import com.byeonggon.latent.camera.UsbCameraConnector
 import com.byeonggon.latent.data.EditSaver
@@ -84,6 +88,23 @@ class AppContainer(private val context: Context) {
     val timelineImporter = TimelineImporter(context, database.locationDao())
     val onlineAccess = OnlineAccess(settings)
     val mapTiles = MapTiles(context, onlineAccess)
+
+    val backupWriter = BackupWriter(database, settings, storage.root, appIdentity())
+
+    val restorer = Restorer(
+        database, settings, storage.root,
+        hasAccess = storage::isAvailable,
+        noticeFiles = { folders ->
+            libraryIndex.adoptUnknownFiles()
+            if (LibraryStorage.canReadMedia(context)) phoneLibrary.refresh(folders)
+        },
+        hasOriginal = { storage.exists(storage.originalOf(File(it.path))) },
+    )
+
+    private fun appIdentity(): AppIdentity {
+        val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        return AppIdentity(context.packageName, info.versionName.orEmpty(), info.longVersionCode)
+    }
 
     /** Brings the photos and videos listed from the phone in line with the folders chosen; how many were added. */
     suspend fun refreshPhoneLibrary(): Int =

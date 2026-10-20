@@ -49,9 +49,31 @@ object LutStore {
         for (value in lut.domainMin) buffer.putFloat(value)
         for (value in lut.domainMax) buffer.putFloat(value)
         buffer.asFloatBuffer().put(lut.table)
+        writeWhole(file, buffer.array(), id)
+    }
+
+    /** Whether [bytes] are a table as [save] writes it to a file. */
+    fun isTable(bytes: ByteArray): Boolean = parse(bytes) != null
+
+    /**
+     * Keeps the file of a LUT brought back from a backup under [id], unless one is kept already. Returns
+     * whether it was written; throws when [bytes] are no table.
+     */
+    @Throws(IOException::class)
+    fun restore(id: String, bytes: ByteArray): Boolean {
+        val file = fileOf(id) ?: throw IOException("No place to keep LUTs")
+        if (file.isFile && read(file) != null) return false
+        if (!isTable(bytes)) throw IOException("Not a LUT table: $id")
+        file.parentFile?.mkdirs()
+        writeWhole(file, bytes, id)
+        synchronized(kept) { kept.remove(id) }
+        return true
+    }
+
+    private fun writeWhole(file: File, bytes: ByteArray, id: String) {
         // Written aside first, so that a file under its name is always whole.
         val partial = File(file.parentFile, file.name + ".part")
-        partial.writeBytes(buffer.array())
+        partial.writeBytes(bytes)
         if (!partial.renameTo(file)) {
             partial.delete()
             throw IOException("Could not keep the LUT $id")
@@ -85,7 +107,15 @@ object LutStore {
     private fun read(file: File): ColorLut? {
         if (!file.isFile) return null
         return try {
-            val buffer = ByteBuffer.wrap(file.readBytes())
+            parse(file.readBytes())
+        } catch (e: IOException) {
+            null
+        }
+    }
+
+    private fun parse(bytes: ByteArray): ColorLut? {
+        return try {
+            val buffer = ByteBuffer.wrap(bytes)
             if (buffer.remaining() < HEADER_BYTES || buffer.getInt() != MAGIC) return null
             val size = buffer.getInt()
             if (size !in ColorLut.SMALLEST..ColorLut.LARGEST) return null
@@ -95,8 +125,6 @@ object LutStore {
             if (buffer.remaining() != table.size * 4) return null
             buffer.asFloatBuffer().get(table)
             ColorLut(size, table, domainMin, domainMax)
-        } catch (e: IOException) {
-            null
         } catch (e: IllegalArgumentException) {
             // A domain with nothing in it: not a file written here.
             null

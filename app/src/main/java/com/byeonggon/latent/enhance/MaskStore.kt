@@ -5,6 +5,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.util.UUID
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
@@ -74,14 +75,36 @@ object MaskStore {
             // An outline is mostly long runs of the same level, which pack down to a few dozen kilobytes.
             DeflaterOutputStream(data).use { it.write(raster.levels) }
         }
+        writeWhole(file, bytes.toByteArray(), id)
+        synchronized(kept) { remember(id, raster) }
+    }
+
+    /** Whether [bytes] are an outline as [save] writes it to a file. */
+    fun isOutline(bytes: ByteArray): Boolean = read(bytes.inputStream()) != null
+
+    /**
+     * Keeps the file of an outline brought back from a backup under [id], unless one is kept already. Returns
+     * whether it was written; throws when [bytes] are no outline.
+     */
+    @Throws(IOException::class)
+    fun restore(id: String, bytes: ByteArray): Boolean {
+        val file = fileOf(id) ?: throw IOException("No place to keep mask outlines")
+        if (file.isFile && read(file) != null) return false
+        if (!isOutline(bytes)) throw IOException("Not a mask outline: $id")
+        file.parentFile?.mkdirs()
+        writeWhole(file, bytes, id)
+        synchronized(kept) { kept.remove(id) }
+        return true
+    }
+
+    private fun writeWhole(file: File, bytes: ByteArray, id: String) {
         // Written aside first, so that a file under its name is always whole.
         val partial = File(file.parentFile, file.name + ".part")
-        partial.writeBytes(bytes.toByteArray())
+        partial.writeBytes(bytes)
         if (!partial.renameTo(file)) {
             partial.delete()
             throw IOException("Could not keep the mask outline $id")
         }
-        synchronized(kept) { remember(id, raster) }
     }
 
     /** The outline with [id]; null when it is not kept or its file cannot be read, and the mask then covers nothing. */
@@ -115,7 +138,15 @@ object MaskStore {
     private fun read(file: File): MaskRaster? {
         if (!file.isFile) return null
         return try {
-            DataInputStream(file.inputStream().buffered()).use { data ->
+            read(file.inputStream())
+        } catch (e: IOException) {
+            null
+        }
+    }
+
+    private fun read(input: InputStream): MaskRaster? {
+        return try {
+            DataInputStream(input.buffered()).use { data ->
                 if (data.readInt() != MAGIC) return null
                 val width = data.readInt()
                 val height = data.readInt()

@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
@@ -237,6 +238,75 @@ interface LocationDao {
     fun observeLatestRecorded(): Flow<LocationPointEntity?>
 }
 
+/**
+ * What a backup reads page by page, so that a library of any size goes through in little memory, and
+ * what a restore writes without disturbing what the phone has.
+ */
+@Dao
+interface BackupDao {
+    @Query("SELECT COUNT(*) FROM media_items WHERE trashedAt IS NULL")
+    suspend fun countMedia(): Int
+
+    @Query("SELECT * FROM media_items WHERE trashedAt IS NULL AND id > :after ORDER BY id LIMIT :limit")
+    suspend fun mediaAfter(after: Long, limit: Int): List<MediaItemEntity>
+
+    @Query("SELECT * FROM media_items WHERE trashedAt IS NULL")
+    suspend fun mediaInLibrary(): List<MediaItemEntity>
+
+    /** Changes the row in place; inserting it again would take its albums and versions away. */
+    @Update
+    suspend fun updateMedia(item: MediaItemEntity)
+
+    @Query("SELECT DISTINCT mediaId FROM album_items")
+    suspend fun mediaInAlbums(): List<Long>
+
+    @Query("SELECT DISTINCT mediaId FROM edit_versions")
+    suspend fun mediaWithVersions(): List<Long>
+
+    @Query("SELECT * FROM albums ORDER BY id")
+    suspend fun albums(): List<AlbumEntity>
+
+    @Query(
+        "SELECT * FROM album_items WHERE albumId > :afterAlbum OR (albumId = :afterAlbum AND mediaId > :afterMedia) " +
+            "ORDER BY albumId, mediaId LIMIT :limit",
+    )
+    suspend fun albumItemsAfter(afterAlbum: Long, afterMedia: Long, limit: Int): List<AlbumItemEntity>
+
+    @Query("SELECT * FROM edit_versions WHERE id > :after ORDER BY id LIMIT :limit")
+    suspend fun versionsAfter(after: Long, limit: Int): List<EditVersionEntity>
+
+    @Query("SELECT * FROM edit_versions WHERE mediaId = :mediaId")
+    suspend fun versionsOf(mediaId: Long): List<EditVersionEntity>
+
+    @Query("SELECT * FROM filters ORDER BY id")
+    suspend fun filters(): List<FilterEntity>
+
+    @Query("SELECT * FROM luts ORDER BY id")
+    suspend fun luts(): List<LutEntity>
+
+    @Query("SELECT COUNT(*) FROM sync_records")
+    suspend fun countSyncRecords(): Int
+
+    @Query("SELECT * FROM sync_records WHERE sourceKey > :after ORDER BY sourceKey LIMIT :limit")
+    suspend fun syncRecordsAfter(after: String, limit: Int): List<SyncRecordEntity>
+
+    /** Keeps the records the phone has already. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSyncRecords(records: List<SyncRecordEntity>): List<Long>
+
+    @Query("SELECT * FROM synced_folders ORDER BY cameraId, path")
+    suspend fun syncedFolders(): List<SyncedFolderEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSyncedFolders(folders: List<SyncedFolderEntity>): List<Long>
+
+    @Query("SELECT COUNT(*) FROM location_points")
+    suspend fun countLocations(): Int
+
+    @Query("SELECT * FROM location_points WHERE id > :after ORDER BY id LIMIT :limit")
+    suspend fun locationsAfter(after: Long, limit: Int): List<LocationPointEntity>
+}
+
 @Database(
     entities = [
         MediaItemEntity::class,
@@ -261,6 +331,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun albumDao(): AlbumDao
     abstract fun editVersionDao(): EditVersionDao
     abstract fun lutDao(): LutDao
+    abstract fun backupDao(): BackupDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
