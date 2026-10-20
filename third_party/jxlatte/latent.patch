@@ -1,0 +1,99 @@
+diff --git a/java/com/traneptora/jxlatte/frame/Frame.java b/java/com/traneptora/jxlatte/frame/Frame.java
+index 4dfda7d..86f285d 100644
+--- a/java/com/traneptora/jxlatte/frame/Frame.java
++++ b/java/com/traneptora/jxlatte/frame/Frame.java
+@@ -318,9 +318,15 @@ public class Frame {
+ 
+         int numPasses = passes.length;
+         PassGroup[][] passGroups = new PassGroup[numPasses][numGroups];
++        // Only VarDCT reads the groups again; a modular frame copies each one out as it is decoded and lets it go.
++        boolean keepGroups = header.encoding == FrameFlags.VARDCT;
+ 
+         for (int pass0 = 0; pass0 < numPasses; pass0++) {
+             final int pass = pass0;
++            for (int i = 0; i < passes[pass].replacedChannels.length; i++) {
++                if (passes[pass].replacedChannels[i] != null)
++                    lfGlobal.globalModular.getChannel(i).allocate();
++            }
+             for (int group0 = 0; group0 < numGroups; group0++) {
+                 final int group = group0;
+                 Bitreader reader = getBitreader(2 + numLFGroups + pass * numGroups + group);
+@@ -335,26 +341,22 @@ public class Frame {
+                     info.size.height = Math.min(info.size.height - info.origin.y, groupHeight);
+                     info.size.width = Math.min(info.size.width - info.origin.x, groupWidth);
+                 }
+-                passGroups[pass][group] = new PassGroup(reader, Frame.this, pass, group, replaced);
+-            }
+-        }
+-
+-        for (int pass = 0; pass < numPasses; pass++) {
+-            int j = 0;
+-            for (int i = 0; i < passes[pass].replacedChannels.length; i++) {
+-                if (passes[pass].replacedChannels[i] == null)
+-                    continue;
+-                ModularChannel channel = lfGlobal.globalModular.getChannel(i);
+-                channel.allocate();
+-                for (int group = 0; group < numGroups; group++) {
+-                    ModularChannel newChannelInfo = passGroups[pass][group].modularStream.getChannel(j);
++                PassGroup passGroup = new PassGroup(reader, Frame.this, pass, group, replaced);
++                int j = 0;
++                for (int i = 0; i < passes[pass].replacedChannels.length; i++) {
++                    if (passes[pass].replacedChannels[i] == null)
++                        continue;
++                    ModularChannel channel = lfGlobal.globalModular.getChannel(i);
++                    ModularChannel newChannelInfo = passGroup.modularStream.getChannel(j);
+                     int[][] buff = newChannelInfo.buffer;
+                     for (int y = 0; y < buff.length; y++) {
+                         System.arraycopy(buff[y], 0, channel.buffer[y + newChannelInfo.origin.y],
+                             newChannelInfo.origin.x, buff[y].length);
+                     }
++                    j++;
+                 }
+-                j++;
++                if (keepGroups)
++                    passGroups[pass][group] = passGroup;
+             }
+         }
+ 
+@@ -453,6 +455,10 @@ public class Frame {
+                 }
+             }
+         }
++        // The frame's own buffers hold the picture now; the modular copy would double what a frame needs.
++        for (int c = 0; c < lfGlobal.globalModular.getEncodedChannelCount(); c++)
++            lfGlobal.globalModular.getChannel(c).buffer = null;
++        modularBuffer = null;
+ 
+         invertSubsampling();
+         if (header.restorationFilter.gab)
+diff --git a/java/com/traneptora/jxlatte/frame/modular/ModularChannel.java b/java/com/traneptora/jxlatte/frame/modular/ModularChannel.java
+index 0245fc1..835eaec 100644
+--- a/java/com/traneptora/jxlatte/frame/modular/ModularChannel.java
++++ b/java/com/traneptora/jxlatte/frame/modular/ModularChannel.java
+@@ -359,6 +359,9 @@ public class ModularChannel {
+                 }
+             }
+         }
++        // The weighted predictor's state is six times the channel; nothing reads it once the channel is decoded.
++        error = null;
++        pred = null;
+         return true;
+     }
+ 
+diff --git a/java/com/traneptora/jxlatte/frame/modular/ModularStream.java b/java/com/traneptora/jxlatte/frame/modular/ModularStream.java
+index 2bcb68d..76211ac 100644
+--- a/java/com/traneptora/jxlatte/frame/modular/ModularStream.java
++++ b/java/com/traneptora/jxlatte/frame/modular/ModularStream.java
+@@ -204,8 +204,11 @@ public class ModularStream implements Iterable<ModularChannel> {
+         }
+         if (stream != null && !stream.validateFinalState())
+             throw new InvalidBitstreamException("Illegal final modular state");
+-        if (!partial)
++        if (!partial) {
++            // Its LZ77 window is 4 MiB, and a frame keeps a stream for every group it decodes.
++            stream = null;
+             applyTransforms();
++        }
+     }
+ 
+     public int getEncodedChannelCount() {

@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Latent"
 include(":app")
+include(":jxlatte")
+project(":jxlatte").projectDir = file("third_party/jxlatte")
