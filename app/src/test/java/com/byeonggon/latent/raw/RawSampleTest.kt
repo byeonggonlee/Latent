@@ -18,7 +18,8 @@ import kotlin.math.sqrt
  *
  * The camera straightens its JPEGs with the same lens profile it stores in the raw file, which makes
  * them the reference: after our correction, every detail must sit where the camera put it.
- * Developed pictures are written to an "out" folder beside the samples for a look.
+ * Developed pictures are written to an "out" folder beside the samples for a look. DNG_SAMPLE_DIR does the same
+ * for a phone's DNGs, without a reference.
  */
 class RawSampleTest {
     private class Picture(val width: Int, val height: Int, val pixels: IntArray)
@@ -43,6 +44,29 @@ class RawSampleTest {
             val shifts = outwardShifts(straightened, camera)
             println("${arw.name}: off by " + shifts.joinToString { "%+.2f".format(it) } + " px from the centre outwards")
             assertTrue("${arw.name} is off by $shifts", shifts.all { abs(it) <= 1.5f })
+        }
+    }
+
+    /**
+     * Develops every .dng in DNG_SAMPLE_DIR, a phone's raw files, and writes a preview of each to an "out" folder
+     * beside them, with how long reading and developing took.
+     */
+    @Test
+    fun developsPhoneDngs() {
+        val dir = System.getenv("DNG_SAMPLE_DIR")?.let(::File)?.takeIf { it.isDirectory }
+        assumeTrue(dir != null)
+        val out = File(dir, "out").apply { mkdirs() }
+        for (dng in dir!!.listFiles { file -> file.extension.equals("dng", ignoreCase = true) }!!.sorted()) {
+            val started = System.nanoTime()
+            val image = Dng.read(dng.readBytes())
+            val read = System.nanoTime()
+            val linear = RawDeveloper.developPreview(image)
+            val developed = System.nanoTime()
+            println(
+                "${dng.name}: ${image.width}x${image.height}x${image.channels}, read in ${(read - started) / 1_000_000} ms, " +
+                    "preview of ${linear.width}x${linear.height} in ${(developed - read) / 1_000_000} ms",
+            )
+            write(Picture(linear.width, linear.height, linear.render(PhotoEdit())), File(out, dng.nameWithoutExtension + ".png"))
         }
     }
 

@@ -460,7 +460,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="about">About Latent</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_text">Photos from your camera and your phone, developed on the phone, placed on a map when you wish. Everything stays on the phone: no account, no ads, no analytics.</string>
-    <string name="about_built_from">Made with Jetpack Compose, Room, Coil, Media3, AndroidX ExifInterface, Gson and LiteRT, all under the Apache License 2.0, as is Latent itself. Subject masks are found on the phone by the U²-Netp model (Qin et al., Apache License 2.0). Map pictures come from OpenStreetMap, © OpenStreetMap contributors, when online maps are on.</string>
+    <string name="about_built_from">Made with Jetpack Compose, Room, Coil, Media3, AndroidX ExifInterface, Gson and LiteRT, all under the Apache License 2.0, as is Latent itself. Subject masks are found on the phone by the U²-Netp model (Qin et al., Apache License 2.0). Expert RAW files are read with jxlatte (Leo Izen, MIT License). Map pictures come from OpenStreetMap, © OpenStreetMap contributors, when online maps are on.</string>
     <string name="about_trademarks">Sony and ZV-E10 are trademarks of Sony Group Corporation; Google Timeline is a feature of Google LLC. Latent is not affiliated with or endorsed by either.</string>
     <string name="about_privacy">Privacy policy</string>
     <string name="about_source">Source code and license</string>

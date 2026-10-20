@@ -26,3 +26,11 @@ LiteRT 2.3.0 (com.google.ai.edge.litert:litert, litert-gpu)
 Copyright Google LLC. Licensed under the Apache License, Version 2.0; see litert-LICENSE.txt.
 Its native libraries contain the third-party code whose notices are in
 litert-THIRD_PARTY_NOTICE.txt, as shipped by Google with LiteRT.
+
+
+jxlatte (JPEG XL decoder, for Expert RAW DNGs)
+----------------------------------------------
+Copyright 2022-2024 Leo Izen (Traneptora). Licensed under the MIT License; see jxlatte-LICENSE.txt.
+Source: https://github.com/Traneptora/jxlatte, commit b98e86eb6a13baca5967dc25cab7698ac6d14675.
+Changed for Latent: memory a frame no longer needs is let go of while it is decoded; the changes are in
+third_party/jxlatte/latent.patch in Latent's source.

@@ -46,9 +46,9 @@ Each is small or medium, works offline, and needs no new permission.
 - **Phone raw files (DNG)**, *stage 1 built 2026-10-19, to be judged on a phone:* Bayer DNGs (a Galaxy's Pro mode,
   Android's own writer, Adobe's converter), uncompressed or in lossless JPEG, with black and white levels,
   linearization, the daylight colour matrix with the camera's calibration, the as-shot white balance, the default
-  crop and the gain maps (lens shading). Next, once a real file has been tried: linear DNGs (Expert RAW, a path
-  around the demosaicing), the lens's distortion from OpcodeList3 (WarpRectilinear), JPEG XL compression (needs a
-  decoder), a colour matrix interpolated between the two illuminants, `BaselineExposure` in the tone stage's
+  crop and the gain maps (lens shading); linear DNGs, as a Galaxy writes in Pro mode (lossless JPEG) and in Expert
+  RAW (JPEG XL, read by jxlatte in `third_party/`). Next: the lens's distortion from OpcodeList3 (WarpRectilinear),
+  a colour matrix interpolated between the two illuminants, `BaselineExposure` in the tone stage's
   exposure (with care not to add to the automatic correction twice), hiding the editor's lens correction chip for
   files without a lens profile, and pairing a Pixel's `.RAW-02.ORIGINAL.dng` with its `.RAW-01.COVER.jpg`. Galaxy
   Log video belongs with item 12.

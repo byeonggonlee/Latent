@@ -11,7 +11,7 @@ import kotlin.math.roundToInt
  * sensor's mosaic of red, green and blue, uncompressed or in lossless JPEG, and what the DNG specification
  * says is needed to develop it (black and white levels, the colour matrices, white balance, the default crop
  * and the gain maps that undo the lens's shading). Also linear DNGs, whose colours the phone has already filled in,
- * as a Galaxy writes them in Pro mode (lossless JPEG) and in Expert RAW (JPEG XL, which is not read yet).
+ * as a Galaxy writes them in Pro mode (lossless JPEG) and in Expert RAW (JPEG XL).
  */
 object Dng {
     private const val TAG_NEW_SUBFILE_TYPE = 0x00FE
@@ -220,7 +220,7 @@ object Dng {
             when (compression) {
                 COMPRESSION_NONE -> unpack(file, order, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength, bits)
                 COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength)
-                COMPRESSION_JPEG_XL -> throw IOException("DNGs compressed with JPEG XL are not supported yet")
+                COMPRESSION_JPEG_XL -> JpegXl.decode(file, offsets[index], lengths[index], into, width, height, left, top, tileWidth, tileLength, channels, bits)
                 else -> throw IOException("Unsupported DNG compression: $compression")
             }
         }

@@ -132,8 +132,14 @@ internal object SyntheticDng {
     /**
      * A linear DNG, as a Galaxy writes in Pro mode: three samples a pixel, red, green and blue, already filled in, with
      * [red], [green] and [blue] above black in the active area; as words or in lossless JPEG with three components.
+     * With [jpegXl], as Expert RAW stores them: the samples of linear(192, 380, 264) from linear-192-380-264.jxl,
+     * which also has a gradient in the active area's top left corner (see linear-192-380-264.py beside it).
      */
-    fun linear(red: Int, green: Int, blue: Int, lossless: Boolean = false, blacks: IntArray = intArrayOf(BLACK, BLACK + 8, BLACK + 16)): ByteArray {
+    fun linear(
+        red: Int, green: Int, blue: Int, lossless: Boolean = false, blacks: IntArray = intArrayOf(BLACK, BLACK + 8, BLACK + 16),
+        jpegXl: Boolean = false,
+    ): ByteArray {
+        require(!jpegXl || (red == 192 && green == 380 && blue == 264 && blacks.contentEquals(intArrayOf(BLACK, BLACK + 8, BLACK + 16))))
         val levels = intArrayOf(red, green, blue)
         val values = Array(HEIGHT) { y ->
             IntArray(WIDTH * 3) { i ->
@@ -142,7 +148,9 @@ internal object SyntheticDng {
                 if (inside) levels[i % 3] + blacks[i % 3] else 0
             }
         }
-        val data = if (lossless) {
+        val data = if (jpegXl) {
+            SyntheticDng::class.java.getResourceAsStream("/raw/linear-192-380-264.jxl")!!.use { it.readBytes() }
+        } else if (lossless) {
             LosslessJpegEncoder.encode(values, components = 3, precision = 16, predictor = 1)
         } else {
             ByteBuffer.allocate(WIDTH * HEIGHT * 6).order(ByteOrder.LITTLE_ENDIAN).apply {
@@ -159,7 +167,7 @@ internal object SyntheticDng {
                 Entry.shorts(0x0100, WIDTH),
                 Entry.shorts(0x0101, HEIGHT),
                 Entry.shorts(0x0102, 16),
-                Entry.shorts(0x0103, if (lossless) 7 else 1),
+                Entry.shorts(0x0103, if (jpegXl) 52546 else if (lossless) 7 else 1),
                 Entry.shorts(0x0106, 34892),
                 Entry.ascii(0x010F, "samsung"),
                 Entry.longs(0x0111, dataAt),

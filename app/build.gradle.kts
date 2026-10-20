@@ -104,6 +104,8 @@ dependencies {
     // Subject masks, worked out on the phone by a model in the app's assets: on the graphics processor, or the cores where it cannot.
     implementation(libs.litert)
     implementation(libs.litert.gpu)
+    // Expert RAW DNGs, compressed with JPEG XL.
+    implementation(project(":jxlatte"))
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

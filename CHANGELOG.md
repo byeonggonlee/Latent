@@ -34,8 +34,8 @@ with the phone's location, and develops them, without a cloud or an account.
 
 - Android 15 (API 35) or later.
 - Tried with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may work. Raw
-  development reads Sony ARW and DNG mosaics, uncompressed or in lossless JPEG. Linear DNGs (a Galaxy's Expert
-  RAW) and JPEG XL compressed DNGs cannot be developed yet. Phone DNGs are developed
+  development reads Sony ARW, DNG mosaics and linear DNGs (a Galaxy's Pro mode and Expert RAW), uncompressed, in
+  lossless JPEG or in JPEG XL. Phone DNGs are developed
   without correcting the lens's distortion.
 - Everything stays on the phone: no account, no analytics, and the internet only for the optional map, which
   is off until you turn it on. See [`PRIVACY.md`](PRIVACY.md).

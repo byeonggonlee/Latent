@@ -138,7 +138,29 @@ class DngTest {
     }
 
     @Test
-    fun saysWhatItCannotReadYet() {
+    fun readsTheSamplesOfExpertRawFromJpegXl() {
+        val words = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264))
+        val image = Dng.read(SyntheticDng.linear(red = 192, green = 380, blue = 264, jpegXl = true))
+
+        assertEquals(3, image.channels)
+        assertEquals(words.width to words.height, image.width to image.height)
+        val active = SyntheticDng.ACTIVE
+        for (y in 0 until image.height) for (x in 0 until image.width) for (channel in 0 until 3) {
+            val at = (y * image.width + x) * 3 + channel
+            val inGradient = y >= active[0] && y < active[0] + 6 && x >= active[1] && x < active[1] + 6
+            if (!inGradient) assertEquals("$x, $y, $channel", words.sensor[at], image.sensor[at])
+        }
+        // In the gradient, red rises 10 a column, green 7 a row, blue by the product of both.
+        val at = (3 * image.width + 5) * 3
+        assertEquals(
+            listOf(scaled(192 + 50), scaled(380 + 21, SyntheticDng.BLACK + 8), scaled(264 + 15, SyntheticDng.BLACK + 16)),
+            listOf(image.sensor[at], image.sensor[at + 1], image.sensor[at + 2]).map { it.toInt() },
+        )
+    }
+
+    @Test
+    fun saysWhatItCannotRead() {
+        // Not a JPEG XL stream where the file says one is.
         val jpegXl = assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, compression = 52546)) }
         assertTrue(jpegXl.message!!.contains("JPEG XL"))
         assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, pattern = intArrayOf(0, 1, 2, 1))) }

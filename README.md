@@ -28,8 +28,8 @@ phone's location, and develops them: raw files included, without a cloud or an a
 The app speaks English, Korean and Japanese, following the phone's language.
 
 It has been used with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may
-work. Raw development reads Sony ARW and DNG mosaics (uncompressed or lossless JPEG); linear DNGs, such as a
-Galaxy's Expert RAW, and JPEG XL compressed DNGs are not read yet.
+work. Raw development reads Sony ARW, DNG mosaics and linear DNGs, uncompressed, in lossless JPEG or in JPEG XL:
+a Galaxy's Pro mode and Expert RAW files among them.
 
 ## Privacy
 
