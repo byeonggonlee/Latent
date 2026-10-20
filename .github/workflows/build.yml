@@ -50,14 +50,14 @@ jobs:
           name="$base-ci.$(git rev-parse --short=7 HEAD)"
           echo "code=$count" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "file=latent-$name-$count.apk" >> "$GITHUB_OUTPUT"
+          echo "file=latent-$name-$count-arm64-v8a.apk" >> "$GITHUB_OUTPUT"
 
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
 
       - name: Release APK (signed with the debug key)
         run: |
-          ./gradlew assembleRelease -PdebugSignedRelease -PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }} --stacktrace
+          ./gradlew assembleRelease -PdebugSignedRelease -PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }} -PlatentAbis=arm64-v8a --stacktrace
           cp app/build/outputs/apk/release/app-release.apk "${{ steps.version.outputs.file }}"
 
       - uses: actions/upload-artifact@v4

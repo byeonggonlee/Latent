@@ -29,15 +29,16 @@ download link and a file manager:
 
 | Build | Name |
 |---|---|
-| CI, every push | `latent-0.1.0-ci.8c34842-4321.apk` (the commit) |
-| Nightly | `latent-0.1.0-nightly.20261017-4321.apk`, with `latent-0.1.0-nightly.20261017-4321.apk.sha256` beside it |
+| CI, every push | `latent-0.1.0-ci.8c34842-4321-arm64-v8a.apk` (the commit) |
+| Nightly | `latent-0.1.0-nightly.20261017-4321-arm64-v8a.apk`, with the same name and `.sha256` beside it |
 | Stable | `latent-0.1.0-4321.apk`, with `latent-0.1.0-4321.apk.sha256` beside it (an `.aab` for Play comes with the store, not before 1.0.0) |
 | A build on the owner's computer | Gradle's own `app-release.apk` / `app-debug.apk`, which scripts and docs refer to |
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
 from is the one in the CI name, or in the release notes for a nightly. The version name is also what the About
-dialog shows. A build for one processor kind only (not made yet: the APK holds all of them) would add it at the
-end, `-arm64-v8a`. The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
+dialog shows. The CI and nightly builds carry the code of 64-bit ARM only (`-PlatentAbis=arm64-v8a`, 20 MB instead
+of 39 MB; every phone of today is that kind) and say so at the end of the name. A build on the owner's computer, and
+the stable one, carry all the kinds unless told otherwise (for Play, the AAB is split by the store itself). The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
 
 ## Signing
 
@@ -60,8 +61,8 @@ afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` al
 - **Without the secrets** the nightly builds, keeps the APK as an artifact (a login is needed to download it) and
   publishes nothing: an APK signed with a key no phone has would update nothing.
 - **At the first real release** a release key is made, kept in two places outside the repository and put in the
-  secrets in the same four; every phone then has to be reinstalled once, which takes the database along unless
-  the backup and restore (not built yet) is there. This happens at the same time as the package name is
+  secrets in the same four; every phone then has to be reinstalled once, which takes the database along through a
+  backup and its restore (below). This happens at the same time as the package name is
   settled, as that makes a new app anyway, so both are done before `v0.1.0`. The stable workflow refuses to run
   without the secrets. Making the key:
 
@@ -75,6 +76,22 @@ afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` al
   passwords in a password manager and in one other place (for example an encrypted backup). `*.jks` and
   `keystore.properties` are ignored by git. If the app ever goes to Play, this is the *upload* key; Google keeps
   the key that signs what people download, which is a different one.
+
+### Reinstalling a phone
+
+Whenever a phone has to take an app it cannot install over the one it has (a new key, a new package name, an older
+build), the database goes with the old app; the photos in `DCIM/Latent` and the phone's folders stay. The way across:
+
+1. In the old app: Settings, **Backup and restore**, **Back up…**, and save the file outside the app (Downloads, a
+   computer, a cloud folder of one's own). It holds places and the location history: keep it private.
+2. Uninstall the old app, install the new one, open it and give it access to the photos and to `DCIM/Latent`, as on
+   the first start; choose the phone folders again if they are wanted at once (the restore adds the backup's anyway).
+3. Settings, **Backup and restore**, **Restore…**, pick the file, read the summary (photos found, photos not found by
+   name, what replaces what), confirm.
+4. Online maps stay off until they are turned on again; location recording is started again by hand.
+
+The new app reads the backup of an older one; an older app refuses the backup of a newer one (see
+[`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).
 
 ## Making a stable release
 
@@ -95,7 +112,8 @@ it in `main`, and tag again only if no one has installed it, otherwise issue the
 ## Things to know
 
 - A build only goes forward: a lower `versionCode` is refused by Android, and the database moves to the newer
-  schema, so going back to an older nightly means uninstalling, which loses the database.
+  schema, so going back to an older nightly means uninstalling, which loses the database unless it was backed up
+  (above); the older app then reads the backup only if its format is not newer than the one it knows.
 - Pre-releases are public downloads (the repository is public). That is a choice of the owner (2026-10-17).
 - Public repositories use standard GitHub-hosted runners for free; do not use "larger runners", which are paid.
 - A run takes about seven minutes. A failing nightly leaves no release behind and is shown red in the Actions

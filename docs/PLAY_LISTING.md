@@ -78,6 +78,9 @@ visible) and starting a sync (notification with progress).
 - Data encrypted in transit: yes, for the map tiles (HTTPS); nothing else is transmitted.
 - Can users ask to delete their data? Everything is local; uninstalling deletes the app's database. Photos are ordinary files the user owns.
 - Cloud backup: the database (it holds recorded locations) is excluded from Android's cloud backup.
+- Backup and restore (Settings): a file the user writes, through the system's file dialog, to a place the user picks, and
+  reads back the same way. The app never transmits it; data the user moves themselves is not collection or sharing, so
+  nothing changes in the form (PRIVACY.md, "Backups", says what the file holds).
 
 ## Other forms
 

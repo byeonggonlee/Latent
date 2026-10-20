@@ -50,6 +50,15 @@ turn online maps off again from the map's menu. Map data © OpenStreetMap contri
 The app's database, with the recorded locations, is kept out of Android's cloud backup. When you move to a
 new phone with the system's own transfer, started by you, it comes along.
 
+**Backup and restore** in the settings writes, when you ask for it, one file with what lives only in the app: your
+albums, ratings and flags, edits and their versions, your own filters, imported LUTs, the outlines of detected masks,
+which camera files were imported, a few settings, the places of your photos and the location history (recorded by the
+app and imported from Google Timeline). Your photos and videos themselves are not in it. The file goes only where you
+choose in the system's file dialog, and is read only when you pick it to restore. The app never uploads it or sends it
+anywhere; you are the only one who handles it. Whoever has the file can see where your photos were taken and where you
+have been, so keep it private. If you choose a folder of a cloud service in the file dialog, that service keeps the
+file under its own terms. Restoring never turns online maps on.
+
 ## Sharing
 
 Photos leave the app only when you share them, to the app you pick, or when another app on the phone
@@ -59,7 +68,7 @@ reads them from `DCIM/Latent`.
 
 Photos you delete go to the app's trash for 30 days, then they are deleted. Uninstalling the app
 deletes its database, with the recorded locations; the photos in `DCIM/Latent` stay until you delete
-them.
+them, and so does a backup file you made, wherever you saved it.
 
 ## Contact
 

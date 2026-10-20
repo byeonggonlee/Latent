@@ -2,12 +2,18 @@ package com.byeonggon.latent
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.video.VideoFrameDecoder
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.byeonggon.latent.backup.AppIdentity
+import com.byeonggon.latent.backup.BackupWriter
+import com.byeonggon.latent.backup.Restorer
 import com.byeonggon.latent.camera.SyncEngine
 import com.byeonggon.latent.camera.UsbCameraConnector
 import com.byeonggon.latent.data.EditSaver
@@ -85,9 +91,34 @@ class AppContainer(private val context: Context) {
     val onlineAccess = OnlineAccess(settings)
     val mapTiles = MapTiles(context, onlineAccess)
 
+    val backupWriter = BackupWriter(database, settings, storage.root, appIdentity())
+
+    /**
+     * Held while the phone's photos are listed, and through a restore: a listing with the folders chosen before the
+     * restore would drop the photos of the folders it brings, which it has just given their edits.
+     */
+    private val phoneListing = Mutex()
+
+    val restorer = Restorer(
+        database, settings, storage.root,
+        exclusive = phoneListing,
+        hasAccess = storage::isAvailable,
+        noticeFiles = { folders ->
+            libraryIndex.adoptUnknownFiles()
+            if (LibraryStorage.canReadMedia(context)) phoneLibrary.refresh(folders)
+        },
+        hasOriginal = { storage.exists(storage.originalOf(File(it.path))) },
+    )
+
+    private fun appIdentity(): AppIdentity {
+        val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        return AppIdentity(context.packageName, info.versionName.orEmpty(), info.longVersionCode)
+    }
+
     /** Brings the photos and videos listed from the phone in line with the folders chosen; how many were added. */
-    suspend fun refreshPhoneLibrary(): Int =
+    suspend fun refreshPhoneLibrary(): Int = phoneListing.withLock {
         if (LibraryStorage.canReadMedia(context)) phoneLibrary.refresh(settings.settings.first().phoneFolders) else 0
+    }
 }
 
 val Context.appContainer: AppContainer

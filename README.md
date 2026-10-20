@@ -21,6 +21,8 @@ phone's location, and develops them: raw files included, without a cloud or an a
 - **Keeps a library** by day, with ratings, albums, raw and JPEG shown as one, a trash, and sharing. It can list
   the phone's own photos too, from the folders you choose, without ever changing them.
 - **Shows your photos on a map** (OpenStreetMap), once you turn online maps on.
+- **Backs up** albums, picks and stars, edits and versions, own filters, LUTs and the location history into one file
+  that you keep, and restores it after a reinstall or on another phone ([format](docs/BACKUP_FORMAT.md)).
 - Fits phones, foldables, tablets and laptop windows, with keyboard and mouse: arrow keys to turn pages,
   a letter for each editing tool, `+`, `-` and `0` to zoom, `P`, `X`, `U` and `1`–`5` to cull, `J` for clipped tones, `\` to see the original,
   and a right click on a photo for a menu.
@@ -64,7 +66,8 @@ Nightly builds, published for the phones, and the version numbers are described 
 [`docs/RELEASES.md`](docs/RELEASES.md).
 
 That APK is signed with the runner's own debug key, which no phone's install has: it installs on a phone without
-the app, but not over a build made on another computer (uninstall first, which takes the app's database along). A
+the app, but not over a build made on another computer (uninstall first, which takes the app's database along; back it
+up first under Settings, Backup and restore, and restore it afterwards). A
 build made to be updated over the ones already on the phones needs the same signing key in a repository secret;
 a build for Play needs the release key in one.
 

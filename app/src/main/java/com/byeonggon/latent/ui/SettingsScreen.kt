@@ -53,7 +53,7 @@ import com.byeonggon.latent.ui.library.AboutDialog
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** What is set once and then left alone: where the tabs are, light or dark, the size of the grid, the language, how long the trash keeps photos, the internet for maps, which phone folders to list. */
+/** What is set once and then left alone: where the tabs are, light or dark, the size of the grid, the language, how long the trash keeps photos, the internet for maps, which phone folders to list; and the backup of it all. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
@@ -215,6 +215,9 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            BackupSection()
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             TextButton(onClick = { about = true }) { Text(stringResource(R.string.about)) }
         }
     }
@@ -260,14 +263,14 @@ private val TabPosition.label: Int
     }
 
 @Composable
-private fun Heading(text: Int) {
+internal fun Heading(text: Int) {
     Text(stringResource(text), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
 }
 
 @Composable
-private fun Hint(text: Int) = Hint(stringResource(text))
+internal fun Hint(text: Int) = Hint(stringResource(text))
 
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
