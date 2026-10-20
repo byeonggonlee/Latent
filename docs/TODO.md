@@ -2,7 +2,7 @@
 
 What is open right now, by who has to move. The longer list of features is in [`ROADMAP.md`](ROADMAP.md), what only a
 phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md).
-Last updated 2026-10-20.
+Last updated 2026-10-20 (evening).
 
 ## Waiting for the owner
 
@@ -10,7 +10,10 @@ Last updated 2026-10-20.
       workflow, `CHANGELOG.md`, `SECURITY.md`, issue templates, and development of phones' DNG raw files
       (`raw/Dng.kt`, `raw/LosslessJpeg.kt`; the Sony ARW path only gains a `saturation` field with the same value).
       Read through here and run on its branch: 430 tests, lint and the androidTest compile pass, as in its CI. Not
-      merged: it needs the owner's go (the DNG decoding has only been tried on synthetic files, see DEVICE_CHECKS).
+      merged: it needs the owner's go. Tried on the one real file so far, a Galaxy S26 DNG of 2026-10-20: it is a
+      *linear* DNG with JPEG XL compression (16-bit, three colours per pixel, with a 4000x3000 JPEG preview beside it),
+      which the PR refuses on purpose ("Linear DNGs ... are not supported yet"). Its Bayer-mosaic and lossless-JPEG
+      paths have still only met synthetic files; a DNG from the S26's *Pro mode* "RAW" is the one to try.
 - [ ] **Signing secrets** in the repository (`SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`,
       `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md). Until they are there the nightly (it has run
       three nights, green) builds and publishes nothing. Then one manual *Run workflow* of **Nightly** with *force*
@@ -31,11 +34,10 @@ Last updated 2026-10-20.
 - [ ] **Backup and restore** of what lives only in the database (albums, picks and stars, edits and versions, own
       filters, LUT files, the timeline) into one file: the way across a reinstall, a new phone, a new package name
       and the first signed release. Medium. Not yet approved by the owner.
-- [ ] **Smaller APK**: it is 38.7 MB with every processor kind in it; arm64 only would be about 14 MB less on a
-      phone. Decide how (an ABI filter, or splits for Play) before the first release.
-- [ ] A look at the other pop-ups that keep their state in the library's title bar (the stars filter menu, the
-      album list, About, the confirmation to trash the rejected): none should close when the list empties or fills.
-- [ ] A smoke test of ten minutes, written out from DEVICE_CHECKS in the order of risk, for after each nightly.
+- [x] The other dialogs of the library's title bar (About, albums, the confirmation to trash the rejected) now live
+      above it, like the search sheet; a test shows About staying up while the library fills under it.
+- [x] A ten-minute check for the phone after each nightly: [`SMOKE_TEST.md`](SMOKE_TEST.md).
+- [x] **Smaller APK**: the CI and nightly builds carry arm64 only, 20 MB instead of 39 MB (`-PlatentAbis`).
 
 ## On hold
 
