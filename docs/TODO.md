@@ -6,18 +6,11 @@ Last updated 2026-10-20 (late night).
 
 ## Waiting for the owner
 
-- [ ] **Pull request #1** (*Add a stable release workflow for v\* tags*, written in a cloud session): the `v*` release
-      workflow, `CHANGELOG.md`, `SECURITY.md`, issue templates, and development of phones' DNG raw files. Since
-      added here: linear DNGs (three samples a pixel) as both S26 modes write them, Pro mode in lossless JPEG and
-      Expert RAW in JPEG XL (jxlatte, MIT, kept in `third_party/jxlatte` and patched to decode a 4000x3000 picture in
-      384 MB of heap instead of more than 1.2 GB), and a positive `BaselineExposure` (Expert RAW's is +3). Both real
-      S26 files develop on a computer, upright and as bright as the phone's JPEG. `main` is merged into it: 468
-      tests and lint pass. Not merged: it needs the owner's go.
 - [ ] **Signing secrets** in the repository (`SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`,
       `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md). Until they are there the nightly (it has run
       three nights, green) builds and publishes nothing. Then one manual *Run workflow* of **Nightly** with *force*
       to see the first pre-release, its checksum file and the clean-up of old ones.
-- [ ] **`gh`**: `brew install gh`, `gh auth login`. Then builds can be started and their logs read from here, and
+- [ ] **`gh`**: installed; `gh auth login` is left. Then builds can be started and their logs read from here, and
       pull requests opened and read.
 - [ ] **On the phones**: the checks in DEVICE_CHECKS, the risky ones first: the colour range and LUT shaders against
       the CPU result, subject and background masks (log tag `SubjectMask`: GPU or CPU, cold and warm time), the
@@ -32,6 +25,9 @@ Last updated 2026-10-20 (late night).
 
 ## Ready to do (this side)
 
+- [x] **Pull request #1** merged 2026-10-20: the `v*` release workflow, `CHANGELOG.md`, `SECURITY.md`, issue
+      templates, and phones' DNGs (mosaics and linear, uncompressed, lossless JPEG or JPEG XL through
+      `third_party/jxlatte`, with a positive `BaselineExposure`). To try on a phone: DEVICE_CHECKS, "Phone raw files".
 - [x] **Backup and restore** of what lives only in the database (albums, picks and stars, edits and versions, own
       filters, LUT files, detected masks, the timeline, camera imports) into one zip that the person keeps: the way
       across a reinstall, a new phone, a new package name and the first signed release (RELEASES.md, "Reinstalling a
