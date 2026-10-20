@@ -702,4 +702,5 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="backup_restore_no_access">To find the photos of the backup, Latent needs access to your photos and to the DCIM/Latent folder. Give it in the library first, then restore. Nothing was taken over.</string>
     <string name="backup_restore_failed">The restore failed, and nothing of the backup was taken over: %1$s</string>
     <string name="backup_restore_wait_for_sync">A camera sync is running. Restore once it has finished.</string>
+    <string name="backup_restore_reimport_hint">Camera files whose photos are not on this phone are not imported again: the Camera tab counts them under \"Files deleted from the phone\", where \"Let them be imported again\" brings them back from the camera.</string>
 </resources>

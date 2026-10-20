@@ -663,4 +663,5 @@
     <string name="backup_restore_no_access">バックアップの写真を見つけるには、写真と DCIM/Latent フォルダへのアクセスが必要です。先にライブラリで許可してから復元してください。何も取り込まれていません。</string>
     <string name="backup_restore_failed">復元できず、バックアップの内容は何も取り込まれていません: %1$s</string>
     <string name="backup_restore_wait_for_sync">カメラの同期中です。終わってから復元してください。</string>
+    <string name="backup_restore_reimport_hint">写真がこのスマートフォンにないカメラのファイルは、もう一度は取り込まれません。カメラタブの「スマートフォンから削除したファイル」に数えられ、「もう一度取り込めるようにする」でカメラから取り込み直せます。</string>
 </resources>

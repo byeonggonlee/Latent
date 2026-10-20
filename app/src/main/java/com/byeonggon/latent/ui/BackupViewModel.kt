@@ -198,6 +198,7 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
             ),
         )
         missingText(getApplication(), result.missing)?.let { append('\n').append(it) }
+        if (result.missing.count > 0 && result.syncRecordsAdded > 0) append('\n').append(text(R.string.backup_restore_reimport_hint))
         if (result.onlineMapsLeftOff) append('\n').append(text(R.string.backup_restore_online_maps))
     }
 
