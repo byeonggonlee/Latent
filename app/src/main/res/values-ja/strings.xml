@@ -630,6 +630,7 @@
     <string name="backup_restore_running">復元中…</string>
     <string name="backup_step_of">%1$s: %2$s / %3$s</string>
     <string name="backup_step_checking">ファイルの読み込み</string>
+    <string name="backup_step_finding">このスマートフォンで写真を探す</string>
     <string name="backup_step_photos">写真</string>
     <string name="backup_step_albums">アルバム</string>
     <string name="backup_step_versions">バージョン</string>

@@ -106,6 +106,7 @@ private fun RestoreDialog(plan: RestorePlan, onConfirm: () -> Unit, onDismiss: (
 private val BackupStep.label: Int
     get() = when (this) {
         BackupStep.CHECKING -> R.string.backup_step_checking
+        BackupStep.FINDING -> R.string.backup_step_finding
         BackupStep.PHOTOS -> R.string.backup_step_photos
         BackupStep.ALBUMS -> R.string.backup_step_albums
         BackupStep.VERSIONS -> R.string.backup_step_versions

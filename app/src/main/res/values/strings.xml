@@ -669,6 +669,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="backup_restore_running">Restoring…</string>
     <string name="backup_step_of">%1$s: %2$s of %3$s</string>
     <string name="backup_step_checking">Reading the file</string>
+    <string name="backup_step_finding">Looking for the photos on this phone</string>
     <string name="backup_step_photos">Photos</string>
     <string name="backup_step_albums">Albums</string>
     <string name="backup_step_versions">Versions</string>

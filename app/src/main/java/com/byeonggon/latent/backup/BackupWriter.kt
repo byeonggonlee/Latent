@@ -23,7 +23,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /** The parts of a backup and of a restore, in the order they are done, to say how far it has come. */
-enum class BackupStep { CHECKING, PHOTOS, ALBUMS, VERSIONS, FILTERS, LUTS, MASKS, CAMERA, TIMELINE, SETTINGS }
+enum class BackupStep { CHECKING, FINDING, PHOTOS, ALBUMS, VERSIONS, FILTERS, LUTS, MASKS, CAMERA, TIMELINE, SETTINGS }
 
 fun interface BackupProgress {
     /** [done] of [total] in [step]; [total] is 0 where it is not known. */

@@ -630,6 +630,7 @@
     <string name="backup_restore_running">복원하는 중…</string>
     <string name="backup_step_of">%1$s: %3$s 중 %2$s</string>
     <string name="backup_step_checking">파일 읽기</string>
+    <string name="backup_step_finding">이 휴대전화에서 사진 찾기</string>
     <string name="backup_step_photos">사진</string>
     <string name="backup_step_albums">앨범</string>
     <string name="backup_step_versions">버전</string>

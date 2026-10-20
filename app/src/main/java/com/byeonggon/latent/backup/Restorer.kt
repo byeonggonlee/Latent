@@ -94,7 +94,7 @@ class Restorer(
     }
 
     private suspend fun planFor(archive: BackupArchive, contents: Contents, progress: BackupProgress): RestorePlan {
-        prepare(contents)
+        prepare(contents, progress)
         val matcher = MediaMatcher(database.backupDao().mediaInLibrary(), paths)
         val found = HashSet<Long>()
         val missing = MissingList()
@@ -141,7 +141,7 @@ class Restorer(
     }
 
     private suspend fun restoreFrom(archive: BackupArchive, contents: Contents, progress: BackupProgress): RestoreResult {
-        prepare(contents)
+        prepare(contents, progress)
         val before = settings.settings.first()
         val addedLuts = ArrayList<String>()
         val addedMasks = ArrayList<String>()
@@ -220,8 +220,10 @@ class Restorer(
     }
 
     /** Lets the library take in the files on the phone, so that the backup's photos can be found among them. */
-    private suspend fun prepare(contents: Contents) {
+    private suspend fun prepare(contents: Contents, progress: BackupProgress) {
         if (!hasAccess()) throw NoLibraryAccessException()
+        // Reading the places out of a phone folder's photos the first time takes a while.
+        progress.report(BackupStep.FINDING, 0, 0)
         val chosen = settings.settings.first().phoneFolders
         noticeFiles(chosen + contents.settings?.phoneFolders.orEmpty() + contents.phoneFolders)
     }
