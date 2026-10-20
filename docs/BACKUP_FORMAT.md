@@ -45,8 +45,9 @@ Times are milliseconds since 1970 (UTC); places are degrees (WGS 84). The order 
 - A file with a **newer** `formatVersion` than the app knows is refused with a message ("made by a newer version of
   Latent (format 2; this version reads up to 1): update the app"), and nothing is changed.
 - Within a version a reader ignores entries and fields it does not know, and takes a missing optional field as its
-  default. A record with a value it does not know where it must know it (a kind of photo, an origin, a source of a
-  place) is left out; such a photo counts as not found.
+  default. A record with a value it does not know where it must know it (a photo's `kind` or `origin`, a place's
+  `source` in the timeline) is left out of the restore, and not counted; a `geoSource` it does not know is taken as
+  `CAMERA`. A line that is no JSON object, or lacks a field that is not optional, makes the file damaged.
 - A change that an older reader can ignore without harm (a new optional field, a new entry) keeps the version. Any other
   change (a field renamed, removed, or given another meaning or unit; something an older reader must not skip) makes a
   new `formatVersion`, and the reader keeps reading every older one.

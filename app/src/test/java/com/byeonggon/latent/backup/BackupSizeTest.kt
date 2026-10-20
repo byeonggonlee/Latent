@@ -54,19 +54,24 @@ class BackupSizeTest {
     )
 
     /**
-     * The most the heap held beyond [baseline] at any of the moments [sample] was called, counting only what is still
+     * The most the heap held at any of the moments [sample] was called, counting only what is still
      * in use (it collects the garbage first). What a stream goes through is garbage a moment later; a list of every
      * point, or a text of the whole entry, is not.
      */
     private class HeapWatch {
         private val runtime = Runtime.getRuntime()
-        private val baseline = live()
-        var most = 0L
-            private set
+        private val before = live()
+        private var highest = 0L
 
         fun sample() {
-            most = maxOf(most, live() - baseline)
+            highest = maxOf(highest, live())
         }
+
+        /**
+         * What was held at most beyond what the heap holds without the work, before it or after it: other tests in the
+         * same process may leave work of their own going, which slowly takes some memory too.
+         */
+        fun most(): Long = (highest - maxOf(before, live())).coerceAtLeast(0)
 
         // A collection is only asked for; of a few, the least is what is really in use.
         private fun live(): Long = (1..3).minOf {
@@ -92,20 +97,22 @@ class BackupSizeTest {
         val writing = HeapWatch()
         file.outputStream().use { source.writer().write(it, watching(writing)) }
         val backedUp = System.nanoTime()
+        val written = writing.most()
         target.use()
         val reading = HeapWatch()
         target.restorer().restore(file, watching(reading))
         val restored = System.nanoTime()
 
+        val read = reading.most()
         val seconds = { from: Long, to: Long -> (to - from) / 1e9 }
         println(
-            "150k places: ${file.length() / 1024} KB, backup ${seconds(started, backedUp)} s (${writing.most / KB} KB held), " +
-                "restore ${seconds(backedUp, restored)} s (${reading.most / KB} KB held)",
+            "150k places: ${file.length() / 1024} KB, backup ${seconds(started, backedUp)} s (${written / KB} KB held), " +
+                "restore ${seconds(backedUp, restored)} s (${read / KB} KB held)",
         )
         assertTrue("backup took ${seconds(started, backedUp)} s", seconds(started, backedUp) < 60)
         assertTrue("restore took ${seconds(backedUp, restored)} s", seconds(backedUp, restored) < 90)
-        assertTrue("the backup held ${writing.most / KB} KB", writing.most < HELD_LIMIT)
-        assertTrue("the restore held ${reading.most / KB} KB", reading.most < HELD_LIMIT)
+        assertTrue("the backup held ${written / KB} KB", written < HELD_LIMIT)
+        assertTrue("the restore held ${read / KB} KB", read < HELD_LIMIT)
 
         assertEquals(POINTS, target.database.backupDao().countLocations())
         var after = 0L
