@@ -1,7 +1,6 @@
 package com.byeonggon.latent.backup
 
 import android.content.Context
-import androidx.room.Room
 import com.byeonggon.latent.camera.ImportedFiles
 import com.byeonggon.latent.camera.RemoteFile
 import com.byeonggon.latent.data.AppSettings
@@ -68,56 +67,14 @@ class BackupRoundTripTest {
 
     private val context: Context = RuntimeEnvironment.getApplication()
     private val settings = SettingsRepository(context)
-    private lateinit var phone: Phone
-
-    /** One phone: its database, library folder, phone storage, LUTs and masks. */
-    inner class Phone(name: String, val user: Int) {
-        val home: File = folders.newFolder(name)
-        val database: AppDatabase = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-        val library = File(home, "storage/emulated/$user/DCIM/Latent")
-        val luts = File(home, "files/luts")
-        val masks = File(home, "files/masks")
-
-        /** What the library takes in when it looks at its folders; filled by each test as adoption would. */
-        val onDisk = ArrayList<MediaItemEntity>()
-        var access = true
-        var noticed: Set<String>? = null
-
-        fun use() {
-            LutStore.directory = luts
-            MaskStore.directory = masks
-            phone = this
-        }
-
-        fun phonePath(relative: String) = "/storage/emulated/$user/$relative"
-
-        fun libraryFile(relative: String) = File(library, relative)
-
-        fun writer() = BackupWriter(database, settings, library, AppIdentity("com.byeonggon.latent", "0.1.0-test", 42), clock = { NOW })
-
-        fun restorer() = Restorer(
-            database, settings, library,
-            hasAccess = { access },
-            noticeFiles = { chosen ->
-                noticed = chosen
-                // Adoption only adds what the library does not know yet.
-                val known = database.mediaDao().all().mapTo(HashSet()) { it.path }
-                onDisk.filter { it.path !in known }.forEach { database.mediaDao().insert(it) }
-            },
-            hasOriginal = { item -> File(library, ".originals/" + File(item.path).relativeTo(library).path).exists() },
-        )
-
-        fun close() = database.close()
-    }
-
-    private lateinit var source: Phone
-    private lateinit var target: Phone
+    private lateinit var source: TestPhone
+    private lateinit var target: TestPhone
 
     @Before
     fun setUp() = runBlocking {
         settings.update { AppSettings() }
-        source = Phone("source", user = 0)
-        target = Phone("target", user = 10)
+        source = TestPhone(context, folders.newFolder("source"), user = 0, settings)
+        target = TestPhone(context, folders.newFolder("target"), user = 10, settings)
     }
 
     @After
@@ -449,14 +406,4 @@ class BackupRoundTripTest {
     private companion object {
         const val NOW = 1_760_950_000_000L
     }
-}
-
-internal inline fun <reified T : Throwable> assertThrows(block: () -> Unit): T {
-    try {
-        block()
-    } catch (e: Throwable) {
-        if (e is T) return e
-        throw AssertionError("Expected ${T::class.simpleName}, got $e", e)
-    }
-    throw AssertionError("Expected ${T::class.simpleName}, nothing was thrown")
 }
