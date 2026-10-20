@@ -392,6 +392,23 @@ class BackupRoundTripTest {
     }
 
     @Test
+    fun keepsThePhonesPhotosFromBeingListedAgainUntilTheSettingsAreIn() = runBlocking {
+        fillSource()
+        val backup = backUp()
+        putFilesOnTarget()
+        var heldForSettings = false
+
+        target.restorer().inspect(backup)
+        assertTrue(target.listingHeld)
+        target.listingHeld = false
+        target.restorer().restore(backup) { step, _, _ -> if (step == BackupStep.SETTINGS) heldForSettings = target.phoneListing.isLocked }
+
+        assertTrue(target.listingHeld)
+        assertTrue(heldForSettings)
+        assertFalse(target.phoneListing.isLocked)
+    }
+
+    @Test
     fun refusesWithoutAccessToTheLibrary() = runBlocking {
         fillSource()
         val backup = backUp()

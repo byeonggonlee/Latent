@@ -7,6 +7,7 @@ import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.enhance.LutStore
 import com.byeonggon.latent.enhance.MaskStore
+import kotlinx.coroutines.sync.Mutex
 import java.io.File
 
 /**
@@ -26,6 +27,10 @@ internal class TestPhone(context: Context, home: File, val user: Int, private va
     /** The phone folders the library was last asked to look through; null before. */
     var noticed: Set<String>? = null
 
+    /** What the app holds while it lists the phone's photos, and whether it was held while the files were taken in. */
+    val phoneListing = Mutex()
+    var listingHeld = false
+
     /** Makes the LUTs and masks this phone's. */
     fun use() {
         LutStore.directory = luts
@@ -44,11 +49,13 @@ internal class TestPhone(context: Context, home: File, val user: Int, private va
         hasAccess = { access },
         noticeFiles = { chosen ->
             noticed = chosen
+            listingHeld = phoneListing.isLocked
             // Adoption only adds what the library does not know yet.
             val known = database.mediaDao().all().mapTo(HashSet()) { it.path }
             onDisk.filter { it.path !in known }.forEach { database.mediaDao().insert(it) }
         },
         hasOriginal = { item -> File(library, ".originals/" + File(item.path).relativeTo(library).path).exists() },
+        exclusive = phoneListing,
     )
 
     fun close() = database.close()

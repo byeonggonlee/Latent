@@ -17,6 +17,8 @@ import com.byeonggon.latent.enhance.MaskStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -77,6 +79,8 @@ class Restorer(
     /** Whether a JPEG of the library keeps its original aside, as an edited one does. */
     private val hasOriginal: (MediaItemEntity) -> Boolean,
     phoneRelativePath: (String) -> String = PhoneLibrary::relativePathOf,
+    /** Held from taking the files in to the last setting: what else lists the phone's photos waits for it. */
+    private val exclusive: Mutex = Mutex(),
 ) {
     private val paths = MediaPaths(libraryRoot, phoneRelativePath)
 
@@ -85,42 +89,46 @@ class Restorer(
     suspend fun inspect(zip: File, progress: BackupProgress = BackupProgress.NONE): RestorePlan = withContext(Dispatchers.IO) {
         BackupArchive.open(zip).use { archive ->
             val contents = check(archive, progress)
-            prepare(contents)
-            val matcher = MediaMatcher(database.backupDao().mediaInLibrary(), paths)
-            val found = HashSet<Long>()
-            val missing = MissingList()
-            var replaced = 0
-            matchAll(archive, matcher, contents.media, progress) { record, target ->
-                if (target == null) {
-                    missing += record.name
-                } else {
-                    found += record.id
-                    if (replacesOwn(target, restoredOnto(target, record, target.editInFile && hasOriginal(target)))) replaced++
-                }
-            }
-            val albumsHere = HashSet<Long>()
-            archive.eachRecord(BackupFormat.ALBUM_ITEMS, AlbumItemRecord::fromJson) { if (it.media in found) albumsHere += it.album }
-            var albums = 0
-            archive.eachRecord(BackupFormat.ALBUMS, AlbumRecord::fromJson) { if (it.id in albumsHere) albums++ }
-            var versions = 0
-            archive.eachRecord(BackupFormat.VERSIONS, VersionRecord::fromJson) { if (it.media in found) versions++ }
-            RestorePlan(
-                manifest = archive.manifest,
-                photos = contents.media,
-                found = found.size,
-                missing = missing.result(),
-                replaced = replaced,
-                albums = albums,
-                versions = versions,
-                filters = contents.filters,
-                luts = contents.luts.size,
-                masks = contents.masks.size,
-                locations = contents.locations,
-                syncRecords = contents.syncRecords,
-                hasSettings = contents.settings != null,
-                onlineMapsInBackup = contents.settings?.onlineMaps == true,
-            )
+            exclusive.withLock { planFor(archive, contents, progress) }
         }
+    }
+
+    private suspend fun planFor(archive: BackupArchive, contents: Contents, progress: BackupProgress): RestorePlan {
+        prepare(contents)
+        val matcher = MediaMatcher(database.backupDao().mediaInLibrary(), paths)
+        val found = HashSet<Long>()
+        val missing = MissingList()
+        var replaced = 0
+        matchAll(archive, matcher, contents.media, progress) { record, target ->
+            if (target == null) {
+                missing += record.name
+            } else {
+                found += record.id
+                if (replacesOwn(target, restoredOnto(target, record, target.editInFile && hasOriginal(target)))) replaced++
+            }
+        }
+        val albumsHere = HashSet<Long>()
+        archive.eachRecord(BackupFormat.ALBUM_ITEMS, AlbumItemRecord::fromJson) { if (it.media in found) albumsHere += it.album }
+        var albums = 0
+        archive.eachRecord(BackupFormat.ALBUMS, AlbumRecord::fromJson) { if (it.id in albumsHere) albums++ }
+        var versions = 0
+        archive.eachRecord(BackupFormat.VERSIONS, VersionRecord::fromJson) { if (it.media in found) versions++ }
+        return RestorePlan(
+            manifest = archive.manifest,
+            photos = contents.media,
+            found = found.size,
+            missing = missing.result(),
+            replaced = replaced,
+            albums = albums,
+            versions = versions,
+            filters = contents.filters,
+            luts = contents.luts.size,
+            masks = contents.masks.size,
+            locations = contents.locations,
+            syncRecords = contents.syncRecords,
+            hasSettings = contents.settings != null,
+            onlineMapsInBackup = contents.settings?.onlineMaps == true,
+        )
     }
 
     /** Restores [zip]. Throws, having changed nothing of the backup's, when it cannot be read or is cancelled. */
@@ -128,37 +136,41 @@ class Restorer(
     suspend fun restore(zip: File, progress: BackupProgress = BackupProgress.NONE): RestoreResult = withContext(Dispatchers.IO) {
         BackupArchive.open(zip).use { archive ->
             val contents = check(archive, progress)
-            prepare(contents)
-            val before = settings.settings.first()
-            val addedLuts = ArrayList<String>()
-            val addedMasks = ArrayList<String>()
-            val listedLuts = HashSet<String>()
-            val result = try {
-                // The files go first, so that edits never name one that is not there; they are taken away again if the rest fails.
-                for ((index, id) in contents.luts.withIndex()) {
-                    if (LutStore.restore(id, archive.bytes(BackupFormat.lutEntry(id), LUT_LIMIT))) addedLuts += id
-                    progress.report(BackupStep.LUTS, index + 1, contents.luts.size)
-                }
-                for ((index, id) in contents.masks.withIndex()) {
-                    if (MaskStore.restore(id, archive.bytes(BackupFormat.maskEntry(id), MASK_LIMIT))) addedMasks += id
-                    progress.report(BackupStep.MASKS, index + 1, contents.masks.size)
-                }
-                database.withTransaction { restoreRecords(archive, contents, progress, listedLuts) }
-            } catch (e: Throwable) {
-                withContext(NonCancellable) {
-                    addedLuts.forEach(LutStore::delete)
-                    addedMasks.forEach(MaskStore::delete)
-                }
-                throw e
-            }
-            progress.report(BackupStep.SETTINGS, 0, 0)
-            contents.settings?.let { restored -> settings.update(restored::applyTo) }
-            result.copy(
-                lutsAdded = (listedLuts + addedLuts).size,
-                masksAdded = addedMasks.size,
-                onlineMapsLeftOff = contents.settings?.onlineMaps == true && !before.onlineMaps,
-            )
+            exclusive.withLock { restoreFrom(archive, contents, progress) }
         }
+    }
+
+    private suspend fun restoreFrom(archive: BackupArchive, contents: Contents, progress: BackupProgress): RestoreResult {
+        prepare(contents)
+        val before = settings.settings.first()
+        val addedLuts = ArrayList<String>()
+        val addedMasks = ArrayList<String>()
+        val listedLuts = HashSet<String>()
+        val result = try {
+            // The files go first, so that edits never name one that is not there; they are taken away again if the rest fails.
+            for ((index, id) in contents.luts.withIndex()) {
+                if (LutStore.restore(id, archive.bytes(BackupFormat.lutEntry(id), LUT_LIMIT))) addedLuts += id
+                progress.report(BackupStep.LUTS, index + 1, contents.luts.size)
+            }
+            for ((index, id) in contents.masks.withIndex()) {
+                if (MaskStore.restore(id, archive.bytes(BackupFormat.maskEntry(id), MASK_LIMIT))) addedMasks += id
+                progress.report(BackupStep.MASKS, index + 1, contents.masks.size)
+            }
+            database.withTransaction { restoreRecords(archive, contents, progress, listedLuts) }
+        } catch (e: Throwable) {
+            withContext(NonCancellable) {
+                addedLuts.forEach(LutStore::delete)
+                addedMasks.forEach(MaskStore::delete)
+            }
+            throw e
+        }
+        progress.report(BackupStep.SETTINGS, 0, 0)
+        contents.settings?.let { restored -> settings.update(restored::applyTo) }
+        return result.copy(
+            lutsAdded = (listedLuts + addedLuts).size,
+            masksAdded = addedMasks.size,
+            onlineMapsLeftOff = contents.settings?.onlineMaps == true && !before.onlineMaps,
+        )
     }
 
     /** What a backup holds, found by reading every entry through, which also proves it whole. */
