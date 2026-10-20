@@ -2,18 +2,17 @@
 
 What is open right now, by who has to move. The longer list of features is in [`ROADMAP.md`](ROADMAP.md), what only a
 phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md).
-Last updated 2026-10-20 (night).
+Last updated 2026-10-20 (late night).
 
 ## Waiting for the owner
 
 - [ ] **Pull request #1** (*Add a stable release workflow for v\* tags*, written in a cloud session): the `v*` release
-      workflow, `CHANGELOG.md`, `SECURITY.md`, issue templates, and development of phones' DNG raw files
-      (`raw/Dng.kt`, `raw/LosslessJpeg.kt`; the Sony ARW path only gains a `saturation` field with the same value).
-      Read through here and run on its branch: 430 tests, lint and the androidTest compile pass, as in its CI. Not
-      merged: it needs the owner's go. Tried on the one real file so far, a Galaxy S26 DNG of 2026-10-20: it is a
-      *linear* DNG with JPEG XL compression (16-bit, three colours per pixel, with a 4000x3000 JPEG preview beside it),
-      which the PR refuses on purpose ("Linear DNGs ... are not supported yet"). Its Bayer-mosaic and lossless-JPEG
-      paths have still only met synthetic files; a DNG from the S26's *Pro mode* "RAW" is the one to try.
+      workflow, `CHANGELOG.md`, `SECURITY.md`, issue templates, and development of phones' DNG raw files. Since
+      added here: linear DNGs (three samples a pixel) as both S26 modes write them, Pro mode in lossless JPEG and
+      Expert RAW in JPEG XL (jxlatte, MIT, kept in `third_party/jxlatte` and patched to decode a 4000x3000 picture in
+      384 MB of heap instead of more than 1.2 GB), and a positive `BaselineExposure` (Expert RAW's is +3). Both real
+      S26 files develop on a computer, upright and as bright as the phone's JPEG. `main` is merged into it: 468
+      tests and lint pass. Not merged: it needs the owner's go.
 - [ ] **Signing secrets** in the repository (`SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`,
       `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md). Until they are there the nightly (it has run
       three nights, green) builds and publishes nothing. Then one manual *Run workflow* of **Nightly** with *force*
