@@ -142,6 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
+| Claude Code (computer) | Room's `MigrationTestHelper` (`room-testing`, tests only) set up against the committed schemas, with a first test that a database made from `13.json` opens as it is | `claude/room-migration-helper` (pull request) | `gradle/libs.versions.toml`, `app/build.gradle.kts`, `data/CommittedSchemaTest.kt` | 2026-10-22 |
 
 ## For Codex
 
