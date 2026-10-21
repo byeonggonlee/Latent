@@ -2,7 +2,8 @@
 
 What is open right now, by who has to move. The longer list of features is in [`ROADMAP.md`](ROADMAP.md), what only a
 phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md), which
-agent (Claude Code or Codex) is on what in [`HANDOFF.md`](HANDOFF.md).
+agent (Claude Code, Codex or Antigravity) is on what in [`HANDOFF.md`](HANDOFF.md), and the owner's decisions on how
+the app is built in [`architecture/decisions.md`](architecture/decisions.md).
 Last updated 2026-10-20 (late night).
 
 ## Waiting for the owner
@@ -19,6 +20,10 @@ Last updated 2026-10-20 (late night).
 - [ ] **Decide when publishing is settled**: the package name (RELEASES.md and the notes on Play), then the first real
       release key, which means every phone is reinstalled once (with a backup first: RELEASES.md, "Reinstalling a
       phone").
+- [ ] **The rest of Codex's architecture questions** (`architecture/codex-assessment.md` §11; question 3, the
+      precision goal, is decided in `architecture/decisions.md`): the first scope of the decoder work, whether
+      standalone JPEG XL, JPEG or HEIF come under the decoders, the phones and the memory and time budgets, the
+      rights to sample photos and who checks on a phone, and who approves a change of the contract.
 - [ ] **OpenCode pilot** (optional): install it, connect a provider, and have a cheap model read the Japanese and
       Korean strings for wording that is off. Source is public; no photos or places are ever sent.
 

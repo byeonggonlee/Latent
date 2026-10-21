@@ -16,7 +16,7 @@ camera sync, all on the phone. Last revised 2026-10-15 (items 1 to 5 and 8 done,
 | **Looks** | Presets (own and imported), profiles, **LUTs** | Looks, HDR, glow, drama | 16 built-in looks, own looks, Lightroom presets and `.cube` LUTs imported (LUTs on stills only) |
 | **Export** | Size, quality, format, metadata, watermark | Save, export, share | Share at a size, JPEG quality, place left out, save a copy. **JPEG only** |
 | **Organise** | Albums, search, keywords, flags | – | Albums, ratings, versions, search by Exif, date, place |
-| **Bit depth, HDR** | 10-bit HEIC and Ultra HDR in and out, HDR display | HDR look (tone mapping, not HDR output) | **8-bit pictures in and out, SDR screen** (inside, light is 16-bit) |
+| **Bit depth, HDR** | 10-bit HEIC and Ultra HDR in and out, HDR display | HDR look (tone mapping, not HDR output) | **8-bit pictures in and out, SDR screen** (inside, light is kept in 14-bit levels) |
 | Beyond stills | HDR merge, panorama | Double exposure, text, frames | – |
 
 ## Next, in this order
@@ -107,6 +107,8 @@ Each is small or medium, works offline, and needs no new permission.
   slider, curve and mask assumes SDR 0 to 1 today, so tone mapping has to be designed first. Memory is the first
   wall (a 24 MP float picture is about 190 MB, so strips and tiles). Only worth it once HDR sources are common among
   the owner's photos. Native code (`libavif`, `libjxl`) would come in only to write AVIF or JPEG XL, not for this.
+  The precision goal until then is the camera's look, not colorimetry: see
+  [`architecture/decisions.md`](architecture/decisions.md) (2026-10-21).
 - Video: trim, then LUT and grading.
 - Double exposure, text, frames (Snapseed's casual tools).
 - Keywords and captions; place names (needs a network service).

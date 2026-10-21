@@ -1,0 +1,75 @@
+# Decisions
+
+What the owner has decided about how Latent is built and how the agents work on it, newest first. Each entry says
+what was decided, why, what it means for a change, and what would open it again. An entry changes only when the
+owner decides again; then the old text stays, marked as replaced. Proposals that wait for a decision live in the
+assessments in this folder (for example [`codex-assessment.md`](codex-assessment.md)) and in `docs/TODO.md`.
+
+## 2026-10-21 · Precision: the camera's look first, colorimetry later
+
+**Decided.** For now the goal of raw development and of the editor is that a photo looks as the camera's own JPEG of
+it does: the same brightness, contrast, colour and highlight roll-off, before any edit. Reproducing the scene's
+colours colorimetrically (a colour chart measured right, scene-referred values kept, a wide-gamut working space,
+ICC conversions, HDR or float output) is a later goal, not today's. This answers question 3 of
+`codex-assessment.md` §11.
+
+**Why.** Latent is first a way to bring a camera's photos in and develop them as the camera would, then to edit
+them; a faithful look is what the owner judges a photo by, and it can be checked against the camera's JPEG. A
+colorimetric pipeline needs references, budgets for memory on a phone, and float buffers, none of which exist yet.
+
+**What it means for a change:**
+
+- The working picture stays `LinearImage`: three planes of 14-bit levels (0 to 16383), clipped where they are
+  clipped today, including values below 0 and above white after white balance and the colour matrix.
+- The look is what defines a correct result: `CameraCurve` (measured on the ZV-E10), the saturation of the colour
+  stage (`1.45` for Sony ARW, `1.0` for DNG), and the camera's JPEG next to a raw file. For Sony ARW,
+  `RawSampleTest` compares against the camera's JPEG; for phone DNGs the comparison is the owner's, in
+  `docs/DEVICE_CHECKS.md` ("Phone raw files").
+- A change that moves pixels without meaning to change the look (moving code, a faster loop, a new decoder backend)
+  gives the same levels, bit for bit, as before it.
+- A change that is meant to change the look or the colour (the curve, the saturation, the colour matrix, white
+  balance, demosaicing, precision) is a change that needs review (see `AGENTS.md`): a pull request, the other code
+  agent's review, and the owner's judgement on photos. It never rides along with another change.
+- JPEG and HEIF pictures keep coming in through the inverse of the camera's curve; they are an editing
+  approximation, not scene light, and are not described as such.
+- Nothing is presented as colour-managed or HDR: the app writes 8-bit sRGB JPEGs.
+
+**Opens again** when the 10-bit and HDR items of `docs/ROADMAP.md` (10 to 12) are taken up, or when a precision
+prototype (milestone M5-A in `codex-assessment.md`) has numbers from a phone to decide by. The owner decides then.
+
+## 2026-10-21 · Review only where it matters
+
+**Decided.** A change is reviewed by the other code agent only when it is important; small patches are not. What
+counts as important is listed in `AGENTS.md` ("Getting to main"): the seam between decoders and the rest, colour
+and precision, buffers and threads, data that could be lost, privacy, signing and CI, dependencies and native code,
+and another agent's area. The milestones and reviews of `codex-assessment.md` apply to those changes, not to every
+patch.
+
+**Why.** Latent is a project of one owner; a review for every small fix would cost more than the mistakes it finds.
+
+## 2026-10-21 · Small changes straight to main, reviewed ones through a pull request
+
+**Decided.** An agent that can run the checks pushes a small change straight to `main` after them. A change that
+needs review goes through a pull request and is merged once CI is green and the review is done. An agent without
+the Android SDK always opens a pull request.
+
+## 2026-10-21 · Each agent in its own worktree
+
+**Decided.** Every agent, Claude Code included, works in a git worktree and on a branch of its own, made from
+`origin/main`. The owner's checkout is left to the owner.
+
+**Why.** On 2026-10-21 two agents worked in the same checkout: one's branch switches and staging could take in the
+other's files, and commits landed on a `main` that had not been pushed.
+
+## 2026-10-21 · Antigravity reads and documents
+
+**Decided.** Antigravity reads the code and writes documents only (under `docs/`); it changes no source, test,
+build file or CI. Its findings go to the agent whose area they are in. Its assessment stays separate from Codex's,
+and the two are compared on the same revision before anything is decided from them.
+
+## Still open
+
+From `codex-assessment.md` §11, waiting for the owner: whether the first scope is the existing decoders with an
+explicit contract (and no `image-core` or `image-contract` module); whether standalone JPEG XL, JPEG or HEIF come
+under the decoders; the phones, largest picture, memory and time budgets; the rights to sample photos and who checks
+on a phone; and the final approver of contract changes.

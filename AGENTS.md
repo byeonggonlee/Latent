@@ -2,10 +2,60 @@
 
 ## Working Alongside Other Agents
 
-More than one agent works on Latent: Codex looks after the image decoders, Claude Code after the rest, and Claude Code
-may run on the owner's computer and in a cloud session at the same time. Read `docs/HANDOFF.md` before starting: it
-says who looks after which files, what is claimed, and what has been handed to you. Claim an item there before you
-start it, and log it there when it is done. Questions only the owner can answer go to `docs/TODO.md`.
+These rules bind every agent that works on Latent. The owner set them on 2026-10-21; the reasons are in
+[`docs/architecture/decisions.md`](docs/architecture/decisions.md). Who looks after which files, what is claimed and
+what is handed over is in [`docs/HANDOFF.md`](docs/HANDOFF.md): read it before starting, claim an item there before
+you start it, and log it there when it is done.
+
+### Who does what
+
+- **Claude Code**: everything but the image decoders: editor, renderers and shaders, library, backup, sync,
+  location, map, UI, CI and docs. It may run on the owner's computer and in cloud sessions at the same time.
+- **Codex**: the image decoders (TIFF, Sony ARW, DNG, lossless JPEG, JPEG XL with `third_party/jxlatte`, the MPF
+  preview), their tests and fixtures.
+- **Antigravity**: reads and documents. It writes only under `docs/`: its own files, such as
+  `docs/architecture/antigravity-assessment.md`, or what it is asked to write. It never changes source, tests,
+  build files or CI, nor another agent's document beyond adding to `docs/HANDOFF.md`. What it finds that needs code
+  goes into the queue of the agent whose area it is.
+- **The owner** decides the package name, keys and secrets, what ships, what waits for a phone, and between two
+  agents who disagree. No agent decides that for them: the question goes under "Waiting for the owner" in
+  `docs/TODO.md`.
+
+### Each agent in its own worktree
+
+- Work in a git worktree of your own, on a branch of your own, made from `origin/main`
+  (`git worktree add <dir> -b <prefix>/<topic> origin/main`): Claude Code under `.claude/worktrees/`, Codex and
+  Antigravity where their tools put worktrees, or in a sibling folder such as `../CameraManager-codex`. Never inside
+  another agent's worktree.
+- The owner's checkout (`/Users/byeonggon/Sources/CameraManager` on their computer) is theirs: no agent edits,
+  commits, stashes or switches branches there.
+- Branch prefixes: `claude/` or `ccr-` for Claude Code, `codex/` for Codex, `agy/` for Antigravity.
+- The stash is shared by every worktree: no bare `git stash`. Stage the paths of your task, never `git add -A`.
+- Remove a worktree and its branch once its work is on `main`.
+
+### Getting to main
+
+- **Small changes go straight to `main`**: documentation, tests, a small fix inside your own area with its test.
+  Before pushing, bring `origin/main` in, run what CI runs as far as your setup can (`testDebugUnitTest lintDebug
+  lintRelease assembleDebugAndroidTest`, then `git diff --exit-code -- app/schemas`), and push a fast-forward. An
+  agent without the Android SDK (a cloud session) cannot prove a change itself, so it always opens a pull request.
+- **Changes that need review go through a pull request**, reviewed by the other code agent (Claude Code or Codex),
+  and are merged once CI is green and the review is done; the owner decides when the two disagree. That is any
+  change to:
+  - the seam between decoders and the rest (`ArwImage`, `LensProfile`, `RawDeveloper`, `LensCorrection`,
+    `RawRenderer`, `RawCache`), or what `LinearImage` means;
+  - colour, precision, white balance, demosaicing, the look, crop or orientation;
+  - the sharing of buffers, threads, locks or cancellation;
+  - the Room schema and migrations, the backup format, or anything else that could lose the owner's photos or data;
+  - permissions, network access, privacy or location data;
+  - signing, the release and nightly workflows, or what CI checks;
+  - a new dependency, native code, the ABIs, or an update of `third_party/`;
+  - another agent's area.
+- Small changes are not reviewed: a reviewer is for the changes above, not for every patch.
+- Never push with force to `main`, never rewrite another agent's commits, and never skip, disable or loosen a test
+  to get green.
+- Every commit names its agent: Claude Code's `Co-Authored-By: Claude ...` line, or a trailer line `Agent: Codex`
+  or `Agent: Antigravity`.
 
 ## Project Structure & Module Organization
 
@@ -38,7 +88,7 @@ Tests use JUnit 4, Robolectric, and Compose UI testing. Name classes `*Test` or 
 
 ## Commit & Pull Request Guidelines
 
-Commit your changes after each completed task, including documentation updates. Stage only files belonging to your task; leave other agents' changes out.
+Commit your changes after each completed task, including documentation updates, with the trailer that names your agent (above). Stage only files belonging to your task; leave other agents' changes out.
 
 History uses descriptive imperative subjects such as “Compile the tests that run on a phone in CI”; follow that style. Keep commits focused. PRs should explain the problem, resulting behavior, and checks performed; link relevant issues and include screenshots for UI changes. State which device checks remain unverified.
 
