@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Restore uncompressed DNG strip/tile byte-count compatibility (queue 4), tests first; keep JPEG XL declared ranges strict. | `codex/decoder-followup` (small fix to main) | `raw/Dng.kt`, `raw/DngTest.kt` | 2026-10-21 |
 | Claude Code (computer) | A raw decode stops when the viewer or editor that asked for it is cancelled (first part of M3-A): the coroutine's `ensureActive()` as the request's `checkCancelled`, through `RawCache.read` and `RawRenderer.read` | `claude/decode-cancellation` (pull request, reviewed by Codex) | `raw/RawCache.kt`, `raw/RawRenderer.kt` (`read` only), `ui/viewer/ViewerViewModel.kt`, `ui/editor/EditorViewModel.kt`; the `RawCache` lambdas in `RawCacheTest`, `ShareCopyTest`, `FrameContractTest` | 2026-10-21 |
 
 ## For Codex
