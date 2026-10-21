@@ -26,11 +26,11 @@ object Healing {
     private const val RING = 1.35f
 
     /**
-     * Takes [spots] out of this picture, in place and in their order. [uprightTurns] are the quarter
-     * turns that bring the picture upright, for one that is stored on its side.
+     * Takes [spots] out of this picture, in place and in their order. The spots are placed on the upright
+     * picture; [orientation] is how this one is stored, for one on its side or mirrored.
      */
-    fun heal(image: LinearImage, spots: List<Spot>, uprightTurns: Int = 0) {
-        for (spot in spots) heal(image, spot, uprightTurns.mod(4))
+    fun heal(image: LinearImage, spots: List<Spot>, orientation: Orientation = Orientation.UPRIGHT) {
+        for (spot in spots) heal(image, spot, orientation)
     }
 
     /**
@@ -67,9 +67,9 @@ object Healing {
         return chosen
     }
 
-    private fun heal(image: LinearImage, spot: Spot, turns: Int) {
-        val (x, y) = stored(spot.x, spot.y, turns)
-        val (fromX, fromY) = stored(spot.fromX, spot.fromY, turns)
+    private fun heal(image: LinearImage, spot: Spot, orientation: Orientation) {
+        val (x, y) = stored(spot.x, spot.y, orientation)
+        val (fromX, fromY) = stored(spot.fromX, spot.fromY, orientation)
         val radius = spot.radius * max(image.width, image.height)
         if (radius < 1f) return
         val centreX = x * image.width
@@ -131,11 +131,15 @@ object Healing {
     }
 
     /** Where a point of the upright picture is in the picture as stored, both as fractions. */
-    private fun stored(x: Float, y: Float, turns: Int): Pair<Float, Float> = when (turns) {
-        1 -> y to 1f - x
-        2 -> 1f - x to 1f - y
-        3 -> 1f - y to x
-        else -> x to y
+    private fun stored(x: Float, y: Float, orientation: Orientation): Pair<Float, Float> {
+        val (unturnedX, unturnedY) = when (orientation.quarterTurns.mod(4)) {
+            1 -> y to 1f - x
+            2 -> 1f - x to 1f - y
+            3 -> 1f - y to x
+            else -> x to y
+        }
+        // Turned back, the point lies in the stored picture mirrored, if its orientation mirrors it.
+        return (if (orientation.mirrored) 1f - unturnedX else unturnedX) to unturnedY
     }
 
     private const val DIRECTIONS = 16

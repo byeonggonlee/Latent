@@ -5,6 +5,7 @@ import android.util.Log
 import com.byeonggon.latent.enhance.Framing
 import com.byeonggon.latent.enhance.Healing
 import com.byeonggon.latent.enhance.LinearImage
+import com.byeonggon.latent.enhance.Orientation
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.enhance.PictureRegion
@@ -37,7 +38,7 @@ object RawRenderer {
     fun proxy(image: ArwImage, cells: Int, lensCorrection: Boolean): LinearImage = timed("proxy") {
         val linear = RawDeveloper.developPreview(image, cells)
         if (lensCorrection) straighten(linear, image.lens)
-        linear.turned(quarterTurnsOf(image.orientation))
+        linear.oriented(Orientation.ofExif(image.orientation))
     }
 
     /**
@@ -45,15 +46,15 @@ object RawRenderer {
      * fractions of the upright picture. For judging detail; the lens is not corrected for here.
      */
     fun region(image: ArwImage, centreX: Float, centreY: Float, size: Int): PictureRegion {
-        val turns = quarterTurnsOf(image.orientation)
-        val sideways = turns % 2 == 1
+        val orientation = Orientation.ofExif(image.orientation)
+        val sideways = orientation.isSideways
         val frameWidth = if (sideways) image.cropHeight else image.cropWidth
         val frameHeight = if (sideways) image.cropWidth else image.cropHeight
         val upright = PictureRegion.bounds(frameWidth, frameHeight, centreX, centreY, size)
-        val stored = PictureRegion.asStored(upright, turns, image.cropWidth, image.cropHeight)
+        val stored = PictureRegion.asStored(upright, orientation, image.cropWidth, image.cropHeight)
         // Starting on an even photosite, as the colours repeat every two.
         val part = image.part(stored[0] and 1.inv(), stored[1] and 1.inv(), stored[2] and 1.inv(), stored[3] and 1.inv())
-        return PictureRegion(RawDeveloper.develop(part).turned(turns), upright[0], upright[1], frameWidth, frameHeight)
+        return PictureRegion(RawDeveloper.develop(part).oriented(orientation), upright[0], upright[1], frameWidth, frameHeight)
     }
 
     /** A half-resolution rendering for the screen. */
@@ -92,29 +93,21 @@ object RawRenderer {
      * orientation tells viewers how to turn them. Reframing turns them upright on the way.
      */
     private fun developFull(source: File, edit: PhotoEdit): LinearImage {
-        val (linear, uprightTurns) = developStraight(source, edit.lensCorrection)
-        Healing.heal(linear, edit.spots, uprightTurns)
-        return if (bakesOrientation(edit)) linear.framed(edit.framing, uprightTurns) else linear
+        val (linear, orientation) = developStraight(source, edit.lensCorrection)
+        Healing.heal(linear, edit.spots, orientation)
+        return if (bakesOrientation(edit)) linear.framed(edit.framing, orientation) else linear
     }
 
     // A function of its own so the decoded sensor data can be freed before more copies of the picture are made.
-    private fun developStraight(source: File, lensCorrection: Boolean): Pair<LinearImage, Int> {
+    private fun developStraight(source: File, lensCorrection: Boolean): Pair<LinearImage, Orientation> {
         val image = read(source)
         val linear = RawDeveloper.develop(image)
         if (lensCorrection) straighten(linear, image.lens)
-        return linear to quarterTurnsOf(image.orientation)
+        return linear to Orientation.ofExif(image.orientation)
     }
 
     private fun straighten(linear: LinearImage, lens: LensProfile?) {
         if (lens != null) LensCorrection(lens, linear.width, linear.height).straighten(linear)
-    }
-
-    /** Clockwise quarter turns that bring a picture with this Exif orientation upright. */
-    private fun quarterTurnsOf(orientation: Int): Int = when (orientation) {
-        3 -> 2
-        6 -> 1
-        8 -> 3
-        else -> 0
     }
 
     private inline fun <T> timed(what: String, block: () -> T): T {

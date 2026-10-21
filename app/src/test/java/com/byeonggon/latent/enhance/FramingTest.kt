@@ -118,8 +118,8 @@ class FramingTest {
             assertArrayEquals("$turns quarter turns", turned.red, framed.red)
         }
         // A picture stored on its side is brought upright first; the framing's own turns come on top.
-        assertArrayEquals(picture.turned(3).red, picture.framed(Framing(quarterTurns = 2), uprightTurns = 1).red)
-        assertArrayEquals(picture.turned(1).red, picture.framed(Framing(), uprightTurns = 1).red)
+        assertArrayEquals(picture.turned(3).red, picture.framed(Framing(quarterTurns = 2), orientation = Orientation(mirrored = false, quarterTurns = 1)).red)
+        assertArrayEquals(picture.turned(1).red, picture.framed(Framing(), orientation = Orientation(mirrored = false, quarterTurns = 1)).red)
     }
 
     @Test
@@ -127,7 +127,7 @@ class FramingTest {
         val picture = counting(6, 4)
 
         // Upright it is 4 wide and 6 high; the kept part is its top half.
-        val part = picture.framed(Framing(bottom = 0.5f), uprightTurns = 1)
+        val part = picture.framed(Framing(bottom = 0.5f), orientation = Orientation(mirrored = false, quarterTurns = 1))
 
         assertEquals(4 to 3, part.width to part.height)
         assertArrayEquals(picture.turned(1).red.copyOf(12), part.red)

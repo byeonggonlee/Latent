@@ -54,6 +54,20 @@ class RawRendererTest {
     }
 
     @Test
+    fun turnsEveryOrientationUprightTheMirroredOnesToo() {
+        for (orientation in 1..8) {
+            raw.writeBytes(SyntheticArw.file(red = 600, green = 900, blue = 700, orientation = orientation))
+            val image = RawRenderer.read(raw)
+            val sideways = orientation >= 5
+
+            val preview = RawRenderer.preview(image, PhotoEdit())
+            assertEquals("preview, orientation $orientation", if (sideways) 4 to 28 else 28 to 4, preview.width to preview.height)
+            val region = RawRenderer.region(image, 0.5f, 0.5f, size = 4)
+            assertEquals("frame, orientation $orientation", if (sideways) 8 to 56 else 56 to 8, region.frameWidth to region.frameHeight)
+        }
+    }
+
+    @Test
     fun showsOnlyThePartThatIsKept() {
         val preview = RawRenderer.preview(RawRenderer.read(raw), PhotoEdit(framing = Framing(bottom = 0.5f)))
 
