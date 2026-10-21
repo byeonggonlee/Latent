@@ -226,8 +226,6 @@ Nothing handed over yet. Its own next items, so that Codex does not pick them to
 - Test the next migration against `app/schemas/.../13.json` with Room's `MigrationTestHelper` (`room-testing`).
 - The map: make the OpenStreetMap credit a link to its copyright page, and send the installed version in the
   `User-Agent` (`map/OnlineAccess.kt` still says `Latent/0.1`).
-- `PRIVACY.md`: its date (October 15) is from before backups; say also that a restore copies the picked file into
-  the app's cache while the summary is open.
 - CI upkeep: the actions still on their Node 20 majors (`checkout`, `setup-java`, `setup-gradle`,
   `upload-artifact` `@v4`), the recursive `chown` of the SDK (about 70 s a run), lint findings printed into the log.
 

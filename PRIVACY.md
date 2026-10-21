@@ -1,6 +1,6 @@
 # Privacy policy
 
-*Latent, effective October 15, 2026*
+*Latent, effective October 22, 2026*
 
 Latent keeps everything on your phone. It has no account, no ads and no analytics, and it does not use
 the internet unless you turn on online maps, the one feature that needs it. With online maps off, which is
@@ -61,7 +61,8 @@ app and imported from Google Timeline). Your photos and videos themselves are no
 choose in the system's file dialog, and is read only when you pick it to restore. The app never uploads it or sends it
 anywhere; you are the only one who handles it. Whoever has the file can see where your photos were taken and where you
 have been, so keep it private. If you choose a folder of a cloud service in the file dialog, that service keeps the
-file under its own terms. Restoring never turns online maps on.
+file under its own terms. To restore, the app copies the file you pick into its own cache while it shows you what the
+backup holds, and deletes that copy once the restore is done or you cancel it. Restoring never turns online maps on.
 
 ## Sharing
 
