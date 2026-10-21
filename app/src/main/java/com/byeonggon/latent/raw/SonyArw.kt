@@ -1,5 +1,8 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.raw.api.DecodedFrame
+import com.byeonggon.latent.raw.api.RawCorrection
+import com.byeonggon.latent.raw.api.RawFormat
 import java.io.IOException
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
@@ -98,11 +101,15 @@ object SonyArw {
     private const val STORED_MAX = 0x7FF
 
     @Throws(IOException::class)
-    fun read(file: ByteArray): ArwImage = try {
-        parse(file)
+    fun read(file: ByteArray): ArwImage = decode(file).legacyImage
+
+    internal fun decode(file: ByteArray): DecodedFrame = try {
+        DecodedFrame(parse(file), RawFormat.SONY_ARW, 11, setOf(RawCorrection.SONY_TONE_EXPANSION))
     } catch (e: IndexOutOfBoundsException) {
         throw IOException("Damaged or unsupported ARW file", e)
     } catch (e: BufferUnderflowException) {
+        throw IOException("Damaged or unsupported ARW file", e)
+    } catch (e: IllegalArgumentException) {
         throw IOException("Damaged or unsupported ARW file", e)
     }
 

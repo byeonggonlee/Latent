@@ -22,3 +22,5 @@
 
 - **M2-A 검증:** 새 입력 검증 테스트 7개는 기존 코드에서 실패했고 수정 후 통과했다. JXL 과대 tile 테스트도 기존 어댑터가 거부하지 않아 실패한 것을 확인했다. RAW 60개(58 통과, 실사진 2 skip), 전체 JVM 504개(500 통과, 4 skip). 잘린 multi-group strip은 실제 `StripByteCounts`만 줄이고 남은 파일 bytes는 유지했다. 원래 `Frame` 수정 전 클래스를 우선 로드한 별도 Java negative control은 같은 DNG 테스트가 20초 내 종료하지 않아 프로세스를 종료했다. vendor source/patch는 변경하지 않았다.
 - **자원 제한:** JXL header는 DNG sensor 할당 전과 codec 진입 시 검사한다. 기존 API에 header-only 진입점이 없어 public header parser로 preflight를 수행한다. 이중 header parsing 비용과 codec 내부/ICC allocation 상한은 실측 전이며 전체 메모리 예산 보장을 주장하지 않는다.
+
+- **M1-A:** `raw/api/DecodedFrame.kt`를 도입하고 ARW/DNG의 기존 `read`는 동일 legacy image로 반환한다. 계약 API 부재 RED 후 RAW 계약/회귀 GREEN, 전체 JVM 511개(507 통과, 4 skip). unsigned bit pattern, 기존 sample 동일성, Core의 read-only 사용, crop view 수명, shape/range와 opaque TIFF ICC 보존을 확인했다. `image-contract.md`에 전환 중 mutable legacy 배열 및 미지원 profile/색 관리/장치 예산을 명시했다.

@@ -192,17 +192,20 @@ internal object SyntheticDng {
     }
 
     /** A multi-group JPEG XL stream in one linear DNG strip, without anyone's camera metadata. */
-    fun jpegXl(bytes: ByteArray, width: Int = 600, height: Int = 520): ByteArray {
+    fun jpegXl(bytes: ByteArray, width: Int = 600, height: Int = 520, iccProfile: ByteArray? = null): ByteArray {
         val tiff = SyntheticArw.Tiff()
         val dataAt = tiff.reserve()
         repeat((bytes.size - 1).coerceAtLeast(0) / 4096) { tiff.reserve() }
         tiff.directory(8,
+            *listOfNotNull(
             Entry.longs(0x00FE, 0), Entry.longs(0x0100, width), Entry.longs(0x0101, height),
             Entry.shorts(0x0102, 16), Entry.shorts(0x0103, 52546), Entry.shorts(0x0106, 34892),
             Entry.longs(0x0111, dataAt), Entry.shorts(0x0115, 3), Entry.longs(0x0116, height),
             Entry.longs(0x0117, bytes.size), Entry.bytes(0xC612, 1, 4, 0, 0),
             Entry.longs(0xC61D, 65535), signedRationals(0xC621, *COLOR_MATRIX),
             rationals(0xC628, *NEUTRAL), Entry.shorts(0xC65A, 21),
+            iccProfile?.let { Entry(0x8773, 7, it.size, it) },
+            ).toTypedArray(),
         )
         tiff.write(dataAt, bytes)
         return tiff.bytes()

@@ -1,5 +1,8 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.raw.api.DecodedFrame
+import com.byeonggon.latent.raw.api.RawCorrection
+import com.byeonggon.latent.raw.api.RawFormat
 import java.io.IOException
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
@@ -38,6 +41,7 @@ object Dng {
     private const val TAG_CFA_REPEAT = 0x828D
     private const val TAG_CFA_PATTERN = 0x828E
     private const val TAG_DNG_VERSION = 0xC612
+    private const val TAG_ICC_PROFILE = 0x8773
     private const val TAG_CFA_PLANE_COLOR = 0xC616
     private const val TAG_LINEARIZATION = 0xC618
     private const val TAG_BLACK_REPEAT = 0xC619
@@ -102,7 +106,9 @@ object Dng {
     }
 
     @Throws(IOException::class)
-    fun read(file: ByteArray): ArwImage = try {
+    fun read(file: ByteArray): ArwImage = decode(file).legacyImage
+
+    internal fun decode(file: ByteArray): DecodedFrame = try {
         parse(file)
     } catch (e: IndexOutOfBoundsException) {
         throw IOException("Damaged or unsupported DNG file", e)
@@ -110,9 +116,11 @@ object Dng {
         throw IOException("Damaged or unsupported DNG file", e)
     } catch (e: NegativeArraySizeException) {
         throw IOException("Damaged or unsupported DNG file", e)
+    } catch (e: IllegalArgumentException) {
+        throw IOException("Damaged or unsupported DNG file", e)
     }
 
-    private fun parse(file: ByteArray): ArwImage {
+    private fun parse(file: ByteArray): DecodedFrame {
         val (data, firstOffset) = TiffDirectory.open(file)
         val main = TiffDirectory.read(data, firstOffset)
         if (TAG_DNG_VERSION !in main) throw IOException("Not a DNG file")
@@ -149,9 +157,11 @@ object Dng {
         val redAt = if (linear) 0 to 0 else redSite(raw)
 
         val sensor = readSamples(file, data.order(), raw, width, height, bits, channels)
-        Levels(raw, bits, activeWidth, activeHeight, channels).apply(sensor, width, activeLeft, activeTop)
-        floatsOf(TAG_BASELINE_EXPOSURE)?.firstOrNull()?.let { brighten(sensor, it) }
-        gainMaps(raw.bytes(TAG_OPCODES_2), channels).forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels) }
+        val levels = Levels(raw, bits, activeWidth, activeHeight, channels)
+        levels.apply(sensor, width, activeLeft, activeTop)
+        val brightened = floatsOf(TAG_BASELINE_EXPOSURE)?.firstOrNull()?.let { brighten(sensor, it) } ?: false
+        val maps = gainMaps(raw.bytes(TAG_OPCODES_2), channels)
+        maps.forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels) }
 
         // The default crop, within the active area, moved by a photosite where needed so that it starts on a red one.
         val origin = raw.floats(TAG_CROP_ORIGIN)?.takeIf { it.size == 2 && it.all(Float::isFinite) } ?: floatArrayOf(0f, 0f)
@@ -166,7 +176,7 @@ object Dng {
         if (cropWidth < 4 || cropHeight < 4) throw IOException("Damaged default crop")
 
         val color = Colors(::floatsOf, ::intOf)
-        return ArwImage(
+        val image = ArwImage(
             width = width,
             height = height,
             cropLeft = activeLeft + cropLeft,
@@ -183,6 +193,13 @@ object Dng {
             sensor = sensor,
             channels = channels,
         )
+        val corrections = buildSet {
+            add(RawCorrection.DNG_LEVELS)
+            if (levels.linearized) add(RawCorrection.LINEARIZATION)
+            if (brightened) add(RawCorrection.POSITIVE_BASELINE_EXPOSURE)
+            if (maps.isNotEmpty()) add(RawCorrection.GAIN_MAP)
+        }
+        return DecodedFrame(image, RawFormat.DNG, bits, corrections, main.bytes(TAG_ICC_PROFILE) ?: raw.bytes(TAG_ICC_PROFILE))
     }
 
     /**
@@ -293,16 +310,17 @@ object Dng {
      * otherwise come out that much darker and on an eighth of the levels. A negative one is left to the tone stage
      * and the person, as darkening here would only lose levels.
      */
-    private fun brighten(sensor: ShortArray, stops: Float) {
-        if (!(stops > 0f) || !stops.isFinite()) return
+    private fun brighten(sensor: ShortArray, stops: Float): Boolean {
+        if (!(stops > 0f) || !stops.isFinite()) return false
         var brightest = 0
         for (value in sensor) brightest = max(brightest, value.toInt())
-        if (brightest == 0) return
+        if (brightest == 0) return false
         val gain = min(2f.pow(stops), WHITE.toFloat() / brightest)
-        if (gain <= 1.001f) return
+        if (gain <= 1.001f) return false
         forRowBands(sensor.size) { from, until ->
             for (at in from until until) sensor[at] = (sensor[at] * gain).roundToInt().coerceAtMost(WHITE).toShort()
         }
+        return true
     }
 
     /**
@@ -314,6 +332,7 @@ object Dng {
         raw: TiffDirectory, bits: Int, private val activeWidth: Int, private val activeHeight: Int, private val channels: Int,
     ) {
         private val table = raw.ints(TAG_LINEARIZATION)?.takeIf { it.isNotEmpty() }
+        val linearized: Boolean get() = table != null
         private val repeat = raw.ints(TAG_BLACK_REPEAT)?.takeIf { it.size == 2 && it[0] in 1..16 && it[1] in 1..16 } ?: intArrayOf(1, 1)
 
         // One black level for each place in the repeat and each sample of a pixel; a file may give one for all samples.
