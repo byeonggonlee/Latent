@@ -142,7 +142,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
-| Claude Code (computer) | The package name `com.latentimage.latent`, the owner's choice (2026-10-22, developer name Latent Image on Play): `applicationId` only, the Kotlin namespace stays `com.byeonggon.latent` | `claude/package-name` (pull request) | `app/build.gradle.kts`, `app/expected-permissions.txt`, `docs/RELEASES.md`, `docs/TODO.md`, `docs/PLAY_LISTING.md`, `docs/BACKUP_FORMAT.md`, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 
 ## For Codex
 
@@ -232,6 +231,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | The package name `com.latentimage.latent` (the owner's choice, developer name Latent Image on Play): `applicationId` only, the Kotlin namespace stays; the release key and the signing secrets recorded. Codex's review found one P2 left open at the merge: the originals the old app kept in `DCIM/Latent/.originals/` stay the old package's, and the new app reads them by path. The phones wait for its fix | [PR #11](https://github.com/byeonggonlee/Latent/pull/11), merged `3ea92c5` |
 | 2026-10-21 | Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice: `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind. Reviewed by Codex, CI green; the ABIs inside the APK and an `x86_64` build were not checked again | [PR #10](https://github.com/byeonggonlee/Latent/pull/10), merged `f82145d` |
 | 2026-10-21 | Codex | Restore uncompressed DNG strip/tile byte-count compatibility; actual row bytes checked before allocation; JPEG XL declared ranges remain strict. Required local checks and remote CI green. | `113ca0b`, [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) |
 | 2026-10-21 | Codex | Decoder bounds/recovery, minimal legacy frame contract and request dispatch/cancellation boundaries; JPEG XL tile size checked before allocation. Claude Code review fixes included; CI green. UI Job integration remains PR #8 and phone checks remain unverified. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), merged `938b5e0` |

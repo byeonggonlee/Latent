@@ -11,10 +11,11 @@ Last updated 2026-10-22.
 - [x] **Signing secrets** (2026-10-22): the release key below is in the four secrets (`SIGNING_KEYSTORE_BASE64`,
       `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md), so the nightly now
       signs what it builds and publishes it.
-- [ ] **The first signed nightly on the phones**, once `com.latentimage.latent` is on `main`: one manual *Run
-      workflow* of **Nightly** with *force* (the first pre-release of the new package, its checksum file and the
-      clean-up of old ones), then each phone moves to it once (RELEASES.md, "Reinstalling a phone"). A nightly signed
-      before that is still `com.byeonggon.latent`: not for the phones.
+- [ ] **The first signed nightly on the phones**, once the new app reads the originals the old one kept (Codex's P2
+      on [PR #11](https://github.com/byeonggonlee/Latent/pull/11): `DCIM/Latent/.originals/` stays the old package's,
+      and the new app reads it by path): one manual *Run workflow* of **Nightly** with *force* (its checksum file and
+      the clean-up of old ones), then each phone moves to it once (RELEASES.md, "Reinstalling a phone"). Until then no
+      nightly is for the phones, though they are signed and published.
 - [ ] **On the phones**: the checks in DEVICE_CHECKS, the risky ones first: the colour range and LUT shaders against
       the CPU result, subject and background masks (log tag `SubjectMask`: GPU or CPU, cold and warm time), the
       settings, search, compare, HEIF, presets, and the tab bar after its fix (no empty band above the buttons).
