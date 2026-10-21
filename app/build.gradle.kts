@@ -75,6 +75,12 @@ android {
             all {
                 // Raw development works on whole 24-megapixel frames.
                 it.maxHeapSize = "2g"
+                // A failure says what it was in the log (the CI's, too), not only where.
+                it.testLogging {
+                    events("failed")
+                    exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                    showCauses = true
+                }
             }
         }
     }

@@ -64,15 +64,18 @@ class BackupSizeTest {
         private val before = live()
         private var highest = 0L
 
-        /** The heap's largest classes when it held the most beyond [HELD_LIMIT], to say what it was if that is too much. */
-        var histogram = ""
+        // What the heap held, class by class, before the work: the growth is what the work (or a test beside it) left.
+        private val baseline = classBytes()
+
+        /** The classes whose bytes grew most when the heap held the most beyond [HELD_LIMIT]; empty if it never did. */
+        var growth = ""
             private set
 
         fun sample() {
             val now = live()
             if (now <= highest) return
             highest = now
-            if (now - before > HELD_LIMIT) histogram = classHistogram()
+            if (now - before > HELD_LIMIT) growth = growthSince(baseline)
         }
 
         /**
@@ -119,8 +122,8 @@ class BackupSizeTest {
         )
         assertTrue("backup took ${seconds(started, backedUp)} s", seconds(started, backedUp) < 60)
         assertTrue("restore took ${seconds(backedUp, restored)} s", seconds(backedUp, restored) < 90)
-        assertTrue("the backup held ${written / KB} KB\n${writing.histogram}", written < HELD_LIMIT)
-        assertTrue("the restore held ${read / KB} KB\n${reading.histogram}", read < HELD_LIMIT)
+        assertTrue("the backup held ${written / KB} KB; the heap grew in\n${writing.growth}", written < HELD_LIMIT)
+        assertTrue("the restore held ${read / KB} KB; the heap grew in\n${reading.growth}", read < HELD_LIMIT)
 
         assertEquals(POINTS, target.database.backupDao().countLocations())
         var after = 0L
@@ -139,13 +142,24 @@ class BackupSizeTest {
     }
 
     private companion object {
-        /** The largest classes on the heap, from the JDK's jcmd; empty where there is none. */
-        private fun classHistogram(): String = runCatching {
+        /** The bytes the live objects of each class take, from the JDK's jcmd; empty where there is none. */
+        fun classBytes(): Map<String, Long> = runCatching {
             val jcmd = File(System.getProperty("java.home"), "bin/jcmd")
             val process = ProcessBuilder(jcmd.path, ProcessHandle.current().pid().toString(), "GC.class_histogram")
                 .redirectErrorStream(true).start()
-            process.inputStream.bufferedReader().useLines { it.take(28).joinToString("\n") }
-        }.getOrDefault("")
+            // Lines look like "   3:       12345      987654  java.lang.String (java.base@21)".
+            val line = Regex("""^\s*\d+:\s+\d+\s+(\d+)\s+(\S+)""")
+            process.inputStream.bufferedReader().useLines { lines ->
+                lines.mapNotNull(line::find).associate { it.groupValues[2] to it.groupValues[1].toLong() }
+            }
+        }.getOrDefault(emptyMap())
+
+        /** The twelve classes that grew most from [before], by how much, and what they take now. */
+        fun growthSince(before: Map<String, Long>): String = classBytes().entries
+            .map { (name, bytes) -> Triple(name, bytes - (before[name] ?: 0L), bytes) }
+            .sortedByDescending { it.second }
+            .take(12)
+            .joinToString("\n") { (name, grew, now) -> "  +${grew / KB} KB (${now / KB} KB) $name" }
 
         const val POINTS = 150_000
         const val START = 1_700_000_000_000L
