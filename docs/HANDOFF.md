@@ -141,7 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Restore uncompressed DNG strip/tile byte-count compatibility (queue 4), tests first; keep JPEG XL declared ranges strict. | `codex/decoder-followup` (small fix to main) | `raw/Dng.kt`, `raw/DngTest.kt` | 2026-10-21 |
+| Codex | Two-illuminant DNG colour interpolation (queue 1); preserve single-matrix path and existing Core look; reviewed PR, phone tungsten judgement pending. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
 | Claude Code (computer) | A raw decode stops when the viewer or editor that asked for it is cancelled (first part of M3-A): the coroutine's `ensureActive()` as the request's `checkCancelled`, through `RawCache.read` and `RawRenderer.read` | `claude/decode-cancellation` (pull request, reviewed by Codex) | `raw/RawCache.kt`, `raw/RawRenderer.kt` (`read` only), `ui/viewer/ViewerViewModel.kt`, `ui/editor/EditorViewModel.kt`; the `RawCache` lambdas in `RawCacheTest`, `ShareCopyTest`, `FrameContractTest` | 2026-10-21 |
 
 ## For Codex
@@ -182,7 +182,7 @@ touch the seam, as it reviews yours.
 
 - **Codex implementation**: [PR #7](https://github.com/byeonggonlee/Latent/pull/7) checks JPEG XL header dimensions before the DNG sensor and codec frame allocation, with padded edge and oriented-header tests. No vendor source/patch change. Merged as `938b5e0` after Claude Code review and green CI; total codec/ICC heap is not a phone memory guarantee.
 
-### 4. DNG: uncompressed strips read as before PR #7 (implemented, CI pending)
+### 4. DNG: uncompressed strips read as before PR #7 (done)
 
 - **Why**: an uncompressed DNG whose `StripByteCounts` (or `TileByteCounts`) is overstated past the end of the file,
   or understated, but whose samples are all there, opened before PR #7 and is refused since. Left from the second
@@ -196,7 +196,7 @@ touch the seam, as it reviews yours.
 - **Test first** in `DngTest`, as `losslessJpegKeepsClippingAnOverstatedStripLengthToEof` does: an uncompressed
   `SyntheticDng` with `StripByteCounts` set to `Int.MAX_VALUE`, and one set to 1, give the same samples; one cut
   short of its rows still fails.
-- **Done when**: CI is green; small and inside the decoders, so straight to `main`.
+- **Done**: `113ca0b`, on main; [CI 39584546602](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) green. WORDS/PACKED_12 counts 1 and Int.MAX_VALUE match normal samples; missing row bytes fail; JPEG XL declared bounds stay strict.
 
 ### Waiting for a phone first (not to start yet)
 
@@ -229,6 +229,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-21 | Codex | Restore uncompressed DNG strip/tile byte-count compatibility; actual row bytes checked before allocation; JPEG XL declared ranges remain strict. Required local checks and remote CI green. | `113ca0b`, [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) |
 | 2026-10-21 | Codex | Decoder bounds/recovery, minimal legacy frame contract and request dispatch/cancellation boundaries; JPEG XL tile size checked before allocation. Claude Code review fixes included; CI green. UI Job integration remains PR #8 and phone checks remain unverified. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), merged `938b5e0` |
 | 2026-10-21 | Claude Code (computer) | The 0.1.0 notes; Room schema exported and checked on CI; phone tests compiled on CI; test failures and `BackupSizeTest`'s heap growth in the log | `be92ec3`, `3765350`, `752fcc5`, `230ea56` |
 | 2026-10-21 | Claude Code (computer) | A cut-short JPEG XL stream fails instead of hanging (was handed to Codex; done before the handover landed) | `cf6a263` |

@@ -54,3 +54,16 @@
 2. [PR #8 리뷰](https://github.com/byeonggonlee/Latent/pull/8#issuecomment-6313647973), head `3e1db45`: 차단 사항 없음. 실제 DNG ForkJoin worker-only Job 취소와 결정적 queued-reader 취소 probe 각각 통과. 관련 테스트 실행 및 원래 전체 결과 535개(531 통과·4 skip, 전체 실행은 cache 재사용), 원격 CI 성공 확인. PR 소스는 수정하지 않았다.
 3. 비압축 DNG 길이 호환성: WORDS/PACKED_12의 count 1과 Int.MAX_VALUE 두 테스트 RED 후, 실제 행 바이트를 EOF와 비교하도록 수정. metadata를 보존한 채 마지막 row byte만 제거하면 여전히 실패하고 JXL 선언 범위 검사는 유지한다. 필수 main gate 성공(59s), 전체 534개(530 통과·4 skip). 원격 CI 확인 후 보드를 완료 처리한다.
 4. 이후 색 행렬 보간은 별도 리뷰 PR, WarpRectilinear는 PR #8 병합 뒤 seam 선점 후 진행한다. 모듈 추출·backend 비교·폰 우선 항목은 시작하지 않는다.
+
+
+## 두 광원 색 보간 설계와 검증 계획
+
+소유자가 지정한 기존 `Dng.Colors`의 범위 안에서 구현한다. 새 모듈·CMS·ForwardMatrix·색 룩·샘플 정규화·BaselineExposure/게인맵 순서는 바꾸지 않는다. 선행 비압축 DNG 수정 `113ca0b`의 [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602)는 전체 성공했다.
+
+- 표준 EXIF 광원을 Kelvin으로 대응하고 Robertson CIE 1960 uv 등온선으로 source white의 역색온도를 얻는다. `AsShotNeutral`은 D50 xy에서 시작해 현재 XYZ→camera 역행렬로 white를 찾는 과정을 최대 30회 반복한다. 유효한 `AsShotWhiteXY`가 있으면 직접 weight를 구한다.
+- SDK 실제 순서에 맞춰 각 광원의 `AnalogBalance × CameraCalibration × ColorMatrix`를 먼저 합성하고, 두 합성 행렬을 clamped inverse-temperature weight로 보간한다. 각 행렬을 별도로 보간한 후 곱하는 방식은 사용하지 않는다. 기존 sRGB primaries 곱·행 정규화·역행렬과 Core WB/룩은 유지한다.
+- 단일 행렬, 광원 누락/알 수 없음/같은 온도, scene white 추정 실패는 기존 daylight 우선 선택을 유지한다. 두 광원 경로의 WhiteXY-only 입력은 그 white로 WB를 구한다. 단일 행렬 경로는 기존 반환값을 유지한다.
+- TDD: tungsten/daylight endpoint, 중간 white와 보간 weight 방향, Neutral↔WhiteXY, 광원 순서 반전, calibration/analog 적용, 단일·알 수 없는 광원 fallback을 실제 synthetic DNG로 검증한다. 고정 수치는 앱과 별도의 Gauss–Jordan 계산으로 구했다.
+- 필수 전체 JVM/lint/androidTest 컴파일·schema 검사, release 빌드와 독립 리뷰 후 별도 PR을 연다. `DEVICE_CHECKS.md`에 tungsten RAW/JPEG 비교를 추가하고 미검증으로 둔다.
+
+근거: Adobe [DNG SDK](https://www.adobe.com/support/downloads/dng/dng_sdk.html), AOSP에 수록된 SDK 1.7.1 [`dng_color_spec.cpp`](https://android.googlesource.com/platform/external/dng_sdk/+/de700ad461e35af50b28b861943a0b0753b10929/source/dng_color_spec.cpp) (`FindXYZtoCamera_SingleOrDual`, `NeutralToXY`), [`dng_temperature.cpp`](https://android.googlesource.com/platform/external/dng_sdk/+/de700ad461e35af50b28b861943a0b0753b10929/source/dng_temperature.cpp), [`dng_camera_profile.cpp`](https://android.googlesource.com/platform/external/dng_sdk/+/de700ad461e35af50b28b861943a0b0753b10929/source/dng_camera_profile.cpp). SDK 자체를 빌드하거나 앱 의존성으로 추가하지 않는다.
