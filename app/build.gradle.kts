@@ -76,6 +76,9 @@ android {
         compose = true
     }
 
+    // The committed schemas, for the migration tests to build a database from: MigrationTestHelper reads them from the
+    // assets of the variant under test, and a unit test's own assets are not among those. Debug builds only.
+    sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -133,6 +136,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    // Builds a database from a committed schema (app/schemas), to test the migration from it.
+    testImplementation(libs.androidx.room.testing)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)
