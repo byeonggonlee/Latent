@@ -1,7 +1,8 @@
 # To do
 
 What is open right now, by who has to move. The longer list of features is in [`ROADMAP.md`](ROADMAP.md), what only a
-phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md).
+phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md), which
+agent (Claude Code or Codex) is on what in [`HANDOFF.md`](HANDOFF.md).
 Last updated 2026-10-20 (late night).
 
 ## Waiting for the owner

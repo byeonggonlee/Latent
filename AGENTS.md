@@ -1,5 +1,12 @@
 # Repository Guidelines
 
+## Working Alongside Other Agents
+
+More than one agent works on Latent: Codex looks after the image decoders, Claude Code after the rest, and Claude Code
+may run on the owner's computer and in a cloud session at the same time. Read `docs/HANDOFF.md` before starting: it
+says who looks after which files, what is claimed, and what has been handed to you. Claim an item there before you
+start it, and log it there when it is done. Questions only the owner can answer go to `docs/TODO.md`.
+
 ## Project Structure & Module Organization
 
 Latent is a Kotlin/Compose Android app for USB imports, editing, and geotagging.
