@@ -180,8 +180,6 @@ class LibraryEdits(
      */
     @Throws(IOException::class)
     suspend fun exportRaw(item: MediaItemEntity): File {
-        // The export decodes the file itself; holding a second copy would only cost memory.
-        rawCache.clear()
         val source = File(item.path)
         // Next to the raw file if it is the library's; a raw file of another app is not written beside.
         val target = if (item.origin == MediaOrigin.PHONE) {
@@ -189,7 +187,11 @@ class LibraryEdits(
         } else {
             storage.siblingFor(source, suffix = "_developed", extension = "jpg")
         }
-        RawRenderer.export(source, target, editOf(item) ?: PhotoEdit(), exportOptions().quality)
+        val edit = editOf(item) ?: PhotoEdit()
+        val quality = exportOptions().quality
+        // The export decodes the file itself, in the cache's turn: the cache lets go of its copy, and no other decode
+        // runs beside it.
+        rawCache.decodingAlone { RawRenderer.export(source, target, edit, quality) }
         val latitude = item.latitude
         val longitude = item.longitude
         if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
@@ -264,8 +266,7 @@ class LibraryEdits(
         if (item.kind == MediaKind.RAW) {
             val edit = editOf(item) ?: PhotoEdit()
             if (longSide == null) {
-                rawCache.clear()
-                RawRenderer.export(source, target, edit, options.quality)
+                rawCache.decodingAlone { RawRenderer.export(source, target, edit, options.quality) }
             } else {
                 // Half the sensor's resolution is as large as a reduced copy gets; it is turned upright on the way.
                 val bitmap = RawRenderer.preview(rawCache.read(source), edit)

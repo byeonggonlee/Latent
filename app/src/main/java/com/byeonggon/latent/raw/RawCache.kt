@@ -9,8 +9,9 @@ import kotlin.concurrent.withLock
  * Keeps the raw file that was decoded last. Decoding takes a moment and the result is large, and
  * the viewer and the editor both need it for the photo that is open.
  *
- * One file is decoded at a time, as two at once would need more memory than a phone gives the app. Clearing does
- * not wait for a decode under way, so that the main thread can do it: what that decode gives is then not kept.
+ * One file is decoded at a time, as two at once would need more memory than a phone gives the app; a decode outside
+ * the cache takes its turn through [decodingAlone]. Clearing does not wait for a decode under way, so that the main
+ * thread can do it: what that decode gives is then not kept.
  */
 class RawCache(private val decode: (File) -> ArwImage = RawRenderer::read) {
     private val decoding = ReentrantLock()
@@ -44,6 +45,16 @@ class RawCache(private val decode: (File) -> ArwImage = RawRenderer::read) {
             }
             return decoded
         }
+    }
+
+    /**
+     * Runs [work], which decodes a raw file the cache does not keep (a full-size export or share), as one of the
+     * cache's own decodes would run: after the cache has let go of its file, and never beside another decode.
+     * Slow; must run off the main thread.
+     */
+    fun <T> decodingAlone(work: () -> T): T {
+        clear()
+        return decoding.withLock(work)
     }
 
     /** Lets go of the decoded file at once, also while one is being decoded. */

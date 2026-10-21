@@ -67,6 +67,26 @@ class RawCacheTest {
     }
 
     @Test(timeout = 5_000)
+    fun aDecodeOutsideTheCacheWaitsForTheOneUnderWay() {
+        val reader = thread { slow.read(first) }
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+        val exporting = CountDownLatch(1)
+        var exported: String? = null
+
+        // An export clears the cache at once, and decodes only once the cache's decode has ended.
+        val export = thread { exported = slow.decodingAlone { exporting.countDown(); "exported" } }
+        assertFalse("the export decoded beside the cache's decode", exporting.await(500, TimeUnit.MILLISECONDS))
+
+        release.countDown()
+        reader.join()
+        export.join()
+        assertEquals("exported", exported)
+        // What the cache decoded is not kept: the export cleared it to have the memory.
+        slow.read(first)
+        assertEquals(2, decodes.get())
+    }
+
+    @Test(timeout = 5_000)
     fun twoReadsOfOneFileDecodeItOnce() {
         var fromOther: ArwImage? = null
         val reader = thread { slow.read(first) }
