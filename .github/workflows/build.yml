@@ -62,6 +62,12 @@ jobs:
       - name: Room schema is committed
         run: git diff --exit-code -- app/schemas
 
+      # What PRIVACY.md promises: no tracking or Google services libraries, and only the permissions it lists.
+      - name: Privacy
+        run: |
+          ./gradlew -q :app:processReleaseManifest
+          scripts/check-privacy.sh
+
       - name: Release APK (signed with the debug key)
         run: |
           ./gradlew assembleRelease -PdebugSignedRelease -PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }} -PlatentAbis=arm64-v8a --stacktrace

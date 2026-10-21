@@ -36,6 +36,9 @@ how the app starts out, it makes no network request at all.
 | USB | To read the camera. |
 | Internet | Only for online maps, and only after you turn them on: to download map pictures from OpenStreetMap. |
 | Foreground services, starting at boot | To keep recording and syncing running while the screen is off, and to tell you after a restart that recording stopped. |
+| Network state, keeping the phone awake | Asked for by the libraries that play video and fetch map pictures; the app uses them to know whether it is online and to finish a sync with the screen off. |
+
+CI checks the release build against this list (`scripts/check-privacy.sh`, `app/expected-permissions.txt`): a new permission, or a library for analytics, crash reports or Google services, fails the build until this page and that file say so.
 
 ## Online maps
 
