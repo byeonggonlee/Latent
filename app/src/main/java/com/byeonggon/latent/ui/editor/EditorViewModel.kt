@@ -111,6 +111,8 @@ data class EditorUiState(
     /** The LUTs the person imported, and the picture with each of them on it, by its hash. */
     val luts: List<LutEntity> = emptyList(),
     val lutPreviews: Map<String, Bitmap> = emptyMap(),
+    /** Whether the raw file carries the lens's profile, which the lens correction needs; a phone's DNG does not. */
+    val hasLensProfile: Boolean = true,
     /** Whether subject and background masks can be made on this phone, as far as is known. */
     val canDetect: Boolean = false,
     /** A model is looking for the subject. */
@@ -210,6 +212,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                                 previewView = view,
                                 pictureWidth = source.image.width,
                                 pictureHeight = source.image.height,
+                                hasLensProfile = source.hasLensProfile,
                                 loading = false,
                             )
                         }
@@ -651,6 +654,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         image = RawRenderer.proxy(raw, PROXY_CELLS, lensCorrection),
                         scale = 1f / (2 * PROXY_CELLS),
                         region = { x, y -> RawRenderer.region(raw, x, y, DETAIL_SIZE) },
+                        hasLensProfile = raw.lens != null,
                     )
                 } else {
                     val original = edits.originalOf(item)
@@ -687,6 +691,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         val image: LinearImage,
         private val scale: Float,
         private val region: (centreX: Float, centreY: Float) -> PictureRegion,
+        val hasLensProfile: Boolean = true,
     ) {
         private var spots = emptyList<Spot>()
         private var healed = image

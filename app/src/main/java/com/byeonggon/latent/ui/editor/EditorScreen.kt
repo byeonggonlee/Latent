@@ -698,7 +698,7 @@ private fun EditorPanel(
                         pictureWidth = state.pictureWidth.toFloat(),
                         pictureHeight = state.pictureHeight.toFloat(),
                         shape = shape,
-                        lensCorrection = edit.lensCorrection.takeIf { state.item?.kind == MediaKind.RAW },
+                        lensCorrection = edit.lensCorrection.takeIf { state.item?.kind == MediaKind.RAW && state.hasLensProfile },
                         enabled = enabled,
                         onShape = onShape,
                         onFraming = viewModel::setFraming,
