@@ -141,7 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Two-illuminant DNG colour interpolation (queue 1); preserve single-matrix path and existing Core look; reviewed PR, phone tungsten judgement pending. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
+| Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
 | Claude Code (computer) | A raw decode stops when the viewer or editor that asked for it is cancelled (first part of M3-A): the coroutine's `ensureActive()` as the request's `checkCancelled`, through `RawCache.read` and `RawRenderer.read` | `claude/decode-cancellation` (pull request, reviewed by Codex) | `raw/RawCache.kt`, `raw/RawRenderer.kt` (`read` only), `ui/viewer/ViewerViewModel.kt`, `ui/editor/EditorViewModel.kt`; the `RawCache` lambdas in `RawCacheTest`, `ShareCopyTest`, `FrameContractTest` | 2026-10-21 |
 
 ## For Codex
@@ -150,7 +150,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
 touch the seam, as it reviews yours.
 
-### 1. DNG: a colour matrix between the two calibration illuminants (feature, medium, needs the owner's files to judge)
+### 1. DNG: a colour matrix between the two calibration illuminants (implemented, review and phone judgement pending)
 
 - **Where**: `raw/Dng.kt:465-467` picks the matrix whose illuminant ranks nearest daylight (`DAYLIGHT_FIRST`) and
   ignores the other. Android's `DngCreator`, and so a Galaxy's Pro mode, writes a Standard A and D65 pair.

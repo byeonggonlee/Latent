@@ -16,6 +16,8 @@ mosaic는 crop 원점에서 RGGB를 반복하며, linear DNG는 camera RGB inter
 
 TIFF `InterColorProfile`은 제한된 opaque source bytes로 보존하고 조회 때 방어 복사한다. 선택 profile의 payload 범위가 손상되면 해당 profile만 생략하며 픽셀 디코딩 오류는 감추지 않는다. CMS 변환이나 출력 JPEG profile 적용은 하지 않는다. DNG의 별도 calibration ICC tag 및 JXL 내부 profile 전체 보존은 아직 이 adapter가 보장하지 않는다. 촬영/노출/EXIF/XMP의 전체 보존은 원본 파일과 기존 앱 metadata/export 경로의 책임이다.
 
+유효한 두 광원 DNG는 D50 기준 profile scale 정규화 후 `AB × CC × CM`을 역색온도로 보간한다. Neutral의 white 추정은 최대 30회이며 진동 시 마지막 두 xy의 평균을 쓴다. WhiteXY-only 두 광원 경로는 같은 보간 행렬에서 WB도 구하며, 그 white가 카메라 모델 밖이면 행렬과 WB를 함께 legacy로 되돌린다. 단일 행렬, 알 수 없거나 같은 온도의 광원, 해석 불가능한 보조 metadata는 기존 선택을 유지한다. 이 색 변화는 리뷰 PR과 텅스텐 RAW/JPEG 실사진 판단 대상이며 완전한 SDK renderer/CMS를 뜻하지 않는다.
+
 ## 수명과 검증
 
 새 sample API는 배열을 노출하지 않는다. decoder는 publish 후 sample을 변경하지 않고 Core는 별도 작업 배열을 만든다. 전환 중 legacy adapter의 mutable 배열은 trusted Core에 남아 있으므로 read-only 규칙이 필요하다. view가 parent 배열을 붙잡고 있어 cache clear 후에도 유효하다. heap-only frame에 `close()`나 reference counting을 추가하지 않는다.
@@ -32,4 +34,4 @@ TIFF `InterColorProfile`은 제한된 opaque source bytes로 보존하고 조회
 
 ## 검증과 남은 gate
 
-최종 로컬 검사: JVM 534개(530 통과, 4 선택 검사 skip), debug/release Lint, androidTest APK 컴파일, R8 release APK와 Room schema diff 통과. 실제 사진·기기 heap/RSS·OOM·JXL header preflight 비용은 측정하지 않았다. 기본 요청은 새 폰 자원 예산이 아니며, codec 내부/ICC/GPU allocation의 전체 상한은 후속 측정·승인 대상이다.
+최종 로컬 검사: JVM 546개(542 통과, 4 선택 검사 skip), debug/release Lint, androidTest APK 컴파일, R8 release APK와 Room schema diff 통과. 실제 사진·기기 heap/RSS·OOM·JXL header preflight 비용은 측정하지 않았다. 기본 요청은 새 폰 자원 예산이 아니며, codec 내부/ICC/GPU allocation의 전체 상한은 후속 측정·승인 대상이다.

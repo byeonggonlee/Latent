@@ -19,6 +19,18 @@ internal object SyntheticDng {
     val COLOR_MATRIX = floatArrayOf(1.1f, -0.4f, -0.1f, -0.35f, 1.25f, 0.1f, -0.05f, 0.2f, 0.55f)
     val NEUTRAL = floatArrayOf(0.5f, 1f, 0.7f)
 
+    data class ColorProfile(
+        val matrix1: FloatArray? = floatArrayOf(0.9f, -0.3f, 0f, -0.4f, 1.3f, 0.1f, -0.1f, 0.3f, 0.6f),
+        val matrix2: FloatArray? = COLOR_MATRIX,
+        val illuminant1: Int = 17,
+        val illuminant2: Int = 21,
+        val calibration1: FloatArray? = null,
+        val calibration2: FloatArray? = null,
+        val analogBalance: FloatArray? = null,
+        val neutral: FloatArray? = NEUTRAL,
+        val whiteXY: FloatArray? = null,
+    )
+
     enum class Layout { ANDROID, ADOBE }
     enum class Storage { WORDS, PACKED_12, LOSSLESS_JPEG }
 
@@ -39,6 +51,7 @@ internal object SyntheticDng {
         photometric: Int = 32803,
         compression: Int? = null,
         orientation: Int = 1,
+        profile: ColorProfile = ColorProfile(),
     ): ByteArray = file(
         samples = { x, y ->
             val ax = x - ACTIVE[1]
@@ -57,7 +70,7 @@ internal object SyntheticDng {
             }
         },
         pattern = pattern, layout = layout, storage = storage, blacks = blacks, linearization = linearization,
-        gainMap = gainMap, photometric = photometric, compression = compression, orientation = orientation,
+        gainMap = gainMap, photometric = photometric, compression = compression, orientation = orientation, profile = profile,
     )
 
     fun file(
@@ -71,6 +84,7 @@ internal object SyntheticDng {
         photometric: Int = 32803,
         compression: Int? = null,
         orientation: Int = 1,
+        profile: ColorProfile = ColorProfile(),
     ): ByteArray {
         val values = Array(HEIGHT) { y -> IntArray(WIDTH) { x -> samples(x, y) } }
         val data = when (storage) {
@@ -106,15 +120,19 @@ internal object SyntheticDng {
             Entry.longs(0xC68D, *ACTIVE),
             gainMap?.let { Entry(0xC741, 7, it.bytes().size, it.bytes()) },
         )
-        val colorEntries = listOf(
+        val colorEntries = listOfNotNull(
             Entry.ascii(0x010F, "samsung"),
             Entry.shorts(0x0112, orientation),
             Entry.bytes(0xC612, 1, 4, 0, 0),
-            signedRationals(0xC621, 0.9f, -0.3f, 0f, -0.4f, 1.3f, 0.1f, -0.1f, 0.3f, 0.6f),
-            signedRationals(0xC622, *COLOR_MATRIX),
-            Entry.shorts(0xC65A, 17),
-            Entry.shorts(0xC65B, 21),
-            rationals(0xC628, *NEUTRAL),
+            profile.matrix1?.let { signedRationals(0xC621, *it) },
+            profile.matrix2?.let { signedRationals(0xC622, *it) },
+            Entry.shorts(0xC65A, profile.illuminant1),
+            Entry.shorts(0xC65B, profile.illuminant2),
+            profile.calibration1?.let { signedRationals(0xC623, *it) },
+            profile.calibration2?.let { signedRationals(0xC624, *it) },
+            profile.analogBalance?.let { rationals(0xC627, *it) },
+            profile.neutral?.let { rationals(0xC628, *it) },
+            profile.whiteXY?.let { rationals(0xC629, *it) },
         )
         if (layout == Layout.ANDROID) {
             tiff.directory(8, *(rawEntries + colorEntries).sortedBy { it.tag }.toTypedArray())
