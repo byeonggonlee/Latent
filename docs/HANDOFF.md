@@ -135,7 +135,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | `RawCache` held its monitor for the whole decode, so the viewer's `clear()` on the main thread waited for a slow file; decodes now have a lock of their own, full-size exports and shares take the same turn (Codex's first P1, `deb41dc`) and find the cache empty when they start (its second, `2be5fbf`). `main` merged in (`06e3681`). **Waits for Codex's second look** | `claude/raw-cache-lock`, pull request #4 | `raw/RawCache.kt` (seam), `data/LibraryEdits.kt`, `raw/RawCacheTest.kt` (new), `data/ShareCopyTest.kt` | 2026-10-21 |
+| | Nothing claimed. | | | |
 
 ## For Codex
 
@@ -213,6 +213,7 @@ Nothing asked yet.
 | 2026-10-21 | Claude Code (computer) | The two copies of this board joined; the rules for every agent in `AGENTS.md` (worktrees, what goes through review, trailers), `GEMINI.md` for Antigravity; the owner's decisions in `architecture/decisions.md` | `claude/agent-rules` |
 | 2026-10-21 | Claude Code (computer) | Mirrored photos (Exif 2, 4, 5, 7) upright everywhere, as the thumbnails show them; reviewed by Codex | pull request #3 |
 | 2026-10-21 | Claude Code (computer) | The restore and the timeline import count the table instead of reading back two queries' worth of row id a point: 300,000 cursors fewer for 150,000 places, the cause of `BackupSizeTest`'s failures on slow runners; reviewed by Codex | pull request #6 |
+| 2026-10-21 | Claude Code (computer) | `RawCache` can be cleared on the main thread without waiting for a decode; full-size exports and shares take the decode's turn and find the cache empty; reviewed by Codex three times | pull request #4 |
 
 ## Template for a handover
 
