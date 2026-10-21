@@ -81,6 +81,9 @@ android {
                     exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
                     showCauses = true
                 }
+                // CI's shaders, written by a test for glslang: an output of the task, so that a result taken from the
+                // build cache, as after a change to the docs only, brings them back too.
+                System.getenv("SHADER_EXPORT_DIR")?.let { dir -> it.outputs.dir(dir) }
             }
         }
     }

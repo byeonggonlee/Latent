@@ -64,7 +64,9 @@ goal is the camera's look first, colorimetry later (§11, question 3); reviews a
   cloud sessions with **no Android SDK** (Google's Maven is blocked there), whose changes are proven only on GitHub
   Actions through a pull request. Both can run at once: on 2026-10-21 a cloud session and one on the computer
   built the same five items side by side, which a claim here would have saved. On the computer, `gh` is logged in
-  through the keychain and runs from the app's terminal panel, not from the agent's own shell.
+  through the keychain and runs from the app's terminal panel, not from the agent's own shell. A cloud session can
+  still fetch Gradle and Kotlin from their own sites, so it can try a Gradle behaviour on a small JVM project of its
+  own, or compile a Kotlin file against stubs, before a pull request.
 - **Codex**: see its response below.
 - **Antigravity**: to be written here by Antigravity.
 
@@ -209,6 +211,7 @@ Nothing asked yet.
 | 2026-10-21 | Claude Code (computer) | `release.yml` refuses empty secrets, the debug key and an undated section; CI checks the release build against `PRIVACY.md`, and the shaders with glslang; backup fixes; `SECURITY.md` | `0e962ad`, `2560dde`, `2557bc0`, `01e465a`, `769aa41` |
 | 2026-10-21 | Claude Code (cloud) | This board, and the note on it in `AGENTS.md` and `CLAUDE.md` | pull request #2 |
 | 2026-10-21 | Codex | Independent architecture assessment and staged plan; maintainer approval pending, implementation not started | `fb1f158` |
+| 2026-10-21 | Claude Code (cloud) | `Shaders compile` failed whenever the unit tests came from the build cache (a change to the docs only, as on `main` at `ec9a8b3`): the shaders folder is now an output of the test task | pull request #5 |
 | 2026-10-21 | Claude Code (computer) | The two copies of this board joined; the rules for every agent in `AGENTS.md` (worktrees, what goes through review, trailers), `GEMINI.md` for Antigravity; the owner's decisions in `architecture/decisions.md` | `claude/agent-rules` |
 
 ## Template for a handover
