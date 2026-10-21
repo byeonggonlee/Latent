@@ -555,7 +555,10 @@ object Dng {
                             floats(TAG_AS_SHOT_WHITE_XY)?.takeIf { it.size == 2 }?.let { doubleArrayOf(it[0].toDouble(), it[1].toDouble()) }
                         }
                         shotWhite?.let { xy ->
-                            weight(xy, temperature1, temperature2)?.let { blend(camera1, camera2, it) }?.takeIf(::usableCamera)
+                            weight(xy, temperature1, temperature2)?.let { blend(camera1, camera2, it) }
+                                ?.takeIf(::usableCamera)
+                                // Keep the transform and WB together when this white is outside the camera model.
+                                ?.takeIf { candidate -> shotNeutral != null || vector(candidate, xyz(xy)).all { it.isFinite() && it > 0f } }
                         }
                     } else null
                 } else null

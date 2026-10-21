@@ -179,6 +179,20 @@ class DngTest {
     }
 
     @Test
+    fun aWhiteOutsideTheCameraModelFallsBackForBothMatrixAndWhiteBalance() {
+        val profile = dualProfile.copy(
+            matrix1 = floatArrayOf(1f, -0.85f, 0f, 0.1f, 1f, 0f, 0f, 0f, 1f),
+            matrix2 = floatArrayOf(0.9f, -0.75f, 0.02f, 0.1f, 1f, 0.1f, 0f, 0.05f, 0.9f),
+            calibration1 = null, calibration2 = null, analogBalance = null, neutral = null,
+        )
+        // Physical xy, but both calibrated camera responses have a negative red channel at this white.
+        val fallback = withProfile(profile)
+        val outside = withProfile(profile.copy(whiteXY = floatArrayOf(0.32f, 0.4f)))
+        assertArrayEquals(fallback.colorMatrix, outside.colorMatrix, 0f)
+        assertArrayEquals(fallback.whiteBalance, outside.whiteBalance, 0f)
+    }
+
+    @Test
     fun aSingularUnusedCalibrationDoesNotBreakTheLegacyFallback() {
         val broken = dualProfile.copy(calibration1 = FloatArray(9))
         assertArrayEquals(daylightMatrix, withProfile(broken).colorMatrix, 0.00001f)
