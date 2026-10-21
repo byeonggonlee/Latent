@@ -21,7 +21,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -64,20 +64,35 @@ jobs:
           echo "file=latent-$name-$count.apk" >> "$GITHUB_OUTPUT"
           case "$name" in *-*) echo "pre=--prerelease" >> "$GITHUB_OUTPUT" ;; *) echo "pre=" >> "$GITHUB_OUTPUT" ;; esac
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
 
       - name: Android SDK
         run: |
-          sudo chown -R "$USER" "$ANDROID_HOME"
+          # Gradle and sdkmanager write into the SDK's own folders, which the runner image leaves to root: its licenses, and a
+          # platform or build tools it lacks. Only those are handed over; the whole SDK, recursively, took most of a minute.
+          sudo chown "$USER" "$ANDROID_HOME" "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+          sudo mkdir -p "$ANDROID_HOME/licenses"
+          sudo chown -R "$USER" "$ANDROID_HOME/licenses"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
+
+      # Lint's findings in the log, warnings too, where a failing run otherwise only has them in the reports artifact.
+      - name: Lint findings
+        if: always()
+        run: |
+          for report in app/build/reports/lint-results-*.txt; do
+            [ -f "$report" ] || continue
+            echo "::group::$(basename "$report")"
+            cat "$report"
+            echo "::endgroup::"
+          done
 
       - name: Release APK
         env:
@@ -117,7 +132,7 @@ jobs:
             echo "Version $name (code ${{ steps.tag.outputs.code }}), commit \`$(git rev-parse --short HEAD)\`. Check a download with \`shasum -a 256 -c ${{ steps.tag.outputs.file }}.sha256\`."
           } >> notes.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: reports

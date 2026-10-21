@@ -1,5 +1,7 @@
 package com.byeonggon.latent.ui.map
 
+import com.byeonggon.latent.ui.common.openInBrowser
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -301,12 +303,16 @@ internal fun PhotoMap(points: List<MapPoint>, tiles: MapTiles, viewModel: MapVie
                 modifier = Modifier.semantics { contentDescription = zoomOut },
             ) { Text("−", style = MaterialTheme.typography.titleLarge) }
         }
-        // The map's makers ask to be named wherever it is shown.
+        // The map's makers ask to be named wherever it is shown, with a link to their copyright page.
+        val context = LocalContext.current
         Text(
             stringResource(R.string.map_attribution),
             style = MaterialTheme.typography.labelSmall,
             color = Color.Black,
-            modifier = Modifier.align(Alignment.BottomEnd).background(Color.White.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp),
+            modifier = Modifier.align(Alignment.BottomEnd)
+                .clickable { context.openInBrowser(OSM_COPYRIGHT) }
+                .background(Color.White.copy(alpha = 0.7f))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
 
@@ -360,3 +366,6 @@ private fun Marker(cluster: Cluster, modifier: Modifier, onClick: () -> Unit) {
 private const val SHOWN_AT_ONCE = 40
 
 private fun ln2(value: Double): Double = kotlin.math.ln(value) / kotlin.math.ln(2.0)
+
+/** What OpenStreetMap's licence asks the map's credit to lead to. */
+private const val OSM_COPYRIGHT = "https://www.openstreetmap.org/copyright"

@@ -45,7 +45,8 @@ CI checks the release build against this list (`scripts/check-privacy.sh`, `app/
 
 Online maps are off until you turn them on, which the app asks you to confirm. While the map is open,
 the app downloads map pictures (tiles) from OpenStreetMap's servers. Like any web request, that tells the
-server your IP address and which map areas you look at. Nothing else is sent: not your photos, their names,
+server your IP address and which map areas you look at, and the app says its name and version, as the servers ask
+apps to. Nothing else is sent: not your photos, their names,
 or a list of where they were taken. Map pictures are kept on the phone for a week to save requests. You can
 turn online maps off again from the map's menu. Map data © OpenStreetMap contributors.
 
