@@ -143,7 +143,7 @@ class SyncEngine(
         for ((index, file) in pending.withIndex()) {
             if (cancelRequested) break
             // The oldest files come first; what does not fit is left on the camera for the next time.
-            if (freeBytes() - file.sizeBytes < LEAVE_FREE_BYTES) {
+            if (freeBytes() - spaceNeededFor(file) < LEAVE_FREE_BYTES) {
                 outOfSpace = true
                 break
             }
@@ -208,6 +208,10 @@ class SyncEngine(
             }
         }
     }
+
+    /** What copying [file] needs free: its size, or at least 4 GB where the camera could not say. */
+    private fun spaceNeededFor(file: RemoteFile) =
+        if (file.sizeBytes == RemoteFile.UNKNOWN_SIZE) AT_LEAST_BYTES_WHEN_SIZE_UNKNOWN else file.sizeBytes
 
     private suspend fun download(
         source: CameraSource,
@@ -335,5 +339,8 @@ class SyncEngine(
 
         /** Left free on the phone: filling it to the last byte would leave it unable to do anything else. */
         const val LEAVE_FREE_BYTES = 500L * 1024 * 1024
+
+        /** A file whose size the camera could not give is one of 4 GB or more: the 32 bits of its object info overflowed. */
+        const val AT_LEAST_BYTES_WHEN_SIZE_UNKNOWN = 4L * 1024 * 1024 * 1024
     }
 }

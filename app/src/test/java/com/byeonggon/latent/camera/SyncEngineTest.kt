@@ -293,6 +293,26 @@ class SyncEngineTest {
     }
 
     @Test
+    fun doesNotCopyAFileOfUnknownSizeWithoutRoomForFourGigabytes() = runBlocking {
+        // The camera reports no size for a file of 4 GB or more; it is not a file of no size.
+        val bytes = ByteArray(2_000)
+        val big = RemoteFile(nextHandle++, "C0001.MP4", RemoteFile.UNKNOWN_SIZE, capturedAt, MediaKind.VIDEO, folder = "$STORAGE:/100MSDCF/")
+        val files = mapOf(big to bytes)
+        var free = 3L * 1024 * 1024 * 1024
+        val limited = SyncEngine(storage, database, settings, Geotagger(database.locationDao(), database.mediaDao(), storage), freeBytes = { free })
+
+        limited.run(FakeCameraSource(files))
+        val stopped = limited.state.value as SyncState.Finished
+        assertTrue(stopped.outOfSpace)
+        assertEquals(0, stopped.imported)
+
+        // With room for it and the margin, it is copied.
+        free = 5L * 1024 * 1024 * 1024
+        limited.run(FakeCameraSource(files))
+        assertEquals(1, (limited.state.value as SyncState.Finished).imported)
+    }
+
+    @Test
     fun placesPhotosByTheRealTimeWhenTheCamerasClockIsOff() = runBlocking {
         recordTrackAroundCapture()
         // The camera's clock runs 40 minutes ahead: its photo of 12:00 was really taken at 11:20, when no position was recorded.
