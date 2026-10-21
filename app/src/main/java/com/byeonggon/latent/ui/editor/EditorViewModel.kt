@@ -44,6 +44,7 @@ import com.byeonggon.latent.enhance.MaskShape
 import com.byeonggon.latent.enhance.MaskStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -649,7 +650,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         val loaded = try {
             withContext(Dispatchers.Default) {
                 if (item.kind == MediaKind.RAW) {
-                    val raw = container.rawCache.read(File(item.path))
+                    // Closing the editor while it opens stops the decode.
+                    val raw = container.rawCache.read(File(item.path)) { ensureActive() }
                     Source(
                         image = RawRenderer.proxy(raw, PROXY_CELLS, lensCorrection),
                         scale = 1f / (2 * PROXY_CELLS),

@@ -15,6 +15,7 @@ import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.raw.RawRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -242,7 +243,8 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         val bitmap = try {
             withContext(Dispatchers.Default) {
                 renderLock.withLock {
-                    if (raw.kind == MediaKind.RAW) RawRenderer.preview(container.rawCache.read(File(raw.path)), edit) else PhotoEnhancer.preview(File(raw.path), edit, PREVIEW_EDGE)
+                    // Moving on to another photo stops this one's decode, instead of waiting seconds for it to end.
+                    if (raw.kind == MediaKind.RAW) RawRenderer.preview(container.rawCache.read(File(raw.path)) { ensureActive() }, edit) else PhotoEnhancer.preview(File(raw.path), edit, PREVIEW_EDGE)
                 }
             }
         } catch (e: IOException) {

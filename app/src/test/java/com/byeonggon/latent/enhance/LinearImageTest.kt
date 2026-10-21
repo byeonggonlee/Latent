@@ -1,8 +1,12 @@
 package com.byeonggon.latent.enhance
 
 import org.junit.Assert.assertArrayEquals
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.util.concurrent.CancellationException
 
 class LinearImageTest {
     /** A picture whose red levels count up along the rows; green and blue are left black. */
@@ -39,6 +43,13 @@ class LinearImageTest {
         assertArrayEquals(shortArrayOf(2, 5, 1, 4, 0, 3), picture.turned(3).red)
         assertArrayEquals(picture.red, picture.turned(4).red)
         assertArrayEquals(picture.red, once.turned(-1).red)
+    }
+
+    @Test
+    fun aCancelledCoroutineStopsTheRowBandsOnEveryCore() {
+        // A raw decode asks between bands whether its screen is still there, from the cores' threads too.
+        val job = Job().apply { cancel() }
+        assertThrows(CancellationException::class.java) { forRowBands(4096) { _, _ -> job.ensureActive() } }
     }
 
     @Test

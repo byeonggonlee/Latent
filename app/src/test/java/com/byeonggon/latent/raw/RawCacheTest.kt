@@ -1,11 +1,18 @@
 package com.byeonggon.latent.raw
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -22,13 +29,46 @@ class RawCacheTest {
     /** A decode that waits for [release] once [started] is counted down: a slow file, or a damaged one. */
     private val started = CountDownLatch(1)
     private val release = CountDownLatch(1)
-    private val slow = RawCache { _ ->
+    private val slow = RawCache { _, _ ->
         decodes.incrementAndGet()
         started.countDown()
         release.await(10, TimeUnit.SECONDS)
         image
     }
-    private val quick = RawCache { _ -> decodes.incrementAndGet(); image }
+    private val quick = RawCache { _, _ -> decodes.incrementAndGet(); image }
+
+    /** A slow decode that asks between its rows, as the decoders do, whether to stop. */
+    private val stoppable = RawCache { _, checkCancelled ->
+        decodes.incrementAndGet()
+        started.countDown()
+        while (!release.await(1, TimeUnit.MILLISECONDS)) checkCancelled?.invoke()
+        image
+    }
+
+    @Test(timeout = 5_000)
+    fun aCancelledReaderStopsItsDecodeAndKeepsNothing() = runBlocking {
+        val reading = launch(Dispatchers.Default) { stoppable.read(first) { ensureActive() } }
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+
+        // Returns only once the decode has stopped: without the check, not before the 5 seconds are up.
+        reading.cancelAndJoin()
+
+        // The lock is free and nothing was kept: the next read decodes the file again.
+        release.countDown()
+        assertSame(image, stoppable.read(first))
+        assertEquals(2, decodes.get())
+    }
+
+    @Test
+    fun aReadCancelledBeforeItsDecodeLeavesTheFileDecodedBefore() {
+        quick.read(first)
+
+        assertThrows(CancellationException::class.java) { quick.read(second) { throw CancellationException("moved on") } }
+
+        // The viewer moved on before the second file was read: the first is still at hand.
+        quick.read(first)
+        assertEquals(1, decodes.get())
+    }
 
     @Test
     fun decodesAFileOnceAndKeepsOnlyTheLast() {

@@ -19,11 +19,15 @@ import java.io.IOException
 object RawRenderer {
     private const val TAG = "RawDevelop"
 
-    /** Reads a raw file of either kind the app develops: a DNG, as phones write them, or a Sony ARW. */
+    /**
+     * Reads a raw file of either kind the app develops: a DNG, as phones write them, or a Sony ARW. [checkCancelled]
+     * is called between rows and tiles and stops the decode by throwing; null leaves it to the decoders' own check.
+     */
     @Throws(IOException::class)
-    fun read(file: File): ArwImage = timed("decode ${file.name}") {
+    fun read(file: File, checkCancelled: (() -> Unit)? = null): ArwImage = timed("decode ${file.name}") {
         try {
-            DecoderDispatch.decode(DecodeRequest(file)).legacyImage
+            val request = if (checkCancelled == null) DecodeRequest(file) else DecodeRequest(file, checkCancelled = checkCancelled)
+            DecoderDispatch.decode(request).legacyImage
         } catch (e: IOException) {
             // The screens only say that the photo could not be opened; why is kept here.
             Log.w(TAG, "Cannot develop ${file.name}: ${e.message}")
