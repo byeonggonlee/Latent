@@ -61,9 +61,21 @@
 소유자가 지정한 기존 `Dng.Colors`의 범위 안에서 구현한다. 새 모듈·CMS·ForwardMatrix·색 룩·샘플 정규화·BaselineExposure/게인맵 순서는 바꾸지 않는다. 선행 비압축 DNG 수정 `113ca0b`의 [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602)는 전체 성공했다.
 
 - 표준 EXIF 광원을 Kelvin으로 대응하고 Robertson CIE 1960 uv 등온선으로 source white의 역색온도를 얻는다. `AsShotNeutral`은 D50 xy에서 시작해 현재 XYZ→camera 역행렬로 white를 찾는 과정을 최대 30회 반복한다. 유효한 `AsShotWhiteXY`가 있으면 직접 weight를 구한다.
-- SDK 실제 순서에 맞춰 각 광원의 `AnalogBalance × CameraCalibration × ColorMatrix`를 먼저 합성하고, 두 합성 행렬을 clamped inverse-temperature weight로 보간한다. 각 행렬을 별도로 보간한 후 곱하는 방식은 사용하지 않는다. 기존 sRGB primaries 곱·행 정규화·역행렬과 Core WB/룩은 유지한다.
+- 두 광원 경로에 SDK의 D50 기준 ColorMatrix scale 정규화와 소수 4자리 반올림을 적용한다. SDK 실제 순서에 맞춰 각 광원의 `AnalogBalance × CameraCalibration × ColorMatrix`를 먼저 합성하고, 두 합성 행렬을 clamped inverse-temperature weight로 보간한다. 각 행렬을 별도로 보간한 후 곱하는 방식은 사용하지 않는다. 기존 sRGB primaries 곱·행 정규화·역행렬과 Core WB/룩은 유지한다.
 - 단일 행렬, 광원 누락/알 수 없음/같은 온도, scene white 추정 실패는 기존 daylight 우선 선택을 유지한다. 두 광원 경로의 WhiteXY-only 입력은 그 white로 WB를 구한다. 단일 행렬 경로는 기존 반환값을 유지한다.
 - TDD: tungsten/daylight endpoint, 중간 white와 보간 weight 방향, Neutral↔WhiteXY, 광원 순서 반전, calibration/analog 적용, 단일·알 수 없는 광원 fallback을 실제 synthetic DNG로 검증한다. 고정 수치는 앱과 별도의 Gauss–Jordan 계산으로 구했다.
 - 필수 전체 JVM/lint/androidTest 컴파일·schema 검사, release 빌드와 독립 리뷰 후 별도 PR을 연다. `DEVICE_CHECKS.md`에 tungsten RAW/JPEG 비교를 추가하고 미검증으로 둔다.
 
 근거: Adobe [DNG SDK](https://www.adobe.com/support/downloads/dng/dng_sdk.html), AOSP에 수록된 SDK 1.7.1 [`dng_color_spec.cpp`](https://android.googlesource.com/platform/external/dng_sdk/+/de700ad461e35af50b28b861943a0b0753b10929/source/dng_color_spec.cpp) (`FindXYZtoCamera_SingleOrDual`, `NeutralToXY`), [`dng_temperature.cpp`](https://android.googlesource.com/platform/external/dng_sdk/+/de700ad461e35af50b28b861943a0b0753b10929/source/dng_temperature.cpp), [`dng_camera_profile.cpp`](https://android.googlesource.com/platform/external/dng_sdk/+/de700ad461e35af50b28b861943a0b0753b10929/source/dng_camera_profile.cpp). SDK 자체를 빌드하거나 앱 의존성으로 추가하지 않는다.
+
+
+### 구현과 독립 리뷰
+
+- `b889a14`: 실제 synthetic DNG의 두 광원 보간, `DngIlluminants`의 표준 EXIF/Robertson 수치, Neutral/WhiteXY·calibration·analog·광원 순서·단일 경로·scale·진동 회귀를 구현했다. 초기 색 선택 실패 5개, 단일 행렬의 unused illuminant payload, CM 전체 scale 불변성이 각각 RED 후 GREEN이다. 샘플 배열과 Core 룩 단계는 바꾸지 않았다.
+- **수치 판단:** 최초의 강한 합성 프로필은 독립 Gauss–Jordan/Robertson 계산에서도 두 white 사이를 진동했다. 그 입력을 4000 K 수렴 사례로 보지 않고 SDK의 30회 평균 사례로 분리했다. 수렴하는 별도 프로필의 4000 K 결과와 직접 WhiteXY 결과는 고정 수치로 검사한다. 비용/한계는 비수렴 white가 SDK의 근사 평균이라는 것이다.
+- **Claude Code CLI 독립 리뷰:** 전체 diff·호출부·SDK 1.7.1 primary source 발췌를 tool-less로 검토했고 필수 P1/P2는 없었다. 선택 지적 중 WhiteXY의 음수 camera response에서 WB만 legacy가 되는 항목은 색 모델 불일치로 판단해 회귀 RED 후 transform/WB 동시 fallback으로 수정했다. 재리뷰 루프는 만들지 않았으며 이 CLI 검토를 GitHub 승인으로 표시하지 않는다.
+- **확인한 검토 가정:** 광원 Kelvin 표는 `IlluminantToTemperature` 실제 소스와 대조했다(13=5050, 2/14=4150, 15=3525 등). SDK를 빌드하거나 완전한 렌더 결과를 비교한 것은 아니다. calibration signature 비교 미지원은 기존 동작이며 이번 보간의 새 정책으로 만들지 않는다.
+- **비차단 후속:** 반복의 Float 정밀도에서 1e-7 조기 수렴 여부는 보장하지 않는다(30회 상한 유지). Neutral 경로의 광원 역순, 서로 다른 tag/동일 Kelvin, 모든 fallback WB 불변, Neutral/WhiteXY 동시 제공의 우선순위, 0/음수 Neutral의 추가 경계 테스트는 후속으로 남겼다. 기존 API의 단일 profile 선택과 WB 경로는 계속 회귀한다.
+- 텅스텐/백열등의 neutral·skin을 폰 JPEG와 비교하는 미확인 항목 한 줄을 `DEVICE_CHECKS.md`의 Phone raw files에 추가했다. 폰 색·메모리·OOM은 측정하지 않았다. M3-B/M4-A와 폰 우선 exposure/gain-map 변경은 하지 않았다.
+
+후속 최종 gate: `testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest assembleRelease -PdebugSignedRelease --offline` 성공(1m15s), JVM **546개(542 통과·4 선택 skip)**. DNG 33개와 `BackupSizeTest` 포함 모두 통과했다. Room schema 및 whitespace diff 검사도 통과했다. 구현 `b889a14`, 독립 리뷰 후속 수정 `9c5dbd4`; 별도 리뷰 PR로 제출하고 직접 병합하지 않는다.
