@@ -135,9 +135,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | Mirrored orientations (EXIF 2, 4, 5, 7) opened unmirrored or on their side outside the thumbnails; an `Orientation` with the mirror now goes through loading, detail, healing, framing and export. Reviewed by Codex (no change needed; its suggested raw test added in `675c067`); waits for #6 to turn CI green | `claude/mirrored-orientation`, pull request #3 | `enhance/Orientation.kt` (new), `LinearImage`, `PictureRegion`, `Framing`, `Healing`, `PhotoEnhancer`, `raw/RawRenderer.kt` (seam), their tests | 2026-10-21 |
-| Claude Code | `RawCache` held its monitor for the whole decode, so the viewer's `clear()` on the main thread waited for a slow file; decodes now have a lock of their own, and full-size exports and shares take the same turn (Codex's P1, `deb41dc`). **Codex to look again** | `claude/raw-cache-lock`, pull request #4 | `raw/RawCache.kt` (seam), `data/LibraryEdits.kt`, `raw/RawCacheTest.kt` (new), `data/ShareCopyTest.kt` | 2026-10-21 |
-| Claude Code | The restore and the timeline import read back two queries' worth of row id for every point: 300,000 cursors for 150,000 places, the garbage behind `BackupSizeTest`'s failures on slow runners. They now count the table instead. **Codex or the owner to review** (backup data path) | `claude/restore-without-row-ids`, pull request #6 | `data/db/AppDatabase.kt` (DAO methods only, no schema change), `backup/Restorer.kt`, `location/TimelineImporter.kt` | 2026-10-21 |
+| Claude Code | `RawCache` held its monitor for the whole decode, so the viewer's `clear()` on the main thread waited for a slow file; decodes now have a lock of their own, full-size exports and shares take the same turn (Codex's first P1, `deb41dc`) and find the cache empty when they start (its second, `2be5fbf`). `main` merged in (`06e3681`). **Waits for Codex's second look** | `claude/raw-cache-lock`, pull request #4 | `raw/RawCache.kt` (seam), `data/LibraryEdits.kt`, `raw/RawCacheTest.kt` (new), `data/ShareCopyTest.kt` | 2026-10-21 |
 
 ## For Codex
 
@@ -213,6 +211,8 @@ Nothing asked yet.
 | 2026-10-21 | Codex | Independent architecture assessment and staged plan; maintainer approval pending, implementation not started | `fb1f158` |
 | 2026-10-21 | Claude Code (cloud) | `Shaders compile` failed whenever the unit tests came from the build cache (a change to the docs only, as on `main` at `ec9a8b3`): the shaders folder is now an output of the test task | pull request #5 |
 | 2026-10-21 | Claude Code (computer) | The two copies of this board joined; the rules for every agent in `AGENTS.md` (worktrees, what goes through review, trailers), `GEMINI.md` for Antigravity; the owner's decisions in `architecture/decisions.md` | `claude/agent-rules` |
+| 2026-10-21 | Claude Code (computer) | Mirrored photos (Exif 2, 4, 5, 7) upright everywhere, as the thumbnails show them; reviewed by Codex | pull request #3 |
+| 2026-10-21 | Claude Code (computer) | The restore and the timeline import count the table instead of reading back two queries' worth of row id a point: 300,000 cursors fewer for 150,000 places, the cause of `BackupSizeTest`'s failures on slow runners; reviewed by Codex | pull request #6 |
 
 ## Template for a handover
 

@@ -29,9 +29,10 @@ Last updated 2026-10-20 (late night).
 
 ## Ready to do (this side)
 
-- [ ] **`BackupSizeTest` on CI**: failed twice on slow runners (restore 28 s instead of 7 s, 13.6 MB held where
-      the limit is 8 MB), passes locally (0.1 MB) and on the other runs. The test now prints the heap's largest
-      classes when it holds too much; read them from the next failure before changing the limit or the restore.
+- [x] **`BackupSizeTest` on CI** (2026-10-21): its next failure was read. The heap's growth by class was about 1.2 MB
+      of 10.9 MB; the rest was some 300,000 closed cursors waiting for their finalizers, which the restore made by
+      asking Room for every point's row id. Fixed in the restore and the timeline import (pull request #6); the test's
+      limits and measurement are as they were.
 - [x] **`gh`** installed and logged in (2026-10-20); its token is in the keychain, so it runs from the Terminal
       panel, not from the agent's own shell.
 - [x] **Pull request #1** merged 2026-10-20: the `v*` release workflow, `CHANGELOG.md`, `SECURITY.md`, issue
