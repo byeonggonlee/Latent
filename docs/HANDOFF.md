@@ -142,8 +142,13 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | M2-A/M1-A/M2-B implemented; Claude Code compatibility findings fixed in `2a4f81d` (five RED→GREEN regressions); shared adapter and v0 contract await integration approval. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), `codex/decoder-stability` | `raw/` readers/API/tests/fixtures; shared `RawRenderer.kt` dispatch adapter (no `ArwImage` fields or cache lock changes) | 2026-10-21 |
+| Claude Code (computer) | A raw decode stops when the viewer or editor that asked for it is cancelled (first part of M3-A): the coroutine's `ensureActive()` as the request's `checkCancelled`, through `RawCache.read` and `RawRenderer.read` | `claude/decode-cancellation` (pull request, reviewed by Codex) | `raw/RawCache.kt`, `raw/RawRenderer.kt` (`read` only), `ui/viewer/ViewerViewModel.kt`, `ui/editor/EditorViewModel.kt`; the `RawCache` lambdas in `RawCacheTest`, `ShareCopyTest`, `FrameContractTest` | 2026-10-21 |
 
 ## For Codex
+
+**Order set by the owner (2026-10-21):** 4 (below), then 1, then 2. Start 2 only once Claude Code's decode
+cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
+touch the seam, as it reviews yours.
 
 ### 1. DNG: a colour matrix between the two calibration illuminants (feature, medium, needs the owner's files to judge)
 
@@ -177,6 +182,22 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 - **Codex implementation**: [PR #7](https://github.com/byeonggonlee/Latent/pull/7) checks JPEG XL header dimensions before the DNG sensor and codec frame allocation, with padded edge and oriented-header tests. No vendor source/patch change. Awaiting the reviewed PR; total codec/ICC heap is not a phone memory guarantee.
 
+### 4. DNG: uncompressed strips read as before PR #7 (bug, small)
+
+- **Why**: an uncompressed DNG whose `StripByteCounts` (or `TileByteCounts`) is overstated past the end of the file,
+  or understated, but whose samples are all there, opened before PR #7 and is refused since. Left from the second
+  review ([comment](https://github.com/byeonggonlee/Latent/pull/7#issuecomment-6311791842)).
+- **Where**: `raw/Dng.kt`, `readSamples`, the check before the sensor is allocated:
+  `compression != COMPRESSION_LOSSLESS_JPEG && offset.toLong() + length > file.size`, and for `COMPRESSION_NONE`
+  `needed > length`. Before PR #7, `unpack` checked only that the rows it reads lie inside the file
+  (`offset + rowBytes * rows > file.size`) and never looked at the declared length.
+- **Do**: for `COMPRESSION_NONE`, check the bytes the rows need against the end of the file, not against the
+  declared length, before allocating. Keep JPEG XL's whole declared range and the offset checks.
+- **Test first** in `DngTest`, as `losslessJpegKeepsClippingAnOverstatedStripLengthToEof` does: an uncompressed
+  `SyntheticDng` with `StripByteCounts` set to `Int.MAX_VALUE`, and one set to 1, give the same samples; one cut
+  short of its rows still fails.
+- **Done when**: CI is green; small and inside the decoders, so straight to `main`.
+
 ### Waiting for a phone first (not to start yet)
 
 - What is left of a `BaselineExposure` that the highlights stopped short, into the tone stage's exposure
@@ -186,8 +207,10 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 ## For Claude Code
 
-Nothing handed over yet. Its own next items, so that Codex does not pick them too:
+Nothing handed over yet. Its own next items, so that Codex does not pick them too, in this order (set by the owner
+2026-10-21):
 
+- A raw decode stops when the screen that asked for it is cancelled (first part of M3-A; under *In progress*).
 - Pair a Pixel's `.RAW-02.ORIGINAL.dng` with its `.RAW-01.COVER.jpg` (`ui/library/LibraryViewModel.kt`, `shotOf`, and
   `data/LibraryIndex.kt`, the same rule on adoption): the library's pairing rule, not the decoder.
 - Test the next migration against `app/schemas/.../13.json` with Room's `MigrationTestHelper` (`room-testing`).
