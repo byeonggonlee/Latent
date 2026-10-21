@@ -77,7 +77,7 @@ class HealingTest {
             stored.blue[row * 150 + column] = value
         }
 
-        Healing.heal(stored, listOf(Spot(0.3f, 0.5f, 0.04f, 0.6f, 0.5f)), uprightTurns = 1)
+        Healing.heal(stored, listOf(Spot(0.3f, 0.5f, 0.04f, 0.6f, 0.5f)), orientation = Orientation(mirrored = false, quarterTurns = 1))
 
         assertEquals(5000, stored.green[140 * 150 + 75].toInt())
     }

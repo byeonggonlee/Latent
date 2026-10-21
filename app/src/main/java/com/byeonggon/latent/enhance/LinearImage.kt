@@ -50,6 +50,25 @@ class LinearImage(
         return small
     }
 
+    /** The picture as it is seen when it is stored with [orientation]: mirrored and turned upright, or itself. */
+    fun oriented(orientation: Orientation): LinearImage =
+        (if (orientation.mirrored) mirrored() else this).turned(orientation.quarterTurns)
+
+    /** A copy mirrored left to right. */
+    fun mirrored(): LinearImage {
+        val result = LinearImage(width, height)
+        for (y in 0 until height) {
+            val row = y * width
+            for (x in 0 until width) {
+                val from = row + width - 1 - x
+                result.red[row + x] = red[from]
+                result.green[row + x] = green[from]
+                result.blue[row + x] = blue[from]
+            }
+        }
+        return result
+    }
+
     /** A copy turned clockwise by [quarterTurns] quarter turns. */
     fun turned(quarterTurns: Int): LinearImage {
         val turns = quarterTurns.mod(4)

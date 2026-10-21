@@ -24,6 +24,14 @@ class PictureRegion(val image: LinearImage, val left: Int, val top: Int, val fra
          * [storedWidth] by [storedHeight] pixels, if [uprightTurns] quarter turns clockwise bring the
          * stored picture upright. Returns left, top, width and height again.
          */
+        fun asStored(upright: IntArray, orientation: Orientation, storedWidth: Int, storedHeight: Int): IntArray {
+            val unturned = asStored(upright, orientation.quarterTurns, storedWidth, storedHeight)
+            if (!orientation.mirrored) return unturned
+            // Turned back, the rectangle lies in the mirrored picture, which is as wide as the stored one.
+            return intArrayOf(storedWidth - unturned[0] - unturned[2], unturned[1], unturned[2], unturned[3])
+        }
+
+        /** [asStored] for a picture that is only turned. */
         fun asStored(upright: IntArray, uprightTurns: Int, storedWidth: Int, storedHeight: Int): IntArray {
             val (left, top, width, height) = upright
             return when (uprightTurns.mod(4)) {

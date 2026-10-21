@@ -64,7 +64,9 @@ goal is the camera's look first, colorimetry later (§11, question 3); reviews a
   cloud sessions with **no Android SDK** (Google's Maven is blocked there), whose changes are proven only on GitHub
   Actions through a pull request. Both can run at once: on 2026-10-21 a cloud session and one on the computer
   built the same five items side by side, which a claim here would have saved. On the computer, `gh` is logged in
-  through the keychain and runs from the app's terminal panel, not from the agent's own shell.
+  through the keychain and runs from the app's terminal panel, not from the agent's own shell. A cloud session can
+  still fetch Gradle and Kotlin from their own sites, so it can try a Gradle behaviour on a small JVM project of its
+  own, or compile a Kotlin file against stubs, before a pull request.
 - **Codex**: see its response below.
 - **Antigravity**: to be written here by Antigravity.
 
@@ -133,8 +135,9 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | Mirrored orientations (EXIF 2, 4, 5, 7): find out with tests whether the thumbnail, the viewer, the editor and an export agree, and make them agree (reviewed: orientation) | `claude/...`, pull request | `raw/RawRenderer.kt` (`quarterTurnsOf`, seam), `enhance/PhotoEnhancer.kt`, `data/Thumbnails.kt`, their tests | 2026-10-21 |
-| Claude Code | `RawCache` holds its lock for the whole decode, so a slow or damaged file holds up every other raw file (reviewed: seam, locks) | `claude/...`, pull request | `raw/RawCache.kt` (seam), `ui/viewer/ViewerViewModel.kt`, their tests | 2026-10-21 |
+| Claude Code | Mirrored orientations (EXIF 2, 4, 5, 7) opened unmirrored or on their side outside the thumbnails; an `Orientation` with the mirror now goes through loading, detail, healing, framing and export. Reviewed by Codex (no change needed; its suggested raw test added in `675c067`); waits for #6 to turn CI green | `claude/mirrored-orientation`, pull request #3 | `enhance/Orientation.kt` (new), `LinearImage`, `PictureRegion`, `Framing`, `Healing`, `PhotoEnhancer`, `raw/RawRenderer.kt` (seam), their tests | 2026-10-21 |
+| Claude Code | `RawCache` held its monitor for the whole decode, so the viewer's `clear()` on the main thread waited for a slow file; decodes now have a lock of their own, and full-size exports and shares take the same turn (Codex's P1, `deb41dc`). **Codex to look again** | `claude/raw-cache-lock`, pull request #4 | `raw/RawCache.kt` (seam), `data/LibraryEdits.kt`, `raw/RawCacheTest.kt` (new), `data/ShareCopyTest.kt` | 2026-10-21 |
+| Claude Code | The restore and the timeline import read back two queries' worth of row id for every point: 300,000 cursors for 150,000 places, the garbage behind `BackupSizeTest`'s failures on slow runners. They now count the table instead. **Codex or the owner to review** (backup data path) | `claude/restore-without-row-ids`, pull request #6 | `data/db/AppDatabase.kt` (DAO methods only, no schema change), `backup/Restorer.kt`, `location/TimelineImporter.kt` | 2026-10-21 |
 
 ## For Codex
 
@@ -208,6 +211,7 @@ Nothing asked yet.
 | 2026-10-21 | Claude Code (computer) | `release.yml` refuses empty secrets, the debug key and an undated section; CI checks the release build against `PRIVACY.md`, and the shaders with glslang; backup fixes; `SECURITY.md` | `0e962ad`, `2560dde`, `2557bc0`, `01e465a`, `769aa41` |
 | 2026-10-21 | Claude Code (cloud) | This board, and the note on it in `AGENTS.md` and `CLAUDE.md` | pull request #2 |
 | 2026-10-21 | Codex | Independent architecture assessment and staged plan; maintainer approval pending, implementation not started | `fb1f158` |
+| 2026-10-21 | Claude Code (cloud) | `Shaders compile` failed whenever the unit tests came from the build cache (a change to the docs only, as on `main` at `ec9a8b3`): the shaders folder is now an output of the test task | pull request #5 |
 | 2026-10-21 | Claude Code (computer) | The two copies of this board joined; the rules for every agent in `AGENTS.md` (worktrees, what goes through review, trailers), `GEMINI.md` for Antigravity; the owner's decisions in `architecture/decisions.md` | `claude/agent-rules` |
 
 ## Template for a handover

@@ -32,7 +32,7 @@ class TimelineImporter(private val context: Context, private val locationDao: Lo
                         source = LocationSource.TIMELINE,
                     )
                 }
-                added += locationDao.insertAll(rows).count { it != -1L }
+                added += locationDao.addNew(rows)
                 parsed += chunk.size
                 from = minOf(from ?: Long.MAX_VALUE, chunk.minOf { it.timestamp })
                 to = maxOf(to ?: Long.MIN_VALUE, chunk.maxOf { it.timestamp })

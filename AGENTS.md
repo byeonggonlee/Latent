@@ -31,6 +31,8 @@ you start it, and log it there when it is done.
   commits, stashes or switches branches there.
 - Branch prefixes: `claude/` or `ccr-` for Claude Code, `codex/` for Codex, `agy/` for Antigravity.
 - The stash is shared by every worktree: no bare `git stash`. Stage the paths of your task, never `git add -A`.
+- A new worktree has no `local.properties` (the Android SDK's path, never committed): copy it from your own setup
+  before building.
 - Remove a worktree and its branch once its work is on `main`.
 
 ### Getting to main

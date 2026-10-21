@@ -177,13 +177,14 @@ internal class FramedView(framing: Framing, turnedWidth: Float, turnedHeight: Fl
 }
 
 /**
- * The part of this picture that [framing] keeps, turned, tilted and levelled. [uprightTurns] are the
- * quarter turns that bring this picture upright in the first place, for one that is stored on its
- * side; the framing applies to the upright picture.
+ * The part of this picture that [framing] keeps, turned, tilted and levelled. [orientation] is how this picture is
+ * stored, for one that has to be turned or mirrored upright in the first place; the framing applies to the
+ * upright picture.
  */
-fun LinearImage.framed(framing: Framing, uprightTurns: Int = 0): LinearImage {
-    val turns = (uprightTurns + framing.quarterTurns).mod(4)
-    if (turns == 0 && framing.copy(quarterTurns = 0) == Framing()) return this
+fun LinearImage.framed(framing: Framing, orientation: Orientation = Orientation.UPRIGHT): LinearImage {
+    val turns = (orientation.quarterTurns + framing.quarterTurns).mod(4)
+    val unmirror = orientation.mirrored
+    if (turns == 0 && !unmirror && framing.copy(quarterTurns = 0) == Framing()) return this
     val turnedWidth = if (turns % 2 == 1) height else width
     val turnedHeight = if (turns % 2 == 1) width else height
     val result = LinearImage(
@@ -215,7 +216,7 @@ fun LinearImage.framed(framing: Framing, uprightTurns: Int = 0): LinearImage {
             }
             val turnedX = mirror * levelX + turnedWidth / 2.0
             val turnedY = levelY + turnedHeight / 2.0
-            val sourceX: Double
+            var sourceX: Double
             val sourceY: Double
             when (turns) {
                 0 -> { sourceX = turnedX; sourceY = turnedY }
@@ -223,6 +224,8 @@ fun LinearImage.framed(framing: Framing, uprightTurns: Int = 0): LinearImage {
                 2 -> { sourceX = width - turnedX; sourceY = height - turnedY }
                 else -> { sourceX = width - turnedY; sourceY = turnedX }
             }
+            // Turned back, the point lies in the stored picture mirrored, if its orientation mirrors it.
+            if (unmirror) sourceX = width - sourceX
             copyBlended(sourceX - 0.5, sourceY - 0.5, result, y * result.width + x)
         }
     }

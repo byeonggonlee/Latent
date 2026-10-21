@@ -56,7 +56,7 @@ object PhotoEnhancer {
      * It may come out up to half that size, as it is only ever shrunk by whole factors.
      */
     @Throws(IOException::class)
-    fun load(source: File, maxEdge: Int): LinearImage = shrunk(source, maxEdge).turned(uprightTurnsOf(source))
+    fun load(source: File, maxEdge: Int): LinearImage = shrunk(source, maxEdge).oriented(orientationOf(source))
 
     /**
      * Replaces [photo] with its edited version. The original moves to [backup], from where
@@ -117,7 +117,7 @@ object PhotoEnhancer {
     private fun isJpeg(file: File): Boolean = file.inputStream().use { it.read() == 0xFF && it.read() == 0xD8 }
 
     private fun bakesOrientation(original: File, edit: PhotoEdit) =
-        edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && uprightTurnsOf(original) != 0)
+        edit.framing != Framing() || edit.spots.isNotEmpty() || (edit.locals.isNotEmpty() && !orientationOf(original).isUpright)
 
     /** The JPEG file of [original] edited as [edit] says, with the camera's Exif carried over to it. */
     private fun editedBytes(original: File, edit: PhotoEdit, name: String, quality: Int): ByteArray {
@@ -185,7 +185,7 @@ object PhotoEnhancer {
 
     /** The picture turned upright, cut and levelled as the edit says, with its tones edited. */
     private fun reframed(original: File, edit: PhotoEdit): Bitmap {
-        val upright = uprightTurnsOf(original)
+        val upright = orientationOf(original)
         return timed("${original.name}: reframe, tones and detail") {
             renderedBitmap(edit, scale = 1f) {
                 val bitmap = timed("${original.name}: decode") {
@@ -205,17 +205,17 @@ object PhotoEnhancer {
     fun region(file: File, centreX: Float, centreY: Float, size: Int): PictureRegion {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)
-        val turns = uprightTurnsOf(file)
-        val sideways = turns % 2 == 1
+        val orientation = orientationOf(file)
+        val sideways = orientation.isSideways
         val frameWidth = if (sideways) bounds.outHeight else bounds.outWidth
         val frameHeight = if (sideways) bounds.outWidth else bounds.outHeight
         val upright = PictureRegion.bounds(frameWidth, frameHeight, centreX, centreY, size)
-        val (left, top, width, height) = PictureRegion.asStored(upright, turns, bounds.outWidth, bounds.outHeight)
+        val (left, top, width, height) = PictureRegion.asStored(upright, orientation, bounds.outWidth, bounds.outHeight)
         val decoder = BitmapRegionDecoder.newInstance(file.path)
         try {
             val bitmap = decoder.decodeRegion(Rect(left, top, left + width, top + height), null)
                 ?: throw IOException("Cannot decode ${file.name}")
-            return PictureRegion(linear(bitmap).turned(turns), upright[0], upright[1], frameWidth, frameHeight)
+            return PictureRegion(linear(bitmap).oriented(orientation), upright[0], upright[1], frameWidth, frameHeight)
         } finally {
             decoder.recycle()
         }
@@ -270,13 +270,8 @@ object PhotoEnhancer {
     }
 
     /** The quarter turns clockwise that show the picture the way the camera was held. */
-    private fun uprightTurnsOf(file: File): Int =
-        when (ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 1
-            ExifInterface.ORIENTATION_ROTATE_180 -> 2
-            ExifInterface.ORIENTATION_ROTATE_270 -> 3
-            else -> 0
-        }
+    private fun orientationOf(file: File): Orientation =
+        Orientation.ofExif(ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL))
 
     private fun render(bitmap: Bitmap, renderer: ToneRenderer) {
         val width = bitmap.width
