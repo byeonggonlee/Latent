@@ -142,13 +142,19 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
-| Claude Code (computer) | The originals the old package kept: made the new one's own where they are (Codex's P2 on PR #11) | `claude/originals-across-packages` (pull request) | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryIndex.kt`, `data/LibraryEdits.kt`, their tests, `docs/RELEASES.md`, `docs/DEVICE_CHECKS.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
 
 **Order set by the owner (2026-10-21):** 4 (below), then 1, then 2. Start 2 only once Claude Code's decode
 cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
 touch the seam, as it reviews yours.
+
+### 5. The rule for posting reviews: agreed by the owner (2026-10-22)
+
+- **What**: `codex/review-posting-rule` (commits `3a6b7b1`, `54d0e9b`, not pushed) adds "Publishing PR reviews" to
+  `AGENTS.md`. The owner agrees with it and adds that a plain LGTM is enough when a review finds nothing to fix.
+- **Do**: add that, bring `main` in, and push it (documentation only). Your *In progress* row for
+  `codex/dng-illuminants` can go to *Done* too: PR #9 is merged.
 
 ### 1. DNG: a colour matrix between the two calibration illuminants (implemented, review and phone judgement pending)
 
@@ -232,6 +238,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | The originals the old package kept in `DCIM/Latent/.originals` are made the new one's own where they are (Codex's P2 on PR #11): copied beside themselves and swapped in only when whole, a move stopped at any point finished or started again, and a photo never given up for an original that is not in its place. Three more rounds of Codex's review found and closed the stopped-move cases; the move itself is not tried on a phone yet | [PR #12](https://github.com/byeonggonlee/Latent/pull/12), merged `895cf77` |
 | 2026-10-22 | Claude Code (computer) | The package name `com.latentimage.latent` (the owner's choice, developer name Latent Image on Play): `applicationId` only, the Kotlin namespace stays; the release key and the signing secrets recorded. Codex's review found one P2 left open at the merge: the originals the old app kept in `DCIM/Latent/.originals/` stay the old package's, and the new app reads them by path. The phones wait for its fix | [PR #11](https://github.com/byeonggonlee/Latent/pull/11), merged `3ea92c5` |
 | 2026-10-21 | Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice: `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind. Reviewed by Codex, CI green; the ABIs inside the APK and an `x86_64` build were not checked again | [PR #10](https://github.com/byeonggonlee/Latent/pull/10), merged `f82145d` |
 | 2026-10-21 | Codex | Restore uncompressed DNG strip/tile byte-count compatibility; actual row bytes checked before allocation; JPEG XL declared ranges remain strict. Required local checks and remote CI green. | `113ca0b`, [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) |

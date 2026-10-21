@@ -11,13 +11,12 @@ Last updated 2026-10-22.
 - [x] **Signing secrets** (2026-10-22): the release key below is in the four secrets (`SIGNING_KEYSTORE_BASE64`,
       `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md), so the nightly now
       signs what it builds and publishes it.
-- [ ] **The first signed nightly on the phones**, once the new app makes the originals the old one kept its own
-      (Codex's P2 on [PR #11](https://github.com/byeonggonlee/Latent/pull/11): `DCIM/Latent/.originals/` stays the
-      old package's, which shared storage shuts to the new one's paths; fixed by the pull request of
-      `claude/originals-across-packages`): one manual *Run workflow* of **Nightly** with *force* (its checksum file
-      and the clean-up of old ones), then each phone moves to it once (RELEASES.md, "Reinstalling a phone"), with the
-      check in DEVICE_CHECKS, "Backup and restore". Until then no nightly is for the phones, though they are signed
-      and published.
+- [ ] **The first signed nightly on the phones**: the first one with the new app taking over the old one's
+      originals ([PR #12](https://github.com/byeonggonlee/Latent/pull/12), on `main` since 2026-10-22) is the next
+      scheduled one, or one manual *Run workflow* of **Nightly** with *force*. Each phone then moves to it once
+      (RELEASES.md, "Reinstalling a phone"), with the check in DEVICE_CHECKS, "Backup and restore", and
+      `SMOKE_TEST.md`. `nightly-20261022-213`, the first signed one, is from before that fix: not for the phones.
+      The signing secrets work: it was signed with the release key and published.
 - [ ] **On the phones**: the checks in DEVICE_CHECKS, the risky ones first: the colour range and LUT shaders against
       the CPU result, subject and background masks (log tag `SubjectMask`: GPU or CPU, cold and warm time), the
       settings, search, compare, HEIF, presets, and the tab bar after its fix (no empty band above the buttons).
@@ -53,7 +52,7 @@ Last updated 2026-10-22.
 - [x] The other dialogs of the library's title bar (About, albums, the confirmation to trash the rejected) now live
       above it, like the search sheet; a test shows About staying up while the library fills under it.
 - [x] A ten-minute check for the phone after each nightly: [`SMOKE_TEST.md`](SMOKE_TEST.md).
-- [x] **Smaller APK**: the CI and nightly builds carry arm64 only, 20 MB instead of 39 MB (`-PlatentAbis`).
+- [x] **Smaller APK**: every build carries arm64 only, 20 MB instead of 39 MB (`-PlatentAbis` for an emulator).
 
 - [ ] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md)), then tap to select (stage 3): no longer held back, the
       owner found the subject mask fine on the phone (2026-10-21). Queued for Claude Code in `HANDOFF.md`.
