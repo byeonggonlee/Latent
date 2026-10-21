@@ -20,14 +20,13 @@ minimal contract first, and extract only `image-decoder` if justified. Separate 
 modules are deferred proposals. **This is a plan, not an approved contract or an implementation claim.**
 Wait for maintainer approval of scope, colour/precision goals, resource budgets and review responsibilities.
 Antigravity's future analysis must remain independent; compare evidence against the same revision without
-overwriting either assessment.
+overwriting either assessment. The assessment commit `fb1f158` itself changed documentation only.
 
 **Execution update (2026-10-21):** the owner authorized Codex to execute the next sequence on autopilot:
 M2-A stability → M1-A minimal legacy contract → M2-B static dispatch/cancellation boundaries. See
 [`architecture/decoder-execution.md`](architecture/decoder-execution.md) and the PR proposal
 [`architecture/image-contract.md`](architecture/image-contract.md). This preserves app/Core, current formats and
 the camera look; it does not approve new phone memory budgets, module extraction, native backends or HDR.
- No application/build changes, Issue/PR creation, push or merge were performed.
 
 Decided by the owner since (2026-10-21, in [`architecture/decisions.md`](architecture/decisions.md)): the precision
 goal is the camera's look first, colorimetry later (§11, question 3); reviews are for important changes only, which
@@ -142,7 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | M2-A/M1-A/M2-B implemented; shared adapter and v0 contract await maintainer review; current ARW/DNG look preserved. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), `codex/decoder-stability` | `raw/` readers/API/tests/fixtures; shared `RawRenderer.kt` dispatch adapter (no `ArwImage` fields or cache lock changes) | 2026-10-21 |
+| Codex | M2-A/M1-A/M2-B implemented; Claude Code compatibility findings fixed in `2a4f81d` (five RED→GREEN regressions); shared adapter and v0 contract await integration approval. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), `codex/decoder-stability` | `raw/` readers/API/tests/fixtures; shared `RawRenderer.kt` dispatch adapter (no `ArwImage` fields or cache lock changes) | 2026-10-21 |
 
 ## For Codex
 
@@ -207,7 +206,6 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
-| 2026-10-21 | Codex | Implemented decoder bounds/recovery, minimal legacy frame contract and static request dispatch/cancellation boundaries. 526 JVM tests: 522 passed/4 optional skipped; lint, androidTest compilation, release and schema diff pass locally. Independent tool-less Claude Code review plus compatibility regression fixes; phone memory/real-photo checks and M3-A UI cancellation remain. Integration review pending. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7); `0f7809e`, `3350d8c`, `a4a23e3` |
 | 2026-10-21 | Claude Code (computer) | The 0.1.0 notes; Room schema exported and checked on CI; phone tests compiled on CI; test failures and `BackupSizeTest`'s heap growth in the log | `be92ec3`, `3765350`, `752fcc5`, `230ea56` |
 | 2026-10-21 | Claude Code (computer) | A cut-short JPEG XL stream fails instead of hanging (was handed to Codex; done before the handover landed) | `cf6a263` |
 | 2026-10-21 | Claude Code (computer) | Sync: a file of unknown size needs room for 4 GB; camera names that lead out of their folder and folders that list themselves are skipped; a restore checks again for a running sync | `11fff6e`, `8db87b9`, `b10040e` |

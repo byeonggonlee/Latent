@@ -33,3 +33,16 @@
 - **다음 승인 지점:** 이 PR의 shared `RawRenderer` adapter와 v0 계약을 유지보수자가 검토한 뒤 통합한다. M3-A(UI Job→요청 취소 전달), 폰 예산 확정, 색/왜곡 기능과 모듈 추출은 이 PR에서 완료했다고 표시하지 않는다.
 
 - **제출:** [PR #7](https://github.com/byeonggonlee/Latent/pull/7), `codex/decoder-stability`. 단계 커밋: `b8be490`(선점/계획), `0f7809e`(M2-A), `3350d8c`(M1-A), `a4a23e3`(M2-B 및 검토 보완). 통합 승인과 원격 CI는 로컬 성공과 구분한다.
+
+## PR #7 리뷰 후속 — 2026-10-21
+
+[Claude Code 리뷰](https://github.com/byeonggonlee/Latent/pull/7#issuecomment-6310871184)를 현재 코드와 대조했다. 새 테스트 5개가 `c1dc651`의 `Unsupported RAW metadata`, `Invalid RAW calibration`, `Damaged TIFF value range`, strip 길이 검사에서 실패했고, `2a4f81d` 수정 후 RAW 회귀가 통과했다.
+
+- ARW/DNG의 방향값 0·9·65535는 upright(1)로 정규화한다. 기존에 허용하던 유한한 ARW WB gain(0·음수 포함)은 유지한다. crop/shape, finite calibration과 sample range 검사는 유지한다.
+- 범위가 잘못된 선택 TIFF ICC payload만 생략한다. 정상 ICC 방어 복사와 픽셀 오류 처리는 유지한다.
+- lossless JPEG는 기존 decoder처럼 overstated byte count를 실제 EOF에서 자른다(`Int.MAX_VALUE` 회귀 포함). 비압축·JPEG XL은 선언 범위를 계속 검사하며, offset·양수 길이·메모리 제한은 완화하지 않았다.
+- 기본 취소 검사는 현재 스레드의 interrupt만 관찰한다. M3-A에서 요청 Job의 `ensureActive()`를 캡처하고 worker 전파·UI 로딩 정리를 검사한다. 이번 PR에 UI 취소 완료를 표시하지 않는다.
+- 추가 sample scan은 측정 전까지 validation으로 유지하고, public `Dng.isDng`도 호환 helper로 유지한다. 성능 개선이나 API 삭제를 이번 호환성 수정에 섞지 않는다.
+- HANDOFF의 assessment-only 문장을 과거 문서 커밋에 한정했고, 미병합 PR #7의 Done 행을 제거했다. In progress 선점은 병합 때까지 유지한다.
+
+후속 로컬 gate: 전체 JVM **531개(527 통과, 선택 4 skip)**, debug/release lint, androidTest 컴파일, R8 release 빌드 성공(1m11s). `BackupSizeTest`도 통과했다. Room schema와 whitespace diff 검사를 통과했다. 폰 메모리·OOM·실사진은 측정하지 않았다. 원격 CI는 이 후속 커밋을 push한 뒤 별도로 확인한다.
