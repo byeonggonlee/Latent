@@ -63,9 +63,9 @@ afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` al
   publishes nothing: an APK signed with a key no phone has would update nothing.
 - **At the first real release** a release key is made, kept in two places outside the repository and put in the
   secrets in the same four; every phone then has to be reinstalled once, which takes the database along through a
-  backup and its restore (below). This happens at the same time as the package name is
-  settled, as that makes a new app anyway, so both are done before `v0.1.0`. The stable workflow refuses to run
-  without the secrets. Making the key:
+  backup and its restore (below). It comes with the package name settled on 2026-10-22,
+  `com.latentimage.latent` (it was `com.byeonggon.latent`), which makes a new app anyway, so both are done before
+  `v0.1.0`. The stable workflow refuses to run without the secrets. Making the key:
 
   ```bash
   keytool -genkeypair -v -keystore latent-release.jks -alias latent -keyalg RSA -keysize 4096 -validity 36500
@@ -90,6 +90,10 @@ build), the database goes with the old app; the photos in `DCIM/Latent` and the 
 3. Settings, **Backup and restore**, **Restore…**, pick the file, read the summary (photos found, photos not found by
    name, what replaces what), confirm.
 4. Online maps stay off until they are turned on again; location recording is started again by hand.
+
+Across the new package name the old app and the new one are two apps that can be installed side by side: install
+the new one first, restore into it, and uninstall the old one once the new one shows everything (step 2 without the
+uninstall). Meanwhile sync, edit and record places in one of them only.
 
 The new app reads the backup of an older one; an older app refuses the backup of a newer one (see
 [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).

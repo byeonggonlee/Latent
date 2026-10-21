@@ -16,7 +16,9 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.byeonggon.latent"
+        // The package on the phones and on Play, the owner's choice of 2026-10-22 (the developer on Play is Latent
+        // Image). The code keeps its namespace above, which no one sees.
+        applicationId = "com.latentimage.latent"
         minSdk = 35
         targetSdk = 37
         // The nightly and stable builds on GitHub pass the number of commits and a name with the date (see docs/RELEASES.md);

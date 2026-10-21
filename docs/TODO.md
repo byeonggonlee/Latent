@@ -17,9 +17,9 @@ Last updated 2026-10-20 (late night).
       settings, search, compare, HEIF, presets, and the tab bar after its fix (no empty band above the buttons).
       Video: a portrait one, a 4K one, one with a rotation flag. Then a backup and its restore on the same phone and on
       the other one, before the first reinstall needs them (no uninstalling for the check).
-- [ ] **Decide when publishing is settled**: the package name (RELEASES.md and the notes on Play), then the first real
-      release key, which means every phone is reinstalled once (with a backup first: RELEASES.md, "Reinstalling a
-      phone").
+- [ ] **The first real release key** (RELEASES.md, "Signing"), which goes into the signing secrets above and means
+      every phone is reinstalled once (with a backup first: RELEASES.md, "Reinstalling a phone"). The package name is
+      settled (2026-10-22): `com.latentimage.latent`, developer name Latent Image on Play.
 - [ ] **The rest of Codex's architecture questions** (`architecture/codex-assessment.md` §11; question 3, the
       precision goal, is decided in `architecture/decisions.md`): the first scope of the decoder work, whether
       standalone JPEG XL, JPEG or HEIF come under the decoders, the phones and the memory and time budgets, the
