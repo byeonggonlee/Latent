@@ -55,7 +55,7 @@ Times are milliseconds since 1970 (UTC); places are degrees (WGS 84). The order 
   (by `make_format1.py` beside it, not by the app's writer). `BackupFileTest.readsTheFirstFormatAsItWasWritten`
   restores it; it must keep passing. Each new version adds a fixture of its own.
 - The package name and the app's version in the manifest are only told, never checked: a backup of
-  `com.byeonggon.latent` restores into an app under another package name.
+  `com.byeonggon.latent`, the package until 2026-10-22, restores into `com.latentimage.latent`.
 
 ### manifest.json
 

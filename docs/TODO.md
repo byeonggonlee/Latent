@@ -4,22 +4,25 @@ What is open right now, by who has to move. The longer list of features is in [`
 phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md), which
 agent (Claude Code, Codex or Antigravity) is on what in [`HANDOFF.md`](HANDOFF.md), and the owner's decisions on how
 the app is built in [`architecture/decisions.md`](architecture/decisions.md).
-Last updated 2026-10-20 (late night).
+Last updated 2026-10-22.
 
 ## Waiting for the owner
 
-- [ ] **Signing secrets** in the repository (`SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`,
-      `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md). Until they are there the nightly (it has run
-      three nights, green) builds and publishes nothing. Then one manual *Run workflow* of **Nightly** with *force*
-      to see the first pre-release, its checksum file and the clean-up of old ones.
+- [x] **Signing secrets** (2026-10-22): the release key below is in the four secrets (`SIGNING_KEYSTORE_BASE64`,
+      `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md), so the nightly now
+      signs what it builds and publishes it.
+- [ ] **The first signed nightly on the phones**, once `com.latentimage.latent` is on `main`: one manual *Run
+      workflow* of **Nightly** with *force* (the first pre-release of the new package, its checksum file and the
+      clean-up of old ones), then each phone moves to it once (RELEASES.md, "Reinstalling a phone"). A nightly signed
+      before that is still `com.byeonggon.latent`: not for the phones.
 - [ ] **On the phones**: the checks in DEVICE_CHECKS, the risky ones first: the colour range and LUT shaders against
       the CPU result, subject and background masks (log tag `SubjectMask`: GPU or CPU, cold and warm time), the
       settings, search, compare, HEIF, presets, and the tab bar after its fix (no empty band above the buttons).
       Video: a portrait one, a 4K one, one with a rotation flag. Then a backup and its restore on the same phone and on
       the other one, before the first reinstall needs them (no uninstalling for the check).
-- [ ] **Decide when publishing is settled**: the package name (RELEASES.md and the notes on Play), then the first real
-      release key, which means every phone is reinstalled once (with a backup first: RELEASES.md, "Reinstalling a
-      phone").
+- [x] **The release key** (2026-10-22): alias `latent`, `CN=Latent Image, C=KR`, RSA 4096, made on the owner's
+      computer and kept outside the repository (RELEASES.md, "Signing"). The package name was settled the same day:
+      `com.latentimage.latent`, developer name Latent Image on Play.
 - [ ] **The rest of Codex's architecture questions** (`architecture/codex-assessment.md` §11; question 3, the
       precision goal, is decided in `architecture/decisions.md`): the first scope of the decoder work, whether
       standalone JPEG XL, JPEG or HEIF come under the decoders, the phones and the memory and time budgets, the

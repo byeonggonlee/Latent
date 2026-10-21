@@ -64,6 +64,9 @@ needs the app uninstalled or its data cleared.
 - [ ] Rotate the phone and leave Settings while a restore runs: it carries on, and its progress and message are there
       when Settings is opened again.
 - [ ] Japanese and English: the section and the summary read well and nothing is cut off in the dialog.
+- [ ] The move to `com.latentimage.latent` (RELEASES.md, "Reinstalling a phone"): the new app installs beside the old
+      one, takes `DCIM/Latent` again and its restore finds every photo; once the old app is uninstalled, every file in
+      `DCIM/Latent` is still there and the new app can still edit, rate, geotag and delete the photos the old one made.
 
 ## Languages
 
@@ -140,7 +143,7 @@ items below stay open until each is looked at. Read the times with `adb logcat -
 - [ ] APK size: the release APK went from 5.5 to 38.7 MB with all ABIs; check what Play reports for an arm64 phone (estimate: +14.5 MB installed, +8.6 MB download).
 - [ ] 16 KB pages: on a phone with 16 KB pages (or the 16 KB emulator image, or Settings → Developer options → "Boot with 16KB page size" on a Pixel), the app starts and "+ Subject" works. The built APK's 64-bit libraries are 16 KB aligned (`objdump -p`, `zipalign -c -P 16`), but no 16 KB device has loaded them.
 - [ ] A phone where LiteRT cannot run (none known): the buttons disappear with one message, and every other mask works.
-- [ ] A mask whose outline file is deleted (`adb shell run-as com.byeonggon.latent rm files/masks/<id>.mask`, then reopen the photo): "The outline of this mask is missing" and "Find again".
+- [ ] A mask whose outline file is deleted (`adb shell run-as com.latentimage.latent rm files/masks/<id>.mask`, then reopen the photo): "The outline of this mask is missing" and "Find again".
 - [ ] Release build: the R8 rules keep LiteRT's classes; "+ Subject" works in `assembleRelease -PdebugSignedRelease` (a missing class would show as a crash or "cannot run" in logcat).
 
 ## Phone raw files (DNG)
