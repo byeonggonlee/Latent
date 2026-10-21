@@ -31,3 +31,5 @@
 
 - **최종 로컬 gate:** `./gradlew testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest assembleRelease -PdebugSignedRelease --offline` 성공(1m14s), JVM 526개 중 522 통과/4 skip. `git diff --check`와 Room schema diff 통과. 코드/metadata 이동 외 sample 변환은 기존 결과를 유지한다. 실제 폰 heap/RSS/OOM·색·실사진 회귀는 미검증이며 CI 결과와 구분한다.
 - **다음 승인 지점:** 이 PR의 shared `RawRenderer` adapter와 v0 계약을 유지보수자가 검토한 뒤 통합한다. M3-A(UI Job→요청 취소 전달), 폰 예산 확정, 색/왜곡 기능과 모듈 추출은 이 PR에서 완료했다고 표시하지 않는다.
+
+- **제출:** [PR #7](https://github.com/byeonggonlee/Latent/pull/7), `codex/decoder-stability`. 단계 커밋: `b8be490`(선점/계획), `0f7809e`(M2-A), `3350d8c`(M1-A), `a4a23e3`(M2-B 및 검토 보완). 통합 승인과 원격 CI는 로컬 성공과 구분한다.
