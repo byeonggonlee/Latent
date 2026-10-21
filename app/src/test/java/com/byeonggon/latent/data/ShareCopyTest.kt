@@ -8,6 +8,8 @@ import androidx.exifinterface.media.ExifInterface
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.raw.RawCache
+import com.byeonggon.latent.raw.RawRenderer
 import com.byeonggon.latent.raw.SyntheticArw
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -25,6 +27,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -91,6 +96,35 @@ class ShareCopyTest {
         assertEquals(4 to 28, sizeOf(copy))
         assertEquals(ExifInterface.ORIENTATION_NORMAL, ExifInterface(copy).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0))
         assertEquals("DSC00002.jpg", copy.name)
+    }
+
+    @Test(timeout = 30_000)
+    fun developsAtFullSizeOnlyOnceTheCachesDecodeHasEnded() {
+        // The viewer's decode of the same raw file, held up as a slow file would be.
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val cache = RawCache { file ->
+            started.countDown()
+            release.await(20, TimeUnit.SECONDS)
+            RawRenderer.read(file)
+        }
+        val database = container.database
+        val edits = LibraryEdits(
+            container.storage, database.mediaDao(), database.filterDao(), container.geotagger, cache, database.lutDao(),
+            database.editVersionDao(),
+        )
+        val viewer = thread { cache.read(File(raw.path)) }
+        assertTrue(started.await(5, TimeUnit.SECONDS))
+
+        var copy: File? = null
+        val sharing = thread { copy = runBlocking { edits.shareCopy(raw, null) } }
+        sharing.join(1_000)
+        assertTrue("the full-size development ran beside the cache's decode", sharing.isAlive)
+
+        release.countDown()
+        viewer.join()
+        sharing.join()
+        assertTrue(copy!!.length() > 0)
     }
 
     @Test
