@@ -11,7 +11,9 @@ import java.net.URL
  */
 class OnlineAccess(
     private val settings: SettingsRepository,
-    private val download: (URL) -> ByteArray? = ::download,
+    /** The installed version of the app, which the map servers are told along with its name. */
+    version: String,
+    private val download: (URL) -> ByteArray? = { download(it, userAgent(version)) },
 ) {
     /** The bytes at [url], or null if online maps are off or the address could not be read. */
     suspend fun get(url: String): ByteArray? {
@@ -19,16 +21,17 @@ class OnlineAccess(
         return download(URL(url))
     }
 
-    private companion object {
-        /** Map servers ask apps to say who they are, so that they can get in touch if one misbehaves. */
-        const val USER_AGENT = "Latent/0.1 (+https://github.com/byeonggonlee/Latent)"
-        const val TIMEOUT_MS = 10_000
-        const val LARGEST = 2 * 1024 * 1024
+    internal companion object {
+        /** Map servers ask apps to say who they are, and which version, so that they can get in touch if one misbehaves. */
+        fun userAgent(version: String) = "Latent/${version.ifBlank { "unknown" }} (+https://github.com/byeonggonlee/Latent)"
 
-        fun download(url: URL): ByteArray? = try {
+        private const val TIMEOUT_MS = 10_000
+        private const val LARGEST = 2 * 1024 * 1024
+
+        private fun download(url: URL, userAgent: String): ByteArray? = try {
             val connection = url.openConnection() as HttpURLConnection
             try {
-                connection.setRequestProperty("User-Agent", USER_AGENT)
+                connection.setRequestProperty("User-Agent", userAgent)
                 connection.connectTimeout = TIMEOUT_MS
                 connection.readTimeout = TIMEOUT_MS
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) null
