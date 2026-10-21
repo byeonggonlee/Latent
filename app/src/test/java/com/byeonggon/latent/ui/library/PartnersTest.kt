@@ -24,4 +24,19 @@ class PartnersTest {
 
         assertEquals(mapOf(1L to 2L, 2L to 1L), partnersOf(items))
     }
+
+    @Test
+    fun pairsAPixelsRawFileWithItsCoverJpeg() {
+        val items = listOf(
+            item(1, "/p/DCIM/Camera/PXL_20261021_101500123.RAW-02.ORIGINAL.dng", MediaKind.RAW),
+            item(2, "/p/DCIM/Camera/PXL_20261021_101500123.RAW-01.COVER.jpg", MediaKind.PHOTO),
+            // As a motion photo, the cover says so in its name.
+            item(3, "/p/DCIM/Camera/PXL_20261021_101722456.RAW-02.ORIGINAL.dng", MediaKind.RAW),
+            item(4, "/p/DCIM/Camera/PXL_20261021_101722456.RAW-01.MP.COVER.jpg", MediaKind.PHOTO),
+            // Another shot a moment later, taken without raw.
+            item(5, "/p/DCIM/Camera/PXL_20261021_101500124.jpg", MediaKind.PHOTO),
+        )
+
+        assertEquals(mapOf(1L to 2L, 2L to 1L, 3L to 4L, 4L to 3L), partnersOf(items))
+    }
 }

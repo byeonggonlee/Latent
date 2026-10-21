@@ -211,8 +211,6 @@ Nothing handed over yet. Its own next items, so that Codex does not pick them to
 2026-10-21):
 
 - Native code for 64-bit ARM only (under *In progress*).
-- Pair a Pixel's `.RAW-02.ORIGINAL.dng` with its `.RAW-01.COVER.jpg` (`ui/library/LibraryViewModel.kt`, `shotOf`, and
-  `data/LibraryIndex.kt`, the same rule on adoption): the library's pairing rule, not the decoder.
 - Import from a card reader, or from a camera in Mass Storage mode, as a sync from the camera does (asked by the
   owner 2026-10-21): the folder picked once in the system's dialog (`ACTION_OPEN_DOCUMENT_TREE`) as a `CameraSource`
   beside `MtpCameraSource`, so that skipping what was imported, the dates and the places work as they do over MTP;
@@ -250,6 +248,7 @@ Nothing asked yet.
 | 2026-10-21 | Claude Code (computer) | The restore and the timeline import count the table instead of reading back two queries' worth of row id a point: 300,000 cursors fewer for 150,000 places, the cause of `BackupSizeTest`'s failures on slow runners; reviewed by Codex | pull request #6 |
 | 2026-10-21 | Claude Code (computer) | `RawCache` can be cleared on the main thread without waiting for a decode; full-size exports and shares take the decode's turn and find the cache empty; reviewed by Codex three times | pull request #4 |
 | 2026-10-21 | Claude Code (computer) | A raw decode stops at its next row or tile once the viewer moves on to another photo or the editor closes (first part of M3-A); exports and shares are as they were; reviewed by Codex | pull request #8 |
+| 2026-10-21 | Claude Code (computer) | A Pixel's `.RAW-02.ORIGINAL.dng` and its `.RAW-01.COVER.jpg` (or `.RAW-01.MP.COVER.jpg`) are one shot, in the library's pairs and when a raw file takes its JPEG's place (`data/Shot.kt`) | "Pair a Pixel's raw file with its cover JPEG", on `main` |
 
 ## Template for a handover
 

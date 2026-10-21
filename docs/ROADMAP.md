@@ -51,11 +51,11 @@ Each is small or medium, works offline, and needs no new permission.
   linearization, the daylight colour matrix with the camera's calibration, the as-shot white balance, the default
   crop and the gain maps (lens shading); linear DNGs, as a Galaxy writes in Pro mode (lossless JPEG) and in Expert
   RAW (JPEG XL, read by jxlatte in `third_party/`), with a positive `BaselineExposure` applied as far as white.
-  Next: the lens's distortion from OpcodeList3 (WarpRectilinear), a colour matrix interpolated between the two
-  illuminants, what is left of a `BaselineExposure` that highlights stopped short in the tone stage's exposure
-  (with care not to add to the automatic correction twice), hiding the editor's lens correction chip for
-  files without a lens profile, and pairing a Pixel's `.RAW-02.ORIGINAL.dng` with its `.RAW-01.COVER.jpg`. Galaxy
-  Log video belongs with item 12.
+  Since done (2026-10-21): the colour matrix interpolated between the two illuminants (pull request #9), the editor's
+  lens correction chip hidden for files without a lens profile, and a Pixel's `.RAW-02.ORIGINAL.dng` shown as one
+  with its `.RAW-01.COVER.jpg`. Next: the lens's distortion from OpcodeList3 (WarpRectilinear), what is left of a
+  `BaselineExposure` that highlights stopped short in the tone stage's exposure (with care not to add to the
+  automatic correction twice). Galaxy Log video belongs with item 12.
 
 ## Larger, to be settled first
 

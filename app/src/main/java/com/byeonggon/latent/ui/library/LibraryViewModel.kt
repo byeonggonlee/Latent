@@ -9,6 +9,7 @@ import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.LibraryStorage
 import com.byeonggon.latent.data.PhoneLibrary
+import com.byeonggon.latent.data.shotOf
 import com.byeonggon.latent.data.db.NameCount
 import com.byeonggon.latent.data.db.AlbumEntity
 import com.byeonggon.latent.data.db.AlbumItemEntity
@@ -46,16 +47,15 @@ import androidx.annotation.StringRes
 import com.byeonggon.latent.R
 
 /**
- * Raw files and JPEGs that the camera wrote of the same shot: in the same folder, under the same name.
+ * Raw files and JPEGs that the camera wrote of the same shot: in the same folder, under the same name ([shotOf]).
  * Returns, for each file of such a pair, the other one's id.
  */
 internal fun partnersOf(items: List<MediaItemEntity>): Map<Long, Long> {
-    fun shotOf(item: MediaItemEntity) = File(item.path).let { File(it.parentFile, it.nameWithoutExtension.lowercase()).path }
-    val jpegs = items.filter { it.kind == MediaKind.PHOTO }.associateBy(::shotOf)
+    val jpegs = items.filter { it.kind == MediaKind.PHOTO }.associateBy { shotOf(File(it.path)) }
     val partners = HashMap<Long, Long>()
     for (raw in items) {
         if (raw.kind != MediaKind.RAW) continue
-        val jpeg = jpegs[shotOf(raw)] ?: continue
+        val jpeg = jpegs[shotOf(File(raw.path))] ?: continue
         partners[raw.id] = jpeg.id
         partners[jpeg.id] = raw.id
     }

@@ -92,7 +92,7 @@ class LibraryIndex(
             ensureActive()
             val items = batch.map { (file, kind) ->
                 val metadata = MediaMetadataReader.read(file, kind, zone)
-                val shot = File(file.parentFile, file.nameWithoutExtension.lowercase()).path
+                val shot = shotOf(file)
                 val place = metadata.location ?: places[shot].takeIf { kind == MediaKind.RAW }
                 if (kind == MediaKind.PHOTO && metadata.location != null) places[shot] = metadata.location
                 MediaItemEntity(

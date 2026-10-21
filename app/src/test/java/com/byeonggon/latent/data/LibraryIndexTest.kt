@@ -4,6 +4,7 @@ import com.byeonggon.latent.grantLibraryAccess
 import android.content.Context
 import java.time.OffsetDateTime
 import com.byeonggon.latent.raw.SyntheticArw
+import com.byeonggon.latent.raw.SyntheticDng
 import com.byeonggon.latent.enhance.PhotoEdit
 import androidx.exifinterface.media.ExifInterface
 import android.graphics.Bitmap
@@ -115,6 +116,23 @@ class LibraryIndexTest {
         assertEquals(null, adopted.edit)
 
         assertEquals(0, index.adoptUnknownFiles())
+    }
+
+    @Test
+    fun aPixelsRawFileTakesThePlaceOfItsCoverJpeg() = runBlocking {
+        val folder = File(storage.root, "2026/2026-10-21").apply { mkdirs() }
+        val cover = File(folder, "PXL_20261021_101500123.RAW-01.COVER.jpg")
+        cover.outputStream().use { Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        ExifInterface(cover).apply {
+            setLatLong(37.55, 126.92)
+            saveAttributes()
+        }
+        File(folder, "PXL_20261021_101500123.RAW-02.ORIGINAL.dng").writeBytes(SyntheticDng.file(200, 400, 300))
+
+        assertEquals(2, index.adoptUnknownFiles())
+
+        val raw = database.mediaDao().all().single { it.kind == MediaKind.RAW }
+        assertEquals(37.55, raw.latitude!!, 1e-4)
     }
 
     @Test

@@ -149,6 +149,8 @@ Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (th
 
 - [ ] Pro mode on the S24 and the S26 with RAW (or RAW and JPEG) on: the `.dng` appears in "Photos on this phone" (`DCIM/Camera/`), with a thumbnail, and opens in the viewer and the editor. If it says it cannot be opened, keep the file for a test (`adb pull`) and note why from logcat (`adb logcat -s RawDevelop`, "Cannot develop …").
 - [ ] Colours next to the phone's own JPEG of the same shot: white balance, skin, sky, greens. The DNG reader adds no extra saturation (`Dng.SATURATION`, 1.0, where Sony files get 1.45); is it too dull?
+- [ ] A Pixel with RAW on (if one is at hand): its `PXL_….RAW-02.ORIGINAL.dng` and `PXL_….RAW-01.COVER.jpg` (or
+      `.RAW-01.MP.COVER.jpg`) show as one photo with the raw badge, as a ZV-E10's pair does.
 - [ ] Two-illuminant DNGs under tungsten/incandescent light: compare neutral whites/grays and skin with the phone's JPEG, automatic correction off; record Pro/Expert RAW mode and whether daylight shots still match.
 - [ ] Corners and edges: no dark or tinted corners (the gain maps), on the main camera, the ultra wide and a telephoto. The ultra wide's distortion is not corrected (OpcodeList3 is not read).
 - [ ] The crop matches the phone's JPEG (no grey or black border, no colour fringe from a wrong mosaic start).
