@@ -55,7 +55,21 @@ jobs:
       # The tests that only a phone can run (GPU tone, subject masks, ...) are compiled here, so that one that no longer
       # builds is found before the phone is.
       - name: Tests and lint
+        env:
+          # A test writes the GPU shaders here for the next step.
+          SHADER_EXPORT_DIR: ${{ runner.temp }}/shaders
         run: ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest --stacktrace
+
+      # A phone's driver compiles the shaders and, if one is wrong, the processor does the work without a word: this
+      # finds a mistake of syntax or type before a phone does.
+      - name: Shaders compile
+        run: |
+          sudo apt-get install -y --no-install-recommends glslang-tools > /dev/null
+          ls "$RUNNER_TEMP"/shaders/*.comp > /dev/null
+          for shader in "$RUNNER_TEMP"/shaders/*.comp; do
+            echo "== $(basename "$shader")"
+            glslangValidator "$shader"
+          done
 
       # Room rewrites the schema file of the current version at every build; a difference from the committed one means
       # an entity changed without a new version and its migration.
