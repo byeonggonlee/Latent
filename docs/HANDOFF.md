@@ -141,7 +141,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Publish PR #10 review and record the owner’s instruction to publish future PR review results. | `codex/review-posting-rule` | `AGENTS.md`, `docs/HANDOFF.md` | 2026-10-21 |
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
 | Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice (2026-10-21): `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind | `claude/arm64-only` (pull request, reviewed by Codex) | `app/build.gradle.kts`, `.github/workflows/build.yml`, `.github/workflows/nightly.yml`, `docs/RELEASES.md`, `docs/AI_MASKS.md`, `docs/PLAY_LISTING.md` | 2026-10-21 |
 
@@ -234,6 +233,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-21 | Codex | Posted PR #10 review: no actionable bugs, exact-head CI passed, local builds/device tests not rerun. Added owner-requested guidance to publish future PR reviews with scope and verification limits. | `codex/review-posting-rule`; [review](https://github.com/byeonggonlee/Latent/pull/10#pullrequestreview-5601635855) |
 | 2026-10-21 | Codex | Restore uncompressed DNG strip/tile byte-count compatibility; actual row bytes checked before allocation; JPEG XL declared ranges remain strict. Required local checks and remote CI green. | `113ca0b`, [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) |
 | 2026-10-21 | Codex | Decoder bounds/recovery, minimal legacy frame contract and request dispatch/cancellation boundaries; JPEG XL tile size checked before allocation. Claude Code review fixes included; CI green. UI Job integration remains PR #8 and phone checks remain unverified. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), merged `938b5e0` |
 | 2026-10-21 | Claude Code (computer) | The 0.1.0 notes; Room schema exported and checked on CI; phone tests compiled on CI; test failures and `BackupSizeTest`'s heap growth in the log | `be92ec3`, `3765350`, `752fcc5`, `230ea56` |
