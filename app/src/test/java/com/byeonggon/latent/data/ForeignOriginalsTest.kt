@@ -166,6 +166,35 @@ class ForeignOriginalsTest {
     }
 
     @Test
+    fun keepsThePhotoWhenTheOriginalAMoveLeftWaitingCannotTakeItsPlace() = runBlocking {
+        stopAfterTheOriginalWasDeleted()
+        // The waiting copy cannot be moved into the original's place.
+        original.parentFile!!.setWritable(false)
+        val edit = PhotoEdit(Adjustments(exposure = 0.5f))
+        val item = item(edit)
+        val picture = photo.readBytes()
+
+        assertThrows(IOException::class.java) { runBlocking { container.libraryEdits.remove(item) } }
+        assertThrows(IOException::class.java) { runBlocking { container.trash.throwAway(listOf(item)) } }
+
+        assertArrayEquals(picture, photo.readBytes())
+        val stored = container.database.mediaDao().byId(item.id)!!
+        assertEquals(photo.path, stored.path)
+        assertEquals(null, stored.trashedAt)
+        assertEquals(edit, PhotoEdit.fromJson(stored.edit))
+        assertArrayEquals(originalBytes, leftBeside(".DSC00001-copied.JPG").readBytes())
+    }
+
+    @Test
+    fun replacesNothingWithAFileThatIsNotThere() {
+        val picture = photo.readBytes()
+
+        assertThrows(IOException::class.java) { storage.replace(File(photo.parentFile, "DSC09999.JPG"), photo) }
+
+        assertArrayEquals(picture, photo.readBytes())
+    }
+
+    @Test
     fun refusesToEditFromThePictureWhenTheOriginalCannotBeTakenOver() {
         // Nothing can be written beside the original, so it stays the other installation's.
         original.parentFile!!.setWritable(false)

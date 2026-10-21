@@ -315,8 +315,9 @@ class LibraryEdits(
     suspend fun remove(item: MediaItemEntity) {
         if (item.kind == MediaKind.PHOTO && item.origin == MediaOrigin.LIBRARY) {
             val photo = File(item.path)
-            if (storage.keepsOriginal(photo)) {
-                PhotoEnhancer.restoreOriginal(photo, storage.originalOf(photo), storage)
+            // The photo only gives way to an original that is there to take its place.
+            storage.keptOriginal(photo)?.let { original ->
+                PhotoEnhancer.restoreOriginal(photo, original, storage)
                 storage.publish(photo)
                 mediaDao.setSize(item.id, photo.length())
             }

@@ -94,6 +94,8 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     @Throws(IOException::class)
     override fun replace(from: File, to: File) {
         if (from.renameTo(to)) return
+        // What is in [to]'s place is only given up for a file that is there to take it.
+        if (!exists(from)) throw IOException("No ${from.name} to put in place of ${to.name}")
         if (exists(to) && !delete(to)) throw IOException("Cannot replace ${to.name}")
         move(from, to)
     }
@@ -154,6 +156,22 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
      * to the app's own that broke off is finished first: its whole copy is the original, waiting beside it.
      */
     fun keepsOriginal(photo: File): Boolean = take(originalOf(photo)) != Kept.NONE
+
+    /**
+     * The original [photo] keeps aside, in its place, for it to be moved or put back from there: made the app's
+     * own where it can be, as [makeOwn] does, or else one the granted folder reaches. Null when none is kept.
+     * Throws when one is kept but not in its place, a move to the app's own that could not be finished: what
+     * would be moved along with it is then left where it is.
+     */
+    @Throws(IOException::class)
+    fun keptOriginal(photo: File): File? {
+        val original = originalOf(photo)
+        return when (take(original)) {
+            Kept.OWN -> original
+            Kept.SHUT -> original.takeIf(::exists) ?: throw IOException("The original of ${photo.name} is not in its place")
+            Kept.NONE -> null
+        }
+    }
 
     /**
      * Whether [photo] keeps its original aside, as far as the app's paths show: an original only the granted
