@@ -1,5 +1,6 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.enhance.Orientation
 import com.byeonggon.latent.raw.api.DecodedFrame
 import com.byeonggon.latent.raw.api.PixelLayout
 import com.byeonggon.latent.raw.api.RawCorrection
@@ -34,6 +35,36 @@ class FrameContractTest {
         val before = frame.legacyImage.sensor.copyOf()
         RawDeveloper.develop(frame.legacyImage)
         assertArrayEquals(before, frame.legacyImage.sensor)
+    }
+
+    @Test
+    fun unknownArwOrientationsKeepTheUprightFallback() {
+        for (orientation in listOf(0, 9, 65535)) {
+            val image = SonyArw.read(SyntheticArw.file(300, 600, 400, orientation = orientation))
+            assertEquals(1, image.orientation)
+            assertEquals(Orientation.UPRIGHT, Orientation.ofExif(image.orientation))
+            assertEquals(600, image.sensor[0].toInt())
+        }
+    }
+
+    @Test
+    fun unknownDngOrientationsKeepTheUprightFallback() {
+        val expected = Dng.read(SyntheticDng.file(200, 400, 300)).sensor
+        for (orientation in listOf(0, 9, 65535)) {
+            val image = Dng.read(SyntheticDng.file(200, 400, 300, orientation = orientation))
+            assertEquals(1, image.orientation)
+            assertEquals(Orientation.UPRIGHT, Orientation.ofExif(image.orientation))
+            assertArrayEquals(expected, image.sensor)
+        }
+    }
+
+    @Test
+    fun retainsFiniteArwWhiteBalanceGainsAcceptedByTheLegacyReader() {
+        for (gains in listOf(intArrayOf(0, 1024, 1024, 0), intArrayOf(-1024, 1024, 1024, -512))) {
+            val image = SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = gains))
+            assertArrayEquals(floatArrayOf(gains[0] / 1024f, 1f, gains[3] / 1024f), image.whiteBalance, 0f)
+            assertEquals(600, image.sensor[0].toInt())
+        }
     }
 
     @Test

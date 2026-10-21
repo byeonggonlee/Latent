@@ -197,7 +197,7 @@ object Dng {
             colorMatrix = color.matrix,
             saturation = SATURATION,
             lens = null,
-            orientation = main.int(TAG_ORIENTATION) ?: 1,
+            orientation = main.int(TAG_ORIENTATION)?.takeIf { it in 1..8 } ?: 1,
             sensor = sensor,
             channels = channels,
         )
@@ -207,7 +207,13 @@ object Dng {
             if (brightened) add(RawCorrection.POSITIVE_BASELINE_EXPOSURE)
             if (maps.isNotEmpty()) add(RawCorrection.GAIN_MAP)
         }
-        return DecodedFrame(image, RawFormat.DNG, bits, corrections, main.bytes(TAG_ICC_PROFILE) ?: raw.bytes(TAG_ICC_PROFILE))
+        // An unreadable preservation-only profile must not hide otherwise decodable pixels.
+        fun profileOf(directory: TiffDirectory): ByteArray? = try {
+            directory.bytes(TAG_ICC_PROFILE)
+        } catch (_: IOException) {
+            null
+        }
+        return DecodedFrame(image, RawFormat.DNG, bits, corrections, profileOf(main) ?: profileOf(raw))
     }
 
     /**
@@ -245,12 +251,14 @@ object Dng {
         if (compression !in intArrayOf(COMPRESSION_NONE, COMPRESSION_LOSSLESS_JPEG, COMPRESSION_JPEG_XL)) {
             throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported DNG compression: $compression")
         }
-        // Validate every strip before allocating the sensor, including bytes the file declares as unavailable.
+        // Lossless JPEG already clips an overstated count to EOF; other formats require the whole declared range.
         for (index in 0 until across * down) {
             checkCancelled()
             val offset = offsets[index]
             val length = lengths[index]
-            if (offset < 0 || length <= 0 || offset.toLong() + length > file.size) throw IOException("Raw image data is cut short")
+            if (offset < 0 || offset >= file.size || length <= 0 ||
+                (compression != COMPRESSION_LOSSLESS_JPEG && offset.toLong() + length > file.size)
+            ) throw IOException("Raw image data is cut short")
             val left = index % across * tileWidth
             val top = index / across * tileLength
             if (compression == COMPRESSION_JPEG_XL) {

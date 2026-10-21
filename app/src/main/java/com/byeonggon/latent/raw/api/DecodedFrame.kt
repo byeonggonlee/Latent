@@ -53,7 +53,7 @@ internal class DecodedFrame(
             cropLeft.toLong() + cropWidth <= width && cropTop.toLong() + cropHeight <= height) { "Invalid RAW crop" }
         require(orientation in 1..8 && originalBitDepth in 1..16) { "Unsupported RAW metadata" }
         require(legacyImage.blackLevel >= 0 && legacyImage.blackLevel < whiteLevel && whiteLevel <= 32767) { "Invalid RAW levels" }
-        require(legacyImage.whiteBalance.size == 3 && legacyImage.whiteBalance.all { it.isFinite() && it > 0f } &&
+        require(legacyImage.whiteBalance.size == 3 && legacyImage.whiteBalance.all(Float::isFinite) &&
             legacyImage.colorMatrix.size == 9 && legacyImage.colorMatrix.all(Float::isFinite)) { "Invalid RAW calibration" }
         require(legacyImage.sensor.all { it >= 0 }) { "Samples exceed the legacy 0..32767 range" }
     }

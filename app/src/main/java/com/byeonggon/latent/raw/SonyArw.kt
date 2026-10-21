@@ -162,7 +162,7 @@ object SonyArw {
             colorMatrix = FloatArray(9) { colorMatrix[it] / 1024f },
             saturation = SATURATION,
             lens = readLensProfile(raw),
-            orientation = main.int(TAG_ORIENTATION) ?: 1,
+            orientation = main.int(TAG_ORIENTATION)?.takeIf { it in 1..8 } ?: 1,
             sensor = decode(file, stripOffset, width, height, toneCurve(raw.ints(TAG_TONE_CURVE)), request?.checkCancelled ?: {}),
         )
     }

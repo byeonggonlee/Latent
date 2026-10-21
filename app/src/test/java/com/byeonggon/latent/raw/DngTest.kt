@@ -5,6 +5,7 @@ import com.byeonggon.latent.raw.SyntheticDng.Storage
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -224,6 +225,25 @@ class DngTest {
             }
         }
         assertThrows(IOException::class.java) { Dng.read(file) }
+    }
+
+    @Test
+    fun aDamagedOptionalIccPointerDoesNotHideTheImage() {
+        val stream = javaClass.getResourceAsStream("/raw/groups.jxl")!!.use { it.readBytes() }
+        val file = SyntheticDng.jpegXl(stream, iccProfile = byteArrayOf(1, 2, 3, 4, 5))
+        val expected = Dng.read(file).sensor
+        setFirstInt(file, 0x8773, Int.MAX_VALUE)
+        val frame = Dng.decode(file)
+        assertNull(frame.iccProfile())
+        assertArrayEquals(expected, frame.legacyImage.sensor)
+    }
+
+    @Test
+    fun losslessJpegKeepsClippingAnOverstatedStripLengthToEof() {
+        val file = SyntheticDng.file(200, 400, 300, storage = Storage.LOSSLESS_JPEG)
+        val expected = Dng.read(file).sensor
+        setFirstInt(file, 0x0117, Int.MAX_VALUE)
+        assertArrayEquals(expected, Dng.read(file).sensor)
     }
 
     private fun setFirstInt(file: ByteArray, tag: Int, value: Int) {

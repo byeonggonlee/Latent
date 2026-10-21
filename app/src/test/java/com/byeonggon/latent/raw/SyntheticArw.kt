@@ -19,7 +19,7 @@ internal object SyntheticArw {
     val BLUE_ABERRATION = IntArray(11) { -768 + 128 * it }
 
     /** A file whose red, green and blue photosites all hold the given stored (11-bit) values. */
-    fun file(red: Int, green: Int, blue: Int, make: String = "SONY", orientation: Int = 1): ByteArray {
+    fun file(red: Int, green: Int, blue: Int, make: String = "SONY", orientation: Int = 1, whiteBalance: IntArray = WHITE_BALANCE): ByteArray {
         val strip = ByteArrayOutputStream()
         for (row in 0 until HEIGHT) {
             repeat(WIDTH / 32) {
@@ -49,7 +49,7 @@ internal object SyntheticArw {
             Entry.signedShorts(0x7035, 22, *RED_ABERRATION, *BLUE_ABERRATION),
             Entry.signedShorts(0x7037, 11, *DISTORTION),
             Entry.shorts(0x7310, BLACK, BLACK, BLACK, BLACK),
-            Entry.signedShorts(0x7313, *WHITE_BALANCE),
+            Entry.signedShorts(0x7313, *whiteBalance),
             Entry.shorts(0xC61D, 16383),
             Entry.longs(0xC61F, CROP_LEFT, CROP_TOP),
             Entry.longs(0xC620, CROP_WIDTH, CROP_HEIGHT),
