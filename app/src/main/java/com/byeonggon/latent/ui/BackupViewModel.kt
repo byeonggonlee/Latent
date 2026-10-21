@@ -90,10 +90,7 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Reads the backup at [uri] and says what restoring it would do; the restore waits for [confirmRestore]. */
     fun inspect(uri: Uri) = start(restoring = true) {
-        if (container.syncEngine.state.value.isRunning) {
-            _state.update { BackupUiState(message = text(R.string.backup_restore_wait_for_sync)) }
-            return@start
-        }
+        if (waitForSync()) return@start
         val plan = restoreStep {
             withContext(Dispatchers.IO) { stage(uri) }
             container.restorer.inspect(staged, progress(restoring = true))
@@ -105,12 +102,22 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
         if (_state.value.plan == null) return
         start(restoring = true) {
             try {
+                // The summary may have waited for a long time on the screen: a sync could have begun since it was read.
+                if (waitForSync()) return@start
                 val result = restoreStep { container.restorer.restore(staged, progress(restoring = true)) } ?: return@start
                 _state.update { BackupUiState(message = describe(result)) }
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) { staged.parentFile?.deleteRecursively() }
             }
         }
+    }
+
+    /** Whether a camera sync is running; if so, says that the restore has to wait and lets the staged copy go. */
+    private suspend fun waitForSync(): Boolean {
+        if (!container.syncEngine.state.value.isRunning) return false
+        _state.update { BackupUiState(message = text(R.string.backup_restore_wait_for_sync)) }
+        withContext(NonCancellable + Dispatchers.IO) { staged.parentFile?.deleteRecursively() }
+        return true
     }
 
     fun dismissPlan() {
