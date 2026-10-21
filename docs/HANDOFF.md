@@ -133,8 +133,8 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | Mirrored orientations (EXIF 2, 4, 5, 7): find out with tests whether the thumbnail, the viewer, the editor and an export agree, and make them agree (reviewed: orientation) | `claude/...`, pull request | `raw/RawRenderer.kt` (`quarterTurnsOf`, seam), `enhance/PhotoEnhancer.kt`, `data/Thumbnails.kt`, their tests | 2026-10-21 |
-| Claude Code | `RawCache` holds its lock for the whole decode, so a slow or damaged file holds up every other raw file (reviewed: seam, locks) | `claude/...`, pull request | `raw/RawCache.kt` (seam), `ui/viewer/ViewerViewModel.kt`, their tests | 2026-10-21 |
+| Claude Code | Mirrored orientations (EXIF 2, 4, 5, 7) opened unmirrored or on their side outside the thumbnails; an `Orientation` with the mirror now goes through loading, detail, healing, framing and export. **Codex to review** (seam) | `claude/mirrored-orientation`, pull request #3 | `enhance/Orientation.kt` (new), `LinearImage`, `PictureRegion`, `Framing`, `Healing`, `PhotoEnhancer`, `raw/RawRenderer.kt` (seam), their tests | 2026-10-21 |
+| Claude Code | `RawCache` held its monitor for the whole decode, so the viewer's `clear()` on the main thread waited for a slow file; decodes now have a lock of their own. **Codex to review** (seam, locks) | `claude/raw-cache-lock`, pull request #4 | `raw/RawCache.kt` (seam), `raw/RawCacheTest.kt` (new) | 2026-10-21 |
 
 ## For Codex
 
