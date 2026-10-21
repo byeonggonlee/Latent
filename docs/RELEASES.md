@@ -36,9 +36,10 @@ download link and a file manager:
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
 from is the one in the CI name, or in the release notes for a nightly. The version name is also what the About
-dialog shows. The CI and nightly builds carry the code of 64-bit ARM only (`-PlatentAbis=arm64-v8a`, 20 MB instead
-of 39 MB; every phone of today is that kind) and say so at the end of the name. A build on the owner's computer, and
-the stable one, carry all the kinds unless told otherwise (for Play, the AAB is split by the store itself). The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
+dialog shows. Every build carries the native code of 64-bit ARM only (`arm64-v8a`, 20 MB instead of 39 MB; every
+phone the app is for is that kind), the owner's choice of 2026-10-21; the CI and nightly builds say so at the end of
+the name. So does the AAB for Play: phones of another kind (32-bit ARM, x86 Chromebooks) are not offered the app. An
+emulator of another kind takes `-PlatentAbis=x86_64`. The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
 
 ## Signing
 

@@ -73,6 +73,7 @@ LiteRT and U²-Netp.
   arm64-v8a, armeabi-v7a and x86_64 (about 9.4, 6.3 and 12.2 MB), the model (4.78 MB) and the notices
   (0.23 MB compressed). Per 64-bit ARM phone (what Play delivers from a bundle) about +14.5 MB on disk and
   about +8.6 MB to download (gzip estimate). LiteRT ships no 32-bit x86 library: there the buttons hide.
+  Since 2026-10-21 every build carries arm64-v8a only (`RELEASES.md`).
 
 ### How a mask is made
 

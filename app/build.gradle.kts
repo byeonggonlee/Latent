@@ -24,9 +24,10 @@ android {
         versionCode = (project.findProperty("latentVersionCode") as String?)?.toInt() ?: 1
         versionName = (project.findProperty("latentVersionName") as String?) ?: (project.findProperty("latent.versionBase") as String)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // The builds for the phones of today carry the code of 64-bit ARM only (-PlatentAbis=arm64-v8a), which is a third
-        // smaller; any other build, an emulator's say, carries all the kinds.
-        (project.findProperty("latentAbis") as String?)?.let { abis -> ndk { abiFilters += abis.split(',').map(String::trim) } }
+        // Every build carries the native code (LiteRT's) of 64-bit ARM only, the kind of every phone the app is for:
+        // the owner's choice, 2026-10-21. An emulator of another kind takes -PlatentAbis=x86_64.
+        val abis = (project.findProperty("latentAbis") as String?) ?: "arm64-v8a"
+        ndk { abiFilters += abis.split(',').map(String::trim) }
     }
 
     // The upload key stays out of the repository: keystore.properties (storeFile, storePassword,
