@@ -9,6 +9,7 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 
 /** The one decoded raw file that the viewer, the editor and shares hold in common. */
@@ -88,35 +89,42 @@ class RawCacheTest {
 
     @Test(timeout = 5_000)
     fun anExportFindsTheCacheEmptyThoughAReadFilledItWhileTheExportWaited() {
-        // Only the first file is slow, so that the cache's lock is held while the others line up for it.
-        val cache = RawCache { file ->
-            decodes.incrementAndGet()
-            if (file == first) {
-                started.countDown()
-                release.await(10, TimeUnit.SECONDS)
-            }
-            image
-        }
-        val reader = thread { cache.read(first) }
-        assertTrue(started.await(2, TimeUnit.SECONDS))
-        // A read of another file waits for the lock first, the export after it: the read gets it, and fills the cache.
-        val otherReader = thread { cache.read(second) }
-        Thread.sleep(200)
+        // The cache's decode lock, held by the test, so that each step comes in this order whatever the scheduler does.
+        val gate = RawCache::class.java.getDeclaredField("decoding").apply { isAccessible = true }.get(quick) as ReentrantLock
         var keptDuringExport: Boolean? = null
-        val export = thread {
-            cache.decodingAlone {
-                // Reading again decodes again unless the cache still holds what the other read decoded.
-                val before = decodes.get()
-                cache.read(second)
-                keptDuringExport = decodes.get() == before
+        var failure: Throwable? = null
+        val export: Thread
+        gate.lock()
+        try {
+            export = thread {
+                try {
+                    quick.decodingAlone {
+                        // Reading again decodes again unless the cache still holds what the read below decoded.
+                        val before = decodes.get()
+                        quick.read(second)
+                        keptDuringExport = decodes.get() == before
+                    }
+                } catch (e: Throwable) {
+                    failure = e
+                }
             }
+            // The export has let the cache go and waits for the lock.
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            while (!gate.hasQueuedThread(export)) {
+                assertTrue("the export never waited for the lock", System.nanoTime() < deadline)
+                Thread.sleep(5)
+            }
+            // A read that has the lock before the export, as one that waited longer would: it fills the cache.
+            quick.read(second)
+            val decoded = decodes.get()
+            quick.read(second)
+            assertEquals("the read did not leave its picture in the cache", decoded, decodes.get())
+        } finally {
+            gate.unlock()
         }
-        Thread.sleep(200)
 
-        release.countDown()
-        reader.join()
-        otherReader.join()
-        export.join()
+        export.join(TimeUnit.SECONDS.toMillis(5))
+        failure?.let { throw it }
         assertEquals("the cache still held a picture while the export decoded", false, keptDuringExport)
     }
 
