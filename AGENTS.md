@@ -31,6 +31,8 @@ Tests use JUnit 4, Robolectric, and Compose UI testing. Name classes `*Test` or 
 
 ## Commit & Pull Request Guidelines
 
+Commit your changes after each completed task, including documentation updates. Stage only files belonging to your task; leave other agents' changes out.
+
 History uses descriptive imperative subjects such as “Compile the tests that run on a phone in CI”; follow that style. Keep commits focused. PRs should explain the problem, resulting behavior, and checks performed; link relevant issues and include screenshots for UI changes. State which device checks remain unverified.
 
 ## Privacy & Configuration
