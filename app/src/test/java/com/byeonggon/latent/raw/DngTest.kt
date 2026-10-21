@@ -42,6 +42,148 @@ class DngTest {
         assertEquals(0, image.sensor[0].toInt())
     }
 
+    private val dualProfile = SyntheticDng.ColorProfile(
+        matrix1 = floatArrayOf(1f, 0.1f, 0f, 0f, 1f, 0.1f, 0.1f, 0f, 1f),
+        matrix2 = floatArrayOf(0.8f, -0.1f, 0.1f, 0.1f, 1.1f, 0f, 0f, 0.1f, 0.9f),
+        calibration1 = floatArrayOf(1f, 0.02f, 0f, 0f, 1f, 0f, 0f, 0f, 1f),
+        calibration2 = floatArrayOf(0.9f, 0f, 0f, 0.03f, 1.1f, 0f, 0f, 0.02f, 1f),
+        analogBalance = floatArrayOf(1.1f, 1f, 0.9f),
+        neutral = floatArrayOf(0.826882372f, 1f, 0.539704874f),
+    )
+    // Independent Gauss–Jordan reference; dual profiles additionally use SDK D50/4-decimal CM normalization.
+    private val tungstenMatrix = floatArrayOf(
+        3.509343779f, -2.139854568f, -0.369489210f,
+        -1.022992860f, 2.207182920f, -0.184190061f,
+        -0.055849855f, -0.219312437f, 1.275162293f,
+    )
+    private val daylightMatrix = floatArrayOf(
+        3.224001980f, -1.101553092f, -1.122448887f,
+        -1.114576183f, 1.891102956f, 0.223473227f,
+        0.086989180f, -0.370824027f, 1.283834848f,
+    )
+    private val middleMatrix = floatArrayOf(
+        3.459153695f, -1.739223797f, -0.719929898f,
+        -1.111991735f, 2.103828679f, 0.008163056f,
+        0.013284284f, -0.300529088f, 1.287244804f,
+    )
+
+    private fun withProfile(profile: SyntheticDng.ColorProfile) = Dng.read(SyntheticDng.file(200, 400, 300, profile = profile))
+
+    @Test
+    fun clampsTheTungstenAndDaylightMatricesOutsideTheirCalibrationTemperatures() {
+        // Neutrals of the composite endpoint matrices under xy=(.480,.414) and D75, respectively.
+        val warm = withProfile(dualProfile.copy(neutral = floatArrayOf(1.372777202f, 1f, 0.326424870f)))
+        val cool = withProfile(dualProfile.copy(neutral = floatArrayOf(0.578943548f, 1f, 0.825811807f)))
+        assertArrayEquals(tungstenMatrix, warm.colorMatrix, 0.003f)
+        assertArrayEquals(daylightMatrix, cool.colorMatrix, 0.003f)
+        assertArrayEquals(warm.sensor, cool.sensor)
+    }
+
+    @Test
+    fun infersAnIntermediateWhiteFromTheCameraNeutral() {
+        // Robertson's 250-mired point (4000 K): first weight = (250-1e6/6500)/(1e6/2850-1e6/6500).
+        val profile = dualProfile.copy(
+            matrix2 = floatArrayOf(0.96f, 0.06f, 0.02f, 0.02f, 1.02f, 0.08f, 0.08f, 0.02f, 0.98f),
+            calibration2 = floatArrayOf(0.98f, 0.016f, 0f, 0.006f, 1.02f, 0f, 0f, 0.004f, 1f),
+            neutral = floatArrayOf(1.091795751f, 1f, 0.610436835f),
+        )
+        val image = withProfile(profile)
+        val expected = floatArrayOf(
+            3.508669936f, -2.066703499f, -0.441966437f,
+            -1.046514303f, 2.191908350f, -0.145394047f,
+            -0.041894230f, -0.236643171f, 1.278537401f,
+        )
+        assertArrayEquals(expected, image.colorMatrix, 0.003f)
+        assertArrayEquals(floatArrayOf(1f / 1.0918f, 1f, 1f / 0.6104f), image.whiteBalance, 0.001f)
+    }
+
+    @Test
+    fun usesAnExplicitWhiteWithTheSameInverseTemperatureWeight() {
+        val image = withProfile(dualProfile.copy(neutral = null, whiteXY = floatArrayOf(0.380446172f, 0.376756239f)))
+        assertArrayEquals(middleMatrix, image.colorMatrix, 0.003f)
+        assertArrayEquals(floatArrayOf(1f / 0.841711095f, 1f, 1f / 0.543624844f), image.whiteBalance, 0.003f)
+    }
+
+    @Test
+    fun theBlendMovesOneWayWithTheSceneTemperature() {
+        // Explicit whites at Robertson's 200, 250 and 325 mired points; this matrix entry increases with warmth.
+        val whites = listOf(floatArrayOf(0.345104142f, 0.351622522f), floatArrayOf(0.380446172f, 0.376756239f), floatArrayOf(0.430438419f, 0.402581260f))
+        val values = whites.map { withProfile(dualProfile.copy(neutral = null, whiteXY = it)).colorMatrix[2] }
+        assertEquals(-0.919378391f, values[0], 0.003f)
+        assertEquals(-0.719929898f, values[1], 0.003f)
+        assertEquals(-0.453615123f, values[2], 0.003f)
+        assertTrue(values[0] < values[1] && values[1] < values[2])
+    }
+
+    @Test
+    fun reversingTheCalibrationOrderDoesNotChangeTheBlend() {
+        val reversed = dualProfile.copy(
+            matrix1 = dualProfile.matrix2, matrix2 = dualProfile.matrix1,
+            calibration1 = dualProfile.calibration2, calibration2 = dualProfile.calibration1,
+            illuminant1 = 21, illuminant2 = 17,
+            neutral = null, whiteXY = floatArrayOf(0.380446172f, 0.376756239f),
+        )
+        assertArrayEquals(middleMatrix, withProfile(reversed).colorMatrix, 0.003f)
+    }
+
+    @Test
+    fun aColorMatrixExposureScaleDoesNotChangeTheBlend() {
+        val profile = dualProfile.copy(neutral = null, whiteXY = floatArrayOf(0.380446172f, 0.376756239f))
+        val scaled = profile.copy(matrix1 = profile.matrix1!!.map { it * 2 }.toFloatArray())
+        assertArrayEquals(withProfile(profile).colorMatrix, withProfile(scaled).colorMatrix, 0.001f)
+    }
+
+    @Test
+    fun anOscillatingNeutralUsesTheSdkThirtyPassAverage() {
+        // This deliberately strong pair alternates between two whites; the independent 30-pass reference
+        // ends at average xy=(.376109004,.376143311), or 242.989353 mired, after profile normalization.
+        val expected = floatArrayOf(
+            3.449271785f, -1.702535042f, -0.746736743f,
+            -1.115383962f, 2.092698211f, 0.022685750f,
+            0.018521747f, -0.306119940f, 1.287598193f,
+        )
+        assertArrayEquals(expected, withProfile(dualProfile).colorMatrix, 0.003f)
+    }
+
+    @Test
+    fun aSingleOrUnspecifiedIlluminantKeepsTheLegacyMatrixSelection() {
+        val firstOnly = withProfile(dualProfile.copy(matrix2 = null))
+        val secondOnly = withProfile(dualProfile.copy(matrix1 = null))
+        assertArrayEquals(tungstenMatrix, firstOnly.colorMatrix, 0.00001f)
+        assertArrayEquals(daylightMatrix, secondOnly.colorMatrix, 0.00001f)
+        assertArrayEquals(daylightMatrix, withProfile(dualProfile.copy(illuminant1 = 0)).colorMatrix, 0.00001f)
+        assertArrayEquals(tungstenMatrix, withProfile(dualProfile.copy(illuminant2 = 17)).colorMatrix, 0.00001f)
+        assertArrayEquals(daylightMatrix, withProfile(dualProfile.copy(neutral = null)).colorMatrix, 0.00001f)
+    }
+
+    @Test
+    fun aSingleMatrixDoesNotReadTheUnusedIlluminantPayload() {
+        val file = SyntheticDng.file(200, 400, 300, profile = dualProfile.copy(matrix2 = null))
+        val data = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN)
+        val count = data.getShort(8).toInt() and 0xFFFF
+        val entry = (0 until count).map { 10 + 12 * it }.first { (data.getShort(it).toInt() and 0xFFFF) == 0xC65B }
+        data.putInt(entry + 4, 3).putInt(entry + 8, Int.MAX_VALUE)
+        assertArrayEquals(tungstenMatrix, Dng.read(file).colorMatrix, 0.00001f)
+    }
+
+    @Test
+    fun invalidWhiteCoordinatesKeepTheLegacyFallback() {
+        for (white in listOf(floatArrayOf(0f, 0f), floatArrayOf(0.8f, 0.8f))) {
+            assertArrayEquals(daylightMatrix, withProfile(dualProfile.copy(neutral = null, whiteXY = white)).colorMatrix, 0.00001f)
+        }
+        val single = dualProfile.copy(matrix2 = null, neutral = null)
+        val before = withProfile(single)
+        val after = withProfile(single.copy(whiteXY = floatArrayOf(0.480f, 0.414f)))
+        assertArrayEquals(before.colorMatrix, after.colorMatrix, 0f)
+        assertArrayEquals(before.whiteBalance, after.whiteBalance, 0f)
+    }
+
+    @Test
+    fun aSingularUnusedCalibrationDoesNotBreakTheLegacyFallback() {
+        val broken = dualProfile.copy(calibration1 = FloatArray(9))
+        assertArrayEquals(daylightMatrix, withProfile(broken).colorMatrix, 0.00001f)
+    }
+
     @Test
     fun findsTheRawImageUnderAPreviewAsAdobeLaysItOut() {
         val android = Dng.read(SyntheticDng.file(200, 400, 300))

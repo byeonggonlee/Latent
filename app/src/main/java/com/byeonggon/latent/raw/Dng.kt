@@ -60,6 +60,7 @@ object Dng {
     private const val TAG_CALIBRATION_2 = 0xC624
     private const val TAG_ANALOG_BALANCE = 0xC627
     private const val TAG_AS_SHOT_NEUTRAL = 0xC628
+    private const val TAG_AS_SHOT_WHITE_XY = 0xC629
     private const val TAG_ILLUMINANT_1 = 0xC65A
     private const val TAG_ILLUMINANT_2 = 0xC65B
     private const val TAG_BASELINE_EXPOSURE = 0xC62A
@@ -520,7 +521,8 @@ object Dng {
     /**
      * The colour matrix from the camera's colours to linear sRGB, and the white balance the photo was taken with,
      * worked out as dcraw does: the camera's response to sRGB's primaries, each row scaled so that white gives one,
-     * and inverted. The colour matrix measured under the light nearest to daylight is used.
+     * and inverted. Two known calibration illuminants are blended for the measured scene white;
+     * otherwise the legacy matrix nearest daylight is used.
      */
     private class Colors(floats: (Int) -> FloatArray?, ints: (Int) -> Int?) {
         val matrix: FloatArray
@@ -531,11 +533,37 @@ object Dng {
             val first = floats(TAG_COLOR_MATRIX_1)?.takeIf(::usable)
             val useSecond = second != null && (first == null || rank(ints(TAG_ILLUMINANT_2)) < rank(ints(TAG_ILLUMINANT_1)))
             val colorMatrix = (if (useSecond) second else first) ?: throw IOException("Missing colour matrix")
-            val calibration = floats(if (useSecond) TAG_CALIBRATION_2 else TAG_CALIBRATION_1)?.takeIf(::usable)
             val analog = floats(TAG_ANALOG_BALANCE)?.takeIf { it.size == 3 && it.all { value -> value.isFinite() && value > 0f } }
-            var cameraOfXyz = colorMatrix
-            if (calibration != null) cameraOfXyz = times(calibration, cameraOfXyz)
-            if (analog != null) cameraOfXyz = FloatArray(9) { analog[it / 3] * cameraOfXyz[it] }
+            fun camera(matrix: FloatArray, calibrationTag: Int): FloatArray {
+                val calibration = floats(calibrationTag)?.takeIf(::usable)
+                val calibrated = calibration?.let { times(it, matrix) } ?: matrix
+                return analog?.let { gains -> FloatArray(9) { gains[it / 3] * calibrated[it] } } ?: calibrated
+            }
+            val fallback = camera(colorMatrix, if (useSecond) TAG_CALIBRATION_2 else TAG_CALIBRATION_1)
+            val shotNeutral = floats(TAG_AS_SHOT_NEUTRAL)?.takeIf { it.size == 3 && it.all { value -> value.isFinite() && value > 0f } }
+            val temperature1 = if (first != null && second != null) DngIlluminants.kelvin(ints(TAG_ILLUMINANT_1)) else null
+            val temperature2 = if (first != null && second != null) DngIlluminants.kelvin(ints(TAG_ILLUMINANT_2)) else null
+            var shotWhite: DoubleArray? = null
+            val blended = try {
+                if (first != null && second != null && temperature1 != null && temperature2 != null && temperature1 != temperature2) {
+                    val camera1 = normalized(first)?.let { camera(it, TAG_CALIBRATION_1) }
+                    val camera2 = normalized(second)?.let { camera(it, TAG_CALIBRATION_2) }
+                    if (camera1 != null && camera2 != null && usableCamera(camera1) && usableCamera(camera2)) {
+                        shotWhite = if (shotNeutral != null) {
+                            whiteOfNeutral(shotNeutral, camera1, camera2, temperature1, temperature2)
+                        } else {
+                            floats(TAG_AS_SHOT_WHITE_XY)?.takeIf { it.size == 2 }?.let { doubleArrayOf(it[0].toDouble(), it[1].toDouble()) }
+                        }
+                        shotWhite?.let { xy ->
+                            weight(xy, temperature1, temperature2)?.let { blend(camera1, camera2, it) }?.takeIf(::usableCamera)
+                        }
+                    } else null
+                } else null
+            } catch (_: IOException) {
+                // Optional metadata for the other illuminant must not break the working legacy selection.
+                null
+            }
+            val cameraOfXyz = blended ?: fallback
 
             val cameraOfRgb = times(cameraOfXyz, XYZ_OF_SRGB)
             // How the camera sees sRGB's white, which is also the white balance for daylight.
@@ -543,8 +571,61 @@ object Dng {
             if (white.any { !(it > 0f) }) throw IOException("Unusable colour matrix")
             matrix = inverse(FloatArray(9) { cameraOfRgb[it] / white[it / 3] }) ?: throw IOException("Unusable colour matrix")
 
-            val neutral = floats(TAG_AS_SHOT_NEUTRAL)?.takeIf { it.size == 3 && it.all { value -> value.isFinite() && value > 0f } } ?: white
+            val neutralFromWhite = if (blended != null && shotWhite != null) {
+                vector(cameraOfXyz, xyz(shotWhite)).takeIf { it.all { value -> value.isFinite() && value > 0f } }
+            } else null
+            val neutral = shotNeutral ?: neutralFromWhite ?: white
             whiteBalance = floatArrayOf(neutral[1] / neutral[0], 1f, neutral[1] / neutral[2])
+        }
+
+        private fun normalized(matrix: FloatArray): FloatArray? {
+            val maximum = vector(matrix, xyz(doubleArrayOf(0.3457, 0.3585))).max()
+            if (!maximum.isFinite() || maximum <= 0f) return null
+            val scale = if (maximum in 0.99f..1.01f) 1.0 else 1.0 / maximum
+            // DNG SDK profile normalization removes arbitrary exposure scale before mixing calibrations.
+            return FloatArray(9) { (kotlin.math.floor(matrix[it] * scale * 10000 + 0.5) / 10000).toFloat() }.takeIf(::usable)
+        }
+
+        private fun weight(xy: DoubleArray, temperature1: Double, temperature2: Double): Float? =
+            DngIlluminants.mired(xy[0], xy[1])?.let {
+                ((it - 1e6 / temperature2) / (1e6 / temperature1 - 1e6 / temperature2)).coerceIn(0.0, 1.0).toFloat()
+            }
+
+        private fun blend(first: FloatArray, second: FloatArray, weight: Float): FloatArray = when {
+            weight >= 1f -> first
+            weight <= 0f -> second
+            else -> FloatArray(9) { weight * first[it] + (1f - weight) * second[it] }
+        }
+
+        private fun usableCamera(matrix: FloatArray): Boolean {
+            if (!usable(matrix) || inverse(matrix)?.takeIf(::usable) == null) return false
+            val rgb = times(matrix, XYZ_OF_SRGB)
+            return (0..2).all { row -> (rgb[3 * row] + rgb[3 * row + 1] + rgb[3 * row + 2]).let { it.isFinite() && it > 0f } }
+        }
+
+        private fun vector(matrix: FloatArray, value: FloatArray) = FloatArray(3) { row ->
+            matrix[3 * row] * value[0] + matrix[3 * row + 1] * value[1] + matrix[3 * row + 2] * value[2]
+        }
+
+        private fun xyz(xy: DoubleArray) = floatArrayOf((xy[0] / xy[1]).toFloat(), 1f, ((1 - xy[0] - xy[1]) / xy[1]).toFloat())
+
+        private fun whiteOfNeutral(
+            neutral: FloatArray, first: FloatArray, second: FloatArray, temperature1: Double, temperature2: Double,
+        ): DoubleArray? {
+            var last = doubleArrayOf(0.3457, 0.3585) // D50, as in DNG SDK NeutralToXY.
+            repeat(30) { pass ->
+                val weight = weight(last, temperature1, temperature2) ?: return null
+                val cameraToXyz = inverse(blend(first, second, weight))?.takeIf(::usable) ?: return null
+                val value = vector(cameraToXyz, neutral)
+                val total = value.sum().toDouble()
+                if (!total.isFinite() || total <= 0) return null
+                val next = doubleArrayOf(value[0] / total, value[1] / total)
+                if (DngIlluminants.mired(next[0], next[1]) == null) return null
+                if (kotlin.math.abs(next[0] - last[0]) + kotlin.math.abs(next[1] - last[1]) < 1e-7) return next
+                if (pass == 29) return doubleArrayOf((last[0] + next[0]) / 2, (last[1] + next[1]) / 2)
+                last = next
+            }
+            return last
         }
 
         private fun usable(matrix: FloatArray) = matrix.size == 9 && matrix.all(Float::isFinite)
