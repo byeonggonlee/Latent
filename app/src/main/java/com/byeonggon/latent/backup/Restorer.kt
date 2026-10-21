@@ -109,8 +109,10 @@ class Restorer(
         }
         val albumsHere = HashSet<Long>()
         archive.eachRecord(BackupFormat.ALBUM_ITEMS, AlbumItemRecord::fromJson) { if (it.media in found) albumsHere += it.album }
-        var albums = 0
-        archive.eachRecord(BackupFormat.ALBUMS, AlbumRecord::fromJson) { if (it.id in albumsHere) albums++ }
+        // By name, as a restore makes them: two of one name in the backup come to one here.
+        val albumNames = HashSet<String>()
+        archive.eachRecord(BackupFormat.ALBUMS, AlbumRecord::fromJson) { if (it.id in albumsHere) albumNames += it.name }
+        val albums = albumNames.size
         var versions = 0
         archive.eachRecord(BackupFormat.VERSIONS, VersionRecord::fromJson) { if (it.media in found) versions++ }
         return RestorePlan(
@@ -274,14 +276,15 @@ class Restorer(
         }
         val albumsByName = HashMap<String, Long>()
         dao.albums().forEach { albumsByName.putIfAbsent(it.name, it.id) }
-        var albums = 0
+        val albumsTouched = HashSet<Long>()
         archive.eachRecord(BackupFormat.ALBUMS, AlbumRecord::fromJson) { album ->
             val items = members[album.id] ?: return@eachRecord
             // The album of that name here is the one: restoring twice must not make two.
             val id = albumsByName.getOrPut(album.name) { database.albumDao().insert(AlbumEntity(name = album.name, createdAt = album.createdAt)) }
             database.albumDao().addItems(items.map { it.copy(albumId = id) })
-            albums++
+            albumsTouched += id
         }
+        val albums = albumsTouched.size
 
         var versions = 0
         archive.eachRecord(BackupFormat.VERSIONS, VersionRecord::fromJson) { version ->

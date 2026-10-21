@@ -79,7 +79,7 @@ class BackupFileTest {
     private val maskId = "fedcba9876543210fedcba9876543210"
 
     /** A small library with a LUT, a mask and [points] places, backed up; the target phone has its photo. */
-    private suspend fun backup(points: Int = 3): File {
+    private suspend fun backup(points: Int = 3, moreAlbums: List<String> = emptyList()): File {
         source.use()
         val photo = MediaItemEntity(
             path = source.libraryFile("2026/2026-10-08/DSC00001.ARW").path, fileName = "DSC00001.ARW", kind = MediaKind.RAW,
@@ -88,6 +88,10 @@ class BackupFileTest {
         val id = source.database.mediaDao().insert(photo)
         val album = source.database.albumDao().insert(AlbumEntity(name = "Trip", createdAt = 3))
         source.database.albumDao().addItems(listOf(AlbumItemEntity(album, id, 4)))
+        for (name in moreAlbums) {
+            val more = source.database.albumDao().insert(AlbumEntity(name = name, createdAt = 6))
+            source.database.albumDao().addItems(listOf(AlbumItemEntity(more, id, 7)))
+        }
         LutStore.save(lutId, ColorLut(2, FloatArray(24)))
         source.database.lutDao().insert(LutEntity(name = "Flat", size = 2, hash = lutId, createdAt = 5))
         MaskStore.save(maskId, MaskRaster(2, 2, ByteArray(4)))
@@ -109,6 +113,25 @@ class BackupFileTest {
         assertFalse(File(target.luts, "$lutId.lut").exists())
         assertFalse(File(target.masks, "$maskId.mask").exists())
         assertEquals(AppSettings(), settings.settings.first())
+    }
+
+    /** A zip of [entries] stored as they are, not packed, so that a byte in one can be changed and the file still read. */
+    private fun zipStored(vararg entries: Pair<String, String>): ByteArray {
+        val bytes = java.io.ByteArrayOutputStream()
+        ZipOutputStream(bytes).use { zip ->
+            for ((name, text) in entries) {
+                val data = text.toByteArray()
+                zip.putNextEntry(ZipEntry(name).apply {
+                    method = ZipEntry.STORED
+                    size = data.size.toLong()
+                    compressedSize = data.size.toLong()
+                    crc = java.util.zip.CRC32().apply { update(data) }.value
+                })
+                zip.write(data)
+                zip.closeEntry()
+            }
+        }
+        return bytes.toByteArray()
     }
 
     private fun zip(vararg entries: Pair<String, String>): File = folders.newFile().also { file ->
@@ -198,6 +221,43 @@ class BackupFileTest {
 
         val error = assertThrows<DamagedBackupException> { target.restorer().restore(broken) }
         assertTrue(error.message!!.contains("locations.jsonl, line 2"))
+        assertNothingRestored()
+    }
+
+    @Test
+    fun countsTwoAlbumsOfOneNameAsTheOneTheyComeTo() = runBlocking {
+        val file = backup(moreAlbums = listOf("Trip", "Trip", "Other"))
+
+        assertEquals(2, target.restorer().inspect(file).albums)
+        assertEquals(2, target.restorer().restore(file).albums)
+        assertEquals(listOf("Other", "Trip"), target.database.backupDao().albums().map { it.name }.sorted())
+    }
+
+    @Test
+    fun refusesAManifestWhoseChecksumItDoesNotMatch() = runBlocking {
+        target.use()
+        val manifest = BackupManifest(1, Instant.EPOCH, AppIdentity("p", "v", 1), BackupCounts()).toJson().toString()
+        val whole = zipStored(BackupFormat.MANIFEST to manifest)
+        // The "p" of the app's package becomes a "q": still a manifest, but not the one that was written.
+        val at = String(whole, Charsets.ISO_8859_1).indexOf("\"p\"")
+        assertTrue(at > 0)
+        val changed = folders.newFile().apply { writeBytes(whole.also { it[at + 1] = 'q'.code.toByte() }) }
+
+        assertThrows<DamagedBackupException> { target.restorer().restore(changed) }
+        assertNothingRestored()
+    }
+
+    @Test
+    fun refusesALineWithoutAnEndInsteadOfReadingItAll() = runBlocking {
+        target.use()
+        val manifest = BackupManifest(1, Instant.EPOCH, AppIdentity("p", "v", 1), BackupCounts()).toJson().toString()
+        val long = zip(
+            BackupFormat.MANIFEST to manifest,
+            BackupFormat.ALBUMS to "{\"id\":1,\"name\":\"" + "x".repeat(5 * 1024 * 1024) + "\",\"createdAt\":3}",
+        )
+
+        val error = assertThrows<DamagedBackupException> { target.restorer().restore(long) }
+        assertTrue(error.message!!, error.message!!.contains("albums.jsonl, line 1"))
         assertNothingRestored()
     }
 

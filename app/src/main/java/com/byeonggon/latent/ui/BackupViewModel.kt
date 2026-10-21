@@ -73,16 +73,16 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
             }
             text(R.string.backup_done) + "\n" + describe(counts)
         } catch (e: CancellationException) {
-            val deleted = withContext(NonCancellable) { discard(uri) }
+            val deleted = withContext(NonCancellable + Dispatchers.IO) { discard(uri) }
             _state.update { BackupUiState(message = text(if (deleted) R.string.backup_cancelled else R.string.backup_cancelled_left)) }
             throw e
         } catch (e: IOException) {
-            discard(uri)
+            withContext(Dispatchers.IO) { discard(uri) }
             text(R.string.backup_failed, e.message.orEmpty())
         } catch (e: SecurityException) {
             text(R.string.backup_failed, e.message.orEmpty())
         } catch (e: SQLException) {
-            discard(uri)
+            withContext(Dispatchers.IO) { discard(uri) }
             text(R.string.backup_failed, e.message.orEmpty())
         }
         _state.update { BackupUiState(message = message) }
@@ -118,6 +118,11 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
         _state.update { BackupUiState(message = text(R.string.backup_restore_wait_for_sync)) }
         withContext(NonCancellable + Dispatchers.IO) { staged.parentFile?.deleteRecursively() }
         return true
+    }
+
+    /** A copy of a backup that was read and never restored holds the person's places: it does not outlive the screen. */
+    override fun onCleared() {
+        staged.parentFile?.deleteRecursively()
     }
 
     fun dismissPlan() {

@@ -9,6 +9,7 @@ import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.Reader
 import java.util.zip.CRC32
 import java.util.zip.CheckedInputStream
 import java.util.zip.ZipEntry
@@ -33,8 +34,9 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
             val reader = input.bufferedReader(Charsets.UTF_8)
             var line = 0
             while (true) {
-                val text = reader.readLine() ?: break
                 line++
+                val text = reader.readBoundedLine(LINE_LIMIT) ?: break
+                if (text.length > LINE_LIMIT) throw DamagedBackupException(name, line)
                 if (line % CANCEL_CHECK == 0) currentCoroutineContext().ensureActive()
                 if (text.isBlank()) continue
                 val record = try {
@@ -94,6 +96,9 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
         private const val DRAIN = 8192
         private const val SMALL_ENTRY = 1024 * 1024
 
+        /** The longest line of a records file: a version's edit or a place is a few KB; a line without an end is not one. */
+        private const val LINE_LIMIT = 4 * 1024 * 1024
+
         /** Opens [file]; throws [NotABackupException] for what is no Latent backup and [NewerBackupException] for a newer one. */
         @Throws(IOException::class)
         suspend fun open(file: File): BackupArchive {
@@ -105,7 +110,13 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
             try {
                 val entry = zip.getEntry(BackupFormat.MANIFEST) ?: throw NotABackupException()
                 val manifest = try {
-                    val bytes = CheckedInputStream(zip.getInputStream(entry), CRC32()).use { it.readLimited(SMALL_ENTRY, entry.name) }
+                    val bytes = CheckedInputStream(zip.getInputStream(entry), CRC32()).use { checked ->
+                        checked.readLimited(SMALL_ENTRY, entry.name).also {
+                            // What the manifest says of a file that its checksum disowns is not to be trusted.
+                            while (checked.read() >= 0) Unit
+                            if (entry.crc != -1L && checked.checksum.value != entry.crc) throw DamagedBackupException(entry.name)
+                        }
+                    }
                     BackupManifest.fromJson(JsonParser.parseString(bytes.toString(Charsets.UTF_8)).asJsonObject)
                 } catch (e: BackupException) {
                     throw e
@@ -119,6 +130,21 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
             } catch (e: Throwable) {
                 zip.close()
                 throw e
+            }
+        }
+
+        /**
+         * The next line, or null at the end; one longer than [limit] comes back one character too long, so that the caller
+         * can refuse it, without reading on to its end, which a damaged file might not have.
+         */
+        private fun Reader.readBoundedLine(limit: Int): String? {
+            val line = StringBuilder()
+            while (true) {
+                val next = read()
+                if (next < 0) return if (line.isEmpty()) null else line.toString()
+                if (next == '\n'.code) return line.toString().removeSuffix("\r")
+                line.append(next.toChar())
+                if (line.length > limit) return line.toString()
             }
         }
 
