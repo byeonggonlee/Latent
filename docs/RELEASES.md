@@ -99,6 +99,8 @@ The new app reads the backup of an older one; an older app refuses the backup of
    [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md) (a nightly signed with the release key is the same build).
 2. `CHANGELOG.md` has a `## [X.Y.Z] - date` section; write the date in. `latent.versionBase` in `gradle.properties` is `X.Y.Z`
    (the workflow refuses a tag that disagrees, as it refuses a commit that is not on `main`).
+   The workflow also refuses a section still marked `unreleased`, a signing key whose alias is `androiddebugkey`, and
+   any of the four secrets being empty, before it builds; a failed build leaves its test and lint reports as an artifact.
 3. Tag and push: `git tag -a vX.Y.Z -m "Latent X.Y.Z" && git push origin vX.Y.Z`.
 4. The workflow publishes the release in about seven minutes. Download the APK on a phone, check the checksum, and
    install it over the nightly before it.

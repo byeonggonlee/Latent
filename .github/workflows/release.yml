@@ -29,6 +29,9 @@ jobs:
         id: tag
         env:
           KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           name="${GITHUB_REF_NAME#v}"
           base=$(grep '^latent.versionBase=' gradle.properties | cut -d= -f2)
@@ -42,8 +45,18 @@ jobs:
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::The tagged commit is not on main."; exit 1
           fi
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::The signing secrets are not set (see docs/RELEASES.md, Signing)."; exit 1
+          for secret in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!secret}" ]; then
+              echo "::error::The signing secret for $secret is not set (see docs/RELEASES.md, Signing): all four are needed."; exit 1
+            fi
+          done
+          # The nightly's debug key is of no value to anyone; a stable release is signed with a key kept for it.
+          if [ "$KEY_ALIAS" = "androiddebugkey" ]; then
+            echo "::error::The signing key is the debug key (alias androiddebugkey). Make a release key first (docs/RELEASES.md, Signing)."; exit 1
+          fi
+          # A section still marked unreleased is notes that have not been written up for this release.
+          if ! echo "$name" | grep -q -- '-' && grep -Ei "^## \\[?${name%%-*}\\]?.*unreleased" CHANGELOG.md > /dev/null; then
+            echo "::error::CHANGELOG.md has the section of $name marked unreleased: write the date in, as docs/RELEASES.md says, and tag again."; exit 1
           fi
           count=$(git rev-list --count HEAD)
           echo "name=$name" >> "$GITHUB_OUTPUT"
@@ -103,6 +116,16 @@ jobs:
             echo "---"
             echo "Version $name (code ${{ steps.tag.outputs.code }}), commit \`$(git rev-parse --short HEAD)\`. Check a download with \`shasum -a 256 -c ${{ steps.tag.outputs.file }}.sha256\`."
           } >> notes.md
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reports
+          path: |
+            app/build/reports/tests
+            app/build/reports/lint-results-*.html
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Publish
         run: |
