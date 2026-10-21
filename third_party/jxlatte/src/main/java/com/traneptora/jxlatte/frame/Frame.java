@@ -382,13 +382,20 @@ public class Frame {
         this.decoded = true;
 
         CompletableFuture.runAsync(ExceptionalRunnable.of(() -> {
-            if (tocLengths.length != 1) {
-                for (int i = 0; i < tocLengths.length; i++) {
-                    byte[] buffer = readBuffer(i);
-                    bitreaders.get(i).complete(new Bitreader(new ByteArrayInputStream(buffer)));
+            try {
+                if (tocLengths.length != 1) {
+                    for (int i = 0; i < tocLengths.length; i++) {
+                        byte[] buffer = readBuffer(i);
+                        bitreaders.get(i).complete(new Bitreader(new ByteArrayInputStream(buffer)));
+                    }
+                } else {
+                     bitreaders.get(0).complete(globalReader);
                 }
-            } else {
-                 bitreaders.get(0).complete(globalReader);
+            } catch (Throwable ex) {
+                // A stream cut short: whoever waits for a reader that will not come is told why, not left waiting.
+                for (CompletableFuture<Bitreader> reader : bitreaders)
+                    reader.completeExceptionally(ex);
+                throw ex;
             }
         }));
 
