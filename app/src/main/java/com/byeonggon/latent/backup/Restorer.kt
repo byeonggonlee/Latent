@@ -311,7 +311,7 @@ class Restorer(
         var syncRecords = 0
         val records = ArrayList<SyncRecordEntity>(BATCH)
         suspend fun flushRecords() {
-            syncRecords += dao.insertSyncRecords(records).count { it != -1L }
+            syncRecords += dao.addNewSyncRecords(records)
             records.clear()
         }
         archive.eachRecord(BackupFormat.SYNC_RECORDS, SyncRecordRecord::fromJson) { record ->
@@ -331,7 +331,7 @@ class Restorer(
         var read = 0
         val points = ArrayList<LocationPointEntity>(LOCATION_BATCH)
         suspend fun flushPoints() {
-            locations += database.locationDao().insertAll(points).count { it != -1L }
+            locations += database.locationDao().addNew(points)
             read += points.size
             points.clear()
             progress.report(BackupStep.TIMELINE, read, contents.locations)

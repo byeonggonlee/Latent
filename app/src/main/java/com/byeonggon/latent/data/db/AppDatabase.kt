@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -225,6 +226,25 @@ interface LocationDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(points: List<LocationPointEntity>): List<Long>
 
+    /** Keeps the points that are here already; see [addNew]. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertNew(points: List<LocationPointEntity>)
+
+    @Query("SELECT COUNT(*) FROM location_points")
+    suspend fun count(): Int
+
+    /**
+     * Adds the points that are not here yet and returns how many that was. Asking [insertAll] for the row ids costs two
+     * queries a point (Room reads each one back with `changes()` and `last_insert_rowid()`), which made thousands of
+     * cursors for years of places; counting the table before and after costs two queries in all.
+     */
+    @Transaction
+    suspend fun addNew(points: List<LocationPointEntity>): Int {
+        val before = count()
+        insertNew(points)
+        return count() - before
+    }
+
     @Query("SELECT * FROM location_points WHERE timestamp <= :timestamp ORDER BY timestamp DESC LIMIT 1")
     suspend fun lastAtOrBefore(timestamp: Long): LocationPointEntity?
 
@@ -292,7 +312,15 @@ interface BackupDao {
 
     /** Keeps the records the phone has already. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertSyncRecords(records: List<SyncRecordEntity>): List<Long>
+    suspend fun insertSyncRecords(records: List<SyncRecordEntity>)
+
+    /** Adds the records the phone does not have yet and returns how many that was, as [LocationDao.addNew] does. */
+    @Transaction
+    suspend fun addNewSyncRecords(records: List<SyncRecordEntity>): Int {
+        val before = countSyncRecords()
+        insertSyncRecords(records)
+        return countSyncRecords() - before
+    }
 
     @Query("SELECT * FROM synced_folders ORDER BY cameraId, path")
     suspend fun syncedFolders(): List<SyncedFolderEntity>
