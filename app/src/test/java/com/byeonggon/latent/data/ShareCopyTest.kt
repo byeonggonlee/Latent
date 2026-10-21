@@ -103,10 +103,10 @@ class ShareCopyTest {
         // The viewer's decode of the same raw file, held up as a slow file would be.
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val cache = RawCache { file ->
+        val cache = RawCache { file, checkCancelled ->
             started.countDown()
             release.await(20, TimeUnit.SECONDS)
-            RawRenderer.read(file)
+            RawRenderer.read(file, checkCancelled)
         }
         val database = container.database
         val edits = LibraryEdits(

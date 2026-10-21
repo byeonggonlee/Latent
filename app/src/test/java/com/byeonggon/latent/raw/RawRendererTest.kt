@@ -13,6 +13,7 @@ import com.byeonggon.latent.enhance.MaskShape
 import com.byeonggon.latent.enhance.MaskStore
 import com.byeonggon.latent.enhance.PhotoEdit
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -22,6 +23,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.util.concurrent.CancellationException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -51,6 +53,19 @@ class RawRendererTest {
         val preview = RawRenderer.preview(RawRenderer.read(raw), PhotoEdit())
 
         assertEquals(4 to 28, preview.width to preview.height)
+    }
+
+    @Test
+    fun asksBetweenRowsWhetherToStopAndStopsWhenTold() {
+        var asked = 0
+        RawRenderer.read(raw) { asked++ }
+        assertTrue("asked $asked times", asked >= SyntheticArw.HEIGHT)
+
+        // Told halfway down the rows.
+        asked = 0
+        assertThrows(CancellationException::class.java) {
+            RawRenderer.read(raw) { if (++asked > SyntheticArw.HEIGHT / 2) throw CancellationException("moved on") }
+        }
     }
 
     @Test

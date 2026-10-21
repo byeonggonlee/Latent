@@ -1,8 +1,14 @@
 package com.byeonggon.latent.enhance
 
 import org.junit.Assert.assertArrayEquals
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 
 class LinearImageTest {
     /** A picture whose red levels count up along the rows; green and blue are left black. */
@@ -39,6 +45,23 @@ class LinearImageTest {
         assertArrayEquals(shortArrayOf(2, 5, 1, 4, 0, 3), picture.turned(3).red)
         assertArrayEquals(picture.red, picture.turned(4).red)
         assertArrayEquals(picture.red, once.turned(-1).red)
+    }
+
+    @Test
+    fun aCancelledCoroutineStopsTheRowBandsFromTheOtherCores() {
+        // A raw decode asks between bands whether its screen is still there; here only the pool's threads ask.
+        val job = Job().apply { cancel() }
+        val caller = Thread.currentThread()
+        val askedElsewhere = AtomicBoolean()
+        val thrown = runCatching {
+            forRowBands(4096) { _, _ ->
+                // The calling thread takes its time, so that the pool's threads take bands too.
+                if (Thread.currentThread() === caller) Thread.sleep(2) else askedElsewhere.set(true).also { job.ensureActive() }
+            }
+        }.exceptionOrNull()
+
+        assumeTrue("every band ran on the calling thread (one core)", askedElsewhere.get())
+        assertTrue("$thrown", thrown is CancellationException)
     }
 
     @Test

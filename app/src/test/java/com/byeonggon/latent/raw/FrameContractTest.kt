@@ -105,7 +105,7 @@ class FrameContractTest {
 
     @Test
     fun aViewRetainsItsSamplesAfterTheCacheIsCleared() {
-        val cache = RawCache { SonyArw.read(SyntheticArw.file(300, 600, 400)) }
+        val cache = RawCache { _, _ -> SonyArw.read(SyntheticArw.file(300, 600, 400)) }
         val image = cache.read(java.io.File("view.ARW"))
         val part = image.part(0, 0, 8, 4)
         val frame = DecodedFrame(part, RawFormat.SONY_ARW, 11, setOf(RawCorrection.SONY_TONE_EXPANSION))

@@ -12,8 +12,10 @@ import kotlin.concurrent.withLock
  * One file is decoded at a time, as two at once would need more memory than a phone gives the app; a decode outside
  * the cache takes its turn through [decodingAlone]. Clearing does not wait for a decode under way, so that the main
  * thread can do it: what that decode gives is then not kept.
+ *
+ * [decode] is given the file and the reader's check for cancellation, as [RawRenderer.read] takes them.
  */
-class RawCache(private val decode: (File) -> ArwImage = RawRenderer::read) {
+class RawCache(private val decode: (File, (() -> Unit)?) -> ArwImage = RawRenderer::read) {
     private val decoding = ReentrantLock()
 
     // Guarded by this object's monitor, which is only ever held for a moment.
@@ -23,20 +25,26 @@ class RawCache(private val decode: (File) -> ArwImage = RawRenderer::read) {
     /** Counts the clears, so that a decode can tell whether the cache was cleared while it ran. */
     private var clears = 0
 
-    /** Slow unless [file] is the one read last; must run off the main thread. */
+    /**
+     * Slow unless [file] is the one read last; must run off the main thread. [checkCancelled] stops the decode by
+     * throwing, as a coroutine's `ensureActive()` does once the screen that asked has moved on; a read stopped so
+     * keeps nothing and lets the next one decode.
+     */
     @Throws(IOException::class)
-    fun read(file: File): ArwImage {
+    fun read(file: File, checkCancelled: (() -> Unit)? = null): ArwImage {
         cached(file)?.let { return it }
         decoding.withLock {
             // Decoded by the read before this one, while this one waited for it.
             cached(file)?.let { return it }
+            // Cancelled while it waited: the file decoded before stays.
+            checkCancelled?.invoke()
             // Let go of the previous file first: two decoded files at once are more than is needed.
             val clearsBefore = synchronized(this) {
                 this.file = null
                 image = null
                 clears
             }
-            val decoded = decode(file)
+            val decoded = decode(file, checkCancelled)
             synchronized(this) {
                 if (clears == clearsBefore) {
                     this.file = file
