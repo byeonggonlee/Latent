@@ -110,6 +110,26 @@ class SyncEngineTest {
     }
 
     @Test
+    fun skipsOnTheCardWhatCameOverMtpAndTheOtherWayRound() = runBlocking {
+        val photo = jpegTakenAt("2026:10:01 12:00:00", "+09:00")
+        val overMtp = remote("DSC00001.JPG", MediaKind.PHOTO, photo)
+        val onCard = remote("DSC00002.ARW", MediaKind.RAW, RAW_BYTES)
+        val card = CameraInfo("", "Card", "folder:1234-ABCD:")
+        engine.run(FakeCameraSource(mapOf(overMtp to photo)))
+        // The card's reader gives the time of the same file in another zone.
+        val zoneShift = 9 * 60 * minute
+        val sameOnCard = overMtp.copy(handle = nextHandle++, modifiedAt = overMtp.modifiedAt + zoneShift)
+
+        engine.run(FakeCameraSource(mapOf(sameOnCard to photo, onCard to RAW_BYTES), card))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        engine.run(FakeCameraSource(mapOf(overMtp to photo, onCard.copy(handle = nextHandle++) to RAW_BYTES)))
+
+        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(setOf("DSC00001.JPG", "DSC00002.ARW"), database.mediaDao().all().map { it.fileName }.toSet())
+    }
+
+    @Test
     fun takesCopiesAlreadyInTheLibraryForImported() = runBlocking {
         // Copied over from another phone: the library holds it, without knowing which camera it came from.
         val copy = File(storage.root, "2026/2026-10-01/DSC00060.ARW").apply {
@@ -403,7 +423,10 @@ class SyncEngineTest {
     }
 
     /** A camera whose single storage holds [files] in their folders; a null payload simulates a failing transfer. */
-    private class FakeCameraSource(private val files: Map<RemoteFile, ByteArray?>) : CameraSource {
+    private class FakeCameraSource(
+        private val files: Map<RemoteFile, ByteArray?>,
+        private val info: CameraInfo = CameraInfo("Sony", "ZV-E10", "SERIAL"),
+    ) : CameraSource {
         val tree = FakeTree()
         var closed = false
         var onDownload: () -> Unit = {}
@@ -417,7 +440,7 @@ class SyncEngineTest {
             }
         }
 
-        override fun open() = CameraInfo("Sony", "ZV-E10", "SERIAL")
+        override fun open() = info
 
         override fun listFiles(request: ListingRequest, onFound: (Int) -> Unit): Listing {
             val storage = listStorage(tree, FakeTree.ROOT, STORAGE, request, onFound)

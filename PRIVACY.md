@@ -11,8 +11,8 @@ how the app starts out, it makes no network request at all.
 - **Photos and videos of other apps** in the folders of the phone that you choose, such as the phone's
   camera: they are listed in the library where they are, never changed or copied. What you do to them is
   kept as settings in the app's database; saving a copy as a JPEG makes a new file in `DCIM/Latent`.
-- **Photos and videos** that it copies from your camera over USB, into `DCIM/Latent` on the phone's
-  storage, and the edits you make to them. They are ordinary files that gallery and backup apps on
+- **Photos and videos** that it copies from your camera over USB, or from its card in a card reader or the
+  camera connected as a drive, into `DCIM/Latent` on the phone's storage, and the edits you make to them. They are ordinary files that gallery and backup apps on
   the phone can see.
 - **Your location**, while location recording is on: the phone's position every few minutes, kept
   in the app's own database, to tell where each photo was taken from the time it was taken. Recording only
@@ -31,6 +31,7 @@ how the app starts out, it makes no network request at all.
 |---|---|
 | Photos and videos (read) | To show and edit the library, including photos put there by other apps. |
 | Access to the `DCIM/Latent` folder, which you choose | To keep files next to raw photos, such as their location sidecars. |
+| Access to a camera's card or drive, which you choose | To read the photos and videos on it and copy them into `DCIM/Latent`; nothing on it is changed. |
 | Location while the app is in use, and media location | To record where you are while recording is on, and to read the locations in photos. |
 | Notifications | To show that location recording or a sync is running, or that recording stopped. |
 | USB | To read the camera. |

@@ -37,6 +37,21 @@ class ImportedFilesTest {
     }
 
     @Test
+    fun recognisesOnACardWhatAnyCameraImported() {
+        // A card cannot say which camera wrote it; the same file came over MTP, read in another time zone.
+        assertTrue(imported.contains(file(modifiedAt = importedAt + 9 * hour), "folder:1234-ABCD:"))
+        assertFalse(imported.contains(file(sizeBytes = 25_000_001), "folder:1234-ABCD:"))
+    }
+
+    @Test
+    fun recognisesOverMtpWhatACardImported() {
+        val fromCard = ImportedFiles(listOf(file().sourceKey("folder:1234-ABCD:")))
+
+        assertTrue(fromCard.contains(file(), "camera"))
+        assertTrue(fromCard.contains(file(), "another camera"))
+    }
+
+    @Test
     fun learnsFilesImportedDuringASync() {
         val later = file(name = "DSC00002.ARW")
         assertFalse(imported.contains(later, "camera"))

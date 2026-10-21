@@ -30,23 +30,28 @@ internal class SystemFilesProvider : DocumentsProvider() {
         val file = fileOf(documentId)
         if (!file.exists()) throw FileNotFoundException(documentId)
         val columns = projection ?: arrayOf(Document.COLUMN_DOCUMENT_ID)
+        return MatrixCursor(columns).apply { addRow(row(columns, documentId, file)) }
+    }
+
+    override fun queryChildDocuments(parentDocumentId: String, projection: Array<out String>?, sortOrder: String?): Cursor {
+        val columns = projection ?: arrayOf(Document.COLUMN_DOCUMENT_ID)
+        val folder = fileOf(parentDocumentId)
+        if (!folder.isDirectory) throw FileNotFoundException(parentDocumentId)
         return MatrixCursor(columns).apply {
-            addRow(
-                columns.map {
-                    when (it) {
-                        Document.COLUMN_DOCUMENT_ID -> documentId
-                        Document.COLUMN_DISPLAY_NAME -> file.name
-                        Document.COLUMN_LAST_MODIFIED -> file.lastModified()
-                        Document.COLUMN_SIZE -> file.length()
-                        else -> null
-                    }
-                },
-            )
+            folder.listFiles()!!.sortedBy { it.name }.forEach { addRow(row(columns, "$parentDocumentId/${it.name}", it)) }
         }
     }
 
-    override fun queryChildDocuments(parentDocumentId: String, projection: Array<out String>?, sortOrder: String?): Cursor =
-        MatrixCursor(projection ?: arrayOf(Document.COLUMN_DOCUMENT_ID))
+    private fun row(columns: Array<out String>, documentId: String, file: File): Array<Any?> = columns.map {
+        when (it) {
+            Document.COLUMN_DOCUMENT_ID -> documentId
+            Document.COLUMN_DISPLAY_NAME -> file.name
+            Document.COLUMN_MIME_TYPE -> if (file.isDirectory) Document.MIME_TYPE_DIR else "application/octet-stream"
+            Document.COLUMN_LAST_MODIFIED -> file.lastModified()
+            Document.COLUMN_SIZE -> file.length()
+            else -> null
+        }
+    }.toTypedArray()
 
     override fun isChildDocument(parentDocumentId: String, documentId: String) =
         documentId.startsWith(if (parentDocumentId.endsWith(":")) parentDocumentId else "$parentDocumentId/")

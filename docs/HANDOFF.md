@@ -142,6 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
+| Claude Code (computer) | Import from a card reader or a camera in Mass Storage mode: a folder picked once, read as a `CameraSource`; what came over MTP and off a card is recognised either way | `claude/card-reader-import` (pull request) | `camera/FolderCameraSource.kt`, `camera/ImportedFiles.kt`, `camera/SyncService.kt`, `data/SettingsRepository.kt`, `ui/sync/`, strings, `PRIVACY.md`, `CHANGELOG.md`, `docs/DEVICE_CHECKS.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
 
@@ -216,7 +217,7 @@ touch the seam, as it reviews yours.
 Nothing handed over yet. Its own next items, so that Codex does not pick them too, in this order (set by the owner
 2026-10-21):
 
-- Import from a card reader, or from a camera in Mass Storage mode, as a sync from the camera does (asked by the
+- Import from a card reader, or from a camera in Mass Storage mode (under *In progress*), as a sync from the camera does (asked by the
   owner 2026-10-21): the folder picked once in the system's dialog (`ACTION_OPEN_DOCUMENT_TREE`) as a `CameraSource`
   beside `MtpCameraSource`, so that skipping what was imported, the dates and the places work as they do over MTP;
   a Sony in Mass Storage mode is offered that instead of only being asked to switch to MTP. No new permission.

@@ -11,8 +11,8 @@ with the phone's location, and develops them, without a cloud or an account.
 
 ### What it does
 
-- **Imports from a camera over USB (MTP)**: only what is new, or only the days you pick. Raw and JPEG of a shot
-  show as one.
+- **Imports from a camera over USB (MTP)**, or from its card in a card reader or the camera connected as a drive:
+  only what is new, whichever way it came before, or only the days you pick. Raw and JPEG of a shot show as one.
 - **Geotags** from the phone's own location record or an exported Google Timeline: GPS tags in a JPEG's EXIF, an
   XMP sidecar for a raw file.
 - **Develops raw files**: Sony ARW with the camera's lens corrections, and the DNGs of phones (such as a Galaxy's

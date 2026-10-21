@@ -15,24 +15,36 @@ private const val ZONE_OFFSET_SPAN_MS = 26 * 60 * 60_000L
  * A camera reports file times as wall-clock time and Android reads them in whichever zone the phone is
  * in at that moment, so the same file shows up with a shifted timestamp after travelling. A file with
  * the same name and size whose time differs by a whole number of quarter hours is therefore the same file.
+ *
+ * A card read in a card reader, or a camera read as a drive, cannot say which camera wrote it (see
+ * [isFolderCamera]): there the file of any camera counts, and the other way round, so that a card does
+ * not bring back what came over MTP, nor MTP what came off the card.
  */
 internal class ImportedFiles(sourceKeys: Collection<String>) {
-    private val timesByIdentity = HashMap<String, MutableList<Long>>()
+    /** By name and size, the camera and the time of each import. */
+    private val imports = HashMap<String, MutableList<Import>>()
+
+    private class Import(val cameraId: String, val time: Long)
 
     init {
         sourceKeys.forEach(::add)
     }
 
     fun add(sourceKey: String) {
-        val separator = sourceKey.lastIndexOf('|')
-        if (separator < 0) return
-        val time = sourceKey.substring(separator + 1).toLongOrNull() ?: return
-        timesByIdentity.getOrPut(sourceKey.substring(0, separator)) { ArrayList() } += time
+        // camera|name|size|time, read from the end: a camera's id is whatever the camera said.
+        val timeAt = sourceKey.lastIndexOf('|')
+        if (timeAt < 0) return
+        val time = sourceKey.substring(timeAt + 1).toLongOrNull() ?: return
+        val sizeAt = sourceKey.lastIndexOf('|', timeAt - 1)
+        val nameAt = if (sizeAt > 0) sourceKey.lastIndexOf('|', sizeAt - 1) else -1
+        if (nameAt < 0) return
+        imports.getOrPut(sourceKey.substring(nameAt + 1, timeAt)) { ArrayList() } += Import(sourceKey.substring(0, nameAt), time)
     }
 
     fun contains(file: RemoteFile, cameraId: String): Boolean =
-        timesByIdentity[file.identity(cameraId)].orEmpty().any { time ->
-            val shift = abs(time - file.modifiedAt)
-            shift <= ZONE_OFFSET_SPAN_MS && shift % ZONE_OFFSET_STEP_MS == 0L
+        imports["${file.name}|${file.sizeBytes}"].orEmpty().any { import ->
+            val shift = abs(import.time - file.modifiedAt)
+            (import.cameraId == cameraId || isFolderCamera(import.cameraId) || isFolderCamera(cameraId)) &&
+                shift <= ZONE_OFFSET_SPAN_MS && shift % ZONE_OFFSET_STEP_MS == 0L
         }
 }

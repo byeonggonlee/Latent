@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.net.Uri
 import android.os.IBinder
 import com.byeonggon.latent.Notifications
 import com.byeonggon.latent.R
@@ -42,12 +43,17 @@ class SyncService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
         )
         if (job?.isActive == true) return START_NOT_STICKY
+        val folder = intent?.getParcelableExtra(EXTRA_FOLDER, Uri::class.java)
         val device = intent?.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
-        if (device == null) {
-            stopSelf()
-            return START_NOT_STICKY
+        val source = when {
+            folder != null -> FolderCameraSource(this, folder)
+            device != null -> MtpCameraSource(getSystemService(UsbManager::class.java), device)
+            else -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
         }
-        val dates = intent.syncDates()
+        val dates = intent?.syncDates()
 
         job = scope.launch {
             val progress = launch {
@@ -57,7 +63,7 @@ class SyncService : Service() {
                 }
             }
             try {
-                engine.run(MtpCameraSource(getSystemService(UsbManager::class.java), device), dates)
+                engine.run(source, dates)
             } finally {
                 progress.cancel()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -116,12 +122,18 @@ class SyncService : Service() {
         private const val ACTION_CANCEL = "com.byeonggon.latent.action.CANCEL_SYNC"
         private const val EXTRA_START_DAY = "start_day"
         private const val EXTRA_END_DAY = "end_day"
+        private const val EXTRA_FOLDER = "folder"
         private const val NOTIFICATION_INTERVAL_MS = 500L
 
-        fun start(context: Context, device: UsbDevice, dates: SyncDates?) {
-            val intent = Intent(context, SyncService::class.java)
-                .setAction(ACTION_START)
-                .putExtra(UsbManager.EXTRA_DEVICE, device)
+        fun start(context: Context, device: UsbDevice, dates: SyncDates?) =
+            start(context, Intent(context, SyncService::class.java).putExtra(UsbManager.EXTRA_DEVICE, device), dates)
+
+        /** Imports from a camera's card, or a camera read as a drive: [folder], picked in the system's folder dialog. */
+        fun start(context: Context, folder: Uri, dates: SyncDates?) =
+            start(context, Intent(context, SyncService::class.java).putExtra(EXTRA_FOLDER, folder), dates)
+
+        private fun start(context: Context, intent: Intent, dates: SyncDates?) {
+            intent.setAction(ACTION_START)
             if (dates != null) {
                 intent.putExtra(EXTRA_START_DAY, dates.start.toEpochDay())
                 intent.putExtra(EXTRA_END_DAY, dates.end.toEpochDay())
