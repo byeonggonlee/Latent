@@ -43,6 +43,9 @@ Each is small or medium, works offline, and needs no new permission.
    vignette, grain, sharpening and noise reduction), the rest is skipped and said so. Not done: sharing one's own
    looks as `.xmp` files (the reverse mapping; Lightroom's reading of it cannot be tried here), `.lrtemplate`.
 
+- **Import from a card reader** or a camera in Mass Storage mode, for those who cannot or do not use MTP: a folder
+  picked once in the system's dialog, imported as a sync from the camera is (what was imported is skipped, dates,
+  places). Medium; no new permission. Asked 2026-10-21.
 - **Phone raw files (DNG)**, *stage 1 built 2026-10-19, to be judged on a phone:* Bayer DNGs (a Galaxy's Pro mode,
   Android's own writer, Adobe's converter), uncompressed or in lossless JPEG, with black and white levels,
   linearization, the daylight colour matrix with the camera's calibration, the as-shot white balance, the default
@@ -63,12 +66,12 @@ Each is small or medium, works offline, and needs no new permission.
    download). Stages: a bake-off on the owner's photos, then subject and background (U2-Netp), sky (EfficientViT
    ADE20K), tap to select (MagicTouch). The owner has answered the questions (2026-10-15): training-data risk
    accepted, bundled models only, subject and background first. Large. **For Opus.**
-   *Stage 1 (subject and background) built 2026-10-16, to be judged on a phone:* "+ Subject" and "+ Background"
+   *Stage 1 (subject and background) built 2026-10-16, found fine on the owner's phone 2026-10-21:* "+ Subject" and "+ Background"
    in the Masks panel run U²-Netp (converted from the authors' weights, 4.8 MB, in the APK) with LiteRT 2.3.0,
    on the GPU or else the CPU, once per photo and only when tapped; the outline is refined along the picture's
    edges and kept in a file of its own, rendered through the brush mask's path in both renderers, and can be
-   painted on with the brush. About +14.5 MB installed on a 64-bit phone. Next: the bake-off on the owner's
-   photos (stage 0, which was skipped), then sky (stage 2). Details and provenance in `AI_MASKS.md`.
+   painted on with the brush. About +14.5 MB installed on a 64-bit phone. Next: sky (stage 2); the bake-off on
+   the owner's photos (stage 0) was skipped. Details and provenance in `AI_MASKS.md`.
 7. **LUTs (`.cube`)** as looks with an intensity slider. *Stills done 2026-10-15, to be judged on a phone;
    the same stage for video (Log footage) is next, with item 12.* "Import LUT…" in the filter panel reads
    Adobe's and Resolve's 3D `.cube` files (2 to 65 points a side, `DOMAIN_MIN`/`DOMAIN_MAX`, up to 20 MB) and

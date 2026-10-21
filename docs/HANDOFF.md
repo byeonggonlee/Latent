@@ -142,7 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
-| Claude Code (computer) | A raw decode stops when the viewer or editor that asked for it is cancelled (first part of M3-A): the coroutine's `ensureActive()` as the request's `checkCancelled`, through `RawCache.read` and `RawRenderer.read` | `claude/decode-cancellation` (pull request, reviewed by Codex) | `raw/RawCache.kt`, `raw/RawRenderer.kt` (`read` only), `ui/viewer/ViewerViewModel.kt`, `ui/editor/EditorViewModel.kt`; the `RawCache` lambdas in `RawCacheTest`, `ShareCopyTest`, `FrameContractTest` | 2026-10-21 |
+| Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice (2026-10-21): `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind | `claude/arm64-only` (pull request, reviewed by Codex) | `app/build.gradle.kts`, `.github/workflows/build.yml`, `.github/workflows/nightly.yml`, `docs/RELEASES.md`, `docs/AI_MASKS.md`, `docs/PLAY_LISTING.md` | 2026-10-21 |
 
 ## For Codex
 
@@ -210,9 +210,15 @@ touch the seam, as it reviews yours.
 Nothing handed over yet. Its own next items, so that Codex does not pick them too, in this order (set by the owner
 2026-10-21):
 
-- A raw decode stops when the screen that asked for it is cancelled (first part of M3-A; under *In progress*).
+- Native code for 64-bit ARM only (under *In progress*).
 - Pair a Pixel's `.RAW-02.ORIGINAL.dng` with its `.RAW-01.COVER.jpg` (`ui/library/LibraryViewModel.kt`, `shotOf`, and
   `data/LibraryIndex.kt`, the same rule on adoption): the library's pairing rule, not the decoder.
+- Import from a card reader, or from a camera in Mass Storage mode, as a sync from the camera does (asked by the
+  owner 2026-10-21): the folder picked once in the system's dialog (`ACTION_OPEN_DOCUMENT_TREE`) as a `CameraSource`
+  beside `MtpCameraSource`, so that skipping what was imported, the dates and the places work as they do over MTP;
+  a Sony in Mass Storage mode is offered that instead of only being asked to switch to MTP. No new permission.
+- The sky mask (stage 2 of `AI_MASKS.md`): the owner found the subject mask fine on the phone (2026-10-21), which
+  was what held it back. The model and its conversion are downloads: ask the owner first, with sizes and sources.
 - Test the next migration against `app/schemas/.../13.json` with Room's `MigrationTestHelper` (`room-testing`).
 - The map: make the OpenStreetMap credit a link to its copyright page, and send the installed version in the
   `User-Agent` (`map/OnlineAccess.kt` still says `Latent/0.1`).
@@ -243,6 +249,7 @@ Nothing asked yet.
 | 2026-10-21 | Claude Code (computer) | Mirrored photos (Exif 2, 4, 5, 7) upright everywhere, as the thumbnails show them; reviewed by Codex | pull request #3 |
 | 2026-10-21 | Claude Code (computer) | The restore and the timeline import count the table instead of reading back two queries' worth of row id a point: 300,000 cursors fewer for 150,000 places, the cause of `BackupSizeTest`'s failures on slow runners; reviewed by Codex | pull request #6 |
 | 2026-10-21 | Claude Code (computer) | `RawCache` can be cleared on the main thread without waiting for a decode; full-size exports and shares take the decode's turn and find the cache empty; reviewed by Codex three times | pull request #4 |
+| 2026-10-21 | Claude Code (computer) | A raw decode stops at its next row or tile once the viewer moves on to another photo or the editor closes (first part of M3-A); exports and shares are as they were; reviewed by Codex | pull request #8 |
 
 ## Template for a handover
 

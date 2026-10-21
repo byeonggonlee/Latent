@@ -49,10 +49,13 @@ Last updated 2026-10-20 (late night).
 - [x] A ten-minute check for the phone after each nightly: [`SMOKE_TEST.md`](SMOKE_TEST.md).
 - [x] **Smaller APK**: the CI and nightly builds carry arm64 only, 20 MB instead of 39 MB (`-PlatentAbis`).
 
+- [ ] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md)), then tap to select (stage 3): no longer held back, the
+      owner found the subject mask fine on the phone (2026-10-21). Queued for Claude Code in `HANDOFF.md`.
+- [ ] **Import from a card reader** or a camera in Mass Storage mode, as a sync over MTP does (2026-10-21). Queued
+      for Claude Code in `HANDOFF.md`.
+
 ## On hold
 
-- Sky mask, then tap to select (stages 2 and 3 of [`AI_MASKS.md`](AI_MASKS.md)); held back by the owner until the
-  subject mask has been judged on a phone.
 - NPU: measure the GPU and CPU time first; decide after.
 - Point colour and calibration; the rest is in the colour range and the mixer.
 

@@ -125,7 +125,8 @@ needs the app uninstalled or its data cleared.
 
 ## Subject and background masks (U²-Netp on LiteRT)
 
-Nothing of this has run on a phone yet. Read the times with `adb logcat -s SubjectMask`.
+The owner tried it on the phone on 2026-10-21 and found it fine overall, which lets the sky mask go ahead; the
+items below stay open until each is looked at. Read the times with `adb logcat -s SubjectMask`.
 
 - [ ] Run `SubjectMaskOnDeviceTest` (`adb shell am instrument -w -e class com.byeonggon.latent.enhance.SubjectMaskOnDeviceTest -e jpegSample <path> ...`): it reads the model's input and output shapes (1 × 320 × 320 × 3 in, 1 × 320 × 320 × 1 out, 0 to 1), finds a plain disc on both accelerators and logs set-up, first and warm run times for the GPU and the CPU, and how far the two disagree; with a photo, both outline it.
 - [ ] First start: the first "+ Subject" after the app starts sets the model up (logged as "set up in … ms"). Does the GPU set up, or does the log say it fell back to the CPU, and why? How long from the tap to the mask, cold and the second time (logged "first (cold)" and "warm")? Is the GPU worth its 3.3 MB (if it is not faster, or not much, `litert-gpu` can go)?
