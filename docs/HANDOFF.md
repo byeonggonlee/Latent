@@ -6,6 +6,20 @@ when you take, hand over or finish something. What the owner has to do stays in 
 features in [`ROADMAP.md`](ROADMAP.md), what only a phone can tell in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md).
 Started 2026-10-21.
 
+## Architecture assessment and implementation plan — approval pending
+
+Codex's independent assessment and staged plan are in
+[`architecture/codex-assessment.md`](architecture/codex-assessment.md), commit `fb1f158` (2026-10-21), based on
+`main` at `553e176`. It covers verified decoder/Core flows, pixel/colour/ownership requirements, module options,
+backend comparisons, cross-agent reviews, and 11 Issue drafts across milestones 0–5.
+
+The recommendation is to preserve existing ARW/DNG/JPEG XL implementations, keep Core in `app`, approve the
+minimal contract first, and extract only `image-decoder` if justified. Separate `image-core` and `image-contract`
+modules are deferred proposals. **This is a plan, not an approved contract or an implementation claim.**
+Wait for maintainer approval of scope, colour/precision goals, resource budgets and review responsibilities.
+Antigravity's future analysis must remain independent; compare evidence against the same revision without
+overwriting either assessment. No application/build changes, Issue/PR creation, push or merge were performed.
+
 ## Who looks after what
 
 | Area | Who | Paths |
@@ -190,6 +204,7 @@ Nothing handed over yet. Its own next items, so that Codex does not pick them to
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
 | 2026-10-21 | Claude Code | This board, `AGENTS.md` and `CLAUDE.md` | `ccr-d5297594-t97yex` |
+| 2026-10-21 | Codex | Independent architecture assessment and staged plan; maintainer approval pending, implementation not started | `fb1f158` |
 
 ## Template for a handover
 
