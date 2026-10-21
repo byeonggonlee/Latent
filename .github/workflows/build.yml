@@ -52,8 +52,10 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "file=latent-$name-$count-arm64-v8a.apk" >> "$GITHUB_OUTPUT"
 
+      # The tests that only a phone can run (GPU tone, subject masks, ...) are compiled here, so that one that no longer
+      # builds is found before the phone is.
       - name: Tests and lint
-        run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
+        run: ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest --stacktrace
 
       # Room rewrites the schema file of the current version at every build; a difference from the committed one means
       # an entity changed without a new version and its migration.
