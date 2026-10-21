@@ -67,6 +67,64 @@ class RawRendererTest {
         }
     }
 
+    /**
+     * The synthetic raw file with each quarter of its crop at a brightness of its own (top left darkest, bottom right
+     * brightest), stored with Exif [orientation].
+     */
+    private fun quarteredRaw(orientation: Int): ArwImage {
+        val plain = SonyArw.read(SyntheticArw.file(red = 600, green = 900, blue = 700))
+        val levels = intArrayOf(300, 1200, 3000, 6000)
+        val sensor = plain.sensor.copyOf()
+        for (y in 0 until plain.cropHeight) for (x in 0 until plain.cropWidth) {
+            val quarter = (if (y < plain.cropHeight / 2) 0 else 2) + (if (x < plain.cropWidth / 2) 0 else 1)
+            sensor[(plain.cropTop + y) * plain.width + plain.cropLeft + x] = (plain.blackLevel + levels[quarter]).toShort()
+        }
+        return ArwImage(
+            plain.width, plain.height, plain.cropLeft, plain.cropTop, plain.cropWidth, plain.cropHeight, plain.blackLevel,
+            plain.whiteLevel, plain.whiteBalance, plain.colorMatrix, plain.saturation, plain.lens, orientation, sensor,
+        )
+    }
+
+    /** Which stored quarter Exif shows at each quarter of the upright picture (top left, top right, bottom left, bottom right). */
+    private fun expectedQuarters(orientation: Int): List<Int> {
+        val storedAt: (Int, Int) -> Pair<Int, Int> = when (orientation) {
+            2 -> { x, y -> 1 - x to y }
+            3 -> { x, y -> 1 - x to 1 - y }
+            4 -> { x, y -> x to 1 - y }
+            5 -> { x, y -> y to x }
+            6 -> { x, y -> y to 1 - x }
+            7 -> { x, y -> 1 - y to 1 - x }
+            8 -> { x, y -> 1 - y to x }
+            else -> { x, y -> x to y }
+        }
+        return listOf(0 to 0, 1 to 0, 0 to 1, 1 to 1).map { (x, y) -> storedAt(x, y).let { (sx, sy) -> sy * 2 + sx } }
+    }
+
+    /** The quarters of [image] by brightness: 0 for the darkest, 3 for the brightest. */
+    private fun quartersOf(image: com.byeonggon.latent.enhance.LinearImage): List<Int> {
+        val seen = listOf(1 to 1, 3 to 1, 1 to 3, 3 to 3).map { (qx, qy) ->
+            image.green[qy * image.height / 4 * image.width + qx * image.width / 4].toInt()
+        }
+        return seen.map { level -> seen.count { it < level } }
+    }
+
+    @Test
+    fun putsTheQuartersOfAMirroredRawFileWhereTheyAreSeen() {
+        for (orientation in 1..8) {
+            val image = quarteredRaw(orientation)
+
+            val proxy = RawRenderer.proxy(image, cells = 1, lensCorrection = false)
+            assertEquals("preview, orientation $orientation", expectedQuarters(orientation), quartersOf(proxy))
+
+            // A part at full size around the middle of the upright picture's top left and bottom right quarters.
+            val topLeft = RawRenderer.region(image, 0.25f, 0.25f, size = 2)
+            val bottomRight = RawRenderer.region(image, 0.75f, 0.75f, size = 2)
+            val expected = expectedQuarters(orientation)
+            val darker = topLeft.image.green[0] < bottomRight.image.green[0]
+            assertEquals("detail, orientation $orientation", expected[0] < expected[3], darker)
+        }
+    }
+
     @Test
     fun showsOnlyThePartThatIsKept() {
         val preview = RawRenderer.preview(RawRenderer.read(raw), PhotoEdit(framing = Framing(bottom = 0.5f)))
