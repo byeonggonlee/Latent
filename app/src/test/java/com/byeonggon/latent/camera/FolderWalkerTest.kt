@@ -41,6 +41,34 @@ class FolderWalkerTest {
     }
 
     @Test
+    fun goesOnWhenAFolderIsListedInsideItself() {
+        val dcim = tree.folder(FakeTree.ROOT, "DCIM")
+        val shots = tree.folder(dcim, "100MSDCF")
+        tree.file(shots, "DSC00001.JPG")
+        tree.link(shots, dcim)
+        tree.link(shots, shots)
+
+        assertEquals(listOf("DSC00001.JPG"), list().files.map { it.name })
+        assertEquals(listOf("DCIM", "100MSDCF"), tree.listedFolders)
+    }
+
+    @Test
+    fun skipsNamesThatLeadOutOfTheirFolder() {
+        val shots = tree.folder(FakeTree.ROOT, "100MSDCF")
+        tree.file(shots, "DSC00001.JPG")
+        tree.file(shots, "../../escape.JPG")
+        tree.file(shots, "sub/DSC00002.JPG")
+        tree.file(shots, "..\\DSC00003.JPG")
+        tree.file(shots, "..")
+        tree.file(tree.folder(shots, "../.."), "DSC00004.JPG")
+
+        val listing = list()
+
+        assertEquals(listOf("DSC00001.JPG"), listing.files.map { it.name })
+        assertEquals(mapOf("(unsafe name)" to 5), listing.skippedExtensions)
+    }
+
+    @Test
     fun doesNotOpenDateFoldersOutsideTheRequestedDates() {
         tree.file(tree.folder(FakeTree.ROOT, "2024-12-07"), "DSC00001.JPG")
         tree.file(tree.folder(FakeTree.ROOT, "2024-12-08"), "DSC00002.JPG")

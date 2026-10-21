@@ -18,6 +18,11 @@ internal class FakeTree : RemoteTree {
     fun file(parent: Int, name: String, sizeBytes: Long = 100, modifiedAt: Long = 1_000, handle: Int = nextHandle++): Int =
         add(parent, handle, RemoteObject(name, isFolder = false, sizeBytes = sizeBytes, modifiedAt = modifiedAt))
 
+    /** Lists the existing [handle] among the objects of [parent] too, as a faulty camera might. */
+    fun link(parent: Int, handle: Int) {
+        children.getOrPut(parent) { ArrayList() } += handle
+    }
+
     override fun childrenOf(parent: Int): IntArray? {
         if (parent != ROOT) listedFolders += objects.getValue(parent).name
         return children[parent].orEmpty().toIntArray()

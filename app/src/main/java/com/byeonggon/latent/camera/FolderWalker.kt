@@ -46,8 +46,14 @@ internal fun listStorage(
     var foldersOutsideDates = 0
 
     val pending = ArrayDeque<Folder>().apply { add(Folder(rootHandle, "$storageName:/", date = null)) }
+    // A camera that lists a folder inside itself would have the walk go round for ever.
+    val opened = HashSet<Int>()
     while (pending.isNotEmpty()) {
         val folder = pending.removeLast()
+        if (!opened.add(folder.handle)) {
+            Log.w(SYNC_LOG_TAG, "${folder.path} was listed before; not opened again")
+            continue
+        }
         if (request.dates != null && folder.date != null && folder.date !in request.dates) {
             foldersOutsideDates++
             continue
@@ -80,6 +86,12 @@ internal fun listStorage(
             val item = objectOf(handle)
             if (item == null) {
                 skippedExtensions.merge(UNREADABLE, 1, Int::plus)
+                onlyReadableFiles = false
+                continue
+            }
+            // The name becomes a file name on the phone: nothing that leads out of the folder it is put in.
+            if (!isSafeName(item.name)) {
+                skippedExtensions.merge(UNSAFE_NAME, 1, Int::plus)
                 onlyReadableFiles = false
                 continue
             }
@@ -128,5 +140,10 @@ private fun dateOf(folderName: String): LocalDate? = try {
     null
 }
 
+/** Whether [name] can only name a file inside the folder it is put in. */
+internal fun isSafeName(name: String): Boolean =
+    name.isNotEmpty() && name != "." && name != ".." && name.none { it == '/' || it == '\\' || it == '\u0000' }
+
 private const val UNREADABLE = "(unreadable)"
 private const val NO_EXTENSION = "(none)"
+private const val UNSAFE_NAME = "(unsafe name)"
