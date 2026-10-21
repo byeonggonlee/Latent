@@ -1,5 +1,11 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.raw.api.DecodeFailure
+import com.byeonggon.latent.raw.api.DecodeFailureReason
+import com.byeonggon.latent.raw.api.DecodeRequest
+import com.byeonggon.latent.raw.api.DecodedFrame
+import com.byeonggon.latent.raw.api.RawCorrection
+import com.byeonggon.latent.raw.api.RawFormat
 import java.io.IOException
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
@@ -38,6 +44,7 @@ object Dng {
     private const val TAG_CFA_REPEAT = 0x828D
     private const val TAG_CFA_PATTERN = 0x828E
     private const val TAG_DNG_VERSION = 0xC612
+    private const val TAG_ICC_PROFILE = 0x8773
     private const val TAG_CFA_PLANE_COLOR = 0xC616
     private const val TAG_LINEARIZATION = 0xC618
     private const val TAG_BLACK_REPEAT = 0xC619
@@ -102,20 +109,26 @@ object Dng {
     }
 
     @Throws(IOException::class)
-    fun read(file: ByteArray): ArwImage = try {
-        parse(file)
+    fun read(file: ByteArray): ArwImage = decode(file).legacyImage
+
+    internal fun decode(file: ByteArray, request: DecodeRequest? = null): DecodedFrame = try {
+        parse(file, request)
     } catch (e: IndexOutOfBoundsException) {
         throw IOException("Damaged or unsupported DNG file", e)
     } catch (e: BufferUnderflowException) {
         throw IOException("Damaged or unsupported DNG file", e)
     } catch (e: NegativeArraySizeException) {
         throw IOException("Damaged or unsupported DNG file", e)
+    } catch (e: IllegalArgumentException) {
+        throw IOException("Damaged or unsupported DNG file", e)
     }
 
-    private fun parse(file: ByteArray): ArwImage {
+    private fun parse(file: ByteArray, request: DecodeRequest?): DecodedFrame {
+        request?.checkCancelled?.invoke()
         val (data, firstOffset) = TiffDirectory.open(file)
         val main = TiffDirectory.read(data, firstOffset)
         if (TAG_DNG_VERSION !in main) throw IOException("Not a DNG file")
+        if (main.ints(TAG_DNG_VERSION)?.firstOrNull() != 1) throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported DNG version")
         // The full-size raw image is the first directory itself (as Android writes it) or one under it (as Adobe does).
         val directories = listOf(main) + (main.ints(TAG_SUB_IFDS)?.map { TiffDirectory.read(data, it) } ?: emptyList())
         val fullSize = directories.filter { (it.int(TAG_NEW_SUBFILE_TYPE) ?: 0) == 0 }
@@ -129,13 +142,16 @@ object Dng {
 
         val width = raw.int(TAG_WIDTH) ?: throw IOException("Missing raw image size")
         val height = raw.int(TAG_HEIGHT) ?: throw IOException("Missing raw image size")
-        if (width < 8 || height < 8 || width.toLong() * height > MAX_PHOTOSITES) throw IOException("Unsupported raw image size")
+        if (width < 8 || height < 8) throw IOException("Invalid raw image size")
+        if (width.toLong() * height > MAX_PHOTOSITES) throw DecodeFailure(DecodeFailureReason.RESOURCE_LIMIT, "Unsupported raw image size")
         val bits = raw.int(TAG_BITS_PER_SAMPLE) ?: 16
-        if (bits !in 8..16) throw IOException("Unsupported raw sample size: $bits bits")
+        if (bits !in 8..16) throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported raw sample size: $bits bits")
         val channels = raw.int(TAG_SAMPLES_PER_PIXEL) ?: 1
-        if (channels != (if (linear) 3 else 1)) throw IOException("Unsupported raw image layout")
-        if (linear && (raw.int(TAG_PLANAR_CONFIGURATION) ?: 1) != 1) throw IOException("Unsupported raw image layout")
+        if (channels != (if (linear) 3 else 1)) throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported raw image layout")
+        if (linear && (raw.int(TAG_PLANAR_CONFIGURATION) ?: 1) != 1) throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported raw image layout")
 
+        request?.checkSamples(width.toLong() * height * channels)
+        val checkCancelled = request?.checkCancelled ?: {}
         val active = raw.ints(TAG_ACTIVE_AREA)?.takeIf { it.size == 4 } ?: intArrayOf(0, 0, height, width)
         val (activeTop, activeLeft, activeBottom, activeRight) = active
         if (activeTop < 0 || activeLeft < 0 || activeBottom > height || activeRight > width ||
@@ -148,11 +164,12 @@ object Dng {
         // A linear picture has no mosaic; its crop may start anywhere.
         val redAt = if (linear) 0 to 0 else redSite(raw)
 
-        val sensor = ShortArray(width * height * channels)
-        readSamples(file, data.order(), raw, sensor, width, height, bits, channels)
-        Levels(raw, bits, activeWidth, activeHeight, channels).apply(sensor, width, activeLeft, activeTop)
-        floatsOf(TAG_BASELINE_EXPOSURE)?.firstOrNull()?.let { brighten(sensor, it) }
-        gainMaps(raw.bytes(TAG_OPCODES_2), channels).forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels) }
+        val sensor = readSamples(file, data.order(), raw, width, height, bits, channels, checkCancelled)
+        val levels = Levels(raw, bits, activeWidth, activeHeight, channels)
+        levels.apply(sensor, width, activeLeft, activeTop, checkCancelled)
+        val brightened = floatsOf(TAG_BASELINE_EXPOSURE)?.firstOrNull()?.let { brighten(sensor, it, checkCancelled) } ?: false
+        val maps = gainMaps(raw.bytes(TAG_OPCODES_2), channels)
+        maps.forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels, checkCancelled) }
 
         // The default crop, within the active area, moved by a photosite where needed so that it starts on a red one.
         val origin = raw.floats(TAG_CROP_ORIGIN)?.takeIf { it.size == 2 && it.all(Float::isFinite) } ?: floatArrayOf(0f, 0f)
@@ -167,7 +184,7 @@ object Dng {
         if (cropWidth < 4 || cropHeight < 4) throw IOException("Damaged default crop")
 
         val color = Colors(::floatsOf, ::intOf)
-        return ArwImage(
+        val image = ArwImage(
             width = width,
             height = height,
             cropLeft = activeLeft + cropLeft,
@@ -180,10 +197,23 @@ object Dng {
             colorMatrix = color.matrix,
             saturation = SATURATION,
             lens = null,
-            orientation = main.int(TAG_ORIENTATION) ?: 1,
+            orientation = main.int(TAG_ORIENTATION)?.takeIf { it in 1..8 } ?: 1,
             sensor = sensor,
             channels = channels,
         )
+        val corrections = buildSet {
+            add(RawCorrection.DNG_LEVELS)
+            if (levels.linearized) add(RawCorrection.LINEARIZATION)
+            if (brightened) add(RawCorrection.POSITIVE_BASELINE_EXPOSURE)
+            if (maps.isNotEmpty()) add(RawCorrection.GAIN_MAP)
+        }
+        // An unreadable preservation-only profile must not hide otherwise decodable pixels.
+        fun profileOf(directory: TiffDirectory): ByteArray? = try {
+            directory.bytes(TAG_ICC_PROFILE)
+        } catch (_: IOException) {
+            null
+        }
+        return DecodedFrame(image, RawFormat.DNG, bits, corrections, profileOf(main) ?: profileOf(raw))
     }
 
     /**
@@ -195,15 +225,15 @@ object Dng {
         val planes = raw.ints(TAG_CFA_PLANE_COLOR) ?: intArrayOf(0, 1, 2)
         val pattern = raw.ints(TAG_CFA_PATTERN)?.map { planes.getOrNull(it) ?: -1 }
         if (!repeat.contentEquals(intArrayOf(2, 2)) || pattern == null || pattern.sorted() != listOf(0, 1, 1, 2)) {
-            throw IOException("Unsupported sensor colour layout")
+            throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported sensor colour layout")
         }
         val red = pattern.indexOf(0)
-        if (pattern[3 - red] != 2) throw IOException("Unsupported sensor colour layout")
+        if (pattern[3 - red] != 2) throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported sensor colour layout")
         return (red % 2) to (red / 2)
     }
 
     /** Reads the strips or tiles of samples into [into], as they are stored. */
-    private fun readSamples(file: ByteArray, order: ByteOrder, raw: TiffDirectory, into: ShortArray, width: Int, height: Int, bits: Int, channels: Int) {
+    private fun readSamples(file: ByteArray, order: ByteOrder, raw: TiffDirectory, width: Int, height: Int, bits: Int, channels: Int, checkCancelled: () -> Unit): ShortArray {
         val tiled = TAG_TILE_OFFSETS in raw
         val offsets = raw.ints(if (tiled) TAG_TILE_OFFSETS else TAG_STRIP_OFFSETS) ?: throw IOException("Missing raw image data")
         val lengths = raw.ints(if (tiled) TAG_TILE_BYTE_COUNTS else TAG_STRIP_BYTE_COUNTS)?.takeIf { it.size == offsets.size }
@@ -213,34 +243,60 @@ object Dng {
         val rowsPerStrip = raw.int(TAG_ROWS_PER_STRIP)?.let { it.toLong() and 0xFFFFFFFFL } ?: height.toLong()
         val tileLength = if (tiled) raw.int(TAG_TILE_LENGTH) ?: 0 else rowsPerStrip.coerceAtMost(height.toLong()).toInt()
         if (tileWidth <= 0 || tileLength <= 0) throw IOException("Damaged raw image layout")
-        val across = (width + tileWidth - 1) / tileWidth
-        val down = (height + tileLength - 1) / tileLength
+        val across = ((width.toLong() + tileWidth - 1) / tileWidth).toInt()
+        val down = ((height.toLong() + tileLength - 1) / tileLength).toInt()
         if (across.toLong() * tileWidth * down * tileLength > 2 * MAX_PHOTOSITES) throw IOException("Damaged raw image layout")
         if (offsets.size < across * down) throw IOException("Missing raw image data")
         val compression = raw.int(TAG_COMPRESSION) ?: COMPRESSION_NONE
+        if (compression !in intArrayOf(COMPRESSION_NONE, COMPRESSION_LOSSLESS_JPEG, COMPRESSION_JPEG_XL)) {
+            throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported DNG compression: $compression")
+        }
+        // Lossless JPEG already clips an overstated count to EOF; other formats require the whole declared range.
         for (index in 0 until across * down) {
+            checkCancelled()
+            val offset = offsets[index]
+            val length = lengths[index]
+            if (offset < 0 || offset >= file.size || length <= 0 ||
+                (compression != COMPRESSION_LOSSLESS_JPEG && offset.toLong() + length > file.size)
+            ) throw IOException("Raw image data is cut short")
+            val left = index % across * tileWidth
+            val top = index / across * tileLength
+            if (compression == COMPRESSION_JPEG_XL) {
+                JpegXl.checkSize(file, offset, length, minOf(tileWidth, width - left)..tileWidth, minOf(tileLength, height - top)..tileLength, channels)
+            }
+            if (compression == COMPRESSION_NONE) {
+                val needed = (tileWidth.toLong() * channels * bits + 7) / 8 * minOf(tileLength, height - top)
+                if (needed > length) throw IOException("Raw image data is cut short")
+            }
+        }
+        val into = ShortArray((width.toLong() * height * channels).toInt())
+        for (index in 0 until across * down) {
+            checkCancelled()
             val left = index % across * tileWidth
             val top = index / across * tileLength
             // The samples of a pixel lie side by side, so a row holds [channels] times as many as it has pixels.
             val rowSamples = width * channels
             when (compression) {
-                COMPRESSION_NONE -> unpack(file, order, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength, bits)
-                COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength)
+                COMPRESSION_NONE -> unpack(file, order, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength, bits, checkCancelled)
+                COMPRESSION_LOSSLESS_JPEG -> LosslessJpeg.decode(file, offsets[index], lengths[index], into, rowSamples, height, left * channels, top, tileWidth * channels, tileLength, checkCancelled)
                 COMPRESSION_JPEG_XL -> JpegXl.decode(file, offsets[index], lengths[index], into, width, height, left, top, tileWidth, tileLength, channels, bits)
-                else -> throw IOException("Unsupported DNG compression: $compression")
+                else -> throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported DNG compression: $compression")
             }
+            checkCancelled()
         }
+        return into
     }
 
     /** Uncompressed samples: 8 or 16 bits as bytes or words in the file's byte order, other sizes packed most significant bit first. */
     private fun unpack(
         file: ByteArray, order: ByteOrder, offset: Int, length: Int, into: ShortArray,
-        width: Int, height: Int, left: Int, top: Int, tileWidth: Int, tileLength: Int, bits: Int,
+        width: Int, height: Int, left: Int, top: Int, tileWidth: Int, tileLength: Int, bits: Int, checkCancelled: () -> Unit,
     ) {
         val rowBytes = (tileWidth.toLong() * bits + 7) / 8
         if (offset < 0 || offset + rowBytes * tileLength.coerceAtMost(height - top) > file.size) throw IOException("Raw image data is cut short")
         val littleEndian = order == ByteOrder.LITTLE_ENDIAN
         for (row in 0 until minOf(tileLength, height - top)) {
+            checkCancelled()
             val rowStart = offset + row * rowBytes
             val target = (top + row) * width + left
             val columns = minOf(tileWidth, width - left)
@@ -274,16 +330,21 @@ object Dng {
      * otherwise come out that much darker and on an eighth of the levels. A negative one is left to the tone stage
      * and the person, as darkening here would only lose levels.
      */
-    private fun brighten(sensor: ShortArray, stops: Float) {
-        if (!(stops > 0f) || !stops.isFinite()) return
+    private fun brighten(sensor: ShortArray, stops: Float, checkCancelled: () -> Unit): Boolean {
+        if (!(stops > 0f) || !stops.isFinite()) return false
         var brightest = 0
-        for (value in sensor) brightest = max(brightest, value.toInt())
-        if (brightest == 0) return
+        for (at in sensor.indices) {
+            if (at % 65536 == 0) checkCancelled()
+            brightest = max(brightest, sensor[at].toInt())
+        }
+        if (brightest == 0) return false
         val gain = min(2f.pow(stops), WHITE.toFloat() / brightest)
-        if (gain <= 1.001f) return
+        if (gain <= 1.001f) return false
         forRowBands(sensor.size) { from, until ->
+            checkCancelled()
             for (at in from until until) sensor[at] = (sensor[at] * gain).roundToInt().coerceAtMost(WHITE).toShort()
         }
+        return true
     }
 
     /**
@@ -295,6 +356,7 @@ object Dng {
         raw: TiffDirectory, bits: Int, private val activeWidth: Int, private val activeHeight: Int, private val channels: Int,
     ) {
         private val table = raw.ints(TAG_LINEARIZATION)?.takeIf { it.isNotEmpty() }
+        val linearized: Boolean get() = table != null
         private val repeat = raw.ints(TAG_BLACK_REPEAT)?.takeIf { it.size == 2 && it[0] in 1..16 && it[1] in 1..16 } ?: intArrayOf(1, 1)
 
         // One black level for each place in the repeat and each sample of a pixel; a file may give one for all samples.
@@ -317,7 +379,7 @@ object Dng {
             FloatArray(channels) { given.getOrNull(it) ?: given.firstOrNull() ?: fallback }
         }
 
-        fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int) {
+        fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int, checkCancelled: () -> Unit) {
             val rowDeltaMost = (deltaH?.max() ?: 0f) + (deltaV?.max() ?: 0f)
             val scale = FloatArray(channels) { channel ->
                 val highestBlack = (0 until repeat[0] * repeat[1]).maxOf { black[it * channels + channel] } + rowDeltaMost
@@ -329,6 +391,7 @@ object Dng {
             sensor.fill(0, 0, activeTop * rowSamples)
             sensor.fill(0, (activeTop + activeHeight) * rowSamples, sensor.size)
             for (y in 0 until activeHeight) {
+                checkCancelled()
                 val rowStart = (activeTop + y) * rowSamples
                 val row = rowStart + activeLeft * channels
                 val blackRow = y % repeat[0] * repeat[1]
@@ -365,7 +428,7 @@ object Dng {
         val plane: Int = 0, val planes: Int = 1,
     ) {
         /** Multiplies the photosites of the active area, placed at [activeLeft], [activeTop] in [sensor], by the map. */
-        fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int, activeWidth: Int, activeHeight: Int, channels: Int = 1) {
+        fun apply(sensor: ShortArray, width: Int, activeLeft: Int, activeTop: Int, activeWidth: Int, activeHeight: Int, channels: Int, checkCancelled: () -> Unit) {
             val columns = (left.coerceAtLeast(0) until right.coerceAtMost(activeWidth) step columnPitch).toList()
             // Where each column falls between the map's points, worked out once: the index of the point before and how far past it.
             val columnPoint = IntArray(columns.size)
@@ -376,6 +439,7 @@ object Dng {
                 columnPast[index] = (along - columnPoint[index]).toFloat()
             }
             for (y in top.coerceAtLeast(0) until bottom.coerceAtMost(activeHeight) step rowPitch) {
+                checkCancelled()
                 val along = (((y + 0.5) / activeHeight - originDown) / spacingDown).coerceIn(0.0, pointsDown - 1.0)
                 val row = along.toInt().coerceAtMost(pointsDown - 2).coerceAtLeast(0)
                 val rowPast = (along - row).toFloat()

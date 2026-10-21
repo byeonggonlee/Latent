@@ -23,7 +23,7 @@ internal object LosslessJpeg {
     @Throws(IOException::class)
     fun decode(
         file: ByteArray, offset: Int, length: Int, into: ShortArray, width: Int, height: Int,
-        left: Int, top: Int, tileWidth: Int, tileLength: Int,
+        left: Int, top: Int, tileWidth: Int, tileLength: Int, checkCancelled: () -> Unit = {},
     ) {
         val end = minOf(file.size.toLong(), offset.toLong() + length).toInt()
         if (offset < 0 || end - offset < 4 || u8(file, offset) != 0xFF || u8(file, offset + 1) != MARKER_START) {
@@ -91,7 +91,7 @@ internal object LosslessJpeg {
                     }
                     val scan = Scan(
                         file, next, end, componentTables, precision, pointTransform, predictor, lines, samplesPerLine,
-                        restartInterval / samplesPerLine,
+                        restartInterval / samplesPerLine, checkCancelled,
                     )
                     scan.decode(into, width, height, left, top, tileWidth)
                     return
@@ -135,6 +135,7 @@ internal object LosslessJpeg {
         private val samplesPerLine: Int,
         /** Lines between restart markers; 0 when there are none. */
         private val restartLines: Int,
+        private val checkCancelled: () -> Unit,
     ) {
         private var bits = 0L
         private var bitCount = 0
@@ -149,6 +150,7 @@ internal object LosslessJpeg {
             var x = 0
             var y = 0
             for (line in 0 until lines) {
+                checkCancelled()
                 // The first line, and the first after a restart, has no line above it to predict from.
                 val first = line == 0 || (restartLines != 0 && line % restartLines == 0)
                 if (first && line != 0) restart()

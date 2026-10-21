@@ -11,6 +11,7 @@ import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.enhance.PictureRegion
 import com.byeonggon.latent.enhance.framed
 import com.byeonggon.latent.enhance.renderedBitmap
+import com.byeonggon.latent.raw.api.DecodeRequest
 import java.io.File
 import java.io.IOException
 
@@ -21,9 +22,8 @@ object RawRenderer {
     /** Reads a raw file of either kind the app develops: a DNG, as phones write them, or a Sony ARW. */
     @Throws(IOException::class)
     fun read(file: File): ArwImage = timed("decode ${file.name}") {
-        val bytes = file.readBytes()
         try {
-            if (Dng.isDng(bytes)) Dng.read(bytes) else SonyArw.read(bytes)
+            DecoderDispatch.decode(DecodeRequest(file)).legacyImage
         } catch (e: IOException) {
             // The screens only say that the photo could not be opened; why is kept here.
             Log.w(TAG, "Cannot develop ${file.name}: ${e.message}")
