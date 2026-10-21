@@ -135,7 +135,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| | Nothing claimed. | | | |
+| Codex | M2-A decoder stability, then minimal contract and dispatch/cancellation boundaries; approved autopilot sequence, existing ARW/DNG look preserved. | `codex/decoder-stability` | `raw/` readers/API/tests/fixtures; shared adapters claimed before edits | 2026-10-21 |
 
 ## For Codex
 

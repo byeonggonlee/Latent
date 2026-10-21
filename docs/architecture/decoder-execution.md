@@ -1,0 +1,21 @@
+# Decoder 실행 계획과 진행 기록
+
+2026-10-21 · Codex · 기준 `f399bf3` · 사용자가 평가 계획의 순차 오토파일럿 실행을 승인했다.
+
+## 범위와 판단
+
+기존 ARW/DNG와 DNG 내부 JPEG XL, 14-bit 정규화와 카메라 룩을 유지한다. Core는 `app`에 두고 모듈 추출, standalone JXL/JPEG/HEIF, native backend, F32/HDR는 추가하지 않는다. 원래 평가의 M2-A → M1-A → M2-B 순서로 진행한다. 기존 jxlatte hang 수정과 RawCache 잠금 수정은 재작성하지 않는다.
+
+자원 예산 수치는 아직 실측·승인 전이다. 이번 할당 검증은 컨테이너가 허용한 범위, 파일 길이, 기존 크기 제한과 checked arithmetic에 근거한다. 이를 폰 OOM 방지 보장으로 표현하지 않는다. 경계/동시성 변경은 Claude Code 리뷰와 CI가 필요한 PR로 내며, 직접 병합하지 않는다.
+
+## 작업 순서
+
+1. **M2-A — 손상 입력과 회복.** `DngTest`/synthetic fixture로 잘린 multi-group JXL strip을 DNG에 넣고 `Dng.read` 오류 및 다음 정상 read를 검사한다. TIFF entry 범위, ARW compressed strip, DNG strip/tile 범위와 산술, JXL header 치수를 할당 전에 확인한다. 오류는 `IOException`, 정상 sample은 동일해야 한다. 변경별 RED→GREEN 및 관련 회귀 후 커밋한다. 이미 동작하는 hang fix의 negative control은 별도 프로세스/격리 스냅샷에서만 수행한다.
+2. **M1-A — 최소 계약.** 첫 단계의 결과에 맞춰 기존 `ArwImage`를 복사 없이 감싸는 명시적 frame/request 계약을 도입한다. sensor mosaic와 이미 보간된 camera RGB를 구분하고, 정규화/보정·저장 방향·채널/stride·공유 read-only 수명을 명시한다. 새 CMS나 픽셀 변환은 하지 않는다. shape/encoding/alias 수명과 sample 동일성을 검증한다.
+3. **M2-B — dispatch와 취소.** header 기반 ARW/DNG 선택, 기존 지원 범위와 오류 분류, 협력적 취소 검사 및 codec 중단 불가 구간을 명시한다. 기존 `RawRenderer` adapter로 통합하고 캐시 monitor/gate를 suspend 경계로 넘기지 않는다. malformed→정상, 취소→정상, 확장자 불일치와 unsupported를 검증한다.
+4. **완료 gate.** 전체 JVM 테스트, debug/release lint, androidTest 컴파일, schema diff 및 release 빌드; 독립 branch 리뷰 후 발견 사항 보완. 실기기 색/메모리 미검증을 명시하고 PR을 제출한다.
+
+## 진행 기록
+
+- 초기 baseline 시도는 새 worktree의 SDK 경로 누락으로 실행 전 실패했다. ignored `local.properties`에 기존 설치 SDK 경로만 지정하고 재실행한다. 소스 실패가 아니다.
+- M0 잔여 사항(실기기/예산/샘플 권리)은 기존 제한을 바꾸지 않는 작업과 분리한다. 새 자원 상한이나 포맷 확대가 필요하면 근거와 제안을 남기고 그 변경의 구현을 보류한다.
