@@ -27,7 +27,7 @@ internal object JpegXl {
                 val reader = Bitreader(PushbackInputStream(demuxer))
                 reader.showBits(16) // Reading the signature establishes the container's level, too.
                 val header = ImageHeader.read(Loggers(JXLOptions(), PrintWriter(StringWriter())), reader, demuxer.level)
-                val size = header.size
+                val size = header.orientedSize
                 if (size.width !in widths || size.height !in heights || header.colorChannelCount != channels || header.extraChannelCount != 0) {
                     throw IOException("JPEG XL header does not match the DNG tile")
                 }

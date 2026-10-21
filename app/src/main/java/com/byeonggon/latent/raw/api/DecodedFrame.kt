@@ -47,7 +47,7 @@ internal class DecodedFrame(
     val layout = if (legacyImage.channels == 1) PixelLayout.RGGB_AT_CROP else PixelLayout.CAMERA_RGB_INTERLEAVED
 
     init {
-        require(width > 0 && height > 0 && legacyImage.channels in listOf(1, 3)) { "Invalid RAW shape" }
+        require(width > 0 && height > 0 && (legacyImage.channels == 1 || legacyImage.channels == 3)) { "Invalid RAW shape" }
         require(width.toLong() * height * legacyImage.channels == samples.size.toLong()) { "Invalid RAW sample count" }
         require(cropLeft >= 0 && cropTop >= 0 && cropWidth > 0 && cropHeight > 0 &&
             cropLeft.toLong() + cropWidth <= width && cropTop.toLong() + cropHeight <= height) { "Invalid RAW crop" }

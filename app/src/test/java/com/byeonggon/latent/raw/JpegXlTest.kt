@@ -38,6 +38,21 @@ class JpegXlTest {
     }
 
     @Test
+    fun checksTheSameOrientedDimensionsAsTheCodecOutput() {
+        // Header only: encoded 600x520, orientation 6, RGB16; no frame data is needed for preflight.
+        val header = listOf(255, 10, 58, 16, 232, 74, 88, 248, 137, 9).map(Int::toByte).toByteArray()
+        JpegXl.checkSize(header, 0, header.size, 520..520, 600..600, channels = 3)
+    }
+
+    @Test
+    fun acceptsAnEdgeTileWithPaddedSamplesOutsideThePicture() {
+        val into = ShortArray(590 * 510 * 3)
+        JpegXl.decode(file, 0, file.size, into, 590, 510, 0, 0, 600, 520, channels = 3, bits = 16)
+        val last = (590 * 510 - 1) * 3
+        assertEquals(listOf(4472, 4790, 2680), into.slice(last until last + 3).map { it.toInt() })
+    }
+
+    @Test
     fun refusesAPictureLargerThanItsDngTile() {
         val into = ShortArray(32 * 24 * 3)
         assertThrows(IOException::class.java) {

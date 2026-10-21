@@ -1,5 +1,8 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.raw.api.DecodeFailure
+import com.byeonggon.latent.raw.api.DecodeFailureReason
+import com.byeonggon.latent.raw.api.DecodeRequest
 import com.byeonggon.latent.raw.api.DecodedFrame
 import com.byeonggon.latent.raw.api.RawCorrection
 import com.byeonggon.latent.raw.api.RawFormat
@@ -103,8 +106,8 @@ object SonyArw {
     @Throws(IOException::class)
     fun read(file: ByteArray): ArwImage = decode(file).legacyImage
 
-    internal fun decode(file: ByteArray): DecodedFrame = try {
-        DecodedFrame(parse(file), RawFormat.SONY_ARW, 11, setOf(RawCorrection.SONY_TONE_EXPANSION))
+    internal fun decode(file: ByteArray, request: DecodeRequest? = null): DecodedFrame = try {
+        DecodedFrame(parse(file, request), RawFormat.SONY_ARW, 11, setOf(RawCorrection.SONY_TONE_EXPANSION))
     } catch (e: IndexOutOfBoundsException) {
         throw IOException("Damaged or unsupported ARW file", e)
     } catch (e: BufferUnderflowException) {
@@ -113,7 +116,8 @@ object SonyArw {
         throw IOException("Damaged or unsupported ARW file", e)
     }
 
-    private fun parse(file: ByteArray): ArwImage {
+    private fun parse(file: ByteArray, request: DecodeRequest?): ArwImage {
+        request?.checkCancelled?.invoke()
         val (data, firstOffset) = TiffDirectory.open(file)
         val main = TiffDirectory.read(data, firstOffset)
         if (main.text(TAG_MAKE)?.startsWith("SONY") != true) throw IOException("Not a Sony raw file")
@@ -126,12 +130,13 @@ object SonyArw {
         val stripLength = raw.int(TAG_STRIP_BYTE_COUNTS) ?: throw IOException("Missing raw image data")
         // The compressed format spends exactly one byte per photosite.
         if (raw.int(TAG_COMPRESSION) != COMPRESSION_SONY || stripLength.toLong() != width.toLong() * height) {
-            throw IOException("Only Sony's compressed raw format is supported")
+            throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Only Sony's compressed raw format is supported")
         }
         if (raw.ints(TAG_CFA_PATTERN)?.contentEquals(RGGB) != true) {
-            throw IOException("Unsupported sensor colour layout")
+            throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported sensor colour layout")
         }
 
+        request?.checkSamples(width.toLong() * height)
         val cropOrigin = raw.ints(TAG_CROP_ORIGIN)?.takeIf { it.size == 2 } ?: intArrayOf(0, 0)
         val cropSize = raw.ints(TAG_CROP_SIZE)?.takeIf { it.size == 2 } ?: intArrayOf(width, height)
         val whiteBalance = raw.ints(TAG_WHITE_BALANCE)?.takeIf { it.size == 4 && it[1] > 0 }
@@ -158,7 +163,7 @@ object SonyArw {
             saturation = SATURATION,
             lens = readLensProfile(raw),
             orientation = main.int(TAG_ORIENTATION) ?: 1,
-            sensor = decode(file, stripOffset, width, height, toneCurve(raw.ints(TAG_TONE_CURVE))),
+            sensor = decode(file, stripOffset, width, height, toneCurve(raw.ints(TAG_TONE_CURVE)), request?.checkCancelled ?: {}),
         )
     }
 
@@ -238,7 +243,7 @@ object SonyArw {
      * Unpacks the sensor data. Each row is a series of 16-byte blocks; a block holds 16 photosites of
      * one colour as their maximum, their minimum, where those two sit, and 7-bit offsets for the rest.
      */
-    internal fun decode(file: ByteArray, stripOffset: Int, width: Int, height: Int, curve: IntArray): ShortArray {
+    internal fun decode(file: ByteArray, stripOffset: Int, width: Int, height: Int, curve: IntArray, checkCancelled: () -> Unit = {}): ShortArray {
         val samples = width.toLong() * height
         // This compression needs one input byte per photosite; check it before allocating the decoded picture.
         if (width <= 0 || height <= 0 || stripOffset < 0 || samples > file.size.toLong() - stripOffset) {
@@ -247,6 +252,7 @@ object SonyArw {
         val sensor = ShortArray(samples.toInt())
         val block = IntArray(16)
         for (row in 0 until height) {
+            checkCancelled()
             var position = stripOffset + row * width
             val rowStart = row * width
             var column = 0

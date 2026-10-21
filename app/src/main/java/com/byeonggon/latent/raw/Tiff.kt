@@ -9,15 +9,15 @@ internal class TiffDirectory private constructor(
     private val data: ByteBuffer,
     private val entries: Map<Int, Entry>,
 ) {
-    private class Entry(val type: Int, val count: Int, val position: Int)
+    private class Entry(val type: Int, val count: Int, val position: Long)
 
     operator fun contains(tag: Int) = tag in entries
 
     /** The integer values stored under [tag], or null when it is absent or holds something else. */
     fun ints(tag: Int): IntArray? {
         val entry = entries[tag] ?: return null
-        if (entry.count < 0 || entry.count > MAX_VALUES) return null
-        val position = entry.position
+        val position = checkedPosition(entry)
+        if (entry.count > MAX_VALUES) return null
         return when (entry.type) {
             BYTE, UNDEFINED -> IntArray(entry.count) { data.get(position + it).toInt() and 0xFF }
             SHORT -> IntArray(entry.count) { data.getShort(position + 2 * it).toInt() and 0xFFFF }
@@ -32,8 +32,8 @@ internal class TiffDirectory private constructor(
     /** The numbers stored under [tag], fractions included; null when it is absent or holds text. A fraction over zero is NaN. */
     fun floats(tag: Int): FloatArray? {
         val entry = entries[tag] ?: return null
-        if (entry.count < 0 || entry.count > MAX_VALUES) return null
-        val position = entry.position
+        val position = checkedPosition(entry)
+        if (entry.count > MAX_VALUES) return null
         return when (entry.type) {
             RATIONAL -> FloatArray(entry.count) {
                 fraction(data.getInt(position + 8 * it).toLong() and 0xFFFFFFFFL, data.getInt(position + 8 * it + 4).toLong() and 0xFFFFFFFFL)
@@ -50,7 +50,8 @@ internal class TiffDirectory private constructor(
     /** The bytes stored under [tag] as they are, for values of a structure of their own; null when it holds something else. */
     fun bytes(tag: Int): ByteArray? {
         val entry = entries[tag]?.takeIf { (it.type == BYTE || it.type == UNDEFINED) && it.count in 0..MAX_VALUES } ?: return null
-        return ByteArray(entry.count) { data.get(entry.position + it) }
+        val position = checkedPosition(entry)
+        return ByteArray(entry.count) { data.get(position + it) }
     }
 
     private fun fraction(numerator: Long, denominator: Long): Float =
@@ -58,8 +59,16 @@ internal class TiffDirectory private constructor(
 
     fun text(tag: Int): String? {
         val entry = entries[tag]?.takeIf { it.type == ASCII && it.count in 0..MAX_VALUES } ?: return null
-        val bytes = ByteArray(entry.count) { data.get(entry.position + it) }
+        val position = checkedPosition(entry)
+        val bytes = ByteArray(entry.count) { data.get(position + it) }
         return String(bytes, Charsets.US_ASCII).substringBefore('\u0000').trim()
+    }
+
+    // Keep unused private pointers opaque; check a payload before allocating or reading its values.
+    private fun checkedPosition(entry: Entry): Int {
+        val size = (TYPE_SIZES.getOrNull(entry.type) ?: 1).toLong() * entry.count
+        if (size < 0 || entry.position < 0 || entry.position + size > data.limit()) throw IOException("Damaged TIFF value range")
+        return entry.position.toInt()
     }
 
     companion object {
@@ -87,6 +96,7 @@ internal class TiffDirectory private constructor(
                 else -> throw IOException("Not a TIFF file")
             }
             val data = ByteBuffer.wrap(file).order(order)
+            if ((data.getShort(2).toInt() and 0xFFFF) != 42) throw IOException("Unsupported TIFF header")
             return data to data.getInt(4)
         }
 
@@ -106,8 +116,7 @@ internal class TiffDirectory private constructor(
                 val valueCount = data.getInt(at + 4)
                 val size = (TYPE_SIZES.getOrNull(type) ?: 1).toLong() * valueCount
                 val position = if (size in 0..4) (at + 8).toLong() else (data.getInt(at + 8).toLong() and 0xFFFFFFFFL) - base
-                if (size < 0 || position < 0 || position + size > data.limit()) throw IOException("Damaged TIFF value range")
-                entries[tag] = Entry(type, valueCount, position.toInt())
+                entries[tag] = Entry(type, valueCount, position)
             }
             return TiffDirectory(data, entries)
         }

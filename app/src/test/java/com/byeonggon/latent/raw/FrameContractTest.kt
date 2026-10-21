@@ -5,7 +5,11 @@ import com.byeonggon.latent.raw.api.PixelLayout
 import com.byeonggon.latent.raw.api.RawCorrection
 import com.byeonggon.latent.raw.api.RawFormat
 import com.byeonggon.latent.raw.api.U16Samples
-import org.junit.Assert.*
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FrameContractTest {

@@ -24,3 +24,10 @@
 - **자원 제한:** JXL header는 DNG sensor 할당 전과 codec 진입 시 검사한다. 기존 API에 header-only 진입점이 없어 public header parser로 preflight를 수행한다. 이중 header parsing 비용과 codec 내부/ICC allocation 상한은 실측 전이며 전체 메모리 예산 보장을 주장하지 않는다.
 
 - **M1-A:** `raw/api/DecodedFrame.kt`를 도입하고 ARW/DNG의 기존 `read`는 동일 legacy image로 반환한다. 계약 API 부재 RED 후 RAW 계약/회귀 GREEN, 전체 JVM 511개(507 통과, 4 skip). unsigned bit pattern, 기존 sample 동일성, Core의 read-only 사용, crop view 수명, shape/range와 opaque TIFF ICC 보존을 확인했다. `image-contract.md`에 전환 중 mutable legacy 배열 및 미지원 profile/색 관리/장치 예산을 명시했다.
+
+- **M2-B 구현:** 정적 TIFF header dispatch, `DecodeFailureReason`(unsupported/corrupt/resource/I/O), 입력·최종 sample 바이트 상한과 row/tile/codec 앞뒤 취소 callback을 도입했다. 취소 예외는 감싸지 않으며 decoder 상태를 다음 요청에 남기지 않는다. `RawRenderer.read`만 legacy adapter로 연결했고 `RawCache` 잠금과 `ArwImage` 필드는 바꾸지 않았다. UI Job→callback 전달은 M3-A 후속 범위다.
+- **독립 검토:** tool-less Claude Code CLI가 전체 diff와 호출부를 검토하여 확정 P1/P2 없음, 호환성/실측 위험을 제시했다. unused private TIFF tag로 정상 태그까지 실패하는 사례를 RED로 재현하고, payload를 실제 조회할 때만 checked range를 적용하도록 보완했다. jxlatte `JXLImage`가 `getOrientedSize()`를 쓰는 것을 확인했고, orientation 6의 수작업 header 테스트가 RED인 후 preflight도 같은 치수를 쓰도록 수정했다. padded edge tile의 literal sample 테스트는 통과했다.
+- **출하 범위 판단:** 새 모듈/포맷/native/색 룩/Gradle/CI 변경 없이 기존 decoder와 내부 adapter만 변경한다. 이번 PR은 release가 아니므로 프로젝트의 기존 `latent.versionBase`와 release notes는 임의로 바꾸지 않는다. `ship` 절차의 검증·리뷰·문서·PR 단계를 적용한다.
+
+- **최종 로컬 gate:** `./gradlew testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest assembleRelease -PdebugSignedRelease --offline` 성공(1m14s), JVM 526개 중 522 통과/4 skip. `git diff --check`와 Room schema diff 통과. 코드/metadata 이동 외 sample 변환은 기존 결과를 유지한다. 실제 폰 heap/RSS/OOM·색·실사진 회귀는 미검증이며 CI 결과와 구분한다.
+- **다음 승인 지점:** 이 PR의 shared `RawRenderer` adapter와 v0 계약을 유지보수자가 검토한 뒤 통합한다. M3-A(UI Job→요청 취소 전달), 폰 예산 확정, 색/왜곡 기능과 모듈 추출은 이 PR에서 완료했다고 표시하지 않는다.

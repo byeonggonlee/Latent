@@ -20,7 +20,14 @@ minimal contract first, and extract only `image-decoder` if justified. Separate 
 modules are deferred proposals. **This is a plan, not an approved contract or an implementation claim.**
 Wait for maintainer approval of scope, colour/precision goals, resource budgets and review responsibilities.
 Antigravity's future analysis must remain independent; compare evidence against the same revision without
-overwriting either assessment. No application/build changes, Issue/PR creation, push or merge were performed.
+overwriting either assessment.
+
+**Execution update (2026-10-21):** the owner authorized Codex to execute the next sequence on autopilot:
+M2-A stability → M1-A minimal legacy contract → M2-B static dispatch/cancellation boundaries. See
+[`architecture/decoder-execution.md`](architecture/decoder-execution.md) and the PR proposal
+[`architecture/image-contract.md`](architecture/image-contract.md). This preserves app/Core, current formats and
+the camera look; it does not approve new phone memory budgets, module extraction, native backends or HDR.
+ No application/build changes, Issue/PR creation, push or merge were performed.
 
 Decided by the owner since (2026-10-21, in [`architecture/decisions.md`](architecture/decisions.md)): the precision
 goal is the camera's look first, colorimetry later (§11, question 3); reviews are for important changes only, which
@@ -135,7 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | M2-A decoder stability, then minimal contract and dispatch/cancellation boundaries; approved autopilot sequence, existing ARW/DNG look preserved. | `codex/decoder-stability` | `raw/` readers/API/tests/fixtures; shared adapters claimed before edits | 2026-10-21 |
+| Codex | M2-A decoder stability, then minimal contract and dispatch/cancellation boundaries; approved autopilot sequence, existing ARW/DNG look preserved. | `codex/decoder-stability` | `raw/` readers/API/tests/fixtures; shared `RawRenderer.kt` dispatch adapter (no `ArwImage` fields or cache lock changes) | 2026-10-21 |
 
 ## For Codex
 
@@ -167,11 +174,9 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 - **Test first**: a synthetic warp on a grid (straight lines come out straight; the identity warp changes nothing).
   The match against the phone's own JPEG goes to `DEVICE_CHECKS.md`.
 
-### 3. JPEG XL: check a tile's declared size before decoding it (hardening, small, optional)
+### 3. JPEG XL: check a tile's declared size before decoding it (implemented, review pending)
 
-- **Where**: `raw/JpegXl.kt` compares the picture's size with the tile only after `JXLDecoder.decode()`. A stream
-  that declares a far larger picture than its tile allocates the whole frame first; callers catch the
-  `OutOfMemoryError`, and a cut-short stream now fails fast (`cf6a263`), so this is only worth a small change.
+- **Codex implementation**: `codex/decoder-stability` checks JPEG XL header dimensions before the DNG sensor and codec frame allocation, with padded edge and oriented-header tests. No vendor source/patch change. Awaiting the reviewed PR; total codec/ICC heap is not a phone memory guarantee.
 
 ### Waiting for a phone first (not to start yet)
 
