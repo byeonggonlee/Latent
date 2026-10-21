@@ -56,4 +56,7 @@ interface CameraSource : Closeable {
     fun listFiles(request: ListingRequest, onFound: (Int) -> Unit): Listing
 
     fun download(file: RemoteFile, destination: File): Boolean
+
+    /** The last [length] bytes of [file], or all of it if it is shorter; null when they cannot be read on their own. */
+    fun readTail(file: RemoteFile, length: Int): ByteArray? = null
 }

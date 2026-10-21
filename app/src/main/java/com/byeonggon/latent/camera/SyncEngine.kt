@@ -27,6 +27,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.RandomAccessFile
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -122,7 +123,8 @@ class SyncEngine(
         val listed = listing.files
             .filter { options.accepts(it.kind) && !alreadyImported.contains(it, cameraId) }
             .filter { dates == null || Instant.ofEpochMilli(it.modifiedAt).atZone(zone).toLocalDate() in dates }
-        val pending = withoutCopiesInLibrary(listed, cameraId, alreadyImported)
+        val seenElsewhere = seenElsewhere(source, listed, cameraId, alreadyImported)
+        val pending = withoutCopiesInLibrary(listed.filterNot { it in seenElsewhere }, cameraId, alreadyImported)
             .sortedBy { it.modifiedAt }
         Log.i(
             SYNC_LOG_TAG,
@@ -174,7 +176,7 @@ class SyncEngine(
             }
             doneBytes += file.sizeBytes
         }
-        rememberImportedFolders(cameraId, acceptedKinds, listing, alreadyImported)
+        rememberImportedFolders(cameraId, acceptedKinds, listing, alreadyImported, seenElsewhere)
         Log.i(
             SYNC_LOG_TAG,
             "Finished: imported=$imported, geotagged=$geotagged, failed=$failed, cancelled=$cancelRequested, outOfSpace=$outOfSpace",
@@ -194,12 +196,13 @@ class SyncEngine(
         acceptedKinds: List<MediaKind>,
         listing: Listing,
         alreadyImported: ImportedFiles,
+        seenElsewhere: Set<RemoteFile>,
     ) {
         val filesByFolder = listing.files.groupBy { it.folder }
         val dao = database.syncedFolderDao()
         for ((path, fingerprint) in listing.folders) {
             val nothingLeft = filesByFolder[path].orEmpty().all {
-                it.kind !in acceptedKinds || alreadyImported.contains(it, cameraId)
+                it.kind !in acceptedKinds || alreadyImported.contains(it, cameraId) || it in seenElsewhere
             }
             if (nothingLeft) {
                 dao.upsert(SyncedFolderEntity(cameraId, path, fingerprint, acceptedKinds.joinToString(",") { it.name }))
@@ -301,6 +304,51 @@ class SyncEngine(
     }
 
     /**
+     * Of [files], those that came in from another camera or card before. A card cannot say which camera wrote it, so
+     * a file imported elsewhere under the same name, size and time ([ImportedFiles.importedElsewhere]) is taken for
+     * the same only when its end, where its picture or video is, reads as the library's copy does; a JPEG's EXIF,
+     * rewritten with its place on the way in, is at its start. Where either end cannot be read, or the library holds
+     * no copy any more, the file is imported: a copy too many is better than a photo never brought in. Nothing is
+     * recorded for them, so the photos deleted from the phone stay counted as they were; the folders they are in
+     * are remembered as imported, so the next sync does not compare them again while they stay as they are.
+     */
+    private suspend fun seenElsewhere(
+        source: CameraSource,
+        files: List<RemoteFile>,
+        cameraId: String,
+        imported: ImportedFiles,
+    ): Set<RemoteFile> {
+        val candidates = files.associateWith { imported.importedElsewhere(it, cameraId) }.filterValues { it.isNotEmpty() }
+        if (candidates.isEmpty()) return emptySet()
+        val copies = candidates.values.flatten().distinct().chunked(500)
+            .flatMap { database.mediaDao().bySourceKeys(it) }
+            .groupBy { it.sourceKey }
+        val same = HashSet<RemoteFile>()
+        for ((file, keys) in candidates) {
+            if (cancelRequested) throw SyncCancelledException()
+            val inLibrary = keys.flatMap { copies[it].orEmpty() }
+            if (inLibrary.isEmpty()) continue
+            // At most its second half: a small JPEG's EXIF, at its start, is never among what is compared.
+            val tail = source.readTail(file, minOf(COMPARED_BYTES.toLong(), file.sizeBytes / 2).toInt()) ?: continue
+            if (tail.isEmpty()) continue
+            if (inLibrary.any { tailAsImported(it, tail.size)?.contentEquals(tail) == true }) same += file
+        }
+        Log.i(SYNC_LOG_TAG, "${candidates.size} files look imported from elsewhere; ${same.size} are, the rest are new")
+        return same
+    }
+
+    /** The end of [item]'s file as it came in: of the original it keeps, if it was edited since. */
+    private fun tailAsImported(item: MediaItemEntity, length: Int): ByteArray? {
+        val file = File(item.path)
+        val asImported = storage.originalOf(file).takeIf { item.kind == MediaKind.PHOTO && it.canRead() } ?: file
+        return try {
+            RandomAccessFile(asImported, "r").use { tailOf(it.channel, length) }
+        } catch (e: IOException) {
+            null
+        }
+    }
+
+    /**
      * [files] less those the library holds already without knowing they came from this camera: copied
      * from another phone, say. A copy has the camera file's name and size, or its kept original has,
      * if it was edited. They are remembered as imported from now on, as if this sync had brought them.
@@ -336,6 +384,9 @@ class SyncEngine(
 
     private companion object {
         const val PROGRESS_INTERVAL_MS = 250L
+
+        /** How much of the end of a file is compared with the library's copy: its picture's last bytes. */
+        const val COMPARED_BYTES = 64 * 1024
 
         /** Left free on the phone: filling it to the last byte would leave it unable to do anything else. */
         const val LEAVE_FREE_BYTES = 500L * 1024 * 1024

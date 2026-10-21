@@ -1,5 +1,7 @@
 package com.byeonggon.latent.camera
 
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import kotlin.math.abs
 
 /** Every time zone offset is a whole number of quarter hours. */
@@ -15,10 +17,6 @@ private const val ZONE_OFFSET_SPAN_MS = 26 * 60 * 60_000L
  * A camera reports file times as wall-clock time and Android reads them in whichever zone the phone is
  * in at that moment, so the same file shows up with a shifted timestamp after travelling. A file with
  * the same name and size whose time differs by a whole number of quarter hours is therefore the same file.
- *
- * A card read in a card reader, or a camera read as a drive, cannot say which camera wrote it (see
- * [isFolderCamera]): there the file of any camera counts, and the other way round, so that a card does
- * not bring back what came over MTP, nor MTP what came off the card.
  */
 internal class ImportedFiles(sourceKeys: Collection<String>) {
     /** By name and size, the camera and the time of each import. */
@@ -41,10 +39,30 @@ internal class ImportedFiles(sourceKeys: Collection<String>) {
         imports.getOrPut(sourceKey.substring(nameAt + 1, timeAt)) { ArrayList() } += Import(sourceKey.substring(0, nameAt), time)
     }
 
-    fun contains(file: RemoteFile, cameraId: String): Boolean =
-        imports["${file.name}|${file.sizeBytes}"].orEmpty().any { import ->
+    /** Whether [file] was imported from this camera, or this card, before. */
+    fun contains(file: RemoteFile, cameraId: String): Boolean = matches(file).any { it.cameraId == cameraId }
+
+    /**
+     * The source keys under which a file like [file] came in from elsewhere, when this source or that one is a card
+     * read as a folder (see [isFolderCamera]), which cannot say which camera wrote it. Only candidates: two cameras'
+     * DSC00001.ARW can share a name, a size and a time, so what they hold has still to be compared.
+     */
+    fun importedElsewhere(file: RemoteFile, cameraId: String): List<String> = matches(file)
+        .filter { it.cameraId != cameraId && (isFolderCamera(it.cameraId) || isFolderCamera(cameraId)) }
+        .map { "${it.cameraId}|${file.name}|${file.sizeBytes}|${it.time}" }
+
+    private fun matches(file: RemoteFile): List<Import> =
+        imports["${file.name}|${file.sizeBytes}"].orEmpty().filter { import ->
             val shift = abs(import.time - file.modifiedAt)
-            (import.cameraId == cameraId || isFolderCamera(import.cameraId) || isFolderCamera(cameraId)) &&
-                shift <= ZONE_OFFSET_SPAN_MS && shift % ZONE_OFFSET_STEP_MS == 0L
+            shift <= ZONE_OFFSET_SPAN_MS && shift % ZONE_OFFSET_STEP_MS == 0L
         }
+}
+
+/** The last [length] bytes of what [channel] holds, or all of it if it is shorter. */
+internal fun tailOf(channel: FileChannel, length: Int): ByteArray {
+    val size = channel.size()
+    val tail = ByteBuffer.allocate(minOf(length.toLong(), size).toInt())
+    channel.position(size - tail.capacity())
+    while (tail.hasRemaining() && channel.read(tail) >= 0) Unit
+    return tail.array()
 }

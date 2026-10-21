@@ -1,6 +1,7 @@
 package com.byeonggon.latent.camera
 
 import com.byeonggon.latent.data.db.MediaKind
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -37,18 +38,26 @@ class ImportedFilesTest {
     }
 
     @Test
-    fun recognisesOnACardWhatAnyCameraImported() {
-        // A card cannot say which camera wrote it; the same file came over MTP, read in another time zone.
-        assertTrue(imported.contains(file(modifiedAt = importedAt + 9 * hour), "folder:1234-ABCD:"))
-        assertFalse(imported.contains(file(sizeBytes = 25_000_001), "folder:1234-ABCD:"))
+    fun offersOnACardWhatACameraImportedToBeCompared() {
+        // A card cannot say which camera wrote it; this may be the file that came over MTP, read in another time zone.
+        val onCard = file(modifiedAt = importedAt + 9 * hour)
+
+        assertFalse(imported.contains(onCard, "folder:1234-ABCD:"))
+        assertEquals(listOf(file().sourceKey("camera")), imported.importedElsewhere(onCard, "folder:1234-ABCD:"))
+        assertEquals(emptyList<String>(), imported.importedElsewhere(file(sizeBytes = 25_000_001), "folder:1234-ABCD:"))
     }
 
     @Test
-    fun recognisesOverMtpWhatACardImported() {
+    fun offersOverMtpWhatACardImportedToBeCompared() {
         val fromCard = ImportedFiles(listOf(file().sourceKey("folder:1234-ABCD:")))
 
-        assertTrue(fromCard.contains(file(), "camera"))
-        assertTrue(fromCard.contains(file(), "another camera"))
+        assertFalse(fromCard.contains(file(), "camera"))
+        assertEquals(listOf(file().sourceKey("folder:1234-ABCD:")), fromCard.importedElsewhere(file(), "camera"))
+    }
+
+    @Test
+    fun neverOffersOneCameraWhatAnotherImported() {
+        assertEquals(emptyList<String>(), imported.importedElsewhere(file(), "another camera"))
     }
 
     @Test

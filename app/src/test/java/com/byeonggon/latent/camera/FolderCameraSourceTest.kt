@@ -87,6 +87,15 @@ class FolderCameraSourceTest {
     }
 
     @Test
+    fun readsTheEndOfAFileOffTheCard() {
+        val source = FolderCameraSource(context, tree).apply { open() }
+        val raw = source.listFiles(ListingRequest()) {}.files.single { it.name == "DSC00001.ARW" }
+
+        assertArrayEquals("file".toByteArray(), source.readTail(raw, 4))
+        assertArrayEquals("raw file".toByteArray(), source.readTail(raw, 1024))
+    }
+
+    @Test
     fun saysWhenTheCardIsOut() {
         card.deleteRecursively()
 
