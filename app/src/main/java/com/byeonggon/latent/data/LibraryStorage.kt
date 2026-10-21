@@ -8,6 +8,7 @@ import android.os.Environment
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.PhotoFiles
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
@@ -93,6 +94,8 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     @Throws(IOException::class)
     override fun replace(from: File, to: File) {
         if (from.renameTo(to)) return
+        // What is in [to]'s place is only given up for a file that is there to take it.
+        if (!exists(from)) throw IOException("No ${from.name} to put in place of ${to.name}")
         if (exists(to) && !delete(to)) throw IOException("Cannot replace ${to.name}")
         move(from, to)
     }
@@ -124,6 +127,99 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
             false
         }
     }
+
+    /** Guards [take]: two copies of one file made at once would write over each other. */
+    private val takingOver = Any()
+
+    /** Where an original stands once [take] has done what it can. */
+    private enum class Kept {
+        /** The app's own, read by its path. */
+        OWN,
+
+        /** There, but only the granted folder reaches it. */
+        SHUT,
+
+        /** Not there. */
+        NONE,
+    }
+
+    /**
+     * Makes [file] the app's own where it is, when only the granted folder reaches it: an original kept by
+     * another installation of the app (one under the package name before, say) or copied in from another
+     * phone. In a folder whose name starts with a dot, shared storage shuts such a file to the app's paths,
+     * which is how the editor reads it. Returns whether the app can read it by its path now.
+     */
+    fun makeOwn(file: File): Boolean = take(file) == Kept.OWN
+
+    /**
+     * Whether [photo] keeps its original aside, made the app's own where it can be, as [makeOwn] does. A move
+     * to the app's own that broke off is finished first: its whole copy is the original, waiting beside it.
+     */
+    fun keepsOriginal(photo: File): Boolean = take(originalOf(photo)) != Kept.NONE
+
+    /**
+     * The original [photo] keeps aside, in its place, for it to be moved or put back from there: made the app's
+     * own where it can be, as [makeOwn] does, or else one the granted folder reaches. Null when none is kept.
+     * Throws when one is kept but not in its place, a move to the app's own that could not be finished: what
+     * would be moved along with it is then left where it is.
+     */
+    @Throws(IOException::class)
+    fun keptOriginal(photo: File): File? {
+        val original = originalOf(photo)
+        return when (take(original)) {
+            Kept.OWN -> original
+            Kept.SHUT -> original.takeIf(::exists) ?: throw IOException("The original of ${photo.name} is not in its place")
+            Kept.NONE -> null
+        }
+    }
+
+    /**
+     * Whether [photo] keeps its original aside, as far as the app's paths show: an original only the granted
+     * folder reaches is not seen, a whole copy waiting to take its place is. For lists, where asking the
+     * granted folder about every photo would take too long.
+     */
+    fun keepsOriginalByPath(photo: File): Boolean = originalOf(photo).let { it.exists() || copiedOf(it).exists() }
+
+    // Still named as photos: shared storage only takes photos and videos in DCIM.
+    private fun copyingOf(file: File) = File(file.parentFile, ".${file.nameWithoutExtension}-copying.${file.extension}")
+
+    private fun copiedOf(file: File) = File(file.parentFile, ".${file.nameWithoutExtension}-copied.${file.extension}")
+
+    /**
+     * Takes [file] over as [makeOwn] says. It is copied next to itself, and the copy takes its place only once
+     * whole: a move that breaks off never leaves part of a picture under its name, and the next call starts it
+     * again or finishes it.
+     */
+    private fun take(file: File): Kept {
+        if (file.canRead()) return Kept.OWN
+        synchronized(takingOver) {
+            if (file.canRead()) return Kept.OWN
+            val copying = copyingOf(file)
+            val copied = copiedOf(file)
+            // A copy cut short is dropped; a whole one, made before the move broke off, finishes it.
+            copying.delete()
+            if (copied.exists()) {
+                return if ((!folder.exists(file) || folder.delete(file)) && putInPlace(copied, file)) Kept.OWN else Kept.SHUT
+            }
+            if (!folder.exists(file)) return Kept.NONE
+            return try {
+                val modifiedAt = folder.lastModified(file)
+                folder.openInput(file).use { source ->
+                    FileOutputStream(copying).use { target ->
+                        source.copyTo(target)
+                        target.fd.sync()
+                    }
+                }
+                if (modifiedAt > 0) copying.setLastModified(modifiedAt)
+                if (copying.renameTo(copied) && folder.delete(file) && putInPlace(copied, file)) Kept.OWN else Kept.SHUT
+            } catch (e: Exception) {
+                copying.delete()
+                Kept.SHUT
+            }
+        }
+    }
+
+    private fun putInPlace(copy: File, file: File) = copy.renameTo(file) || folder.move(copy, file)
 
     private fun isPhoto(file: File) = MediaKind.fromFileName(file.name).let { it == MediaKind.PHOTO || it == MediaKind.RAW }
 

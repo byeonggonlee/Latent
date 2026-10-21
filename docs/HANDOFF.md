@@ -142,6 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
+| Claude Code (computer) | The originals the old package kept: made the new one's own where they are (Codex's P2 on PR #11) | `claude/originals-across-packages` (pull request) | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryIndex.kt`, `data/LibraryEdits.kt`, their tests, `docs/RELEASES.md`, `docs/DEVICE_CHECKS.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
 

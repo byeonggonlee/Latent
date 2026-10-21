@@ -22,11 +22,13 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
         for (item in items) {
             if (item.trashedAt != null) continue
             val file = File(item.path)
+            // Asked before anything moves: a photo whose original cannot go along stays where it is.
+            val original = storage.keptOriginal(file)
             val folder = storage.trashFolder(item.id)
             val kept = File(folder, file.name)
             storage.move(file, kept)
             sidecarOf(file).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(kept)) }
-            storage.originalOf(file).takeIf(storage::exists)?.let { storage.move(it, File(folder, ORIGINAL + file.name)) }
+            original?.let { storage.move(it, File(folder, ORIGINAL + file.name)) }
             mediaDao.setPlace(item.id, kept.path, System.currentTimeMillis(), item.path)
             // Gallery apps see the file gone.
             storage.publish(file)

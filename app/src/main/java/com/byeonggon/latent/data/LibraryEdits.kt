@@ -130,17 +130,26 @@ class LibraryEdits(
         return mediaDao.countEditsLike(pattern) > 0 || versionDao.countLike(pattern) > 0 || filterDao.countLike(pattern) > 0
     }
 
-    /** The picture an edit of [item] starts from: the original, also when the file itself is an edited version. */
+    /**
+     * The picture an edit of [item] starts from: the original, also when the file itself is an edited version.
+     * Throws when the original is there but cannot be read.
+     */
+    @Throws(IOException::class)
     fun originalOf(item: MediaItemEntity): File {
         val file = File(item.path)
         if (item.origin == MediaOrigin.PHONE) return file
-        return storage.originalOf(file).takeIf { it.exists() } ?: file
+        // One that only the granted folder reaches, kept by another installation, is made the app's own to be read.
+        val original = storage.originalOf(file)
+        if (storage.makeOwn(original)) return original
+        // Starting from the edited picture instead would show one thing and save another.
+        if (storage.keepsOriginal(file)) throw IOException("Cannot read the original of ${file.name}")
+        return file
     }
 
     fun isEdited(item: MediaItemEntity): Boolean = when {
         item.kind == MediaKind.VIDEO -> false
         item.editsAsSettings -> item.edit != null
-        else -> storage.originalOf(File(item.path)).exists()
+        else -> storage.keepsOriginalByPath(File(item.path))
     }
 
     /** The edit in effect on [item], or null if it is as the camera made it. */
@@ -168,7 +177,10 @@ class LibraryEdits(
             return
         }
         val photo = File(item.path)
-        PhotoEnhancer.saveEdited(photo, storage.originalOf(photo), edit, storage)
+        // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
+        val original = storage.originalOf(photo)
+        if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
+        PhotoEnhancer.saveEdited(photo, original, edit, storage)
         storage.publish(photo)
         mediaDao.setSize(item.id, photo.length())
         mediaDao.setEdit(item.id, edit.toJson())
@@ -303,9 +315,9 @@ class LibraryEdits(
     suspend fun remove(item: MediaItemEntity) {
         if (item.kind == MediaKind.PHOTO && item.origin == MediaOrigin.LIBRARY) {
             val photo = File(item.path)
-            val backup = storage.originalOf(photo)
-            if (storage.exists(backup)) {
-                PhotoEnhancer.restoreOriginal(photo, backup, storage)
+            // The photo only gives way to an original that is there to take its place.
+            storage.keptOriginal(photo)?.let { original ->
+                PhotoEnhancer.restoreOriginal(photo, original, storage)
                 storage.publish(photo)
                 mediaDao.setSize(item.id, photo.length())
             }
