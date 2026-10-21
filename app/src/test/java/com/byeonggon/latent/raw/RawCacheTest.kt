@@ -87,6 +87,40 @@ class RawCacheTest {
     }
 
     @Test(timeout = 5_000)
+    fun anExportFindsTheCacheEmptyThoughAReadFilledItWhileTheExportWaited() {
+        // Only the first file is slow, so that the cache's lock is held while the others line up for it.
+        val cache = RawCache { file ->
+            decodes.incrementAndGet()
+            if (file == first) {
+                started.countDown()
+                release.await(10, TimeUnit.SECONDS)
+            }
+            image
+        }
+        val reader = thread { cache.read(first) }
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+        // A read of another file waits for the lock first, the export after it: the read gets it, and fills the cache.
+        val otherReader = thread { cache.read(second) }
+        Thread.sleep(200)
+        var keptDuringExport: Boolean? = null
+        val export = thread {
+            cache.decodingAlone {
+                // Reading again decodes again unless the cache still holds what the other read decoded.
+                val before = decodes.get()
+                cache.read(second)
+                keptDuringExport = decodes.get() == before
+            }
+        }
+        Thread.sleep(200)
+
+        release.countDown()
+        reader.join()
+        otherReader.join()
+        export.join()
+        assertEquals("the cache still held a picture while the export decoded", false, keptDuringExport)
+    }
+
+    @Test(timeout = 5_000)
     fun twoReadsOfOneFileDecodeItOnce() {
         var fromOther: ArwImage? = null
         val reader = thread { slow.read(first) }

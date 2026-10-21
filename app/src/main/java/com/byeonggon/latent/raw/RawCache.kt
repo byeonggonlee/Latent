@@ -54,7 +54,11 @@ class RawCache(private val decode: (File) -> ArwImage = RawRenderer::read) {
      */
     fun <T> decodingAlone(work: () -> T): T {
         clear()
-        return decoding.withLock(work)
+        return decoding.withLock {
+            // A read may have had the lock before this, while it waited, and kept what it decoded.
+            clear()
+            work()
+        }
     }
 
     /** Lets go of the decoded file at once, also while one is being decoded. */
