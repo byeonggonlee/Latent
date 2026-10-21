@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | CI upkeep: the actions on their Node 24 majors, the SDK handed over folder by folder instead of recursively, lint's findings printed into the log | `claude/ci-upkeep` (pull request) | `.github/workflows/`, `app/build.gradle.kts` (`lint`) | 2026-10-22 |
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
 
 ## For Codex

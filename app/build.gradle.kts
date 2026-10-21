@@ -68,6 +68,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    lint {
+        // Also as text, which CI prints into its log.
+        textReport = true
+    }
     buildFeatures {
         compose = true
     }
