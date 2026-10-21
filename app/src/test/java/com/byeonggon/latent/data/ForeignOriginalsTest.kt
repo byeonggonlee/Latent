@@ -70,11 +70,20 @@ class ForeignOriginalsTest {
 
     private fun leftBeside(name: String) = File(original.parentFile, name)
 
-    private fun item(): MediaItemEntity = runBlocking {
+    private fun item(edit: PhotoEdit? = null): MediaItemEntity = runBlocking {
         val id = container.database.mediaDao().insert(
-            MediaItemEntity(path = photo.path, fileName = photo.name, kind = MediaKind.PHOTO, sizeBytes = photo.length(), capturedAt = 1, importedAt = 2),
+            MediaItemEntity(
+                path = photo.path, fileName = photo.name, kind = MediaKind.PHOTO, sizeBytes = photo.length(), capturedAt = 1, importedAt = 2,
+                edit = edit?.toJson(),
+            ),
         )
         container.database.mediaDao().byId(id)!!
+    }
+
+    /** The app was stopped after the other installation's original was deleted, before its whole copy took its place. */
+    private fun stopAfterTheOriginalWasDeleted() {
+        original.delete()
+        leftBeside(".DSC00001-copied.JPG").writeBytes(originalBytes)
     }
 
     private fun writeGrey(file: File, grey: Int) {
@@ -119,13 +128,41 @@ class ForeignOriginalsTest {
 
     @Test
     fun finishesAMoveStoppedAfterTheOriginalWasDeleted() {
-        original.delete()
-        leftBeside(".DSC00001-copied.JPG").writeBytes(originalBytes)
+        stopAfterTheOriginalWasDeleted()
 
         assertTrue(storage.makeOwn(original))
 
         assertArrayEquals(originalBytes, original.readBytes())
         assertEquals(listOf(original.name), original.parentFile!!.list()!!.toList())
+    }
+
+    @Test
+    fun adoptsTheEditedPhotoWhoseMoveStoppedAfterTheOriginalWasDeleted() = runBlocking {
+        stopAfterTheOriginalWasDeleted()
+
+        container.libraryIndex.adoptUnknownFiles()
+
+        assertTrue(container.libraryEdits.isEdited(container.database.mediaDao().all().single()))
+        assertArrayEquals(originalBytes, original.readBytes())
+        assertEquals(listOf(original.name), original.parentFile!!.list()!!.toList())
+    }
+
+    @Test
+    fun countsAPhotoEditedWhileItsOriginalWaitsBesideIt() {
+        stopAfterTheOriginalWasDeleted()
+
+        assertTrue(container.libraryEdits.isEdited(item(PhotoEdit(Adjustments(exposure = 0.5f)))))
+    }
+
+    @Test
+    fun takesTheEditAwayWithTheOriginalAMoveLeftWaiting() = runBlocking {
+        stopAfterTheOriginalWasDeleted()
+        val item = item(PhotoEdit(Adjustments(exposure = 0.5f)))
+
+        container.libraryEdits.remove(item)
+
+        assertArrayEquals(originalBytes, photo.readBytes())
+        assertEquals(null, container.database.mediaDao().byId(item.id)!!.edit)
     }
 
     @Test

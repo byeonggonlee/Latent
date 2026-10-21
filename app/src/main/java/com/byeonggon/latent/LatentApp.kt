@@ -107,7 +107,7 @@ class AppContainer(private val context: Context) {
             libraryIndex.adoptUnknownFiles()
             if (LibraryStorage.canReadMedia(context)) phoneLibrary.refresh(folders)
         },
-        hasOriginal = { storage.exists(storage.originalOf(File(it.path))) },
+        hasOriginal = { storage.keepsOriginal(File(it.path)) },
     )
 
     private fun appIdentity(): AppIdentity {

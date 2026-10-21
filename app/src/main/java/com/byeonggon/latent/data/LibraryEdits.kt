@@ -142,14 +142,14 @@ class LibraryEdits(
         val original = storage.originalOf(file)
         if (storage.makeOwn(original)) return original
         // Starting from the edited picture instead would show one thing and save another.
-        if (storage.exists(original)) throw IOException("Cannot read the original of ${file.name}")
+        if (storage.keepsOriginal(file)) throw IOException("Cannot read the original of ${file.name}")
         return file
     }
 
     fun isEdited(item: MediaItemEntity): Boolean = when {
         item.kind == MediaKind.VIDEO -> false
         item.editsAsSettings -> item.edit != null
-        else -> storage.originalOf(File(item.path)).exists()
+        else -> storage.keepsOriginalByPath(File(item.path))
     }
 
     /** The edit in effect on [item], or null if it is as the camera made it. */
@@ -179,7 +179,7 @@ class LibraryEdits(
         val photo = File(item.path)
         // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
         val original = storage.originalOf(photo)
-        if (!storage.makeOwn(original) && storage.exists(original)) throw IOException("Cannot read the original of ${photo.name}")
+        if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
         PhotoEnhancer.saveEdited(photo, original, edit, storage)
         storage.publish(photo)
         mediaDao.setSize(item.id, photo.length())
@@ -315,9 +315,8 @@ class LibraryEdits(
     suspend fun remove(item: MediaItemEntity) {
         if (item.kind == MediaKind.PHOTO && item.origin == MediaOrigin.LIBRARY) {
             val photo = File(item.path)
-            val backup = storage.originalOf(photo)
-            if (storage.exists(backup)) {
-                PhotoEnhancer.restoreOriginal(photo, backup, storage)
+            if (storage.keepsOriginal(photo)) {
+                PhotoEnhancer.restoreOriginal(photo, storage.originalOf(photo), storage)
                 storage.publish(photo)
                 mediaDao.setSize(item.id, photo.length())
             }

@@ -26,7 +26,7 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
             val kept = File(folder, file.name)
             storage.move(file, kept)
             sidecarOf(file).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(kept)) }
-            storage.originalOf(file).takeIf(storage::exists)?.let { storage.move(it, File(folder, ORIGINAL + file.name)) }
+            if (storage.keepsOriginal(file)) storage.move(storage.originalOf(file), File(folder, ORIGINAL + file.name))
             mediaDao.setPlace(item.id, kept.path, System.currentTimeMillis(), item.path)
             // Gallery apps see the file gone.
             storage.publish(file)
