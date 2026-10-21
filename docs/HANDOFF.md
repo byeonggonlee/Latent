@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Publish PR #10 review and record the owner’s instruction to publish future PR review results. | `codex/review-posting-rule` | `AGENTS.md`, `docs/HANDOFF.md` | 2026-10-21 |
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
 | Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice (2026-10-21): `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind | `claude/arm64-only` (pull request, reviewed by Codex) | `app/build.gradle.kts`, `.github/workflows/build.yml`, `.github/workflows/nightly.yml`, `docs/RELEASES.md`, `docs/AI_MASKS.md`, `docs/PLAY_LISTING.md` | 2026-10-21 |
 
