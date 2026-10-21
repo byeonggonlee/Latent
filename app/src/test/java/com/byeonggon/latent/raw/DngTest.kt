@@ -204,9 +204,42 @@ class DngTest {
     }
 
     @Test
-    fun refusesUncompressedSamplesOutsideTheDeclaredStrip() {
-        val file = SyntheticDng.file(200, 400, 300)
-        setFirstInt(file, 0x0117, 1)
+    fun ignoresAnUnderstatedUncompressedStripByteCount() = assertUncompressedStripLengthIgnored(1)
+
+    @Test
+    fun ignoresAnOverstatedUncompressedStripByteCount() = assertUncompressedStripLengthIgnored(Int.MAX_VALUE)
+
+    private fun assertUncompressedStripLengthIgnored(length: Int) {
+        for (storage in listOf(Storage.WORDS, Storage.PACKED_12)) {
+            val file = SyntheticDng.file(200, 400, 300, storage = storage)
+            val expected = Dng.read(file).sensor
+            setFirstInt(file, 0x0117, length)
+            assertArrayEquals(expected, Dng.read(file).sensor)
+        }
+    }
+
+    @Test
+    fun anUncompressedStripWithAMissingRowByteStillFails() {
+        for (storage in listOf(Storage.WORDS, Storage.PACKED_12)) {
+            val file = SyntheticDng.file(200, 400, 300, storage = storage)
+            val (data, directory) = TiffDirectory.open(file)
+            val raw = TiffDirectory.read(data, directory)
+            val offset = raw.int(0x0111)!!
+            val length = raw.int(0x0117)!!
+            // Append the strip after all metadata, then remove its last byte alone.
+            val cutShort = file + file.copyOfRange(offset, offset + length - 1)
+            setFirstInt(cutShort, 0x0111, file.size)
+            setFirstInt(cutShort, 0x0117, Int.MAX_VALUE)
+            val failure = assertThrows(IOException::class.java) { Dng.read(cutShort) }
+            assertEquals("Raw image data is cut short", failure.message)
+        }
+    }
+
+    @Test
+    fun jpegXlStillRequiresItsWholeDeclaredStripRange() {
+        val stream = javaClass.getResourceAsStream("/raw/groups.jxl")!!.use { it.readBytes() }
+        val file = SyntheticDng.jpegXl(stream)
+        setFirstInt(file, 0x0117, Int.MAX_VALUE)
         assertThrows(IOException::class.java) { Dng.read(file) }
     }
 

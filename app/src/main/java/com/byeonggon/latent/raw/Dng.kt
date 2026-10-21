@@ -251,13 +251,14 @@ object Dng {
         if (compression !in intArrayOf(COMPRESSION_NONE, COMPRESSION_LOSSLESS_JPEG, COMPRESSION_JPEG_XL)) {
             throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported DNG compression: $compression")
         }
-        // Lossless JPEG already clips an overstated count to EOF; other formats require the whole declared range.
+        // Uncompressed rows use their actual byte size; only JPEG XL requires the whole declared range.
         for (index in 0 until across * down) {
             checkCancelled()
             val offset = offsets[index]
             val length = lengths[index]
-            if (offset < 0 || offset >= file.size || length <= 0 ||
-                (compression != COMPRESSION_LOSSLESS_JPEG && offset.toLong() + length > file.size)
+            if (offset < 0 || offset >= file.size ||
+                (compression != COMPRESSION_NONE && length <= 0) ||
+                (compression == COMPRESSION_JPEG_XL && offset.toLong() + length > file.size)
             ) throw IOException("Raw image data is cut short")
             val left = index % across * tileWidth
             val top = index / across * tileLength
@@ -266,7 +267,7 @@ object Dng {
             }
             if (compression == COMPRESSION_NONE) {
                 val needed = (tileWidth.toLong() * channels * bits + 7) / 8 * minOf(tileLength, height - top)
-                if (needed > length) throw IOException("Raw image data is cut short")
+                if (offset.toLong() + needed > file.size) throw IOException("Raw image data is cut short")
             }
         }
         val into = ShortArray((width.toLong() * height * channels).toInt())

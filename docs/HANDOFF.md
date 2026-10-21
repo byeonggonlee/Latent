@@ -182,7 +182,7 @@ touch the seam, as it reviews yours.
 
 - **Codex implementation**: [PR #7](https://github.com/byeonggonlee/Latent/pull/7) checks JPEG XL header dimensions before the DNG sensor and codec frame allocation, with padded edge and oriented-header tests. No vendor source/patch change. Merged as `938b5e0` after Claude Code review and green CI; total codec/ICC heap is not a phone memory guarantee.
 
-### 4. DNG: uncompressed strips read as before PR #7 (bug, small)
+### 4. DNG: uncompressed strips read as before PR #7 (implemented, CI pending)
 
 - **Why**: an uncompressed DNG whose `StripByteCounts` (or `TileByteCounts`) is overstated past the end of the file,
   or understated, but whose samples are all there, opened before PR #7 and is refused since. Left from the second

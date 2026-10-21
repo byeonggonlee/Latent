@@ -46,3 +46,11 @@
 - HANDOFF의 assessment-only 문장을 과거 문서 커밋에 한정했고, 미병합 PR #7의 Done 행을 제거했다. In progress 선점은 병합 때까지 유지한다.
 
 후속 로컬 gate: 전체 JVM **531개(527 통과, 선택 4 skip)**, debug/release lint, androidTest 컴파일, R8 release 빌드 성공(1m11s). `BackupSizeTest`도 통과했다. Room schema와 whitespace diff 검사를 통과했다. 폰 메모리·OOM·실사진은 측정하지 않았다. 원격 CI는 이 후속 커밋을 push한 뒤 별도로 확인한다.
+
+
+## 소유자 지정 후속 순서 — 2026-10-21
+
+1. 보드 정리 `4be60fc`: PR #7(`938b5e0`)을 Done으로 옮기고 JPEG XL tile 크기 항목 완료 표시. 필수 main gate 통과 후 fast-forward push.
+2. [PR #8 리뷰](https://github.com/byeonggonlee/Latent/pull/8#issuecomment-6313647973), head `3e1db45`: 차단 사항 없음. 실제 DNG ForkJoin worker-only Job 취소와 결정적 queued-reader 취소 probe 각각 통과. 관련 테스트 실행 및 원래 전체 결과 535개(531 통과·4 skip, 전체 실행은 cache 재사용), 원격 CI 성공 확인. PR 소스는 수정하지 않았다.
+3. 비압축 DNG 길이 호환성: WORDS/PACKED_12의 count 1과 Int.MAX_VALUE 두 테스트 RED 후, 실제 행 바이트를 EOF와 비교하도록 수정. metadata를 보존한 채 마지막 row byte만 제거하면 여전히 실패하고 JXL 선언 범위 검사는 유지한다. 필수 main gate 성공(59s), 전체 534개(530 통과·4 skip). 원격 CI 확인 후 보드를 완료 처리한다.
+4. 이후 색 행렬 보간은 별도 리뷰 PR, WarpRectilinear는 PR #8 병합 뒤 seam 선점 후 진행한다. 모듈 추출·backend 비교·폰 우선 항목은 시작하지 않는다.
