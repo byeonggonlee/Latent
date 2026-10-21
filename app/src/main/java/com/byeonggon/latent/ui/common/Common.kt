@@ -1,6 +1,8 @@
 package com.byeonggon.latent.ui.common
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -202,5 +204,14 @@ fun <T> ChoiceRow(options: List<T>, selected: T, label: @Composable (T) -> Strin
                 label = { Text(label(option)) },
             )
         }
+    }
+}
+
+/** Opens a page in the browser; the app itself needs no internet for that. */
+fun Context.openInBrowser(address: String) {
+    try {
+        startActivity(Intent(Intent.ACTION_VIEW, address.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (e: ActivityNotFoundException) {
+        // No browser on the phone; nothing useful to do.
     }
 }

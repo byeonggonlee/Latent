@@ -32,7 +32,7 @@ class MapTilesTest {
         Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF336699.toInt()) }.compress(Bitmap.CompressFormat.PNG, 100, it)
     }.toByteArray()
 
-    private val online = OnlineAccess(settings) { url: URL -> asked += url.toString(); png }
+    private val online = OnlineAccess(settings, "0.1.0") { url: URL -> asked += url.toString(); png }
 
     @Before
     fun clean() {
@@ -72,7 +72,7 @@ class MapTilesTest {
     @Test
     fun givesNothingForATileTheServerDoesNotHave() = runBlocking {
         settings.update { it.copy(onlineMaps = true) }
-        val missing = MapTiles(context, OnlineAccess(settings) { _: URL -> null })
+        val missing = MapTiles(context, OnlineAccess(settings, "0.1.0") { _: URL -> null })
 
         assertNull(missing.tile(2, 1, 1))
     }
