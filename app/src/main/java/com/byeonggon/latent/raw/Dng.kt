@@ -148,8 +148,7 @@ object Dng {
         // A linear picture has no mosaic; its crop may start anywhere.
         val redAt = if (linear) 0 to 0 else redSite(raw)
 
-        val sensor = ShortArray(width * height * channels)
-        readSamples(file, data.order(), raw, sensor, width, height, bits, channels)
+        val sensor = readSamples(file, data.order(), raw, width, height, bits, channels)
         Levels(raw, bits, activeWidth, activeHeight, channels).apply(sensor, width, activeLeft, activeTop)
         floatsOf(TAG_BASELINE_EXPOSURE)?.firstOrNull()?.let { brighten(sensor, it) }
         gainMaps(raw.bytes(TAG_OPCODES_2), channels).forEach { it.apply(sensor, width, activeLeft, activeTop, activeWidth, activeHeight, channels) }
@@ -203,7 +202,7 @@ object Dng {
     }
 
     /** Reads the strips or tiles of samples into [into], as they are stored. */
-    private fun readSamples(file: ByteArray, order: ByteOrder, raw: TiffDirectory, into: ShortArray, width: Int, height: Int, bits: Int, channels: Int) {
+    private fun readSamples(file: ByteArray, order: ByteOrder, raw: TiffDirectory, width: Int, height: Int, bits: Int, channels: Int): ShortArray {
         val tiled = TAG_TILE_OFFSETS in raw
         val offsets = raw.ints(if (tiled) TAG_TILE_OFFSETS else TAG_STRIP_OFFSETS) ?: throw IOException("Missing raw image data")
         val lengths = raw.ints(if (tiled) TAG_TILE_BYTE_COUNTS else TAG_STRIP_BYTE_COUNTS)?.takeIf { it.size == offsets.size }
@@ -213,11 +212,30 @@ object Dng {
         val rowsPerStrip = raw.int(TAG_ROWS_PER_STRIP)?.let { it.toLong() and 0xFFFFFFFFL } ?: height.toLong()
         val tileLength = if (tiled) raw.int(TAG_TILE_LENGTH) ?: 0 else rowsPerStrip.coerceAtMost(height.toLong()).toInt()
         if (tileWidth <= 0 || tileLength <= 0) throw IOException("Damaged raw image layout")
-        val across = (width + tileWidth - 1) / tileWidth
-        val down = (height + tileLength - 1) / tileLength
+        val across = ((width.toLong() + tileWidth - 1) / tileWidth).toInt()
+        val down = ((height.toLong() + tileLength - 1) / tileLength).toInt()
         if (across.toLong() * tileWidth * down * tileLength > 2 * MAX_PHOTOSITES) throw IOException("Damaged raw image layout")
         if (offsets.size < across * down) throw IOException("Missing raw image data")
         val compression = raw.int(TAG_COMPRESSION) ?: COMPRESSION_NONE
+        if (compression !in intArrayOf(COMPRESSION_NONE, COMPRESSION_LOSSLESS_JPEG, COMPRESSION_JPEG_XL)) {
+            throw IOException("Unsupported DNG compression: $compression")
+        }
+        // Validate every strip before allocating the sensor, including bytes the file declares as unavailable.
+        for (index in 0 until across * down) {
+            val offset = offsets[index]
+            val length = lengths[index]
+            if (offset < 0 || length <= 0 || offset.toLong() + length > file.size) throw IOException("Raw image data is cut short")
+            val left = index % across * tileWidth
+            val top = index / across * tileLength
+            if (compression == COMPRESSION_JPEG_XL) {
+                JpegXl.checkSize(file, offset, length, minOf(tileWidth, width - left)..tileWidth, minOf(tileLength, height - top)..tileLength, channels)
+            }
+            if (compression == COMPRESSION_NONE) {
+                val needed = (tileWidth.toLong() * channels * bits + 7) / 8 * minOf(tileLength, height - top)
+                if (needed > length) throw IOException("Raw image data is cut short")
+            }
+        }
+        val into = ShortArray((width.toLong() * height * channels).toInt())
         for (index in 0 until across * down) {
             val left = index % across * tileWidth
             val top = index / across * tileLength
@@ -230,6 +248,7 @@ object Dng {
                 else -> throw IOException("Unsupported DNG compression: $compression")
             }
         }
+        return into
     }
 
     /** Uncompressed samples: 8 or 16 bits as bytes or words in the file's byte order, other sizes packed most significant bit first. */

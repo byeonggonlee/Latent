@@ -1,8 +1,16 @@
 package com.byeonggon.latent.raw
 
 import com.traneptora.jxlatte.JXLDecoder
+import com.traneptora.jxlatte.JXLOptions
+import com.traneptora.jxlatte.bundle.ImageHeader
+import com.traneptora.jxlatte.io.Bitreader
+import com.traneptora.jxlatte.io.Demuxer
+import com.traneptora.jxlatte.io.Loggers
+import com.traneptora.jxlatte.io.PushbackInputStream
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.io.PrintWriter
+import java.io.StringWriter
 import kotlin.math.roundToInt
 
 /**
@@ -11,6 +19,26 @@ import kotlin.math.roundToInt
  * stored here side by side, as uncompressed and lossless JPEG samples are.
  */
 internal object JpegXl {
+    /** Checks the header before either the DNG sensor or the codec's full frame is allocated. */
+    fun checkSize(file: ByteArray, offset: Int, length: Int, widths: IntRange, heights: IntRange, channels: Int) {
+        if (offset < 0 || length <= 0 || offset.toLong() + length > file.size) throw IOException("Raw image data is cut short")
+        try {
+            Demuxer(ByteArrayInputStream(file, offset, length)).use { demuxer ->
+                val reader = Bitreader(PushbackInputStream(demuxer))
+                reader.showBits(16) // Reading the signature establishes the container's level, too.
+                val header = ImageHeader.read(Loggers(JXLOptions(), PrintWriter(StringWriter())), reader, demuxer.level)
+                val size = header.size
+                if (size.width !in widths || size.height !in heights || header.colorChannelCount != channels || header.extraChannelCount != 0) {
+                    throw IOException("JPEG XL header does not match the DNG tile")
+                }
+            }
+        } catch (e: IOException) {
+            throw IOException("Damaged JPEG XL header", e)
+        } catch (e: RuntimeException) {
+            throw IOException("Damaged JPEG XL header", e)
+        }
+    }
+
     /**
      * Decodes the stream of [length] bytes at [offset] in [file] into [into], a picture [width] pixels across and
      * [height] down with [channels] samples a pixel, as the tile of [tileWidth] by [tileLength] pixels whose corner is at
@@ -22,7 +50,8 @@ internal object JpegXl {
     ) {
         if (offset < 0 || length <= 0 || offset.toLong() + length > file.size) throw IOException("Raw image data is cut short")
         val image = try {
-            JXLDecoder(ByteArrayInputStream(file, offset, length)).decode()
+            checkSize(file, offset, length, minOf(tileWidth, width - left)..tileWidth, minOf(tileLength, height - top)..tileLength, channels)
+            JXLDecoder(ByteArrayInputStream(file, offset, length)).use { it.decode() }
         } catch (e: IOException) {
             throw IOException("Damaged JPEG XL data", e)
         } catch (e: RuntimeException) {

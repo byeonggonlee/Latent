@@ -19,3 +19,6 @@
 
 - 초기 baseline 시도는 새 worktree의 SDK 경로 누락으로 실행 전 실패했다. ignored `local.properties`에 기존 설치 SDK 경로만 지정하고 재실행한다. 소스 실패가 아니다.
 - M0 잔여 사항(실기기/예산/샘플 권리)은 기존 제한을 바꾸지 않는 작업과 분리한다. 새 자원 상한이나 포맷 확대가 필요하면 근거와 제안을 남기고 그 변경의 구현을 보류한다.
+
+- **M2-A 검증:** 새 입력 검증 테스트 7개는 기존 코드에서 실패했고 수정 후 통과했다. JXL 과대 tile 테스트도 기존 어댑터가 거부하지 않아 실패한 것을 확인했다. RAW 60개(58 통과, 실사진 2 skip), 전체 JVM 504개(500 통과, 4 skip). 잘린 multi-group strip은 실제 `StripByteCounts`만 줄이고 남은 파일 bytes는 유지했다. 원래 `Frame` 수정 전 클래스를 우선 로드한 별도 Java negative control은 같은 DNG 테스트가 20초 내 종료하지 않아 프로세스를 종료했다. vendor source/patch는 변경하지 않았다.
+- **자원 제한:** JXL header는 DNG sensor 할당 전과 codec 진입 시 검사한다. 기존 API에 header-only 진입점이 없어 public header parser로 preflight를 수행한다. 이중 header parsing 비용과 codec 내부/ICC allocation 상한은 실측 전이며 전체 메모리 예산 보장을 주장하지 않는다.

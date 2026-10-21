@@ -95,7 +95,9 @@ internal class TiffDirectory private constructor(
          * original file; [base] is where [data] starts within that file.
          */
         fun read(data: ByteBuffer, offset: Int, base: Int = 0): TiffDirectory {
+            if (offset < 0 || offset.toLong() + 2 > data.limit()) throw IOException("Damaged TIFF directory")
             val count = data.getShort(offset).toInt() and 0xFFFF
+            if (offset.toLong() + 2 + 12L * count > data.limit()) throw IOException("Damaged TIFF directory")
             val entries = HashMap<Int, Entry>(count * 2)
             for (index in 0 until count) {
                 val at = offset + 2 + 12 * index
@@ -103,8 +105,9 @@ internal class TiffDirectory private constructor(
                 val type = data.getShort(at + 2).toInt() and 0xFFFF
                 val valueCount = data.getInt(at + 4)
                 val size = (TYPE_SIZES.getOrNull(type) ?: 1).toLong() * valueCount
-                val position = if (size in 0..4) at + 8 else data.getInt(at + 8) - base
-                entries[tag] = Entry(type, valueCount, position)
+                val position = if (size in 0..4) (at + 8).toLong() else (data.getInt(at + 8).toLong() and 0xFFFFFFFFL) - base
+                if (size < 0 || position < 0 || position + size > data.limit()) throw IOException("Damaged TIFF value range")
+                entries[tag] = Entry(type, valueCount, position.toInt())
             }
             return TiffDirectory(data, entries)
         }

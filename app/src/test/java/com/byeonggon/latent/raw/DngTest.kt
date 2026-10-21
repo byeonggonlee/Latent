@@ -9,6 +9,8 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.math.roundToInt
 
 class DngTest {
@@ -182,6 +184,53 @@ class DngTest {
         assertTrue(jpegXl.message!!.contains("JPEG XL"))
         assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300, pattern = intArrayOf(0, 1, 2, 1))) }
         assertThrows(IOException::class.java) { Dng.read(SyntheticDng.file(200, 400, 300).copyOf(600)) }
+    }
+
+    @Test(timeout = 30_000)
+    fun aCutShortMultiGroupDngFailsAndTheNextReadSucceeds() {
+        val stream = javaClass.getResourceAsStream("/raw/groups.jxl")!!.use { it.readBytes() }
+        for (kept in listOf(stream.size / 4, stream.size * 2 / 3, stream.size - 1)) {
+            val file = SyntheticDng.jpegXl(stream)
+            // The file still contains every byte: only its declared strip length cuts the stream short.
+            setFirstInt(file, 0x0117, kept)
+            assertThrows(IOException::class.java) { Dng.read(file) }
+            val image = Dng.read(SyntheticDng.jpegXl(stream))
+            assertEquals(600 * 520 * 3, image.sensor.size)
+            // At 300,260: red = 2280, green = 2420 + (37*32 % 50) = 2454, blue = 1360.
+            val at = (260 * 600 + 300) * 3
+            assertEquals(listOf(570, 613, 340), image.sensor.slice(at until at + 3).map { it.toInt() })
+        }
+    }
+
+    @Test
+    fun refusesUncompressedSamplesOutsideTheDeclaredStrip() {
+        val file = SyntheticDng.file(200, 400, 300)
+        setFirstInt(file, 0x0117, 1)
+        assertThrows(IOException::class.java) { Dng.read(file) }
+    }
+
+    @Test
+    fun refusesAnOverflowingTileLayout() {
+        val file = SyntheticDng.file(200, 400, 300)
+        val data = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN)
+        val count = data.getShort(8).toInt() and 0xFFFF
+        for (i in 0 until count) {
+            val at = 10 + 12 * i
+            when (data.getShort(at).toInt() and 0xFFFF) {
+                0x0111 -> data.putShort(at, 0x0144.toShort())
+                0x0117 -> data.putShort(at, 0x0145.toShort())
+                0xC61F -> { data.putShort(at, 0x0142.toShort()); data.putInt(at + 4, 1); data.putInt(at + 8, Int.MAX_VALUE) }
+                0xC620 -> { data.putShort(at, 0x0143.toShort()); data.putInt(at + 4, 1); data.putInt(at + 8, Int.MAX_VALUE) }
+            }
+        }
+        assertThrows(IOException::class.java) { Dng.read(file) }
+    }
+
+    private fun setFirstInt(file: ByteArray, tag: Int, value: Int) {
+        val data = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN)
+        val count = data.getShort(8).toInt() and 0xFFFF
+        val at = (0 until count).map { 10 + 12 * it }.first { (data.getShort(it).toInt() and 0xFFFF) == tag }
+        data.putInt(at + 8, value)
     }
 
     @Test

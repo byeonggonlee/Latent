@@ -232,7 +232,12 @@ object SonyArw {
      * one colour as their maximum, their minimum, where those two sit, and 7-bit offsets for the rest.
      */
     internal fun decode(file: ByteArray, stripOffset: Int, width: Int, height: Int, curve: IntArray): ShortArray {
-        val sensor = ShortArray(width * height)
+        val samples = width.toLong() * height
+        // This compression needs one input byte per photosite; check it before allocating the decoded picture.
+        if (width <= 0 || height <= 0 || stripOffset < 0 || samples > file.size.toLong() - stripOffset) {
+            throw IOException("Raw image data is cut short or has an invalid size")
+        }
+        val sensor = ShortArray(samples.toInt())
         val block = IntArray(16)
         for (row in 0 until height) {
             var position = stripOffset + row * width

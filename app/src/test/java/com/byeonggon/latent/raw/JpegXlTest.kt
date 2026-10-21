@@ -2,6 +2,7 @@ package com.byeonggon.latent.raw
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
@@ -34,6 +35,15 @@ class JpegXlTest {
             val error = assertThrows("kept $kept", IOException::class.java) { decode(file.copyOf(kept)) }
             assertEquals("Damaged JPEG XL data", error.message)
         }
+    }
+
+    @Test
+    fun refusesAPictureLargerThanItsDngTile() {
+        val into = ShortArray(32 * 24 * 3)
+        assertThrows(IOException::class.java) {
+            JpegXl.decode(file, 0, file.size, into, 32, 24, 0, 0, 32, 24, channels = 3, bits = 16)
+        }
+        assertTrue(into.all { it == 0.toShort() })
     }
 
     @Test

@@ -86,6 +86,22 @@ class SonyArwTest {
     }
 
     @Test
+    fun rejectsImpossibleDimensionsBeforeAllocatingTheSensor() {
+        val curve = IntArray(4096) { it }
+        for ((width, height) in listOf(0 to 1, -1 to -1, Int.MAX_VALUE to 2)) {
+            assertThrows(IOException::class.java) { SonyArw.decode(ByteArray(0), 0, width, height, curve) }
+        }
+    }
+
+    @Test
+    fun rejectsACompressedStripOutsideTheFileBeforeAllocatingTheSensor() {
+        val curve = IntArray(4096) { it }
+        for (offset in listOf(-1, 1, Int.MAX_VALUE)) {
+            assertThrows(IOException::class.java) { SonyArw.decode(ByteArray(32), offset, 32, 1, curve) }
+        }
+    }
+
+    @Test
     fun rejectsFilesItCannotDevelop() {
         assertThrows(IOException::class.java) { SonyArw.read(ByteArray(64) { it.toByte() }) }
         assertThrows(IOException::class.java) { SonyArw.read(SyntheticArw.file(300, 600, 400, make = "Canon")) }
