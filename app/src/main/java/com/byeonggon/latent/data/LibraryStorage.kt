@@ -8,6 +8,7 @@ import android.os.Environment
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.PhotoFiles
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
@@ -125,36 +126,46 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
         }
     }
 
+    /** Guards [makeOwn]: two copies of one file made at once would write over each other. */
+    private val takingOver = Any()
+
     /**
      * Makes [file] the app's own where it is, when only the granted folder reaches it: an original kept by
      * another installation of the app (one under the package name before, say) or copied in from another
      * phone. In a folder whose name starts with a dot, shared storage shuts such a file to the app's paths,
-     * which is how the editor reads it. The file is set aside under another name first and copied back,
-     * so that its picture is never only in a half-written file. Returns whether the app can read it by its
-     * path now.
+     * which is how the editor reads it. It is copied next to itself, and the copy takes its place only once
+     * whole: a move that breaks off never leaves part of a picture under its name, and the next call starts
+     * it again or finishes it. Returns whether the app can read it by its path now.
      */
     fun makeOwn(file: File): Boolean {
         if (file.canRead()) return true
-        if (!folder.exists(file)) return false
-        // Still named as a photo: shared storage only takes photos and videos in DCIM.
-        val aside = File(file.parentFile, ".${file.nameWithoutExtension}-taking-over.${file.extension}")
-        // One left from an attempt that broke off may be the only whole copy: it is left alone.
-        if (aside.exists() || folder.exists(aside)) return false
-        val modifiedAt = folder.lastModified(file)
-        if (!folder.move(file, aside)) return false
-        return try {
-            folder.openInput(aside).use { source -> file.outputStream().use { source.copyTo(it) } }
-            if (modifiedAt > 0) file.setLastModified(modifiedAt)
-            // If it cannot be deleted, it stays out of sight: a copy too many is better than none.
-            folder.delete(aside)
-            true
-        } catch (e: Exception) {
-            // Whatever broke off the copy, the original goes back under its name.
-            file.delete()
-            folder.move(aside, file)
-            false
+        synchronized(takingOver) {
+            if (file.canRead()) return true
+            // Still named as photos: shared storage only takes photos and videos in DCIM.
+            val copying = File(file.parentFile, ".${file.nameWithoutExtension}-copying.${file.extension}")
+            val copied = File(file.parentFile, ".${file.nameWithoutExtension}-copied.${file.extension}")
+            // A copy cut short is dropped; a whole one, made before the move broke off, finishes it.
+            copying.delete()
+            if (copied.exists()) return (!folder.exists(file) || folder.delete(file)) && putInPlace(copied, file)
+            if (!folder.exists(file)) return false
+            return try {
+                val modifiedAt = folder.lastModified(file)
+                folder.openInput(file).use { source ->
+                    FileOutputStream(copying).use { target ->
+                        source.copyTo(target)
+                        target.fd.sync()
+                    }
+                }
+                if (modifiedAt > 0) copying.setLastModified(modifiedAt)
+                copying.renameTo(copied) && folder.delete(file) && putInPlace(copied, file)
+            } catch (e: Exception) {
+                copying.delete()
+                false
+            }
         }
     }
+
+    private fun putInPlace(copy: File, file: File) = copy.renameTo(file) || folder.move(copy, file)
 
     private fun isPhoto(file: File) = MediaKind.fromFileName(file.name).let { it == MediaKind.PHOTO || it == MediaKind.RAW }
 

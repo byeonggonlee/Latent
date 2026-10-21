@@ -15,6 +15,7 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeFalse
 import org.junit.Before
@@ -26,6 +27,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
+import java.io.IOException
 
 /**
  * The originals that another installation of the app kept, under the package name before say, which shared
@@ -59,8 +61,20 @@ class ForeignOriginalsTest {
 
     @After
     fun clearTheLibrary() {
-        storage.root.walk().forEach { it.setReadable(true) }
+        storage.root.walk().forEach {
+            it.setReadable(true)
+            it.setWritable(true)
+        }
         storage.root.deleteRecursively()
+    }
+
+    private fun leftBeside(name: String) = File(original.parentFile, name)
+
+    private fun item(): MediaItemEntity = runBlocking {
+        val id = container.database.mediaDao().insert(
+            MediaItemEntity(path = photo.path, fileName = photo.name, kind = MediaKind.PHOTO, sizeBytes = photo.length(), capturedAt = 1, importedAt = 2),
+        )
+        container.database.mediaDao().byId(id)!!
     }
 
     private fun writeGrey(file: File, grey: Int) {
@@ -82,13 +96,48 @@ class ForeignOriginalsTest {
     }
 
     @Test
-    fun leavesTheOriginalAloneWhereAnEarlierAttemptBrokeOff() {
-        val aside = File(original.parentFile, ".DSC00001-taking-over.JPG").apply { writeText("set aside before") }
+    fun startsAgainFromACopyCutShort() {
+        // The app was stopped while it copied: the original is still the other installation's.
+        leftBeside(".DSC00001-copying.JPG").writeBytes(originalBytes.copyOf(20))
+
+        assertTrue(storage.makeOwn(original))
+
+        assertArrayEquals(originalBytes, original.readBytes())
+        assertEquals(listOf(original.name), original.parentFile!!.list()!!.toList())
+    }
+
+    @Test
+    fun finishesAMoveStoppedAfterTheCopy() {
+        // Stopped once the copy was whole, before the other installation's file was deleted.
+        leftBeside(".DSC00001-copied.JPG").writeBytes(originalBytes)
+
+        assertTrue(storage.makeOwn(original))
+
+        assertArrayEquals(originalBytes, original.readBytes())
+        assertEquals(listOf(original.name), original.parentFile!!.list()!!.toList())
+    }
+
+    @Test
+    fun finishesAMoveStoppedAfterTheOriginalWasDeleted() {
+        original.delete()
+        leftBeside(".DSC00001-copied.JPG").writeBytes(originalBytes)
+
+        assertTrue(storage.makeOwn(original))
+
+        assertArrayEquals(originalBytes, original.readBytes())
+        assertEquals(listOf(original.name), original.parentFile!!.list()!!.toList())
+    }
+
+    @Test
+    fun refusesToEditFromThePictureWhenTheOriginalCannotBeTakenOver() {
+        // Nothing can be written beside the original, so it stays the other installation's.
+        original.parentFile!!.setWritable(false)
+        val item = item()
 
         assertFalse(storage.makeOwn(original))
-
-        assertFalse(original.canRead())
-        assertEquals("set aside before", aside.readText())
+        assertThrows(IOException::class.java) { container.libraryEdits.originalOf(item) }
+        assertThrows(IOException::class.java) { runBlocking { container.libraryEdits.apply(item, PhotoEdit(Adjustments(exposure = 0.5f))) } }
+        assertEquals(EDITED_GREY.toDouble(), greyOf(photo).toDouble(), 2.0)
     }
 
     @Test
@@ -102,10 +151,7 @@ class ForeignOriginalsTest {
 
     @Test
     fun editsFromTheOriginalAndKeepsIt() = runBlocking {
-        val id = container.database.mediaDao().insert(
-            MediaItemEntity(path = photo.path, fileName = photo.name, kind = MediaKind.PHOTO, sizeBytes = photo.length(), capturedAt = 1, importedAt = 2),
-        )
-        val item = container.database.mediaDao().byId(id)!!
+        val item = item()
 
         assertEquals(original, container.libraryEdits.originalOf(item))
         container.libraryEdits.apply(item, PhotoEdit(Adjustments(exposure = 0.5f)))

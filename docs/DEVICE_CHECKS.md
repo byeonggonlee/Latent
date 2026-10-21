@@ -69,7 +69,7 @@ needs the app uninstalled or its data cleared.
       `DCIM/Latent` is still there and the new app can still edit, rate, geotag and delete the photos the old one made.
       A JPEG the old app edited: the new one shows it as edited, its editor starts from the original (not from the
       edited picture), a new edit saves, and "Remove edit" gives the original back. In a file manager, nothing named
-      `…-taking-over.…` is left in `DCIM/Latent/.originals`.
+      `…-copying.…` or `…-copied.…` is left in `DCIM/Latent/.originals`.
 
 ## Languages
 
