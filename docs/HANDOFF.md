@@ -142,6 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
+| Claude Code (computer) | The map's credit links to OpenStreetMap's copyright page; the map servers are told the installed version | `claude/map-credit-agent` (pull request) | `map/OnlineAccess.kt`, `ui/map/MapScreen.kt`, `ui/common/Common.kt`, `ui/library/AboutDialog.kt`, `LatentApp.kt`, `PRIVACY.md`, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 
 ## For Codex
 
@@ -224,7 +225,7 @@ Nothing handed over yet. Its own next items, so that Codex does not pick them to
   was what held it back. The model and its conversion are downloads: ask the owner first, with sizes and sources.
 - Test the next migration against `app/schemas/.../13.json` with Room's `MigrationTestHelper` (`room-testing`).
 - The map: make the OpenStreetMap credit a link to its copyright page, and send the installed version in the
-  `User-Agent` (`map/OnlineAccess.kt` still says `Latent/0.1`).
+  `User-Agent` (under *In progress*).
 - `PRIVACY.md`: its date (October 15) is from before backups; say also that a restore copies the picked file into
   the app's cache while the summary is open.
 - CI upkeep: the actions still on their Node 20 majors (`checkout`, `setup-java`, `setup-gradle`,

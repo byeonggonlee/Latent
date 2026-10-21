@@ -177,6 +177,7 @@ Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (th
 - [ ] With it on: tiles load, attribution shows, pinch, double tap and the buttons zoom, markers show counts, a marker with few photos opens a strip of them, one with many zooms in.
 - [ ] How the map copes with about 9,000 located photos (marker drawing while panning).
 - [ ] Turning online maps off from the map's menu returns to the explanation.
+- [ ] Tapping "© OpenStreetMap contributors" opens OpenStreetMap's copyright page in the browser.
 
 ## Camera and sync (needs the ZV-E10)
 
