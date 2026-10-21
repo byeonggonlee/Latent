@@ -55,6 +55,11 @@ jobs:
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
 
+      # Room rewrites the schema file of the current version at every build; a difference from the committed one means
+      # an entity changed without a new version and its migration.
+      - name: Room schema is committed
+        run: git diff --exit-code -- app/schemas
+
       - name: Release APK (signed with the debug key)
         run: |
           ./gradlew assembleRelease -PdebugSignedRelease -PlatentVersionCode=${{ steps.version.outputs.code }} -PlatentVersionName=${{ steps.version.outputs.name }} -PlatentAbis=arm64-v8a --stacktrace

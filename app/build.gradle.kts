@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+ksp {
+    // Room writes the schema of every version here; they are kept so that a migration can be tried against the real one.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.byeonggon.latent"
     compileSdk = 37
