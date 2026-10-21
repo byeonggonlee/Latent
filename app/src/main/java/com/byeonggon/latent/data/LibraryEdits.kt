@@ -134,7 +134,8 @@ class LibraryEdits(
     fun originalOf(item: MediaItemEntity): File {
         val file = File(item.path)
         if (item.origin == MediaOrigin.PHONE) return file
-        return storage.originalOf(file).takeIf { it.exists() } ?: file
+        // One that only the granted folder reaches, kept by another installation, is made the app's own to be read.
+        return storage.originalOf(file).takeIf(storage::makeOwn) ?: file
     }
 
     fun isEdited(item: MediaItemEntity): Boolean = when {
@@ -168,6 +169,8 @@ class LibraryEdits(
             return
         }
         val photo = File(item.path)
+        // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
+        storage.makeOwn(storage.originalOf(photo))
         PhotoEnhancer.saveEdited(photo, storage.originalOf(photo), edit, storage)
         storage.publish(photo)
         mediaDao.setSize(item.id, photo.length())

@@ -125,6 +125,37 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
         }
     }
 
+    /**
+     * Makes [file] the app's own where it is, when only the granted folder reaches it: an original kept by
+     * another installation of the app (one under the package name before, say) or copied in from another
+     * phone. In a folder whose name starts with a dot, shared storage shuts such a file to the app's paths,
+     * which is how the editor reads it. The file is set aside under another name first and copied back,
+     * so that its picture is never only in a half-written file. Returns whether the app can read it by its
+     * path now.
+     */
+    fun makeOwn(file: File): Boolean {
+        if (file.canRead()) return true
+        if (!folder.exists(file)) return false
+        // Still named as a photo: shared storage only takes photos and videos in DCIM.
+        val aside = File(file.parentFile, ".${file.nameWithoutExtension}-taking-over.${file.extension}")
+        // One left from an attempt that broke off may be the only whole copy: it is left alone.
+        if (aside.exists() || folder.exists(aside)) return false
+        val modifiedAt = folder.lastModified(file)
+        if (!folder.move(file, aside)) return false
+        return try {
+            folder.openInput(aside).use { source -> file.outputStream().use { source.copyTo(it) } }
+            if (modifiedAt > 0) file.setLastModified(modifiedAt)
+            // If it cannot be deleted, it stays out of sight: a copy too many is better than none.
+            folder.delete(aside)
+            true
+        } catch (e: Exception) {
+            // Whatever broke off the copy, the original goes back under its name.
+            file.delete()
+            folder.move(aside, file)
+            false
+        }
+    }
+
     private fun isPhoto(file: File) = MediaKind.fromFileName(file.name).let { it == MediaKind.PHOTO || it == MediaKind.RAW }
 
     /** Deletes a file, or a folder with all it holds. Returns whether it is gone. */

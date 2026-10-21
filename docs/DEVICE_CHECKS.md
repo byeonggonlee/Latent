@@ -67,6 +67,9 @@ needs the app uninstalled or its data cleared.
 - [ ] The move to `com.latentimage.latent` (RELEASES.md, "Reinstalling a phone"): the new app installs beside the old
       one, takes `DCIM/Latent` again and its restore finds every photo; once the old app is uninstalled, every file in
       `DCIM/Latent` is still there and the new app can still edit, rate, geotag and delete the photos the old one made.
+      A JPEG the old app edited: the new one shows it as edited, its editor starts from the original (not from the
+      edited picture), a new edit saves, and "Remove edit" gives the original back. In a file manager, nothing named
+      `…-taking-over.…` is left in `DCIM/Latent/.originals`.
 
 ## Languages
 

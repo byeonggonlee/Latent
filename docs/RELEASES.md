@@ -98,7 +98,9 @@ build), the database goes with the old app; the photos in `DCIM/Latent` and the 
 
 Across the new package name the old app and the new one are two apps that can be installed side by side: install
 the new one first, restore into it, and uninstall the old one once the new one shows everything (step 2 without the
-uninstall). Meanwhile sync, edit and record places in one of them only.
+uninstall). Meanwhile sync, edit and record places in one of them only. The originals the old app kept of the JPEGs
+it edited (`DCIM/Latent/.originals`) are its own, which shared storage shuts to another app's paths; the new one
+makes them its own as it lists the library, after which the old one can no longer edit those JPEGs again.
 
 The new app reads the backup of an older one; an older app refuses the backup of a newer one (see
 [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).

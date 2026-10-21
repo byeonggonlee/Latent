@@ -34,11 +34,20 @@ class GrantedFolder(private val context: Context, private val root: File) {
 
     fun exists(file: File): Boolean = try {
         val uri = uriOf(file) ?: return false
-        resolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)
+        resolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null)
             ?.use { it.moveToFirst() } ?: false
     } catch (e: Exception) {
         // A missing document is reported as an exception, of a kind that depends on the provider.
         false
+    }
+
+    /** When [file] was last changed, in milliseconds since 1970, or 0 when that cannot be told. */
+    fun lastModified(file: File): Long = try {
+        val uri = uriOf(file) ?: return 0
+        resolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null)
+            ?.use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else 0 } ?: 0
+    } catch (e: Exception) {
+        0
     }
 
     /** Deletes a file, or a folder with all it holds. Returns whether it was deleted. */

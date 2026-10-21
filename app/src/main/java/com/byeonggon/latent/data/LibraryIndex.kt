@@ -91,6 +91,12 @@ class LibraryIndex(
         for (batch in found.chunked(BATCH)) {
             ensureActive()
             val items = batch.map { (file, kind) ->
+                // An edited JPEG whose original came along can be put back; how it was edited is not known. An
+                // original that another installation kept is made the app's own, for the editor to read; where
+                // that fails, it is still there to be put back.
+                val original = storage.originalOf(file)
+                val edited = kind == MediaKind.PHOTO && storage.exists(original)
+                if (edited) storage.makeOwn(original)
                 val metadata = MediaMetadataReader.read(file, kind, zone)
                 val shot = shotOf(file)
                 val place = metadata.location ?: places[shot].takeIf { kind == MediaKind.RAW }
@@ -106,8 +112,7 @@ class LibraryIndex(
                     longitude = place?.longitude,
                     altitude = place?.altitude,
                     geoSource = if (place != null) GeoSource.CAMERA else GeoSource.NONE,
-                    // An edited JPEG whose original came along can be put back; how it was edited is not known.
-                    edit = if (kind == MediaKind.PHOTO && storage.exists(storage.originalOf(file))) PhotoEdit().toJson() else null,
+                    edit = if (edited) PhotoEdit().toJson() else null,
                 )
             }
             database.withTransaction { items.forEach { dao.insertUnlessKnown(it) } }
