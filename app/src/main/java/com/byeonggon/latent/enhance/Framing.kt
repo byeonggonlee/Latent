@@ -181,7 +181,48 @@ internal class FramedView(framing: Framing, turnedWidth: Float, turnedHeight: Fl
  * stored, for one that has to be turned or mirrored upright in the first place; the framing applies to the
  * upright picture.
  */
-fun LinearImage.framed(framing: Framing, orientation: Orientation = Orientation.UPRIGHT): LinearImage {
+fun LinearImage.framed(framing: Framing, orientation: Orientation = Orientation.UPRIGHT): LinearImage =
+    framedAs(framing, orientation).image
+
+/** A picture framed, and the framing it was actually cut with: [Framing.keptWithin] of the one asked for. */
+class FramedImage(val image: LinearImage, val framing: Framing)
+
+/**
+ * Like [framed], but also says which framing was used, which differs from [framing] only for one far outside the
+ * picture. Whatever places things on the framed picture (a brush mask, say) has to use that one.
+ */
+fun LinearImage.framedAs(framing: Framing, orientation: Orientation = Orientation.UPRIGHT): FramedImage {
+    val used = framing.keptWithin(width.toFloat(), height.toFloat(), orientation)
+    return FramedImage(keeping(used, orientation), used)
+}
+
+/**
+ * This framing as a picture stored as [pictureWidth] by [pictureHeight], with [orientation], can be cut by it. A framing
+ * that only a damaged edit or something else could have written (a backup's, say) can keep a rectangle thousands of
+ * times the picture, past what an Int counts: it is shrunk to fit the picture, and where nothing of it is left, the
+ * whole picture is kept, turned and mirrored as the framing says. So is it for a rectangle of no size, one whose sides
+ * are the wrong way round, or one so thin that the picture it was cut from would be infinitely large by it. None the
+ * editor makes comes near either way: a rectangle within the picture levelled and tilted is less than twice its size,
+ * and the crop tool keeps at least 8 percent of each side.
+ */
+fun Framing.keptWithin(pictureWidth: Float, pictureHeight: Float, orientation: Orientation = Orientation.UPRIGHT): Framing {
+    if (isSized(width, height)) return this
+    val sideways = orientation.quarterTurns % 2 != 0
+    val shrunk = shrunkToFit(if (sideways) pictureHeight else pictureWidth, if (sideways) pictureWidth else pictureHeight)
+    // A rectangle that is no area, or not a number (it started outside the picture, or past a Float), cuts nothing.
+    return if (isSized(shrunk.width, shrunk.height)) shrunk else Framing(quarterTurns = quarterTurns, flipped = flipped)
+}
+
+/** Whether a rectangle [width] by [height], as shares of the picture, can be cut and placed: see [keptWithin]. */
+private fun isSized(width: Float, height: Float) =
+    width in SMALLEST_SIDE..LARGEST_SIDE && height in SMALLEST_SIDE..LARGEST_SIDE && width * height <= LARGEST_AREA
+
+/** At most this many times the picture's width or height, or its size, is kept, and at least this share of each side: see [keptWithin]. */
+private const val LARGEST_SIDE = 16f
+private const val LARGEST_AREA = 4f
+private const val SMALLEST_SIDE = 1e-4f
+
+private fun LinearImage.keeping(framing: Framing, orientation: Orientation): LinearImage {
     val turns = (orientation.quarterTurns + framing.quarterTurns).mod(4)
     val unmirror = orientation.mirrored
     if (turns == 0 && !unmirror && framing.copy(quarterTurns = 0) == Framing()) return this

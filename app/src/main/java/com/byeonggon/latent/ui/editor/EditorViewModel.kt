@@ -29,7 +29,7 @@ import com.byeonggon.latent.enhance.ToneCurves
 import com.byeonggon.latent.enhance.ToneRenderer
 import com.byeonggon.latent.enhance.UltraHdr
 import com.byeonggon.latent.enhance.bitmapOf
-import com.byeonggon.latent.enhance.framed
+import com.byeonggon.latent.enhance.framedAs
 import com.byeonggon.latent.raw.RawRenderer
 import com.byeonggon.latent.enhance.ImportedPreset
 import com.byeonggon.latent.data.db.LutEntity
@@ -706,6 +706,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         private var wholeOverview = image.downscaled(ToneRenderer.OVERVIEW_EDGE)
         private var framing = Framing()
         private var framed = image
+        private var framedWith = Framing()
         private var draftFramed: LinearImage? = null
         private var overview = wholeOverview
         private var detailCentre: Pair<Float, Float>? = null
@@ -738,7 +739,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             }
             if (edit.framing != framing) {
                 framing = edit.framing
-                framed = healed.framed(framing)
+                healed.framedAs(framing).let {
+                    framed = it.image
+                    framedWith = it.framing
+                }
                 draftFramed = null
                 overview = if (framing == Framing()) wholeOverview else framed.downscaled(ToneRenderer.OVERVIEW_EDGE)
             }
@@ -747,7 +751,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             } else {
                 framed
             }
-            val pixels = ToneRenderer(edit, overview).render(picture)
+            // Masks are placed by the framing the picture was cut with, which is not the edit's own when that was far outside it.
+            val placed = if (framedWith == edit.framing) edit else edit.copy(framing = framedWith)
+            val pixels = ToneRenderer(placed, overview).render(picture)
             val shrunk = picture.width.toFloat() / framed.width
             val histogram = histogramOf(pixels)
             return Rendered(bitmapOf(pixels, picture.width, picture.height, DetailFilter(edit.adjustments, scale * shrunk)).marked(clipping), histogram)

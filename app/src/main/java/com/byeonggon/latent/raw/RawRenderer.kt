@@ -9,7 +9,8 @@ import com.byeonggon.latent.enhance.Orientation
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.enhance.PictureRegion
-import com.byeonggon.latent.enhance.framed
+import com.byeonggon.latent.enhance.Developed
+import com.byeonggon.latent.enhance.framedAs
 import com.byeonggon.latent.enhance.renderedBitmap
 import com.byeonggon.latent.raw.api.DecodeRequest
 import java.io.File
@@ -64,7 +65,7 @@ object RawRenderer {
     /** A half-resolution rendering for the screen. */
     fun preview(image: ArwImage, edit: PhotoEdit): Bitmap = timed("render") {
         renderedBitmap(edit, scale = 0.5f) {
-            proxy(image, cells = 1, edit.lensCorrection).also { Healing.heal(it, edit.spots) }.framed(edit.framing)
+            proxy(image, cells = 1, edit.lensCorrection).also { Healing.heal(it, edit.spots) }.framedAs(edit.framing).let(::Developed)
         }
     }
 
@@ -96,10 +97,10 @@ object RawRenderer {
      * Unless the picture is reframed, its pixels stay as the sensor recorded them and the copied
      * orientation tells viewers how to turn them. Reframing turns them upright on the way.
      */
-    private fun developFull(source: File, edit: PhotoEdit): LinearImage {
+    private fun developFull(source: File, edit: PhotoEdit): Developed {
         val (linear, orientation) = developStraight(source, edit.lensCorrection)
         Healing.heal(linear, edit.spots, orientation)
-        return if (bakesOrientation(edit)) linear.framed(edit.framing, orientation) else linear
+        return if (bakesOrientation(edit)) Developed(linear.framedAs(edit.framing, orientation)) else Developed(linear, edit.framing)
     }
 
     // A function of its own so the decoded sensor data can be freed before more copies of the picture are made.
