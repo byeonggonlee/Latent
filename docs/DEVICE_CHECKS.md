@@ -163,6 +163,13 @@ Built 2026-10-22 on the subject masks' path; read the times with `adb logcat -s 
 - [ ] Subject and sky on one photo: each model is set up once (two "set up in" lines), and both stay.
 - [ ] APK size: the release APK grows by about the model's 19.5 MB (stored uncompressed).
 
+## Ultra HDR photos (gain map)
+
+- [ ] Open an Ultra HDR photo from the phone's camera in the editor: the note says it is saved without its HDR
+      brightness, once. Darken it (tones only) and save: on an HDR screen the saved photo shows no HDR brightening, in
+      Latent's viewer and in Google Photos (before 2026-10-22 a tone edit kept the original's gain map, made for other
+      tones). Revert: the original, gain map and all, is back. A crop or straightening saves without one too.
+
 ## Phone raw files (DNG)
 
 Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (three samples a pixel). Pro mode (lossless JPEG, 4080x2298) now develops, upright and in plausible colours, in about 0.6 s to read on a computer. Expert RAW (JPEG XL, 4000x3000) develops too, through jxlatte (MIT, `third_party/jxlatte`, patched to need 384 MB of heap instead of more than 1.2 GB), in about 1.3 s to read on a computer. Its samples stay under an eighth of white (the brightest 8026 of 65535) with a `BaselineExposure` of +3, which the reader now applies, as far as the brightest sample reaches white: it then looks as bright as the phone's JPEG. Pro mode's is 0.
