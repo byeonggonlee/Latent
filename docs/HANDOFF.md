@@ -141,7 +141,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | Self-review of the library code pushed straight to `main` before the rules: one lock over library file moves (trash, edits, the folder check, places written in), a copy aside that takes its name only once whole, a failed SAF move that keeps its name, exports written under a hidden name, a backup written over truncated. Codex's review: no findings at `bd7c6e0`; waits for the merge | `claude/library-file-safety` | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryEdits.kt`, `data/LibraryIndex.kt`, `data/Trash.kt`, `location/Geotagger.kt`, `ui/BackupViewModel.kt`, `LatentApp.kt`, their tests | 2026-10-22 |
 
 ## For Codex
 
@@ -413,6 +412,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | From a self-review of the library code pushed to `main` before the rules: one lock over library file moves (the trash, edits in place, the folder check, taking files in, exports, places written in); copies aside, exports and places written under a hidden name and given theirs once whole; a SAF move that fails keeps its name; a backup written over is truncated. Reviewed by Codex, no findings; not tried on a phone yet. Codex's audit of the rest is under *For Claude Code* (LA-01 to LA-09) | [PR #18](https://github.com/byeonggonlee/Latent/pull/18), merged `e57b35a` |
 | 2026-10-22 | Codex | Owner-requested independent legacy audit at `0f8af7e`: eight confirmed Claude-area findings (LA-01–08), one separately classified CI hardening proposal, owner tradeoffs in TODO, and coverage/limits above. Temporary reproductions were removed from the build; no Claude-owned production code changed. | `ca3b719`, `codex/legacy-safety-audit` |
 | 2026-10-22 | Codex | MPF optional-preview safety: Long offset/range checks stay inside APP2; truncated headers, wrapped table offsets and one-byte previews return no preview. Ten permanent normal/endian/malformed tests and related decoder checks pass. | `codex/legacy-safety-audit` |
 | 2026-10-22 | Codex | DNG WarpRectilinear merged after independent Claude LGTM and green CI; synthetic geometry and real linear-DNG decode checks complete. OpcodeList3 camera-JPEG matching and S26 latency/memory remain device checks. | [PR #17](https://github.com/byeonggonlee/Latent/pull/17), merged `0f8af7e` |
