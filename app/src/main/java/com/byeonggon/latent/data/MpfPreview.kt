@@ -15,7 +15,7 @@ internal object MpfPreview {
             val head = ByteArray(minOf(HEAD_BYTES.toLong(), input.length()).toInt())
             input.readFully(head)
             val (start, size) = previewIn(head) ?: return null
-            if (size !in 1..MAX_PREVIEW_BYTES || start + size > input.length()) return null
+            if (size !in 2..MAX_PREVIEW_BYTES || start < 0 || size.toLong() > input.length() - start) return null
             val preview = ByteArray(size)
             input.seek(start)
             input.readFully(preview)
@@ -35,15 +35,22 @@ internal object MpfPreview {
             if (marker == 0xDA || marker == 0xD9) return null
             val length = (head.u8(at + 2) shl 8) or head.u8(at + 3)
             val payload = at + 4
-            if (marker == 0xE2 && payload + 8 <= head.size && head.ascii(payload, 4) == "MPF\u0000") {
-                return entriesIn(head, tiffStart = payload + 4)
+            val end = at.toLong() + 2 + length
+            if (length < 2 || end > head.size) return null
+            if (marker == 0xE2 && payload + 4 <= end && head.ascii(payload, 4) == "MPF\u0000") {
+                return entriesIn(head, tiffStart = payload + 4, end = end.toInt())
             }
-            at += 2 + length
+            at = end.toInt()
         }
         return null
     }
 
-    private fun entriesIn(head: ByteArray, tiffStart: Int): Pair<Long, Int>? {
+    private fun entriesIn(head: ByteArray, tiffStart: Int, end: Int): Pair<Long, Int>? {
+        // Offsets are unsigned and relative to the TIFF header. Keep their sums wide until the
+        // entire requested range has been proved to belong to this APP2, not neighbouring JPEG data.
+        fun position(at: Long, bytes: Long): Int? =
+            if (at < tiffStart || bytes < 0 || at > end || bytes > end - at) null else at.toInt()
+        position(tiffStart.toLong(), 8) ?: return null
         val little = when (head.ascii(tiffStart, 2)) {
             "II" -> true
             "MM" -> false
@@ -56,23 +63,27 @@ internal object MpfPreview {
             (u16(at).toLong() shl 16) or u16(at + 2).toLong()
         }
 
-        val ifd = tiffStart + u32(tiffStart + 4).toInt()
-        if (ifd + 2 > head.size) return null
-        for (index in 0 until u16(ifd)) {
+        if (u16(tiffStart + 2) != 42) return null
+        val directoryOffset = u32(tiffStart + 4)
+        if (directoryOffset < 8) return null
+        val ifd = position(tiffStart.toLong() + directoryOffset, 2) ?: return null
+        val tags = u16(ifd)
+        position(ifd.toLong() + 2, 12L * tags) ?: return null
+        for (index in 0 until tags) {
             val tag = ifd + 2 + index * 12
-            if (tag + 12 > head.size) return null
             if (u16(tag) != MP_ENTRY) continue
-            val count = u32(tag + 4).toInt() / ENTRY_BYTES
-            val entries = tiffStart + u32(tag + 8).toInt()
+            val bytes = u32(tag + 4)
+            if (bytes % ENTRY_BYTES != 0L) return null
+            val entries = position(tiffStart.toLong() + u32(tag + 8), bytes) ?: return null
+            val count = (bytes / ENTRY_BYTES).toInt()
             var best: Pair<Long, Int>? = null
             for (entry in 0 until count) {
                 val at = entries + entry * ENTRY_BYTES
-                if (at + ENTRY_BYTES > head.size) return best
                 val type = u32(at) and TYPE_MASK
                 val size = u32(at + 4)
                 if (type != LARGE_THUMBNAIL_VGA && type != LARGE_THUMBNAIL_FULL_HD) continue
-                if (size > Int.MAX_VALUE || (best != null && size <= best.second)) continue
-                best = (tiffStart + u32(at + 8)) to size.toInt()
+                if (size !in 2..MAX_PREVIEW_BYTES.toLong() || (best != null && size <= best.second)) continue
+                best = (tiffStart.toLong() + u32(at + 8)) to size.toInt()
             }
             return best
         }

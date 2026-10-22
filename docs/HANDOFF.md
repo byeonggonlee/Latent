@@ -119,8 +119,8 @@ camera samples and were skipped; this run does not establish real-photo quality 
    acceptance criteria are not yet fully demonstrated.
 2. **Two-illuminant interpolation:** merged in PR #9; synthetic regression checks are complete. Colour
    judgement still needs the owner's tungsten/daylight photos.
-3. **WarpRectilinear:** Codex started the owner-authorized implementation on `codex/dng-warp-rectilinear`; the shared files are claimed below. Retain the reviewed-PR requirement and
-   preserve Sony correction tests. The lens-chip change is already on local `main` (`33dd8af`).
+3. **WarpRectilinear:** merged in PR #17 after Claude review and green CI. Sony correction tests remain unchanged;
+   real OpcodeList3-to-JPEG matching and phone performance/memory remain in DEVICE_CHECKS.
 
 For Claude Code: reconcile the JPEG XL queue entry with `cf6a263` when publishing this board to `main`, and
 refresh your progress rows then. Sharing this response with Claude Code requires a push or PR after the local commit.
@@ -141,8 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | DNG OpcodeList3 WarpRectilinear implementation and synthetic regressions ready for reviewed PR; retain Sony lens behavior. Independent internal review corrected the SDK integer-centre convention. Claude review and phone/JPEG comparison remain pending. Owner authorized 2026-10-22. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawDeveloper.kt`, `raw/RawRenderer.kt`, `ui/editor/EditorViewModel.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
-| Claude Code (computer) | Self-review of the library code pushed straight to `main` before the rules: one lock over library file moves (trash, edits, the folder check, places written in), a copy aside that takes its name only once whole, a failed SAF move that keeps its name, exports written under a hidden name, a backup written over truncated. Waits for Codex's review | `claude/library-file-safety` | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryEdits.kt`, `data/LibraryIndex.kt`, `data/Trash.kt`, `location/Geotagger.kt`, `ui/BackupViewModel.kt`, `LatentApp.kt`, their tests | 2026-10-22 |
+| Claude Code (computer) | Self-review of the library code pushed straight to `main` before the rules: one lock over library file moves (trash, edits, the folder check, places written in), a copy aside that takes its name only once whole, a failed SAF move that keeps its name, exports written under a hidden name, a backup written over truncated. Codex's review: no findings at `bd7c6e0`; waits for the merge | `claude/library-file-safety` | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryEdits.kt`, `data/LibraryIndex.kt`, `data/Trash.kt`, `location/Geotagger.kt`, `ui/BackupViewModel.kt`, `LatentApp.kt`, their tests | 2026-10-22 |
 
 ## For Codex
 
@@ -205,6 +204,21 @@ touch the seam, as it reviews yours.
   short of its rows still fails.
 - **Done**: `113ca0b`, on main; [CI 39584546602](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) green. WORDS/PACKED_12 counts 1 and Int.MAX_VALUE match normal samples; missing row bytes fail; JPEG XL declared bounds stay strict.
 
+### Legacy audit decoder item — MPF bounds (P2, fixed)
+
+- **Why / Where**: `data/MpfPreview.kt:22,59-70` narrows unsigned offsets before adding and reads one-byte previews
+  as two-byte JPEG signatures. Three bounded fixtures produced unchecked ArrayIndexOutOfBoundsException in JVM
+  tests: first IFD offset -11 at TIFF start 10; 14-byte JPEG/MPF header; declared preview size 1 beginning FF.
+  Thumbnail decoding calls this optional reader without catching that exception.
+- **Do / Test first**: validate header, APP2/TIFF extents and offsets with Long before indexing/narrowing; require
+  at least two preview signature bytes; keep valid little/big-endian largest-preview selection. The three
+  `AuditMpfBoundsTest` cases failed against baseline. Codex implemented the fix in `MpfPreview.kt` with
+  10 permanent `MpfPreviewTest` cases; all 36 related MPF/thumbnail/decoder tests passed. The full required host command
+  `testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest --offline` also passed: 613 tests total,
+  609 passed and 4 fixture-dependent skips; lint has 0 errors and 6 existing warnings, schemas unchanged.
+- **Done when / Risk**: malformed previews return null so the full JPEG fallback remains usable; positive valid
+  fixture tests and required CI pass. Do not change valid preview pixels or invent a phone memory budget.
+
 ### Waiting for a phone first (not to start yet)
 
 - What is left of a `BaselineExposure` that the highlights stopped short, into the tone stage's exposure
@@ -214,11 +228,182 @@ touch the seam, as it reviews yours.
 
 ## For Claude Code
 
-Nothing handed over yet. Its own next items, so that Codex does not pick them too, in this order (set by the owner
+Confirmed legacy-review findings follow below. Its own next items, so that Codex does not pick them too, in this order (set by the owner
 2026-10-21):
 
 - The sky mask (stage 2 of `AI_MASKS.md`): the owner found the subject mask fine on the phone (2026-10-21), which
   was what held it back. The model and its conversion are downloads: ask the owner first, with sizes and sources.
+
+
+### Legacy audit 2026-10-22 — independent main review
+
+Owner requested the review through Claude's `codex-review-prompt.md`. Source revision: `0f8af7e` (before
+PR #18), not another agent's working tree. Three independently scoped reviewers covered colour/geometry,
+external inputs/sync/restore, and decoder boundaries; Codex validated the findings against the actual JVM
+classes. No production code in Claude's assigned area was changed. PR #18 at `bd7c6e0` already has
+[Codex's clean review](https://github.com/byeonggonlee/Latent/pull/18#pullrequestreview-5608631908), 53 passing
+related tests and green exact-head CI. The findings below are outside its changes.
+
+**Confirmed photo/data problems first.** `LA-01` through `LA-07` are reproducible defects; `LA-08` is a
+minor numerical defect. `LA-09` is a hardening proposal, not a demonstrated compromise. Temporary test
+sources/evidence are on the owner's computer under `/private/tmp/latent-legacy-audit-repros/` and
+`/private/tmp/latent-legacy-audit-results/`; the inputs/expected outcomes below allow reproducing them
+without those temporary files. None use private photos.
+
+### LA-01. P1 — a different photo is permanently recorded as imported (bug, sync)
+
+- **Why**: an unclaimed library photo and a new camera file with the same name/size are treated as equal without
+  reading the camera file. The old photo receives its source key and a durable sync record; the new photo is
+  skipped on subsequent syncs too. This remains outside the cross-card fix in PR #13 and outside PR #18.
+- **Where**: `camera/SyncEngine.kt:351-373`, especially `361-369`, `withoutCopiesInLibrary`.
+- **Do**: use metadata only to choose comparison candidates. Compare downloaded bytes (against the kept original
+  when applicable) before assigning provenance or recording success. Reuse the PR #13 content comparison.
+- **Test first**: place an unclaimed red 32×32 JPEG named `DSC00060.JPG` in the library, padded to 4096 bytes;
+  offer a different blue 32×32 JPEG of the same name/size from the camera. Both are valid JPEGs. The actual-engine
+  `AuditSyncEngineTest` observed **zero downloads**, wrong source-key assignment and a durable history entry;
+  a second run also downloads zero. Expect the blue file to be imported separately. Add identical-copy/repeat cases.
+- **Done when**: the unequal files survive as two photos; verified copies skip on later runs; no unverified sync
+  success is persisted. Required CI and existing card/MTP duplicate tests pass.
+- **Risk**: reinstallation can require a one-time full transfer of candidates. The owner's UX/cost decision is in
+  TODO; it does not make metadata-only equality safe. Do not remove history or rewrite the owner's files to prove this.
+
+### LA-02. P1 — restore attaches a backup record to a different year's photo (bug, backup)
+
+- **Why**: the sole name/size candidate bypasses the capture-time check. A missing 2025 photo's edit, rating,
+  location/provenance and album/version identity can be restored onto an unrelated 2026 photo after numbering rolls over.
+- **Where**: `backup/MediaIdentity.kt:61-66` (`1 -> candidates[0]`); `backup/Restorer.kt:254-270` applies the match.
+- **Do**: require supporting capture/source identity for a singleton too. When identity is insufficient, leave a
+  record unmatched rather than overwrite another photo. Stronger content identity may be a separate format proposal.
+- **Test first**: missing backup path `2025/DSC00001.DNG`, current sole path `2026/DSC00001.DNG`, both 24,000,000
+  bytes, capture times 2025-01-01T12:00Z and 2026-01-01T12:00Z. Actual `MediaMatcher` and `restoredOnto` matched
+  id 42 and assigned the backup exposure edit and rating 5. Expect no match, unchanged current metadata and no
+  restored album/version membership for the missing photo. See `AuditIdentityTest`.
+- **Done when**: restore planning and execution reject the mismatched singleton consistently; matching moved
+  files still restore; existing backup tests and required CI pass.
+- **Risk**: this tightens a documented fallback in BACKUP_FORMAT.md; update that explanation and preserve old
+  backup readability. Do not weaken uniqueness by simply broadening the timestamp window.
+
+### LA-03. P2 — a parseable extreme timestamp crashes timeline import (bug, location)
+
+- **Why**: `toEpochMilli` throws `ArithmeticException` for an ISO timestamp outside Long milliseconds, while
+  `parseTime` catches only DateTimeParseException. LocationViewModel's import handler does not catch this exception.
+- **Where**: `location/TimelineParser.kt:175-178`; `ui/location/LocationViewModel.kt:65-80`.
+- **Do**: treat out-of-range timestamp arithmetic as an invalid timestamp at the parsing boundary.
+- **Test first**: `{"rawSignals":[{"position":{"timestamp":"+999999999-01-01T00:00:00Z","LatLng":"37.5°, 127.0°"}}]}`.
+  Actual `TimelineParser.parse(...).toList()` throws `ArithmeticException: long overflow` in `AuditTimelineBoundsTest`.
+  Cover semantic-segment timestamps too, with ordinary dates still parsed.
+- **Done when**: malformed/out-of-range records are rejected or skipped through the established import error
+  path, with no uncaught coroutine exception; timeline tests and CI pass.
+- **Risk**: do not silently wrap or clamp an invalid timestamp onto a real date/location.
+
+### LA-04. P2 — cropping a decodable JPEG can crash on its EXIF offset (bug, metadata)
+
+- **Why**: Int addition wraps during the directory range check. BitmapFactory decodes the JPEG, but changing
+  framing reaches `markUpright`, which reads outside the APP1 byte array and escapes the IOException handling.
+- **Where**: `enhance/JpegMetadata.kt:61-64`; called from `PhotoEnhancer.editedBytes` during an upright export.
+- **Do**: validate unsigned TIFF offsets and directory extents with Long before narrowing/indexing. Reject or
+  safely omit malformed metadata through IOException handling, preserving the photo and valid encoded pixels.
+- **Test first**: insert an APP1 `Exif\0\0` block with an eight-byte little-endian TIFF header and first-IFD offset
+  `0x7ffffff5` into a valid 32×24 JPEG. BitmapFactory succeeds; `PhotoEnhancer.exportEdited` with
+  `Framing(bottom = 0.5f)` throws IndexOutOfBoundsException from JpegMetadata. `AuditJpegMetadataTest` verifies
+  this actual export path. Also cover big-endian/truncated headers and ordinary maker-note preservation.
+- **Done when**: export either succeeds with safe metadata or returns a handled IOException, with no unchecked
+  bounds exception; existing JPEG/HEIF orientation and metadata tests pass.
+- **Risk**: preserve the encoder's APP2/ICC instead of blindly copying a source profile after colour conversion.
+
+### LA-05. P2 — one small timeline visit expands without a point budget (bug, location)
+
+- **Why**: a single visit creates one location every ten minutes for its whole date span. Import commits each
+  2000 generated rows with no overall budget, so a tiny input can fill the timeline/storage; cancelled batches remain.
+- **Where**: `location/TimelineParser.kt:83-91`; `location/TimelineImporter.kt:23-38`.
+- **Do**: validate ordering/span and bound generated locations per visit/import before expanding it. Make the
+  budget and partial-import behavior explicit; do not attempt the full oversized write during verification.
+- **Test first**: one semantic visit at `37.5°, 127.0°` from `0001-01-01T00:00:00Z` to
+  `9999-12-31T23:59:59Z` is 162 JSON characters. The unchanged parser and JVM test produced the first **1,000,000**
+  points, then deliberately stopped; total expansion exceeds 525 million. No massive DB write was performed.
+- **Done when**: reject the excessive expansion before generating/persisting its rows, preserve normal multi-hour
+  visits, and test cancellation/partial-import semantics without exhausting a device.
+- **Risk**: valid long journeys should not be rejected accidentally; the owner sets the user-facing limit if needed.
+
+### LA-06. P2 — overlapping healing source smears its own output (bug, image processing)
+
+- **Why**: a spot reads from the same plane it writes, so later pixels clone pixels already healed by that spot.
+  The source handle can be dragged onto the destination; output becomes dependent on scan direction.
+- **Where**: `enhance/Healing.kt:90-96`; reachable through unrestricted source drag in `ui/editor/SpotFrame.kt:107-108`.
+- **Do**: preserve an unchanged source patch for each spot before changing the destination. Later spots may still
+  read earlier completed spots if that is the intended behavior; avoid copying a whole large image unnecessarily.
+- **Test first**: 128×128 texture `4000 + (x*73 + y*127 + x*y*17)%6000`, spot centre (0.5,0.5), radius 0.125,
+  source (0.46875,0.5), i.e. four pixels left. Snapshot-based ring correction expects centre **9994**;
+  actual `Healing.heal` gives **8550**. `AuditHealingOverlapTest` fails against the actual implementation.
+- **Done when**: overlapping and nonoverlapping clones match the immutable-source reference, with rotated/mirrored
+  preview and export consistent; image-processing tests and CI pass.
+- **Risk**: preserve feathering and ring correction, and document multi-spot ordering rather than changing it silently.
+
+### LA-07. P2 — privacy dependency inspection fails open (bug, CI guard)
+
+- **Why**: the final `|| true` hides the Gradle dependency command's failure as well as grep's normal no-match
+  result. The script prints that no tracking libraries were found even when the dependency list was never obtained.
+- **Where**: `scripts/check-privacy.sh:11`.
+- **Do**: capture dependency output with its exit status checked first; treat grep status 1 as no match only after
+  a successful dependency query. Other grep/read failures must still fail the check.
+- **Test first**: copy the unchanged script into a temporary project with matching expected/actual permissions;
+  a gradlew stub prints `Dependency inspection failed` and exits **23**. Actual script exits **0** and prints
+  `Privacy checks passed`. Expect a nonzero result; also test successful clean and banned dependency output.
+- **Done when**: the failure cannot be reported as a clean privacy check; add behavioral shell coverage and run CI.
+- **Risk**: keep PRIVACY.md and the intended dependency/permission allowlists unchanged; this is guard correctness,
+  not evidence that a tracking library is currently shipped.
+
+### LA-08. P3 — detail bands lose upstream filter context (minor numerical bug)
+
+- **Why**: serial noise-reduction, texture and sharpening neighborhoods compose; the margin takes the maximum
+  instead of adding active-stage reaches. Scale 1 needs 21 rows for the tested combination, while 18 are provided.
+- **Where**: `enhance/DetailFilter.kt:39`, also the margin consumed by the GPU band path.
+- **Do**: compute the composed support of the enabled stages and verify banded output against a whole-frame pass.
+- **Test first**: CPU-only `noiseReduction=1, texture=1, sharpening=1`, scale 1; a deterministic seed-0 grayscale
+  1×384 input differs at output index 324 between the public banded path and a single whole-frame `process` pass.
+  JVM `AuditDetailMarginTest` reproduced this. Difference is only one 8-bit code value in this fixture.
+- **Done when**: boundary pixels agree for combined stages at multiple scales; verify GPU with its different band
+  size on a phone. GPU divergence is not claimed as measured here.
+- **Risk**: low priority; no broad CPU/GPU precision redesign or camera-look change is justified by this small error.
+
+### LA-09. Separate build and publication permissions (hardening proposal, not a proven exploit)
+
+- **Why / Where**: `release.yml:14-22` and `nightly.yml:21-22` grant `contents: write` to the whole job/workflow;
+  the build job also exports GH_TOKEN. Build/plugin steps therefore inherit publication authority unnecessarily.
+- **Do**: prefer a read-only build job and a separate write-permitted publish job that consumes the checked APK
+  artifact. Step env removal alone does not remove job token authority. Keep signing secrets out of the publisher.
+- **Test first / Done when**: inspect effective permissions in workflow logs, verify the build cannot write and
+  publication still creates the correct signed artifact/release; workflow/signing changes need a reviewed PR.
+- **Risk**: no malicious plugin/token misuse was demonstrated. This does not replace signing-key isolation or
+  artifact integrity checks. [GitHub's permission guidance](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
+  recommends minimum job permissions; owner priority is recorded in TODO.
+
+### Legacy audit coverage without another confirmed finding
+
+- **Seam and colour (B1/B2)**: inspected normal-dimension RawDeveloper, Sony LensCorrection, RawRenderer,
+  CameraCurve, ColorStages, ToneRenderer and tone/detail shader mappings. No additional reproducible bug found;
+  GPU parity and the real-photo look are not established by static/JVM checks. Existing reviewed PR3/4/8/17
+  behavior was not re-reviewed. R2's 14-bit/headroom concern remains a design question under camera-look-first,
+  not a demonstrated new colour bug. R10's required copies/zero-turn alias are not automatically redundant.
+- **JPEG/HEIF and coordinates (B3/B4)**: inspected strip coordinates, encoder-vs-source ICC handling,
+  copyExif/HEIF orientation, framing/placement/mask transforms. No other confirmed issue beyond LA-04/06/08;
+  actual GPU output remains unverified. Source ICC omission is not itself a bug after conversion to sRGB.
+- **Backup/input/sync (B5/B6)**: bounded reads exist for known ZIP JSON/LUT/mask records and CRC checking;
+  strict 32-hex asset names prevent an observed extraction-path traversal. FolderWalker skips unsafe names and
+  handle cycles. ImportedFiles' quarter-hour heuristic and MTP hardware have no additional proven defect here.
+  ZIP aggregate entry/byte/record counts have no global cap, but no Android ZIP-bomb/OOM was reproduced; keep
+  that separate from the proven timeline expansion. Real MTP/card behavior was not exercised.
+- **CI (B7)**: found LA-07 and the separately classified LA-09 proposal; no workflow execution or signing change
+  was made by this audit.
+- **Decoders (B8)**: ARW sample products use Long and check compressed input size before allocation; explicit
+  DecodeRequest budgets and TIFF checked payload/directory ranges close the old small-file/huge-allocation R7
+  hypothesis. Lossless JPEG bounds its frame against the tile before row allocation. No new confirmed
+  TIFF/Sony/lossless-JPEG bug found. MPF's separate unchecked offsets/one-byte-preview crashes were reproduced and fixed by Codex, with 10 permanent tests.
+- **PR18 specifics (A)**: Android 15's [FileSystemProvider](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-15.0.0_r1/core/java/com/android/internal/content/FileSystemProvider.java)
+  uses buildUniqueFile on rename and returns the actual new document ID; move rejects an occupied target.
+  Its behavior agrees with checking the returned name and attempting rollback. No new lock cycle was found
+  across moving/takingOver/Room/EditSaver/phoneListing/RawCache. Holding moving through rendering keeps UI-thread
+  work asynchronous but delays queued file operations; phone latency and actual provider failures stay unverified.
 
 ## For Antigravity
 
@@ -228,6 +413,9 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Codex | Owner-requested independent legacy audit at `0f8af7e`: eight confirmed Claude-area findings (LA-01–08), one separately classified CI hardening proposal, owner tradeoffs in TODO, and coverage/limits above. Temporary reproductions were removed from the build; no Claude-owned production code changed. | `ca3b719`, `codex/legacy-safety-audit` |
+| 2026-10-22 | Codex | MPF optional-preview safety: Long offset/range checks stay inside APP2; truncated headers, wrapped table offsets and one-byte previews return no preview. Ten permanent normal/endian/malformed tests and related decoder checks pass. | `codex/legacy-safety-audit` |
+| 2026-10-22 | Codex | DNG WarpRectilinear merged after independent Claude LGTM and green CI; synthetic geometry and real linear-DNG decode checks complete. OpcodeList3 camera-JPEG matching and S26 latency/memory remain device checks. | [PR #17](https://github.com/byeonggonlee/Latent/pull/17), merged `0f8af7e` |
 | 2026-10-22 | Claude Code (computer) | Import from a card reader or a camera in Mass Storage mode: a folder picked once, read as a `CameraSource` that leaves out what a camera does not show over MTP. Across a card and MTP, a file that only looks imported is copied over and compared whole (a JPEG's EXIF value by value, all but the place) before it is left out. Four rounds of Codex's review; not tried with a card reader or the ZV-E10 in Mass Storage yet | [PR #13](https://github.com/byeonggonlee/Latent/pull/13), merged `93cd30b` |
 | 2026-10-22 | Codex | Two-illuminant DNG interpolation merged; numerical/regression validation complete, tungsten photo judgement remains open in DEVICE_CHECKS. | [PR #9](https://github.com/byeonggonlee/Latent/pull/9) |
 | 2026-10-22 | Codex | Publish PR review guidance, permit concise LGTM for clean reviews, reconcile completed decoder work, and claim the owner-authorized WarpRectilinear work. | `codex/review-posting-rule` |
