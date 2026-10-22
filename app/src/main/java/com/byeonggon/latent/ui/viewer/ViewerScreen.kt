@@ -69,6 +69,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,6 +86,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -118,6 +120,7 @@ import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.ui.common.localFormat
 import androidx.compose.ui.res.pluralStringResource
+import com.byeonggon.latent.enhance.HdrPictures
 
 private val CAPTURE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
@@ -147,6 +150,14 @@ fun ViewerScreen(
     BackHandler(onBack = close)
 
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // The window shows HDR while an HDR photo is in front, and ordinary pictures again once it is not, or the viewer closes.
+    val view = LocalView.current
+    val showingHdr = state.hdr != null && state.rendered == null
+    DisposableEffect(showingHdr) {
+        val activity = view.context as? Activity
+        activity?.let { HdrPictures.showHdr(it, showingHdr) }
+        onDispose { activity?.let { HdrPictures.showHdr(it, false) } }
+    }
     val item = state.item
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -318,8 +329,9 @@ fun ViewerScreen(
                 // While the list of pages changes, the pager can briefly ask for a page that is no longer there.
                 HorizontalPager(state = pager, key = { pages.getOrNull(it)?.id ?: -1L - it }, modifier = Modifier.fillMaxSize()) { page ->
                     val shown = pages.getOrNull(page) ?: return@HorizontalPager
-                    // A raw file with corrections is drawn with them; that is only worked out for the photo in front.
-                    val rendered = state.rendered.takeIf { shown.id == item?.id }
+                    // A raw file with corrections is drawn with them, an HDR photo with what makes it HDR; that is only worked
+                    // out for the photo in front.
+                    val rendered = (state.rendered ?: state.hdr).takeIf { shown.id == item?.id }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         ZoomableBox(resetKey = shown.id, state = if (shown.id == item?.id) zoom else rememberZoomState(shown.id)) {
                             if (rendered != null) {

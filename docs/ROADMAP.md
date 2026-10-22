@@ -98,7 +98,10 @@ Each is small or medium, works offline, and needs no new permission.
    someone misses it. Medium.
 10. **HDR in the viewer.** Show Ultra HDR JPEGs and 10-bit HEIF as HDR (window colour mode and headroom, 16-bit
     float decoding): viewing only, no change to editing. No native code is needed (minimum Android is 15).
-    Small to medium.
+    Small to medium. *Built 2026-10-22, to be judged on a phone:* the photo in front, unedited and told HDR by its
+    header (an Ultra HDR gain map, or a HEIF's HLG or PQ colour space), is decoded with the system's ImageDecoder,
+    which keeps its gain map or ten bits, and the window turns to HDR colour mode while it is shown. Headroom is the
+    system's; edits and thumbnails stay SDR.
 11. **Keep the gain map, or say it is lost.** Editing and saving a copy of an Ultra HDR photo from the phone drops
     its gain map today and leaves an SDR picture. Either carry the gain map through (it can be edited along, or
     kept for an untouched picture) or tell the person. Medium. *Telling done 2026-10-22, to be seen on a phone:* the

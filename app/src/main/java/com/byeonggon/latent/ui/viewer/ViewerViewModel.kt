@@ -11,6 +11,7 @@ import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.PhotoEdit
+import com.byeonggon.latent.enhance.HdrPictures
 import com.byeonggon.latent.enhance.PhotoEnhancer
 import com.byeonggon.latent.raw.RawRenderer
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,8 @@ data class ViewerUiState(
     val allDetails: List<ExifGroup> = emptyList(),
     /** A raw file as its corrections make it look, shown in place of the preview the camera embedded. */
     val rendered: Bitmap? = null,
+    /** An HDR photo as it is, gain map or HDR transfer kept, shown in place of the image loader's ordinary picture. */
+    val hdr: Bitmap? = null,
     /** Set while the person is to be asked by the system whether a photo of another app may be deleted. */
     val deleteRequest: IntentSender? = null,
     val busy: Boolean = false,
@@ -111,6 +114,12 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
             item.map { it?.takeIf { item -> item.editsAsSettings && item.kind != MediaKind.VIDEO } }
                 .distinctUntilChanged { old, new -> old?.path == new?.path && old?.edit == new?.edit }
                 .collectLatest { stored -> showCorrected(stored) }
+        }
+        viewModelScope.launch {
+            // A photo shown as its file is: not a raw file, and not one whose corrections are drawn over it.
+            item.map { it?.takeIf { item -> item.kind == MediaKind.PHOTO && !(item.editsAsSettings && item.edit != null) } }
+                .distinctUntilChanged { old, new -> old?.path == new?.path && old?.sizeBytes == new?.sizeBytes && old?.edit == new?.edit }
+                .collectLatest { photo -> showHdr(photo) }
         }
     }
 
@@ -255,6 +264,23 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         status.update {
             it.copy(busy = false, rendered = bitmap, message = if (bitmap == null) text(R.string.render_failed) else null)
         }
+    }
+
+    /** Decodes [photo] with what makes it HDR, if it is an HDR picture; for any other, the image loader's picture is shown. */
+    private suspend fun showHdr(photo: MediaItemEntity?) {
+        status.update { it.copy(hdr = null) }
+        if (photo == null) return
+        val bitmap = try {
+            withContext(Dispatchers.IO) {
+                val file = File(photo.path)
+                if (HdrPictures.isHdr(file)) HdrPictures.decode(file, PREVIEW_EDGE).takeIf(HdrPictures::isHdr) else null
+            }
+        } catch (e: IOException) {
+            null
+        } catch (e: OutOfMemoryError) {
+            null
+        }
+        status.update { it.copy(hdr = bitmap) }
     }
 
     /** Runs a slow file operation and reports its outcome, or [failure], as a message. */
