@@ -141,7 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | Autopilot of 2026-10-22, one pull request each, in this order: LA-03 and LA-05 (Timeline bounds), LA-04 (Exif offsets), LA-02 (restore matching), LA-07 (privacy check), the HEIF share with the place left out, LA-06 and LA-08 (healing, detail bands), LA-01 (sync compares look-alikes), roadmap 11 (gain map), roadmap 10 (HDR in the viewer), the sky mask (stage 2). Codex reviews each; the owner lets Claude Code merge what Codex approves, for this run only | `claude/timeline-bounds` and the branches after it | as each pull request lists | 2026-10-22 |
+| Claude Code (computer) | Autopilot of 2026-10-22 (merged so far: #20 to #26; open: #27 gain map, #28 HDR viewer, #29 sky), one pull request each, in this order: LA-03 and LA-05 (Timeline bounds), LA-04 (Exif offsets), LA-02 (restore matching), LA-07 (privacy check), the HEIF share with the place left out, LA-06 and LA-08 (healing, detail bands), LA-01 (sync compares look-alikes), roadmap 11 (gain map), roadmap 10 (HDR in the viewer), the sky mask (stage 2). Codex reviews each; the owner lets Claude Code merge what Codex approves, for this run only | `claude/timeline-bounds` and the branches after it | as each pull request lists | 2026-10-22 |
 
 ## For Codex
 
@@ -250,7 +250,7 @@ sources/evidence are on the owner's computer under `/private/tmp/latent-legacy-a
 `/private/tmp/latent-legacy-audit-results/`; the inputs/expected outcomes below allow reproducing them
 without those temporary files. None use private photos.
 
-### LA-01. P1 — a different photo is permanently recorded as imported (bug, sync)
+### LA-01. P1 — a different photo is permanently recorded as imported (bug, sync) — done, PR #26
 
 - **Why**: an unclaimed library photo and a new camera file with the same name/size are treated as equal without
   reading the camera file. The old photo receives its source key and a durable sync record; the new photo is
@@ -267,7 +267,7 @@ without those temporary files. None use private photos.
 - **Risk**: reinstallation can require a one-time full transfer of candidates. The owner's UX/cost decision is in
   TODO; it does not make metadata-only equality safe. Do not remove history or rewrite the owner's files to prove this.
 
-### LA-02. P1 — restore attaches a backup record to a different year's photo (bug, backup)
+### LA-02. P1 — restore attaches a backup record to a different year's photo (bug, backup) — done, PR #22
 
 - **Why**: the sole name/size candidate bypasses the capture-time check. A missing 2025 photo's edit, rating,
   location/provenance and album/version identity can be restored onto an unrelated 2026 photo after numbering rolls over.
@@ -283,7 +283,7 @@ without those temporary files. None use private photos.
 - **Risk**: this tightens a documented fallback in BACKUP_FORMAT.md; update that explanation and preserve old
   backup readability. Do not weaken uniqueness by simply broadening the timestamp window.
 
-### LA-03. P2 — a parseable extreme timestamp crashes timeline import (bug, location)
+### LA-03. P2 — a parseable extreme timestamp crashes timeline import (bug, location) — done, PR #20
 
 - **Why**: `toEpochMilli` throws `ArithmeticException` for an ISO timestamp outside Long milliseconds, while
   `parseTime` catches only DateTimeParseException. LocationViewModel's import handler does not catch this exception.
@@ -296,7 +296,7 @@ without those temporary files. None use private photos.
   path, with no uncaught coroutine exception; timeline tests and CI pass.
 - **Risk**: do not silently wrap or clamp an invalid timestamp onto a real date/location.
 
-### LA-04. P2 — cropping a decodable JPEG can crash on its EXIF offset (bug, metadata)
+### LA-04. P2 — cropping a decodable JPEG can crash on its EXIF offset (bug, metadata) — done, PR #21
 
 - **Why**: Int addition wraps during the directory range check. BitmapFactory decodes the JPEG, but changing
   framing reaches `markUpright`, which reads outside the APP1 byte array and escapes the IOException handling.
@@ -311,7 +311,7 @@ without those temporary files. None use private photos.
   bounds exception; existing JPEG/HEIF orientation and metadata tests pass.
 - **Risk**: preserve the encoder's APP2/ICC instead of blindly copying a source profile after colour conversion.
 
-### LA-05. P2 — one small timeline visit expands without a point budget (bug, location)
+### LA-05. P2 — one small timeline visit expands without a point budget (bug, location) — done, PR #20
 
 - **Why**: a single visit creates one location every ten minutes for its whole date span. Import commits each
   2000 generated rows with no overall budget, so a tiny input can fill the timeline/storage; cancelled batches remain.
@@ -325,7 +325,7 @@ without those temporary files. None use private photos.
   visits, and test cancellation/partial-import semantics without exhausting a device.
 - **Risk**: valid long journeys should not be rejected accidentally; the owner sets the user-facing limit if needed.
 
-### LA-06. P2 — overlapping healing source smears its own output (bug, image processing)
+### LA-06. P2 — overlapping healing source smears its own output (bug, image processing) — done, PR #25
 
 - **Why**: a spot reads from the same plane it writes, so later pixels clone pixels already healed by that spot.
   The source handle can be dragged onto the destination; output becomes dependent on scan direction.
@@ -339,7 +339,7 @@ without those temporary files. None use private photos.
   preview and export consistent; image-processing tests and CI pass.
 - **Risk**: preserve feathering and ring correction, and document multi-spot ordering rather than changing it silently.
 
-### LA-07. P2 — privacy dependency inspection fails open (bug, CI guard)
+### LA-07. P2 — privacy dependency inspection fails open (bug, CI guard) — done, PR #23
 
 - **Why**: the final `|| true` hides the Gradle dependency command's failure as well as grep's normal no-match
   result. The script prints that no tracking libraries were found even when the dependency list was never obtained.
@@ -353,7 +353,7 @@ without those temporary files. None use private photos.
 - **Risk**: keep PRIVACY.md and the intended dependency/permission allowlists unchanged; this is guard correctness,
   not evidence that a tracking library is currently shipped.
 
-### LA-08. P3 — detail bands lose upstream filter context (minor numerical bug)
+### LA-08. P3 — detail bands lose upstream filter context (minor numerical bug) — done, PR #25
 
 - **Why**: serial noise-reduction, texture and sharpening neighborhoods compose; the margin takes the maximum
   instead of adding active-stage reaches. Scale 1 needs 21 rows for the tested combination, while 18 are provided.
@@ -413,6 +413,13 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | LA-01: a camera file that only looks like a library photo is copied over and compared before it is left out; more than 20 (or 2 GB) wait for the person's "Copy over and compare", as the owner decided. Reviewed by Codex; not tried with a camera yet | [PR #26](https://github.com/byeonggonlee/Latent/pull/26), merged `8bdf459` |
+| 2026-10-22 | Claude Code (computer) | Healing reads each spot's source as it was (LA-06); a detail band reads as far as its stages reach together (LA-08). Reviewed by Codex | [PR #25](https://github.com/byeonggonlee/Latent/pull/25), merged `a2420e5` |
+| 2026-10-22 | Claude Code (computer) | A HEIF picture shared without its place goes out as a JPEG made from it, instead of failing. Reviewed by Codex | [PR #24](https://github.com/byeonggonlee/Latent/pull/24), merged `9c49c85` |
+| 2026-10-22 | Claude Code (computer) | LA-07: the privacy check fails when the release build's libraries could not be listed. Reviewed by Codex | [PR #23](https://github.com/byeonggonlee/Latent/pull/23), merged `83fd7a5` |
+| 2026-10-22 | Claude Code (computer) | LA-02: a backup's photo is matched to a lone one of the same name and size only if taken at the same moment. Reviewed by Codex | [PR #22](https://github.com/byeonggonlee/Latent/pull/22), merged `791ad0d` |
+| 2026-10-22 | Claude Code (computer) | LA-04: a JPEG's Exif offsets are read unsigned and in Long; a block that cannot be read is left out of a turned picture. Reviewed by Codex | [PR #21](https://github.com/byeonggonlee/Latent/pull/21), merged `d86ece5` |
+| 2026-10-22 | Claude Code (computer) | LA-03 and LA-05: a Timeline time past what milliseconds count is no time; a stay longer than a week, or wrapping round, is left out and counted. Codex's second review closed a wrap it found | [PR #20](https://github.com/byeonggonlee/Latent/pull/20), merged `b341f16` |
 | 2026-10-22 | Claude Code (computer) | LA-09: the nightly and stable workflows build in a read-only job and publish in one of their own, which takes the APK from the build's artifact, checks its checksum and never sees the signing secrets; before the `v0.1.0` tag, the owner's choice. Reviewed by Codex, no findings; neither workflow has run since, the next nightly is the first | [PR #19](https://github.com/byeonggonlee/Latent/pull/19), merged `5e1a6d6` |
 | 2026-10-22 | Claude Code (computer) | From a self-review of the library code pushed to `main` before the rules: one lock over library file moves (the trash, edits in place, the folder check, taking files in, exports, places written in); copies aside, exports and places written under a hidden name and given theirs once whole; a SAF move that fails keeps its name; a backup written over is truncated. Reviewed by Codex, no findings; not tried on a phone yet. Codex's audit of the rest is under *For Claude Code* (LA-01 to LA-09) | [PR #18](https://github.com/byeonggonlee/Latent/pull/18), merged `e57b35a` |
 | 2026-10-22 | Codex | Owner-requested independent legacy audit at `0f8af7e`: eight confirmed Claude-area findings (LA-01–08), one separately classified CI hardening proposal, owner tradeoffs in TODO, and coverage/limits above. Temporary reproductions were removed from the build; no Claude-owned production code changed. | `ca3b719`, `codex/legacy-safety-audit` |
