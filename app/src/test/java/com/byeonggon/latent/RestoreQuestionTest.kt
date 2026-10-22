@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -159,6 +161,30 @@ class RestoreQuestionTest {
         assertEquals(3, rating())
         assertFalse(onlineMaps())
         compose.waitUntil(timeoutMillis = 10_000) { !staged.exists() }
+    }
+
+    @Test
+    fun showsHowFarTheRestoreHasGotAndTakesNothingOverWhenCancelled() {
+        openSettings()
+        // Library files are being moved: finding the backup's photos on the phone waits for that.
+        runBlocking { container.storage.moving.lock() }
+        try {
+            restoreFrom(backup)
+            waitForText("복원하는 중…")
+            waitForText("이 휴대전화에서 사진 찾기")
+            compose.onNodeWithText("백업…").performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithText("복원…").performScrollTo().assertIsNotEnabled()
+
+            compose.onNodeWithText("취소").performScrollTo().performClick()
+
+            waitForText("복원을 취소했습니다. 백업의 내용은 하나도 들어오지 않았습니다.")
+        } finally {
+            container.storage.moving.unlock()
+        }
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); !staged.exists() }
+        assertEquals(0, compose.onAllNodesWithText("이 백업을 복원할까요?").fetchSemanticsNodes().size)
+        compose.onNodeWithText("복원…").performScrollTo().assertIsEnabled()
+        assertEquals(5, rating())
     }
 
     @Test
