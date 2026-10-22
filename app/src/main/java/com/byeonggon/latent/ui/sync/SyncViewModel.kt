@@ -77,6 +77,9 @@ class SyncViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startFromCard(folder: CardFolder) = SyncService.start(getApplication(), folder.uri, _dates.value)
 
+    /** Starts the last sync again, copying over and comparing what it left on the camera as looking like the library's. */
+    fun compareLookAlikes() = SyncService.compareLookAlikes(getApplication())
+
     /** The name of the folder [tree] is, or null when it cannot be read now. */
     private fun nameOf(tree: Uri): String? = try {
         val root = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
