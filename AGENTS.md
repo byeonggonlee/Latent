@@ -11,13 +11,16 @@ you start it, and log it there when it is done.
 
 - **Claude Code** (code authoring & review): authors everything but the image decoders—editor, renderers and
   shaders, library, backup, sync, location, map, UI, CI and docs—and reviews changes in Codex's area and the shared
-  seam. It may run on the owner's computer and in cloud sessions at the same time.
+  seam. It may run on the owner's computer and in cloud sessions at the same time. **Claude Sonnet 5.5** may author
+  code and tests in Claude Code's area at a minimum reasoning effort of `high` (extended thinking); for changes on
+  the mandatory-review list below, **Claude Opus 5.5** is preferred and **Sonnet 5.5** requires `high` or `max`
+  extended thinking.
 - **Codex** (code authoring & review): authors the image decoders (TIFF, Sony ARW, DNG, lossless JPEG, JPEG XL with
   `third_party/jxlatte`, the MPF preview), their tests and fixtures, and reviews changes in Claude Code's area and
   the shared seam.
-- **Antigravity** (code review, model orchestration & documentation; never authors code): conducts code reviews and
-  orchestrates review/task routing across its hosted models (**Gemini 3.8 Flash**, **Gemini 4 Argon**, and
-  **Claude Opus 5.5**) alongside Claude Code and Codex, following
+- **Antigravity** (code review, mechanical dispatch & documentation; never authors code): dispatches reviews
+  mechanically through **Gemini 3.8 Flash** and conducts deep code reviews across **Gemini 4 Argon** and
+  **Claude Opus 5.5** alongside Claude Code and Codex, following
   [`docs/architecture/antigravity-review-orchestration.md`](docs/architecture/antigravity-review-orchestration.md).
   It never changes source, tests, build files, schemas or CI. It writes only under `docs/` (its own files,
   `docs/HANDOFF.md`, and owner-decision queues in `docs/TODO.md`) and to agent governance files when asked by the
@@ -48,15 +51,18 @@ you start it, and log it there when it is done.
   agent without the Android SDK (a cloud session) cannot prove a change itself, so it always opens a pull request.
 - **Changes that need review go through a pull request**, reviewed by a deep reviewer from another model family by
   default—**Gemini 4 Argon** (via Antigravity) or **Codex** for a Claude Code PR; **Gemini 4 Argon** (via
-  Antigravity), **Claude Opus 5.5** (via Antigravity), or **Claude Code** for a Codex PR—and are merged once CI is
-  green and the review is done; the owner decides when reviewers disagree. **Gemini 3.8 Flash** may triage and
-  pre-screen, but does not by itself satisfy this review requirement. **Gemini 4 Argon** has a tight token budget: if
-  it is out of tokens, the review it was assigned falls back first to the non-author model family (**Codex** or
-  **Claude Code** / **Opus 5.5**), or—when cross-family deep reviewers are also out of quota—to an independent-context
-  same-family deep reviewer (**Claude Opus 5.5** via Antigravity or **Claude Sonnet 5.5** via Claude Code). The
-  review names the fallback at its top and states which Argon checks (numerical bounds, colour invariants, locks and
-  cancellation) it did and did not cover; if no deep reviewer is available, the PR waits and goes under "Waiting for
-  the owner" in `docs/TODO.md`. A review is required for any change to:
+  Antigravity), **Claude Opus 5.5** (via Antigravity), or **Claude Code** (**Opus 5.5**) for a Codex PR—and are merged
+  once CI is green and the review is done; the owner decides when reviewers disagree. **Gemini 3.8 Flash** dispatches
+  reviews mechanically ("when unsure, escalate") and checks surface contracts, but does not judge safety and never by
+  itself satisfies this review requirement. **Gemini 4 Argon** has a tight token budget: if it is out of tokens, the
+  review it was assigned falls back first to the non-author model family (**Codex** for a Claude Code PR;
+  **Claude Opus 5.5** via Antigravity or **Claude Code** for a Codex PR). When cross-family deep reviewers are also
+  out of quota on a Claude Code PR, the same-family fallback is **Claude Opus 5.5** (via Antigravity, in its own
+  session) first, and **Claude Sonnet 5.5** at minimum `high` (extended thinking) reasoning effort from a **fresh
+  session** (no shared context with the author's session) second. The review names the fallback (and its reasoning
+  effort and same-family status, when applicable) at its top and states which Argon checks (numerical bounds, colour
+  invariants, locks and cancellation) it did and did not cover; if no qualified deep reviewer is available, the PR
+  waits and goes under "Waiting for the owner" in `docs/TODO.md`. A review is required for any change to:
   - the seam between decoders and the rest (`ArwImage`, `LensProfile`, `RawDeveloper`, `LensCorrection`,
     `RawRenderer`, `RawCache`), or what `LinearImage` means;
   - colour, precision, white balance, demosaicing, the look, crop or orientation;
@@ -79,9 +85,11 @@ you start it, and log it there when it is done.
   owner explicitly asks for a private or chat-only review.
 - Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
   found), checks verified, and any unverified builds or device checks. Identify the reviewing agent and active
-  model explicitly at the top of the review (for example, `Reviewed by Gemini 3.8 Flash (via Antigravity, pre-screen)`,
-  `Reviewed by Gemini 4 Argon (via Antigravity)`, or `Reviewed by Claude Opus 5.5 (via Antigravity, fallback for
-  Gemini 4 Argon)`), along with which primary checks a fallback reviewer did and did not cover.
+  model explicitly at the top of the review (for example, `Reviewed by Gemini 3.8 Flash (via Antigravity, mechanical
+  triage & contract check)`, `Reviewed by Gemini 4 Argon (via Antigravity)`, `Reviewed by Claude Opus 5.5 (via
+  Antigravity, fallback for Gemini 4 Argon; same model family as author, independent session)`, or `Reviewed by
+  Claude Sonnet 5.5 (high thinking) (via Claude Code, fresh session, fallback for Gemini 4 Argon; same model family
+  as author)`), along with which primary checks a fallback reviewer did and did not cover.
 - A concise LGTM is enough when no actionable issues are found; keep the inspected commit and material validation
   limits clear.
 - Post a review even when no bugs are found. Because every agent currently posts through the owner's single GitHub

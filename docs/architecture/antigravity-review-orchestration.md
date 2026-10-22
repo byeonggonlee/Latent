@@ -39,14 +39,22 @@ Review & Orchestration** (shared across agents and orchestrated across models).
 | **Application, editor, storage, sync, UI & CI** | **Claude Code** | Editor, GPU/CPU renderers and shaders (`enhance/`), library, backup and restore (`backup/`), MTP and card sync (`camera/`), location/Timeline/map (`location/`), Compose UI and ViewModels (`ui/`), Room database and migrations (`data/`), CI/release workflows, and general documentation. |
 | **Source code & tests** | **Antigravity** | **None.** Antigravity never authors code or tests in any domain. |
 
+- **Claude Sonnet 5.5 authoring & reasoning-effort rules (in Claude Code)**:
+  - **Claude Sonnet 5.5** may author code and tests within Claude Code's area only when running with a **minimum
+    reasoning effort of `high` (extended thinking enabled)**—never at `low` or `medium`.
+  - For changes touching any of the **eight mandatory-review categories** in [`AGENTS.md`](../../AGENTS.md) (the
+    decoder seam, colour/precision, buffers/locks/cancellation, Room migrations/backup format/data-loss paths,
+    privacy/permissions, signing/CI, dependencies/ABIs), **Claude Opus 5.5** is preferred; if authored by **Claude
+    Sonnet 5.5**, **`high` or `max` (extended thinking)** reasoning effort is strictly required, and the PR description
+    must note the authoring model and reasoning effort.
+
 ### 2.2 Code Review & Orchestration
 
 Reviews are conducted by **Claude Code**, **Codex**, and **Antigravity**:
 
 - **Antigravity** serves as the cross-cutting review and model-orchestration hub. Because it has no authoring stake in
-  either codebase partition, it can review PRs from both Claude Code and Codex, audit the seam between them, and
-  dispatch or synthesize reviews across its hosted models (**Gemini 3.8 Flash**, **Gemini 4 Argon**, and
-  **Claude Opus 5.5**).
+  either codebase partition, it dispatches reviews mechanically through **Gemini 3.8 Flash** and conducts deep reviews
+  across **Gemini 4 Argon** and **Claude Opus 5.5**.
 - **Codex** and **Claude Code** continue to review each other's pull requests—especially on the decoder seam,
   domain-specific invariants, and cross-agent handoffs—either independently or alongside Antigravity's reviews.
 - **The owner** remains the final arbiter when reviewers disagree, and decides package identity, keys/secrets,
@@ -56,26 +64,26 @@ Reviews are conducted by **Claude Code**, **Codex**, and **Antigravity**:
 
 ## 3. Multi-Model Roles Inside Antigravity
 
-Antigravity hosts three distinct model tiers. Each model has a defined review focus so that review depth matches the
-risk of the change:
+Antigravity hosts three distinct model tiers. Orchestration and status upkeep are separated from deep safety review so
+that high-reasoning token budgets are spent where bugs cost user data:
 
-### 3.1 Gemini 3.8 Flash — Fast Triage, Surface & Contract Pre-Screener
+### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher, Intake & Surface Checker
 
-- **Primary focus**:
-  - Rapid scanning of open PRs (`gh pr list`, `gh pr view`, `gh pr diff`) and CI status (`gh pr checks`).
-  - Classifying whether a diff triggers any of the eight mandatory review categories in `AGENTS.md`.
-  - Checking caller/callee contract alignment (e.g., `ArwImage` field updates across `EditorViewModel`,
-    `ViewerViewModel`, `LibraryEdits`, and `LatentApp`), commit trailer compliance, `docs/HANDOFF.md` claim/completion
-    consistency, and `docs/DEVICE_CHECKS.md` updates.
-  - Catching localized defects: missing resource translations (`values/`, `values-ko/`, `values-ja/`), obvious null/NaN
-    oversights, and style/lint issues.
-- **When to use & mandatory-review limit**: Initial PR intake, status summaries, and pre-screening before escalating to
-  a deep reviewer. **A Gemini 3.8 Flash review alone never satisfies the mandatory review requirement** in
-  [`AGENTS.md`](../../AGENTS.md) ("Getting to main"); any PR on that mandatory list requires a review by **Gemini 4
-  Argon** or **Claude Opus 5.5** (inside Antigravity), or by **Claude Code** / **Codex**, subject to the
-  model-independence and fallback rules in §3.4.
+- **Primary focus (Orchestration & Dispatch)**:
+  - **Intake and status tracking**: Scanning open PRs (`gh pr list`, `gh pr view`, `gh pr diff --name-only`), checking
+    CI status (`gh pr checks`), and keeping `docs/HANDOFF.md` claims and status tables up to date.
+  - **Mechanical classification against `AGENTS.md`**: Matching touched paths and topics against the eight mandatory
+    review categories in [`AGENTS.md`](../../AGENTS.md) ("Getting to main") and selecting the required deep reviewer
+    according to the author's model family (§3.4).
+  - **One-way escalation ("when unsure, escalate")**: Classification is strictly mechanical. Any path or topic on the
+    `AGENTS.md` mandatory list is escalated to a deep reviewer regardless of what Flash thinks of the diff. **Flash
+    does not judge whether a mandatory-review change is safe, and may only escalate—never downgrade—a review.**
+  - **Surface and contract checks**: Checking caller/callee alignment (`ArwImage` callers), commit trailers,
+    `docs/DEVICE_CHECKS.md` entries, and resource translation completeness (`values/`, `values-ko/`, `values-ja/`).
+- **Mandatory-review limit**: **A Gemini 3.8 Flash review alone never satisfies the mandatory review requirement** in
+  `AGENTS.md`, and never serves as a fallback for a deep reviewer.
 
-### 3.2 Gemini 4 Argon — Systems, Numerical, Concurrency & Seam Reviewer
+### 3.2 Gemini 4 Argon — Systems, Numerical, Concurrency & Seam Deep Reviewer
 
 - **Primary focus**:
   - **Numerical and parser safety**: Integer overflow and wrap-around in TIFF/EXIF/MPF offsets, unsigned-to-signed
@@ -86,7 +94,8 @@ risk of the change:
     and bit-for-bit equivalence on refactoring changes.
   - **Concurrency and buffer ownership**: Lock ordering (`moving`, `takingOver`, `RawCache`), main-thread safety,
     shared buffer mutation, and coroutine cancellation boundaries across decode, render, sync, and export paths.
-  - **Workflow & governance orchestration**: Structuring multi-agent handoffs and maintaining repository guidelines.
+  - **Governance rules & review synthesis**: Editing rule documents when asked by the owner and resolving conflicting
+    reviews alongside Claude Opus 5.5 and the owner (routine intake/dispatch stays with Gemini 3.8 Flash).
 - **When to use**: PRs touching decoders, the shared seam, image processing (`enhance/`), external-input parsers,
   or concurrency/cancellation paths.
 - **Token budget & fallback**: Gemini 4 Argon has a tight token budget. When it is out of tokens, the review it was
@@ -102,15 +111,15 @@ risk of the change:
     `EditSaver`, and Compose UI state lifecycles.
   - **Security, privacy, and CI hardening**: Verifying zero network/tracking regressions against `PRIVACY.md`,
     auditing GitHub Actions job permissions (`release.yml`, `nightly.yml`), and reviewing signing/artifact boundaries.
-  - **Multi-review synthesis**: Resolving complex architectural trade-offs and preparing concise decision options for
-    the owner when agents or models surface competing approaches.
+  - **Governance rules & multi-review synthesis**: Editing rule documents when asked by the owner and synthesizing
+    competing review findings into clear options for the owner.
 - **When to use**: High-blast-radius PRs affecting user photos/data, Room schemas, backup formats, sync identity,
   privacy/security boundaries, or multi-module architectural changes.
 
-### 3.4 Model-Family Independence and Quota Fallback Rules
+### 3.4 Model-Family Independence, Claude Sonnet 5.5 Eligibility, and Quota Fallbacks
 
 1. **Cross-family review by default**:
-   - A mandatory review should normally be performed by a **different model family** than the PR's author:
+   - A mandatory review must normally be performed by a **different model family** than the PR's author:
      - **PR authored by Claude Code**: primary mandatory reviewers are **Gemini 4 Argon** (via Antigravity) or
        **Codex** (GPT). Because `Claude Opus 5.5 (via Antigravity)` shares the Claude model family with the author, it
        provides supplemental architectural review in normal operation and does not count as the primary cross-agent
@@ -118,27 +127,39 @@ risk of the change:
      - **PR authored by Codex**: primary mandatory reviewers are **Gemini 4 Argon** (via Antigravity),
        **Claude Opus 5.5** (via Antigravity), or **Claude Code**; a GPT-family review does not count as a cross-agent
        review of a Codex PR.
-2. **Quota and token fallback**:
+2. **Quota and token fallback order**:
    - **Gemini 4 Argon**, **Claude**, and **Codex** all have finite token/review quotas.
-   - If **Gemini 4 Argon** is out of tokens, the review it was assigned is done first by the non-author model family
-     (**Codex** for a Claude Code PR; **Claude Opus 5.5** via Antigravity or **Claude Code** for a Codex PR).
-   - If both cross-family deep reviewers are out of quota on a Claude Code PR (for example, both Argon and Codex are
-     exhausted), an independent-context Claude review (**Claude Opus 5.5** via Antigravity, or **Claude Sonnet 5.5** via
-     Claude Code) may serve as a best-effort fallback rather than blocking solely on model family.
-   - Every fallback review **must name the fallback at its top** and state explicitly which of the primary reviewer's
-     checks (such as Argon's numerical bounds, colour invariants, locks and cancellation) it did and did not cover.
-   - **Gemini 3.8 Flash never serves as the sole fallback** for a mandatory review. If no deep reviewer is available,
-     the PR waits and the item goes under `"Waiting for the owner"` in [`docs/TODO.md`](../TODO.md).
+   - If **Gemini 4 Argon** is out of tokens, the review it was assigned falls back first to the non-author model family:
+     - **Codex** for a **Claude Code** PR;
+     - **Claude Opus 5.5** (via Antigravity) or **Claude Code** (**Opus 5.5**) for a **Codex** PR.
+   - If all cross-family deep reviewers are out of quota on a **Claude Code** PR (both Argon and Codex exhausted), the
+     same-family fallback order is:
+     1. **Claude Opus 5.5 (via Antigravity)** first, because it runs in its own harness and session (independent of the
+        authoring session's context, though sharing the Claude model family).
+     2. **Claude Sonnet 5.5** second (when Opus 5.5 is also unavailable), **strictly requiring a fresh session** (no
+        shared context with the session that authored the PR) and a **minimum reasoning effort of `high` (extended
+        thinking enabled)**.
+   - On a **Codex** PR when Argon, Opus 5.5, and Claude Code (Opus 5.5) are all out of quota, **Claude Sonnet 5.5** in
+     a fresh session at **minimum `high` (extended thinking)** reasoning effort may likewise serve as a fallback deep
+     reviewer.
+   - Every fallback review **must name the fallback and its reasoning effort at the top**, state whether it shares the
+     author's model family (`not independent of the author's model family; independent session`), and state explicitly
+     which of the primary reviewer's checks (such as Argon's numerical bounds, colour invariants, locks and
+     cancellation) it did and did not cover.
+   - **Gemini 3.8 Flash** and any **Claude Sonnet 5.5 run below `high` reasoning effort** never satisfy a mandatory
+     review. If no qualified deep reviewer is available, the PR waits and the item goes under `"Waiting for the owner"`
+     in [`docs/TODO.md`](../TODO.md).
 
 ---
 
 ## 4. Orchestration & Review Protocol
 
-### Step 1: Intake and Scope Classification
+### Step 1: Mechanical Intake and Reviewer Dispatch (Gemini 3.8 Flash)
 
 1. Read [`docs/HANDOFF.md`](../HANDOFF.md) (*In progress*, agent queues) and inspect open PRs via `gh pr list`.
 2. Record the exact head commit SHA of the PR being inspected (`gh pr view <id> --json headRefOid`).
-3. Classify the PR against the mandatory review triggers in [`AGENTS.md`](../../AGENTS.md):
+3. Mechanically match the PR's changed paths and topics against the mandatory review triggers in
+   [`AGENTS.md`](../../AGENTS.md):
    - Decoder seam (`ArwImage`, `LensProfile`, `RawDeveloper`, `LensCorrection`, `RawRenderer`, `RawCache`, `LinearImage`)
    - Colour, precision, white balance, demosaicing, camera look, crop, or orientation
    - Buffer sharing, threads, locks, or coroutine cancellation
@@ -147,28 +168,30 @@ risk of the change:
    - Signing, release/nightly workflows, or CI checks
    - New dependencies, native code, ABIs, or `third_party/` updates
    - Cross-area changes touching another agent's partition
+4. **Escalate unconditionally**: If any path or topic matches the list above—or if there is any doubt ("when unsure,
+   escalate")—assign the PR to the appropriate deep reviewer under §3.2–§3.4 without judging whether the diff is safe.
 
-### Step 2: Model Dispatch and Inspection
+### Step 2: Deep Inspection (Gemini 4 Argon / Claude Opus 5.5 / Peer Agent / Qualified Fallback)
 
-1. Match the PR's risk profile to the appropriate deep reviewer under §3.1–§3.4 (Gemini 3.8 Flash may pre-screen and
-   check contracts, followed by Gemini 4 Argon, Claude Opus 5.5, or peer agent review for mandatory categories).
-2. Inspect the full diff (`gh pr diff <id>`) and surrounding source context in read-only mode.
-3. Check CI status on the exact head commit (`gh pr checks <id>`) and note what was verified by CI versus what
+1. Inspect the full diff (`gh pr diff <id>`) and surrounding source context in read-only mode.
+2. Check CI status on the exact head commit (`gh pr checks <id>`) and note what was verified by CI versus what
    remains a phone-only check in [`docs/DEVICE_CHECKS.md`](../DEVICE_CHECKS.md).
 
 ### Step 3: Identity-Transparent Review Publication
 
 When publishing a review via `gh pr review`, always comply with these formatting and transparency rules:
 
-1. **Explicit model, agent & fallback header**: Every review or PR comment posted from Antigravity must begin by
-   stating the exact model that performed the review (and any fallback role):
+1. **Explicit model, agent, reasoning-effort & fallback header**: Every review or PR comment must begin by stating the
+   exact model that performed the review (and its reasoning effort / fallback / family-independence status when
+   applicable):
    ```markdown
    Reviewed by **<Model Name>** (via Antigravity) — inspected commit `<short-sha>`.
    ```
    Synthetic examples:
-   - `Reviewed by **Gemini 3.8 Flash** (via Antigravity, pre-screen) — inspected commit 1111111.`
+   - `Reviewed by **Gemini 3.8 Flash** (via Antigravity, mechanical triage & contract check) — inspected commit 1111111.`
    - `Reviewed by **Gemini 4 Argon** (via Antigravity) — inspected commit 2222222.`
-   - `Reviewed by **Claude Opus 5.5** (via Antigravity, fallback for Gemini 4 Argon) — inspected commit 3333333.`
+   - `Reviewed by **Claude Opus 5.5** (via Antigravity, fallback for Gemini 4 Argon; same model family as author, independent session) — inspected commit 3333333.`
+   - `Reviewed by **Claude Sonnet 5.5 (high thinking)** (via Claude Code, fresh session, fallback for Gemini 4 Argon; same model family as author) — inspected commit 4444444.`
 2. **Structured body**:
    - **Scope & fallback coverage**: Brief statement of the files and invariants inspected; when acting as a fallback,
      state which of the primary reviewer's checks (numerical bounds, colour invariants, locks and cancellation) were

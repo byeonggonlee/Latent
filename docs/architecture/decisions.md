@@ -24,16 +24,24 @@ responsible authoring agent.
 
 - Antigravity never writes or edits code, tests, build scripts or CI workflows. Any defect or missing test it finds
   is published in the PR review and/or added to the responsible authoring agent's queue in `docs/HANDOFF.md`.
+- **Gemini 3.8 Flash** serves as the mechanical dispatcher ("when unsure, escalate"): it matches changed paths and
+  topics against `AGENTS.md`, assigns the deep reviewer by author family, and keeps `docs/HANDOFF.md` up to date,
+  without judging whether a mandatory-review change is safe.
+- **Claude Sonnet 5.5** may author code and tests in Claude Code's area at a minimum reasoning effort of `high`
+  (extended thinking); for changes on the `AGENTS.md` mandatory-review list, **Claude Opus 5.5** is preferred and
+  **Sonnet 5.5** requires `high` or `max` extended thinking.
 - Every PR review published from Antigravity explicitly states both the reviewing model and the agent at the top of
   the review (`Reviewed by <Model> (via Antigravity)`), anchored to the inspected commit SHA, and uses `--comment`
   because all agents currently share the owner's `gh` account.
-- Important changes (as listed in `AGENTS.md`) require a deep review rather than a **Gemini 3.8 Flash** pre-screen
-  alone, preferring a different model family from the PR author (**Gemini 4 Argon** or **Codex** for a Claude Code
-  PR; **Gemini 4 Argon**, **Claude Opus 5.5**, or **Claude Code** for a Codex PR). When **Gemini 4 Argon** or the
-  primary cross-family reviewer is out of tokens/quota, the review falls back to another deep reviewer (including an
-  independent-context Claude review on a Claude Code PR when Argon and Codex are both exhausted), naming the fallback
-  and any unverified checks at the top of the review; if no deep reviewer is available, the PR waits under "Waiting
-  for the owner" in `docs/TODO.md`.
+- Important changes (as listed in `AGENTS.md`) require a deep review rather than **Gemini 3.8 Flash** alone,
+  preferring a different model family from the PR author (**Gemini 4 Argon** or **Codex** for a Claude Code PR;
+  **Gemini 4 Argon**, **Claude Opus 5.5**, or **Claude Code** for a Codex PR). When **Gemini 4 Argon** is out of
+  tokens, the review falls back first to the non-author model family (**Codex** for a Claude Code PR; **Claude Opus
+  5.5** via Antigravity or **Claude Code** for a Codex PR); when cross-family deep reviewers are also exhausted on a
+  Claude Code PR, the same-family fallback order is **Claude Opus 5.5** (via Antigravity, in its own session) first,
+  and **Claude Sonnet 5.5** at minimum `high` (extended thinking) reasoning effort from a **fresh session** second,
+  stating at the top that it shares the author's model family along with any unverified Argon checks; if no qualified
+  deep reviewer is available, the PR waits under "Waiting for the owner" in `docs/TODO.md`.
 
 **Opens again** if the owner changes the agent roster, model assignments, or authoring boundaries.
 
