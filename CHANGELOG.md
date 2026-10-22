@@ -16,8 +16,9 @@ with the phone's location, and develops them, without a cloud or an account.
 - **Geotags** from the phone's own location record or an exported Google Timeline: GPS tags in a JPEG's EXIF, an
   XMP sidecar for a raw file.
 - **Develops raw files**: Sony ARW with the camera's lens corrections, and the DNGs of phones (such as a Galaxy's
-  Pro mode) with their shading corrections. JPEGs are edited the same way; a JPEG's original is kept and can be
-  restored.
+  Pro mode) with their shading corrections, and with colours matched to the light of the shot between the two a
+  phone calibrates for (tungsten and daylight, say). JPEGs are edited the same way; a JPEG's original is kept and
+  can be restored.
 - **Edits**: exposure and tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise
   reduction, filters, cropping and perspective with auto level, spot healing, and masks (linear, radial, brush,
   colour range, tone range, and subject and background found on the phone). Edits stay editable and can be kept
@@ -34,10 +35,12 @@ with the phone's location, and develops them, without a cloud or an account.
 
 ### Good to know
 
-- Android 15 (API 35) or later.
+- Android 15 (API 35) or later, on a phone with a 64-bit ARM processor (`arm64-v8a`), as every recent phone has:
+  32-bit phones and x86 Chromebooks cannot install it.
 - Tried with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may work. Raw
-  development reads Sony ARW, DNG mosaics and linear DNGs (a Galaxy's Pro mode and Expert RAW), uncompressed, in
-  lossless JPEG or in JPEG XL. Phone DNGs are developed without correcting the lens's distortion.
+  development reads Sony ARW, DNG mosaics and linear DNGs (a Galaxy's Pro mode and Expert RAW, and a Pixel's, which
+  shows as one with its cover JPEG; not tried with a Pixel yet), uncompressed, in lossless JPEG or in JPEG XL.
+  Phone DNGs are developed without correcting the lens's distortion.
 - Everything stays on the phone: no account, no analytics, and the internet only for the optional map, which
   is off until you turn it on. See [`PRIVACY.md`](https://github.com/byeonggonlee/Latent/blob/main/PRIVACY.md).
 - Export is JPEG only, on an 8-bit pipeline and an SDR screen. There is no sky mask yet.

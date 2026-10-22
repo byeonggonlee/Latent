@@ -39,13 +39,15 @@ class StoreAssetsTest {
         return bitmap
     }
 
-    private fun save(bitmap: Bitmap, name: String) {
+    /** Play takes the icon with alpha, and the feature graphic and the developer page's header only without it (24-bit PNG). */
+    private fun save(bitmap: Bitmap, name: String, opaque: Boolean = false) {
         folder.mkdirs()
+        bitmap.setHasAlpha(!opaque)
         File(folder, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     @Test
-    fun drawsTheStoreIconAndFeatureGraphic() {
+    fun drawsTheStorePictures() {
         assumeTrue(System.getenv("LATENT_STORE_ASSETS") != null)
         save(mark(512), "icon-512.png")
 
@@ -65,11 +67,27 @@ class StoreAssetsTest {
         }
         canvas.drawText("Develop photos on your phone.", 434f, 320f, tagline)
         canvas.drawText("From camera to map, privately.", 434f, 368f, tagline)
-        save(graphic, "feature-graphic-1024x500.png")
+        save(graphic, "feature-graphic-1024x500.png", opaque = true)
+
+        // The developer page's header, 4096 × 2304: the mark large in the middle, its developer's surface drawn across the
+        // whole width. Play shows it cropped to a wide band on some screens, so nothing lies far above or below the middle.
+        val header = Bitmap.createBitmap(4096, 2304, Bitmap.Config.ARGB_8888)
+        Canvas(header).apply {
+            drawColor(BACKGROUND)
+            val unit = 22f // pixels for each dp of the icon's 108 dp canvas: the 40 dp disc comes out 880 px across
+            val left = 2048f - 54f * unit
+            val top = 1152f - 54f * unit
+            drawRect(0f, top + 54.5f * unit, 4096f, top + 57.5f * unit, Paint().apply { color = AMBER })
+            val foreground = ContextCompat.getDrawable(context, R.drawable.ic_launcher_foreground)!!
+            foreground.setBounds(left.toInt(), top.toInt(), (left + 108f * unit).toInt(), (top + 108f * unit).toInt())
+            foreground.draw(this)
+        }
+        save(header, "developer-header-4096x2304.png", opaque = true)
     }
 
     private companion object {
         val BACKGROUND = 0xFF17171A.toInt()
         val CREAM = 0xFFF2EDE4.toInt()
+        val AMBER = 0xFFE8A23A.toInt()
     }
 }

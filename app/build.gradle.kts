@@ -16,7 +16,9 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.byeonggon.latent"
+        // The package on the phones and on Play, the owner's choice of 2026-10-22 (the developer on Play is Latent
+        // Image). The code keeps its namespace above, which no one sees.
+        applicationId = "com.latentimage.latent"
         minSdk = 35
         targetSdk = 37
         // The nightly and stable builds on GitHub pass the number of commits and a name with the date (see docs/RELEASES.md);
@@ -24,9 +26,10 @@ android {
         versionCode = (project.findProperty("latentVersionCode") as String?)?.toInt() ?: 1
         versionName = (project.findProperty("latentVersionName") as String?) ?: (project.findProperty("latent.versionBase") as String)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // The builds for the phones of today carry the code of 64-bit ARM only (-PlatentAbis=arm64-v8a), which is a third
-        // smaller; any other build, an emulator's say, carries all the kinds.
-        (project.findProperty("latentAbis") as String?)?.let { abis -> ndk { abiFilters += abis.split(',').map(String::trim) } }
+        // Every build carries the native code (LiteRT's) of 64-bit ARM only, the kind of every phone the app is for:
+        // the owner's choice, 2026-10-21. An emulator of another kind takes -PlatentAbis=x86_64.
+        val abis = (project.findProperty("latentAbis") as String?) ?: "arm64-v8a"
+        ndk { abiFilters += abis.split(',').map(String::trim) }
     }
 
     // The upload key stays out of the repository: keystore.properties (storeFile, storePassword,
@@ -65,10 +68,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    lint {
+        // Also as text, which CI prints into its log.
+        textReport = true
+    }
     buildFeatures {
         compose = true
     }
 
+    // The committed schemas, for the migration tests to build a database from: MigrationTestHelper reads them from the
+    // assets of the variant under test, and a unit test's own assets are not among those. Debug builds only.
+    sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -126,6 +136,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    // Builds a database from a committed schema (app/schemas), to test the migration from it.
+    testImplementation(libs.androidx.room.testing)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)

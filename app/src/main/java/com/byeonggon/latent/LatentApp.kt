@@ -88,7 +88,7 @@ class AppContainer(private val context: Context) {
     val maskDetector = MaskDetector { LiteRtSegmenter(context.assets) }
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())
-    val onlineAccess = OnlineAccess(settings)
+    val onlineAccess = OnlineAccess(settings, appIdentity().versionName)
     val mapTiles = MapTiles(context, onlineAccess)
 
     val backupWriter = BackupWriter(database, settings, storage.root, appIdentity())
@@ -107,7 +107,7 @@ class AppContainer(private val context: Context) {
             libraryIndex.adoptUnknownFiles()
             if (LibraryStorage.canReadMedia(context)) phoneLibrary.refresh(folders)
         },
-        hasOriginal = { storage.exists(storage.originalOf(File(it.path))) },
+        hasOriginal = { storage.keepsOriginal(File(it.path)) },
     )
 
     private fun appIdentity(): AppIdentity {

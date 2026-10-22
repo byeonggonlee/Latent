@@ -141,14 +141,20 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
-| Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice (2026-10-21): `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind | `claude/arm64-only` (pull request, reviewed by Codex) | `app/build.gradle.kts`, `.github/workflows/build.yml`, `.github/workflows/nightly.yml`, `docs/RELEASES.md`, `docs/AI_MASKS.md`, `docs/PLAY_LISTING.md` | 2026-10-21 |
+| Codex | Implement DNG OpcodeList3 WarpRectilinear with synthetic parser/geometry regressions; retain Sony lens behavior. Owner authorized 2026-10-22; phone comparison follows implementation. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawRenderer.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 
 ## For Codex
 
 **Order set by the owner (2026-10-21):** 4 (below), then 1, then 2. Start 2 only once Claude Code's decode
 cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
 touch the seam, as it reviews yours.
+
+### 5. The rule for posting reviews: agreed by the owner (2026-10-22)
+
+- **What**: `codex/review-posting-rule` (commits `3a6b7b1`, `54d0e9b`, not pushed) adds "Publishing PR reviews" to
+  `AGENTS.md`. The owner agrees with it and adds that a plain LGTM is enough when a review finds nothing to fix.
+- **Do**: add that, bring `main` in, and push it (documentation only). Your *In progress* row for
+  `codex/dng-illuminants` can go to *Done* too: PR #9 is merged.
 
 ### 1. DNG: a colour matrix between the two calibration illuminants (implemented, review and phone judgement pending)
 
@@ -210,20 +216,14 @@ touch the seam, as it reviews yours.
 Nothing handed over yet. Its own next items, so that Codex does not pick them too, in this order (set by the owner
 2026-10-21):
 
-- Native code for 64-bit ARM only (under *In progress*).
 - Import from a card reader, or from a camera in Mass Storage mode, as a sync from the camera does (asked by the
   owner 2026-10-21): the folder picked once in the system's dialog (`ACTION_OPEN_DOCUMENT_TREE`) as a `CameraSource`
   beside `MtpCameraSource`, so that skipping what was imported, the dates and the places work as they do over MTP;
   a Sony in Mass Storage mode is offered that instead of only being asked to switch to MTP. No new permission.
 - The sky mask (stage 2 of `AI_MASKS.md`): the owner found the subject mask fine on the phone (2026-10-21), which
   was what held it back. The model and its conversion are downloads: ask the owner first, with sizes and sources.
-- Test the next migration against `app/schemas/.../13.json` with Room's `MigrationTestHelper` (`room-testing`).
-- The map: make the OpenStreetMap credit a link to its copyright page, and send the installed version in the
-  `User-Agent` (`map/OnlineAccess.kt` still says `Latent/0.1`).
 - `PRIVACY.md`: its date (October 15) is from before backups; say also that a restore copies the picked file into
   the app's cache while the summary is open.
-- CI upkeep: the actions still on their Node 20 majors (`checkout`, `setup-java`, `setup-gradle`,
-  `upload-artifact` `@v4`), the recursive `chown` of the SDK (about 70 s a run), lint findings printed into the log.
 
 ## For Antigravity
 
@@ -233,7 +233,15 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Codex | Two-illuminant DNG interpolation merged; numerical/regression validation complete, tungsten photo judgement remains open in DEVICE_CHECKS. | [PR #9](https://github.com/byeonggonlee/Latent/pull/9) |
+| 2026-10-22 | Codex | Publish PR review guidance, permit concise LGTM for clean reviews, reconcile completed decoder work, and claim the owner-authorized WarpRectilinear work. | `codex/review-posting-rule` |
 | 2026-10-21 | Codex | Posted PR #10 review: no actionable bugs, exact-head CI passed, local builds/device tests not rerun. Added owner-requested guidance to publish future PR reviews with scope and verification limits. | `codex/review-posting-rule`; [review](https://github.com/byeonggonlee/Latent/pull/10#pullrequestreview-5601635855) |
+| 2026-10-22 | Claude Code (computer) | CI's actions on their Node 24 majors (checkout v7, setup-java v6, setup-gradle v6, upload-artifact v7); the SDK handed over folder by folder (41 s to 8 s); lint's findings printed into the log. Reviewed by Codex | [PR #15](https://github.com/byeonggonlee/Latent/pull/15), merged `1217517` |
+| 2026-10-22 | Claude Code (computer) | The map's credit links to OpenStreetMap's copyright page; the map servers are told the installed version. Reviewed by Codex; the tap on a phone is not tried yet | [PR #14](https://github.com/byeonggonlee/Latent/pull/14), merged `02bca02` |
+| 2026-10-22 | Claude Code (computer) | Room's `MigrationTestHelper` (`room-testing`, tests only) against the committed schemas, which the debug build carries as assets; a database made from `13.json` opens as it is. Reviewed by Codex | [PR #16](https://github.com/byeonggonlee/Latent/pull/16), merged `1d4b62e` |
+| 2026-10-22 | Claude Code (computer) | The originals the old package kept in `DCIM/Latent/.originals` are made the new one's own where they are (Codex's P2 on PR #11): copied beside themselves and swapped in only when whole, a move stopped at any point finished or started again, and a photo never given up for an original that is not in its place. Three more rounds of Codex's review found and closed the stopped-move cases; the move itself is not tried on a phone yet | [PR #12](https://github.com/byeonggonlee/Latent/pull/12), merged `895cf77` |
+| 2026-10-22 | Claude Code (computer) | The package name `com.latentimage.latent` (the owner's choice, developer name Latent Image on Play): `applicationId` only, the Kotlin namespace stays; the release key and the signing secrets recorded. Codex's review found one P2 left open at the merge: the originals the old app kept in `DCIM/Latent/.originals/` stay the old package's, and the new app reads them by path. The phones wait for its fix | [PR #11](https://github.com/byeonggonlee/Latent/pull/11), merged `3ea92c5` |
+| 2026-10-21 | Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice: `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind. Reviewed by Codex, CI green; the ABIs inside the APK and an `x86_64` build were not checked again | [PR #10](https://github.com/byeonggonlee/Latent/pull/10), merged `f82145d` |
 | 2026-10-21 | Codex | Restore uncompressed DNG strip/tile byte-count compatibility; actual row bytes checked before allocation; JPEG XL declared ranges remain strict. Required local checks and remote CI green. | `113ca0b`, [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) |
 | 2026-10-21 | Codex | Decoder bounds/recovery, minimal legacy frame contract and request dispatch/cancellation boundaries; JPEG XL tile size checked before allocation. Claude Code review fixes included; CI green. UI Job integration remains PR #8 and phone checks remain unverified. | [PR #7](https://github.com/byeonggonlee/Latent/pull/7), merged `938b5e0` |
 | 2026-10-21 | Claude Code (computer) | The 0.1.0 notes; Room schema exported and checked on CI; phone tests compiled on CI; test failures and `BackupSizeTest`'s heap growth in the log | `be92ec3`, `3765350`, `752fcc5`, `230ea56` |

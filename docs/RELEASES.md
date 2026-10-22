@@ -36,9 +36,10 @@ download link and a file manager:
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
 from is the one in the CI name, or in the release notes for a nightly. The version name is also what the About
-dialog shows. The CI and nightly builds carry the code of 64-bit ARM only (`-PlatentAbis=arm64-v8a`, 20 MB instead
-of 39 MB; every phone of today is that kind) and say so at the end of the name. A build on the owner's computer, and
-the stable one, carry all the kinds unless told otherwise (for Play, the AAB is split by the store itself). The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
+dialog shows. Every build carries the native code of 64-bit ARM only (`arm64-v8a`, 20 MB instead of 39 MB; every
+phone the app is for is that kind), the owner's choice of 2026-10-21; the CI and nightly builds say so at the end of
+the name. So does the AAB for Play: phones of another kind (32-bit ARM, x86 Chromebooks) are not offered the app. An
+emulator of another kind takes `-PlatentAbis=x86_64`. The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
 
 ## Signing
 
@@ -55,22 +56,27 @@ set by the owner under Settings, Secrets and variables, Actions:
 The workflow writes them to `keystore.properties` and the key store file on the runner, which is thrown away
 afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` already reads).
 
-- **For now** the key is the one in `~/.android/debug.keystore` of the owner's computer (alias `androiddebugkey`,
-  both passwords `android`): nightlies then update over the builds made on that computer, and nothing needs to
-  be uninstalled. It is a debug key, of no value to anyone, and **not** the key of a Play release.
+- **Since 2026-10-22** the secrets hold the release key: alias `latent`, `CN=Latent Image, C=KR`, RSA 4096, valid
+  for 100 years, made on the owner's computer and kept outside the repository, in a password manager and two
+  encrypted copies. Every nightly and stable build is signed with it. A build made on a computer without
+  `keystore.properties` is signed with that computer's debug key instead, and neither installs over the other.
 - **Without the secrets** the nightly builds, keeps the APK as an artifact (a login is needed to download it) and
   publishes nothing: an APK signed with a key no phone has would update nothing.
-- **At the first real release** a release key is made, kept in two places outside the repository and put in the
-  secrets in the same four; every phone then has to be reinstalled once, which takes the database along through a
-  backup and its restore (below). This happens at the same time as the package name is
-  settled, as that makes a new app anyway, so both are done before `v0.1.0`. The stable workflow refuses to run
-  without the secrets. Making the key:
+- **The release key** was made on 2026-10-22, the day the package name was settled as `com.latentimage.latent` (it
+  was `com.byeonggon.latent`). Either makes a new app, so every phone moves once, before `v0.1.0`, taking the
+  database along through a backup and its restore (below). Until then the secrets were empty and nightlies published
+  nothing. The stable workflow refuses to run without the secrets. How it was made, for the day another is needed:
 
   ```bash
   keytool -genkeypair -v -keystore latent-release.jks -alias latent -keyalg RSA -keysize 4096 -validity 36500
-  base64 -i latent-release.jks   # on Linux: base64 -w0 latent-release.jks; this is SIGNING_KEYSTORE_BASE64
-  keytool -list -v -keystore latent-release.jks   # note the SHA-256 fingerprint somewhere safe
+  keytool -J-Duser.language=en -list -v -keystore latent-release.jks   # note the SHA-256 fingerprint somewhere safe
+  base64 -i latent-release.jks | gh secret set SIGNING_KEYSTORE_BASE64 --repo byeonggonlee/Latent
+  gh secret set SIGNING_STORE_PASSWORD --repo byeonggonlee/Latent   # pasted at the prompt, out of the shell's history
   ```
+
+  The key store is PKCS12, so the key's password is the store's: `keytool` does not ask for it, and
+  `SIGNING_KEY_PASSWORD` is the same. On Linux the third line takes `base64 -w0`. The English locale on the second line gets round the `keytool` of JDK 25,
+  whose Korean messages fail while they print a certificate (`IllegalFormatConversionException`).
 
   Losing the key or its passwords means that no phone can update to any later build; keep the file and both
   passwords in a password manager and in one other place (for example an encrypted backup). `*.jks` and
@@ -89,6 +95,12 @@ build), the database goes with the old app; the photos in `DCIM/Latent` and the 
 3. Settings, **Backup and restore**, **Restore…**, pick the file, read the summary (photos found, photos not found by
    name, what replaces what), confirm.
 4. Online maps stay off until they are turned on again; location recording is started again by hand.
+
+Across the new package name the old app and the new one are two apps that can be installed side by side: install
+the new one first, restore into it, and uninstall the old one once the new one shows everything (step 2 without the
+uninstall). Meanwhile sync, edit and record places in one of them only. The originals the old app kept of the JPEGs
+it edited (`DCIM/Latent/.originals`) are its own, which shared storage shuts to another app's paths; the new one
+makes them its own as it lists the library, after which the old one can no longer edit those JPEGs again.
 
 The new app reads the backup of an older one; an older app refuses the backup of a newer one (see
 [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).

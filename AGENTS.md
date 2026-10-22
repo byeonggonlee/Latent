@@ -66,6 +66,8 @@ you start it, and log it there when it is done.
   owner explicitly asks for a private or chat-only review.
 - Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
   found), checks verified, and any unverified builds or device checks. Identify any fallback reviewer accurately.
+- A concise LGTM is enough when no actionable issues are found; keep the inspected commit and material validation
+  limits clear.
 - Post a review even when no bugs are found. Use a COMMENT review when reviewing through the PR author's own
   account, since that account cannot approve its own PR. Publishing a review does not authorize a merge.
 

@@ -2,11 +2,12 @@
 
 Everything to paste into the Play Console, written from what the app does today. Check it against the
 app again before submitting. Pictures are in [`store/`](../store): `icon-512.png`,
-`feature-graphic-1024x500.png` (regenerate with `LATENT_STORE_ASSETS=1 ./gradlew testDebugUnitTest --tests '*StoreAssetsTest'`).
+`feature-graphic-1024x500.png`, and `developer-header-4096x2304.png` for the developer page (regenerate with `LATENT_STORE_ASSETS=1 ./gradlew testDebugUnitTest --tests '*StoreAssetsTest'`).
 Phone screenshots still have to be taken on a phone, with photos the owner is happy to show.
 
 - App name: **Latent**
-- Package: `com.byeonggon.latent`
+- Package: `com.latentimage.latent` (settled 2026-10-22; it can never change once on Play)
+- Developer name: **Latent Image**
 - Category: Photography
 - Privacy policy URL: https://github.com/byeonggonlee/Latent/blob/main/PRIVACY.md
 - Source code: https://github.com/byeonggonlee/Latent (Apache License 2.0)

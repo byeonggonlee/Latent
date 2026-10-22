@@ -15,7 +15,7 @@ import androidx.room.Room
  * reads; the app's own database is left alone (the scan runs against an empty one in memory).
  *
  * Run it with `adb shell am instrument`, not with Gradle's connectedAndroidTest, which uninstalls the app.
- * The app needs the media permissions first: `adb shell pm grant com.byeonggon.latent <permission>`.
+ * The app needs the media permissions first: `adb shell pm grant com.latentimage.latent <permission>`.
  */
 @RunWith(AndroidJUnit4::class)
 class PhoneLibraryOnDeviceTest {
