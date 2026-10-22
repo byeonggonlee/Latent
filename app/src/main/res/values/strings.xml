@@ -49,6 +49,7 @@
     <string name="edit_copied">Edit copied. It can be pasted onto other photos.</string>
     <string name="filter_saved">Saved as a filter.</string>
     <string name="open_failed">Could not open the photo.</string>
+    <string name="edit_loses_gain_map">An HDR photo: the edit shows and saves it without its extra brightness on HDR screens. The original keeps it.</string>
     <plurals name="library_adopted">
         <item quantity="one">Added %d item that was in the folder to the library.</item>
         <item quantity="other">Added %d items that were in the folder to the library.</item>
