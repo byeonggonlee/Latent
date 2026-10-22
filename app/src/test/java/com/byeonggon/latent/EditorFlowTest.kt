@@ -67,6 +67,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /** Edits photos through the real screens: open one from the library, move a slider, save, and take it back. */
 @RunWith(RobolectricTestRunner::class)
@@ -685,6 +687,48 @@ class EditorFlowTest {
         assertEquals(DetectedKind.SKY, local.mask.detection!!.kind)
         assertEquals("top", local.mask.detection!!.model)
         assertEquals(false, local.mask.inverted)
+    }
+
+    @Test
+    fun hidesTheSkyMaskOnAPhoneWhereItsModelCannotRun() {
+        container.maskDetector.makeSegmenter = { kind -> if (kind == DetectedKind.SKY) throw IllegalStateException("no delegate") else RightHalfIsSubject() }
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 하늘").performScrollTo().performClick()
+
+        waitForText("이 휴대전화에서는 하늘 마스크를 쓸 수 없어 버튼을 숨겼습니다. 다른 마스크는 그대로 쓸 수 있습니다.")
+        compose.onAllNodesWithText("+ 하늘").assertCountEquals(0)
+        // The subject has a model of its own, which still runs.
+        compose.onNodeWithText("+ 피사체").performScrollTo().performClick()
+        waitForText("피사체 1")
+    }
+
+    /** Stands in for a model that takes its time: finds the sky once [release] is counted down. */
+    private class SlowSky(val release: CountDownLatch) : Segmenter {
+        override val model = "slow"
+        override val modelVersion = 1
+
+        override fun segment(picture: ShownPicture): Segmentation {
+            release.await(20, TimeUnit.SECONDS)
+            return TopHalfIsSky().segment(picture)
+        }
+    }
+
+    @Test
+    fun saysWhatItLooksForWhileTheModelRuns() {
+        val release = CountDownLatch(1)
+        container.maskDetector.makeSegmenter = { kind -> if (kind == DetectedKind.SKY) SlowSky(release) else RightHalfIsSubject() }
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 하늘").performScrollTo().performClick()
+
+        waitForText("하늘을 찾는 중…")
+        compose.onNodeWithText("+ 피사체").performScrollTo().assertIsNotEnabled()
+        release.countDown()
+
+        waitForText("하늘 1")
+        compose.onAllNodesWithText("하늘을 찾는 중…").assertCountEquals(0)
+        compose.onNodeWithText("+ 피사체").performScrollTo().assertIsEnabled()
     }
 
     @Test
