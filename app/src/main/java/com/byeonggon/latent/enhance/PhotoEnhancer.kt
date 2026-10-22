@@ -173,6 +173,10 @@ object PhotoEnhancer {
         val bitmap = timed("${original.name}: decode") {
             BitmapFactory.decodeFile(original.path, options) ?: throw IOException("Cannot decode ${original.name}")
         }
+        // An Ultra HDR photo's gain map was made for its tones as they were, and the encoder would write it back: an HDR
+        // screen would then brighten what the edit changed. The edit is saved as an ordinary picture, as the editor says,
+        // the way a reframed one already is.
+        bitmap.gainmap = null
         try {
             timed("${original.name}: tones") { render(bitmap, ToneRenderer(edit, shrunk(original, ToneRenderer.OVERVIEW_EDGE))) }
             timed("${original.name}: detail") { DetailFilter(edit.adjustments, scale = 1f).applyTo(bitmap) }
