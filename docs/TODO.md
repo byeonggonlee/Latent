@@ -84,3 +84,9 @@ Last updated 2026-10-22.
   (ROADMAP items 7, 11, 12). HDR in the viewer, and telling that an edit drops the gain map, are done (2026-10-22,
   pull requests #27 and #28).
 - The stable workflow's first run, a baseline profile and the closed test that a personal Play account needs.
+- Optional: rename the source package `com.byeonggon.latent` (the `namespace`; about 300 files) to match the
+  application id `com.latentimage.latent`. Nobody sees it and nothing needs it before Play, so it waits. If it is done,
+  do it in one rename-only pull request while no other is open (no change of content; the CI checks, the schema diff
+  and a search for the old name come out clean). It could be a trial of Gemini 3.8 Flash as an author, which needs the
+  owner's one-off exception to the rule that Antigravity writes no code, recorded in `architecture/decisions.md`, and
+  a review by another model.
