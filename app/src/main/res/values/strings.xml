@@ -480,7 +480,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="about">About Latent</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_text">Photos from your camera and your phone, developed on the phone, placed on a map when you wish. Everything stays on the phone: no account, no ads, no analytics.</string>
-    <string name="about_built_from">Made with Jetpack Compose, Room, Coil, Media3, AndroidX ExifInterface, Gson and LiteRT, all under the Apache License 2.0, as is Latent itself. Subject masks are found on the phone by the U²-Netp model (Qin et al., Apache License 2.0). Expert RAW files are read with jxlatte (Leo Izen, MIT License). Map pictures come from OpenStreetMap, © OpenStreetMap contributors, when online maps are on.</string>
+    <string name="about_built_from">Made with Jetpack Compose, Room, Coil, Media3, AndroidX ExifInterface, Gson and LiteRT, all under the Apache License 2.0, as is Latent itself. Subject masks are found on the phone by the U²-Netp model (Qin et al., Apache License 2.0), sky masks by EfficientViT (MIT HAN Lab, Apache License 2.0). Expert RAW files are read with jxlatte (Leo Izen, MIT License). Map pictures come from OpenStreetMap, © OpenStreetMap contributors, when online maps are on.</string>
     <string name="about_trademarks">Sony and ZV-E10 are trademarks of Sony Group Corporation; Google Timeline is a feature of Google LLC. Latent is not affiliated with or endorsed by either.</string>
     <string name="about_privacy">Privacy policy</string>
     <string name="about_source">Source code and license</string>
@@ -628,8 +628,14 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="mask_background">Background %1$d</string>
     <string name="finding_subject">Finding the subject…</string>
     <string name="subject_not_found">Nothing in this photo stands out clearly enough to be its subject.</string>
+    <string name="add_sky">+ Sky</string>
+    <string name="mask_sky">Sky %1$d</string>
+    <string name="mask_not_sky">All but the sky %1$d</string>
+    <string name="finding_sky">Finding the sky…</string>
+    <string name="sky_not_found">No sky was found in this photo.</string>
     <string name="subject_failed">The subject could not be found. Try again.</string>
     <string name="subject_unavailable">Subject and background masks cannot run on this phone, so their buttons are hidden. Every other mask works as before.</string>
+    <string name="sky_unavailable">Sky masks cannot run on this phone, so their button is hidden. Every other mask works as before.</string>
     <string name="mask_outline_lost">The outline of this mask is missing, so it changes nothing.</string>
     <string name="detect_again">Find again</string>
     <string name="colour_only">Only this colour</string>

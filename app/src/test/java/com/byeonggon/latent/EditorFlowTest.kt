@@ -657,7 +657,34 @@ class EditorFlowTest {
         compose.onAllNodesWithText("+ 피사체").assertCountEquals(0)
         compose.onAllNodesWithText("+ 배경").assertCountEquals(0)
         compose.onNodeWithText("+ 선형").assertIsDisplayed()
+        // The sky has a model of its own, not tried yet: its button stays until it fails too.
+        compose.onNodeWithText("+ 하늘").assertExists()
         assertTrue(PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit }) == null)
+    }
+
+    /** Stands in for the sky model: sees the top half of any picture as sky. */
+    private class TopHalfIsSky : Segmenter {
+        override val model = "top"
+        override val modelVersion = 1
+
+        override fun segment(picture: ShownPicture) = Segmentation(32, 32, FloatArray(32 * 32) { if (it / 32 < 16) 0.95f else 0.02f })
+    }
+
+    @Test
+    fun editsTheSkyFoundOnThePhone() {
+        container.maskDetector.makeSegmenter = { kind -> if (kind == DetectedKind.SKY) TopHalfIsSky() else RightHalfIsSubject() }
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("부분").performScrollTo().performClick()
+        compose.onNodeWithText("+ 하늘").performScrollTo().performClick()
+        waitForText("하늘 1")
+        slide("노출", to = -1f)
+        compose.onNodeWithText("완료").assertIsEnabled().performClick()
+
+        waitForText("원본으로 되돌리기")
+        val local = PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit })!!.locals.single()
+        assertEquals(DetectedKind.SKY, local.mask.detection!!.kind)
+        assertEquals("top", local.mask.detection!!.model)
+        assertEquals(false, local.mask.inverted)
     }
 
     @Test

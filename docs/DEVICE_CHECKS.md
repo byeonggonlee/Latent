@@ -149,6 +149,20 @@ items below stay open until each is looked at. Read the times with `adb logcat -
 - [ ] A mask whose outline file is deleted (`adb shell run-as com.latentimage.latent rm files/masks/<id>.mask`, then reopen the photo): "The outline of this mask is missing" and "Find again".
 - [ ] Release build: the R8 rules keep LiteRT's classes; "+ Subject" works in `assembleRelease -PdebugSignedRelease` (a missing class would show as a crash or "cannot run" in logcat).
 
+## Sky masks (EfficientViT-Seg B1 on LiteRT)
+
+Built 2026-10-22 on the subject masks' path; read the times with `adb logcat -s SubjectMask SkyMaskOnDeviceTest`.
+
+- [ ] Run `SkyMaskOnDeviceTest` (`-e class com.byeonggon.latent.enhance.SkyMaskOnDeviceTest`, with `-e jpegSample <path>` of a
+      photo with sky): 1 × 512 × 512 × 3 in, 1 × 64 × 64 × 1 out, a plain sky found on both accelerators. Does the GPU set up,
+      or does the log say it fell back to the CPU (the model's `GATHER_ND` and `BROADCAST_TO`)? Cold and warm times.
+- [ ] Quality: tree branches and wires against the sky, haze, sunsets, night, reflections in water, a sky seen through a
+      window, a portrait photo (stretched to the square the model takes), a photo with no sky ("No sky was found").
+- [ ] "+ Sky" on a photo, then darker exposure and more saturation on it, and "All but the sky" (Invert): the edges
+      follow the horizon and the trees in the preview and the saved JPEG; brush add and erase work on it.
+- [ ] Subject and sky on one photo: each model is set up once (two "set up in" lines), and both stay.
+- [ ] APK size: the release APK grows by about the model's 19.5 MB (stored uncompressed).
+
 ## Ultra HDR photos (gain map)
 
 - [ ] Open an Ultra HDR photo from the phone's camera in the editor: the note says it is saved without its HDR

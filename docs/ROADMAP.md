@@ -70,8 +70,11 @@ Each is small or medium, works offline, and needs no new permission.
    in the Masks panel run U²-Netp (converted from the authors' weights, 4.8 MB, in the APK) with LiteRT 2.3.0,
    on the GPU or else the CPU, once per photo and only when tapped; the outline is refined along the picture's
    edges and kept in a file of its own, rendered through the brush mask's path in both renderers, and can be
-   painted on with the brush. About +14.5 MB installed on a 64-bit phone. Next: sky (stage 2); the bake-off on
+   painted on with the brush. About +14.5 MB installed on a 64-bit phone. The bake-off on
    the owner's photos (stage 0) was skipped. Details and provenance in `AI_MASKS.md`.
+   *Stage 2 (sky) built 2026-10-22, to be judged on a phone:* "+ Sky" runs EfficientViT-Seg B1 (ADE20K, 19.5 MB
+   in the APK) beside the subject's model, the sky's probability refined along the picture's edges as the subject's
+   outline is. Next: tap to select (stage 3).
 7. **LUTs (`.cube`)** as looks with an intensity slider. *Stills done 2026-10-15, to be judged on a phone;
    the same stage for video (Log footage) is next, with item 12.* "Import LUT…" in the filter panel reads
    Adobe's and Resolve's 3D `.cube` files (2 to 65 points a side, `DOMAIN_MIN`/`DOMAIN_MAX`, up to 20 MB) and

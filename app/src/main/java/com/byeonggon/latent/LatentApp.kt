@@ -28,6 +28,8 @@ import com.byeonggon.latent.data.SettingsRepository
 import com.byeonggon.latent.data.Trash
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.enhance.LiteRtSegmenter
+import com.byeonggon.latent.enhance.SegmenterModel
+import com.byeonggon.latent.enhance.DetectedKind
 import com.byeonggon.latent.enhance.LutStore
 import com.byeonggon.latent.enhance.MaskStore
 import com.byeonggon.latent.location.Geotagger
@@ -85,7 +87,9 @@ class AppContainer(private val context: Context) {
     val editSaver = EditSaver(context, libraryEdits)
 
     /** Subject masks; the model is only made when one is first asked for. */
-    val maskDetector = MaskDetector { LiteRtSegmenter(context.assets) }
+    val maskDetector = MaskDetector { kind ->
+        LiteRtSegmenter(context.assets, spec = if (kind == DetectedKind.SKY) SegmenterModel.SKY else SegmenterModel.SUBJECT)
+    }
     val syncEngine = SyncEngine(storage, database, settings, geotagger)
     val timelineImporter = TimelineImporter(context, database.locationDao())
     val onlineAccess = OnlineAccess(settings, appIdentity().versionName)
