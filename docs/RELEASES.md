@@ -56,6 +56,13 @@ set by the owner under Settings, Secrets and variables, Actions:
 The workflow writes them to `keystore.properties` and the key store file on the runner, which is thrown away
 afterwards (`keystore.properties` is ignored by git, which `build.gradle.kts` already reads).
 
+The nightly and stable workflows build and sign in one job and publish in another (since 2026-10-22, the owner's
+choice before `v0.1.0`). The build job, which runs the tests, the Gradle plugins and every library the build pulls in,
+and holds the secrets, may only read the repository. The publish job may write to it, to make the release, but runs
+nothing of the build's and never sees the secrets: it takes the APK the build kept as an artifact, checks it against
+its checksum, and puts it out. A plugin or library that turned bad could still read the signing key, which the build
+needs to sign, but it could not publish a release or change the repository.
+
 - **Since 2026-10-22** the secrets hold the release key: alias `latent`, `CN=Latent Image, C=KR`, RSA 4096, valid
   for 100 years, made on the owner's computer and kept outside the repository, in a password manager and two
   encrypted copies. Every nightly and stable build is signed with it. A build made on a computer without

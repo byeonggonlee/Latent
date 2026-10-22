@@ -12,9 +12,9 @@ Last updated 2026-10-22.
       file that only looks like one in the library by name and size is compared whole before it is left out, and the
       person is asked first before the one-time transfer that comparing many of them takes. A file not compared, the
       person having declined or not yet answered, is never recorded as imported. Claude Code implements it.
-- [ ] **Release/nightly token scope priority** (legacy audit LA-09, HANDOFF): prefer separate read-only build and
-      write-permitted publication jobs. Current broad token scope is verified; no exploit was demonstrated.
-      Decide timing for a reviewed workflow change; this audit changes neither signing nor publication settings.
+- [x] **Release/nightly token scope priority** (legacy audit LA-09, HANDOFF; decided 2026-10-22): before the
+      `v0.1.0` tag. The nightly and stable workflows build in a read-only job and publish in a job of its own
+      (RELEASES.md, Signing); a reviewed pull request, the nightly after it shows the split works.
 
 - [x] **Signing secrets** (2026-10-22): the release key below is in the four secrets (`SIGNING_KEYSTORE_BASE64`,
       `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md), so the nightly now
