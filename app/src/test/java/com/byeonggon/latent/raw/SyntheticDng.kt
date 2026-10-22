@@ -48,10 +48,12 @@ internal object SyntheticDng {
         blacks: IntArray = intArrayOf(BLACK),
         linearization: IntArray? = null,
         gainMap: GainMap? = null,
+        opcodes3: ByteArray? = null,
         photometric: Int = 32803,
         compression: Int? = null,
         orientation: Int = 1,
         profile: ColorProfile = ColorProfile(),
+        defaultScale: FloatArray? = null,
     ): ByteArray = file(
         samples = { x, y ->
             val ax = x - ACTIVE[1]
@@ -70,7 +72,7 @@ internal object SyntheticDng {
             }
         },
         pattern = pattern, layout = layout, storage = storage, blacks = blacks, linearization = linearization,
-        gainMap = gainMap, photometric = photometric, compression = compression, orientation = orientation, profile = profile,
+        gainMap = gainMap, opcodes3 = opcodes3, photometric = photometric, compression = compression, orientation = orientation, profile = profile, defaultScale = defaultScale,
     )
 
     fun file(
@@ -81,10 +83,12 @@ internal object SyntheticDng {
         blacks: IntArray = intArrayOf(BLACK),
         linearization: IntArray? = null,
         gainMap: GainMap? = null,
+        opcodes3: ByteArray? = null,
         photometric: Int = 32803,
         compression: Int? = null,
         orientation: Int = 1,
         profile: ColorProfile = ColorProfile(),
+        defaultScale: FloatArray? = null,
     ): ByteArray {
         val values = Array(HEIGHT) { y -> IntArray(WIDTH) { x -> samples(x, y) } }
         val data = when (storage) {
@@ -115,10 +119,12 @@ internal object SyntheticDng {
             if (blacks.size == 4) Entry.shorts(0xC619, 2, 2) else null,
             rationals(0xC61A, *FloatArray(blacks.size) { blacks[it].toFloat() }),
             Entry.shorts(0xC61D, linearization?.last() ?: WHITE),
+            defaultScale?.let { rationals(0xC61E, *it) },
             Entry.longs(0xC61F, 1, 1),
             Entry.longs(0xC620, 26, 18),
             Entry.longs(0xC68D, *ACTIVE),
             gainMap?.let { Entry(0xC741, 7, it.bytes().size, it.bytes()) },
+            opcodes3?.let { Entry(0xC742, 7, it.size, it) },
         )
         val colorEntries = listOfNotNull(
             Entry.ascii(0x010F, "samsung"),
@@ -155,7 +161,7 @@ internal object SyntheticDng {
      */
     fun linear(
         red: Int, green: Int, blue: Int, lossless: Boolean = false, blacks: IntArray = intArrayOf(BLACK, BLACK + 8, BLACK + 16),
-        jpegXl: Boolean = false, baselineExposure: Float? = null,
+        jpegXl: Boolean = false, baselineExposure: Float? = null, opcodes3: ByteArray? = null,
     ): ByteArray {
         require(!jpegXl || (red == 192 && green == 380 && blue == 264 && blacks.contentEquals(intArrayOf(BLACK, BLACK + 8, BLACK + 16))))
         val levels = intArrayOf(red, green, blue)
@@ -203,7 +209,8 @@ internal object SyntheticDng {
                 rationals(0xC628, *NEUTRAL),
                 Entry.shorts(0xC65A, 21),
                 Entry.longs(0xC68D, *ACTIVE),
-            ).plus(listOfNotNull(baselineExposure?.let { signedRationals(0xC62A, it) })).sortedBy { it.tag }.toTypedArray(),
+            ).plus(listOfNotNull(baselineExposure?.let { signedRationals(0xC62A, it) },
+                opcodes3?.let { Entry(0xC742, 7, it.size, it) })).sortedBy { it.tag }.toTypedArray(),
         )
         tiff.write(dataAt, data)
         return tiff.bytes()

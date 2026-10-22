@@ -17,9 +17,9 @@ object RawDeveloper {
      * [cells] red-green-green-blue cells along each side, so 1 gives half the sensor's size and 2 a
      * quarter. Fast, free of demosaicing artefacts, and plenty for looking at a photo on a phone.
      */
-    fun developPreview(image: ArwImage, cells: Int = 1): LinearImage {
+    fun developPreview(image: ArwImage, cells: Int = 1, lensCorrection: Boolean = false): LinearImage {
         val result = LinearImage(image.cropWidth / (2 * cells), image.cropHeight / (2 * cells))
-        val color = ColorStage(image, result)
+        val color = ColorStage(image, result, lensCorrection && image.dngWarp != null)
         if (image.channels == 3) {
             // Colours already filled in: each pixel of the result averages a block of the same size a mosaic would give.
             val side = 2 * cells
@@ -42,6 +42,7 @@ object RawDeveloper {
                     color.store(y * result.width + x, red / count, green / count, blue / count)
                 }
             }
+            color.finish(image, 2 * cells)
             return result
         }
         val sensor = image.sensor
@@ -65,6 +66,7 @@ object RawDeveloper {
                 color.store(y * result.width + x, red / perColor, green / (2 * perColor), blue / perColor)
             }
         }
+        color.finish(image, 2 * cells)
         return result
     }
 
@@ -74,11 +76,11 @@ object RawDeveloper {
      * least, then red and blue from their differences to green, which vary far less than the colours
      * themselves. The few pixels along the edges, which lack the neighbours for it, average theirs.
      */
-    fun develop(image: ArwImage): LinearImage {
+    fun develop(image: ArwImage, lensCorrection: Boolean = false): LinearImage {
         val width = image.cropWidth
         val height = image.cropHeight
         val result = LinearImage(width, height)
-        val color = ColorStage(image, result)
+        val color = ColorStage(image, result, lensCorrection && image.dngWarp != null)
         if (image.channels == 3) {
             val sensor = image.sensor
             forRowBands(height) { from, until ->
@@ -90,6 +92,7 @@ object RawDeveloper {
                     }
                 }
             }
+            color.finish(image, 1)
             return result
         }
         // Until the colour stage at the end, the planes hold what the photosites recorded, white balanced.
@@ -170,6 +173,7 @@ object RawDeveloper {
                 color.store(index, red[index].toInt(), green[index].toInt(), blue[index].toInt())
             }
         }
+        color.finish(image, 1)
         return result
     }
 
@@ -230,7 +234,7 @@ object RawDeveloper {
     private fun between(value: Int, one: Int, other: Int): Int = value.coerceIn(min(one, other), max(one, other))
 
     /** White balance, highlight clipping and the camera's colour matrix, in that order. */
-    private class ColorStage(image: ArwImage, private val into: LinearImage) {
+    private class ColorStage(image: ArwImage, private val into: LinearImage, private val deferMatrix: Boolean) {
         /** The most a white-balanced sensor value can be. */
         val range = image.whiteLevel - image.blackLevel
 
@@ -244,6 +248,25 @@ object RawDeveloper {
         private val toLevel = LinearImage.MAX_LEVEL.toFloat() / range
 
         fun store(index: Int, r: Int, g: Int, b: Int) {
+            if (deferMatrix) {
+                into.red[index] = r.toShort()
+                into.green[index] = g.toShort()
+                into.blue[index] = b.toShort()
+            } else convert(index, r, g, b)
+        }
+
+        fun finish(image: ArwImage, step: Int) {
+            if (!deferMatrix) return
+            // OpcodeList3 planes are camera RGB, before the colour matrix mixes them.
+            image.dngWarp!!.straighten(into, image, step)
+            forRowBands(into.height) { from, until ->
+                for (index in from * into.width until until * into.width) {
+                    convert(index, into.red[index].toInt(), into.green[index].toInt(), into.blue[index].toInt())
+                }
+            }
+        }
+
+        private fun convert(index: Int, r: Int, g: Int, b: Int) {
             into.red[index] = level(matrix[0] * r + matrix[1] * g + matrix[2] * b)
             into.green[index] = level(matrix[3] * r + matrix[4] * g + matrix[5] * b)
             into.blue[index] = level(matrix[6] * r + matrix[7] * g + matrix[8] * b)

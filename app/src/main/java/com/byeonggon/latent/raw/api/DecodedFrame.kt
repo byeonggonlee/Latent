@@ -17,7 +17,8 @@ internal class U16Samples(private val values: ShortArray) {
  * These are camera samples, not rendered sRGB or guaranteed scene radiance. RGB is interleaved;
  * a mosaic repeats RGGB from the crop origin. There is no alpha, row padding, or applied orientation.
  * DNG levels/linearization/exposure/shading already applied by the reader must not be applied again.
- * White balance, calibration, demosaic, the camera look and output encoding remain Core's responsibility.
+ * Pending DNG warp metadata is carried by the legacy adapter; it is not an applied sample correction.
+ * White balance, calibration, demosaic, geometry, the camera look and output encoding remain Core's responsibility.
  *
  * A view keeps the whole parent allocation alive. Cache eviction drops only the cache's reference.
  * Heap ownership needs no close(). The legacy adapter still exposes mutable arrays to trusted Core code:
