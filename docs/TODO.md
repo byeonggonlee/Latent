@@ -67,8 +67,8 @@ Last updated 2026-10-22.
 - [x] A ten-minute check for the phone after each nightly: [`SMOKE_TEST.md`](SMOKE_TEST.md).
 - [x] **Smaller APK**: every build carries arm64 only, 20 MB instead of 39 MB (`-PlatentAbis` for an emulator).
 
-- [ ] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md)), then tap to select (stage 3): no longer held back, the
-      owner found the subject mask fine on the phone (2026-10-21). Queued for Claude Code in `HANDOFF.md`.
+- [x] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md), 2026-10-22, [PR #29](https://github.com/byeonggonlee/Latent/pull/29)):
+      "+ Sky" in the editor; the phone checks are in DEVICE_CHECKS, "Sky masks". Tap to select (stage 3) is next.
 - [x] **Import from a card reader** or a camera in Mass Storage mode, as a sync over MTP does (2026-10-22,
       [PR #13](https://github.com/byeonggonlee/Latent/pull/13)): the Camera tab's "Card or drive". The phone checks are in
       DEVICE_CHECKS, "From the card".

@@ -141,7 +141,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | Autopilot of 2026-10-22 (merged so far: #20 to #26; open: #27 gain map, #28 HDR viewer, #29 sky), one pull request each, in this order: LA-03 and LA-05 (Timeline bounds), LA-04 (Exif offsets), LA-02 (restore matching), LA-07 (privacy check), the HEIF share with the place left out, LA-06 and LA-08 (healing, detail bands), LA-01 (sync compares look-alikes), roadmap 11 (gain map), roadmap 10 (HDR in the viewer), the sky mask (stage 2). Codex reviews each; the owner lets Claude Code merge what Codex approves, for this run only | `claude/timeline-bounds` and the branches after it | as each pull request lists | 2026-10-22 |
 
 ## For Codex
 
@@ -231,8 +230,7 @@ touch the seam, as it reviews yours.
 Confirmed legacy-review findings follow below. Its own next items, so that Codex does not pick them too, in this order (set by the owner
 2026-10-21):
 
-- The sky mask (stage 2 of `AI_MASKS.md`): the owner found the subject mask fine on the phone (2026-10-21), which
-  was what held it back. The model and its conversion are downloads: ask the owner first, with sizes and sources.
+- Tap to select (stage 3 of `AI_MASKS.md`): the sky (stage 2) is on `main` since 2026-10-22, to be judged on a phone.
 
 
 ### Legacy audit 2026-10-22 — independent main review
@@ -413,6 +411,9 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | Roadmap 10: an HDR photo (Ultra HDR, or HEIF in HLG or PQ) in front in the viewer is decoded with its gain map or ten bits, and the window turns to HDR colour mode for it. Reviewed by Codex; not seen on a phone yet | [PR #28](https://github.com/byeonggonlee/Latent/pull/28), merged `fa386f9` |
+| 2026-10-22 | Claude Code (computer) | Stage 2 of the AI masks, the sky: EfficientViT-Seg B1 (ADE20K) converted to LiteRT, "+ Sky" in the editor, one model per kind (19.5 MB more in the APK). Reviewed by Codex; whether it runs on the GPU, and its quality, are for the phone | [PR #29](https://github.com/byeonggonlee/Latent/pull/29), merged `87daf12` |
+| 2026-10-22 | Claude Code (computer) | Roadmap 11: the editor says an Ultra HDR photo's edit is saved without its gain map, and a tone edit no longer carries the original's along (Codex's review found it did). Reviewed by Codex | [PR #27](https://github.com/byeonggonlee/Latent/pull/27), merged `50590e1` |
 | 2026-10-22 | Claude Code (computer) | LA-01: a camera file that only looks like a library photo is copied over and compared before it is left out; more than 20 (or 2 GB) wait for the person's "Copy over and compare", as the owner decided. Reviewed by Codex; not tried with a camera yet | [PR #26](https://github.com/byeonggonlee/Latent/pull/26), merged `8bdf459` |
 | 2026-10-22 | Claude Code (computer) | Healing reads each spot's source as it was (LA-06); a detail band reads as far as its stages reach together (LA-08). Reviewed by Codex | [PR #25](https://github.com/byeonggonlee/Latent/pull/25), merged `a2420e5` |
 | 2026-10-22 | Claude Code (computer) | A HEIF picture shared without its place goes out as a JPEG made from it, instead of failing. Reviewed by Codex | [PR #24](https://github.com/byeonggonlee/Latent/pull/24), merged `9c49c85` |
