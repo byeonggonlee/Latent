@@ -168,6 +168,9 @@
     <string name="nothing_new">新しく取り込むものはありません。</string>
     <string name="failed_retry_hint">失敗したファイルは次回の同期でもう一度試します。</string>
     <string name="sync_out_of_space">スマートフォンの空きがほとんどないため、同期を停止しました。</string>
+    <string name="sync_look_alikes">カメラの%1$sは、名前とサイズがライブラリにある写真と同じに見えます(合計 %2$s)。コピーして比べるまで、カメラに残しておきます。</string>
+    <string name="sync_look_alikes_hint">比べてライブラリの写真と中身が同じものだけを除き、取り込み済みとして記録します。違うものは別の写真として取り込みます。コピーには取り込みと同じだけ時間がかかります。</string>
+    <string name="sync_compare_look_alikes">コピーして比べる</string>
     <string name="sync_out_of_space_hint">空き容量を確保してからもう一度同期すると、止まったところから続きを取り込みます。</string>
     <string name="sync_failed">同期に失敗しました</string>
     <string name="sync_failed_hint">ケーブルと、カメラのUSB接続設定(MTP)を確認してください。</string>
@@ -188,6 +191,9 @@
     </plurals>
     <plurals name="geotagged_files">
         <item quantity="other">%d 件に位置情報を追加</item>
+    </plurals>
+    <plurals name="look_alike_files">
+        <item quantity="other">ファイル %d 件</item>
     </plurals>
     <plurals name="failed_files">
         <item quantity="other">%d 件失敗: </item>
@@ -412,6 +418,9 @@
     </plurals>
     <plurals name="timeline_added">
         <item quantity="other">%2$d 件の位置情報のうち新しい %1$d 件を追加しました(%3$s)。</item>
+    </plurals>
+    <plurals name="timeline_visits_skipped">
+        <item quantity="other">滞在記録 %d 件は除きました。1 週間より長いか、終わりが始まりより前になっています。</item>
     </plurals>
     <plurals name="stars">
         <item quantity="other">星 %d 個</item>
