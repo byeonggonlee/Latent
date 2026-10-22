@@ -1,5 +1,12 @@
 package com.byeonggon.latent
 
+import android.graphics.Bitmap
+import android.os.Environment
+import androidx.exifinterface.media.ExifInterface
+import com.byeonggon.latent.data.db.MediaItemEntity
+import com.byeonggon.latent.data.db.MediaKind
+import java.io.File
+import java.time.OffsetDateTime
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.getBoundsInRoot
@@ -141,5 +148,34 @@ class SettingsTest {
 
         runBlocking { container.settings.update { it.copy(cameraZoneId = null) } }
         assertEquals(null, runBlocking { container.settings.settings.first() }.cameraZoneId)
+    }
+
+    @Test
+    fun readsTheTimesOfTheLibrarysPhotosAgainInTheCamerasZone() {
+        ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
+        // Shot at 15:42 by a camera that does not say its zone, and taken in as if in UTC.
+        val photo = File(container.storage.root, "2026/2026-10-09/DSC02003.JPG").apply { parentFile!!.mkdirs() }
+        photo.outputStream().use { Bitmap.createBitmap(32, 24, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        ExifInterface(photo).apply {
+            setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, "2026:10:09 15:42:00")
+            saveAttributes()
+        }
+        val utc = OffsetDateTime.parse("2026-10-09T15:42:00Z").toInstant().toEpochMilli()
+        val id = runBlocking {
+            container.settings.update { it.copy(cameraZoneId = "Asia/Seoul") }
+            container.database.mediaDao().insert(
+                MediaItemEntity(path = photo.path, fileName = photo.name, kind = MediaKind.PHOTO, sizeBytes = photo.length(), capturedAt = utc, importedAt = 1),
+            )
+        }
+        openSettings()
+
+        compose.onNodeWithText("보관함 사진의 시각 다시 읽기").performScrollTo().performClick()
+
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.waitForIdle()
+            compose.onAllNodesWithText("사진 1장의 시각이 바뀌었습니다.", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        val seoul = OffsetDateTime.parse("2026-10-09T15:42:00+09:00").toInstant().toEpochMilli()
+        assertEquals(seoul, runBlocking { container.database.mediaDao().byId(id)!!.capturedAt })
     }
 }
