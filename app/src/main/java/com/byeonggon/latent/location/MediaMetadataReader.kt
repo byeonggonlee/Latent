@@ -33,8 +33,9 @@ object MediaMetadataReader {
                 ?: exif.getAttribute(ExifInterface.TAG_OFFSET_TIME),
             fallbackZone = cameraZone,
         )
-        val location = exif.latLong?.let { (latitude, longitude) ->
-            GeoPoint(latitude, longitude, exif.getAltitude(Double.NaN).takeUnless { it.isNaN() })
+        // Exif's degrees are ratios, which a damaged file can make 200 north, or a degree over nothing: no place on the Earth.
+        val location = exif.latLong?.takeIf { (latitude, longitude) -> latitude in -90.0..90.0 && longitude in -180.0..180.0 }?.let { (latitude, longitude) ->
+            GeoPoint(latitude, longitude, exif.getAltitude(Double.NaN).takeIf { it.isFinite() })
         }
         return MediaMetadata(capturedAt, location)
     }

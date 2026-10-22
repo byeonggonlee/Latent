@@ -166,6 +166,21 @@ class TimelineParserTest {
     }
 
     @Test
+    fun takesAnAltitudeOrAccuracyThatIsNoNumberAsNone() {
+        val points = parse(
+            """
+            {"rawSignals": [
+              {"position": {"timestamp": "2026-10-01T09:00:00Z", "LatLng": "37.5°, 127.0°", "altitudeMeters": "NaN", "accuracyMeters": "Infinity"}},
+              {"position": {"timestamp": "2026-10-01T09:01:00Z", "LatLng": "37.5°, 127.0°", "altitudeMeters": 41.5, "accuracyMeters": 1e300}}
+            ]}
+            """,
+        )
+
+        assertEquals(listOf(null, 41.5), points.map { it.altitude })
+        assertEquals(listOf<Float?>(null, null), points.map { it.accuracy })
+    }
+
+    @Test
     fun rejectsMalformedCoordinates() {
         assertNull(TimelineParser.parseLatLng("not a coordinate"))
         assertNull(TimelineParser.parseLatLng("95.0°, 10.0°"))
