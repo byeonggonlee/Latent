@@ -1,7 +1,14 @@
 package com.byeonggon.latent.ui.sync
 
+import android.content.Context
 import android.hardware.usb.UsbDevice
+import android.net.Uri
+import android.os.Environment
+import android.os.storage.StorageManager
+import android.provider.DocumentsContract
 import android.text.format.Formatter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,10 +65,18 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val dates by viewModel.dates.collectAsStateWithLifecycle()
     val deletedFromPhone by viewModel.deletedFromPhone.collectAsStateWithLifecycle()
+    val cardFolder by viewModel.cardFolder.collectAsStateWithLifecycle()
     val storageGranted = rememberStorageAccess()
     var pickingDates by rememberSaveable { mutableStateOf(false) }
     var confirmingReimport by rememberSaveable { mutableStateOf(false) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshLibrary() }
+    val context = LocalContext.current
+    val pickCardFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree != null) viewModel.useCardFolder(tree)
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshLibrary()
+        viewModel.checkCardFolder()
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -94,6 +109,28 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
                     }
                 }
             }
+        }
+
+        SectionCard(stringResource(R.string.card_import)) {
+            val folder = cardFolder
+            Text(
+                when {
+                    folder == null -> stringResource(R.string.card_folder_none)
+                    folder.name == null -> stringResource(R.string.card_folder_missing)
+                    else -> stringResource(R.string.card_folder, folder.name)
+                },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (folder?.name != null) {
+                    Button(onClick = { viewModel.startFromCard(folder) }, enabled = storageGranted && !syncState.isRunning) {
+                        Text(stringResource(R.string.import_from_card))
+                    }
+                }
+                OutlinedButton(onClick = { pickCardFolder.launch(cardStart(context)) }, enabled = !syncState.isRunning) {
+                    Text(stringResource(if (folder == null) R.string.choose_card_folder else R.string.choose_another_folder))
+                }
+            }
+            Hint(stringResource(R.string.card_import_hint))
         }
 
         SectionCard(stringResource(R.string.what_to_import)) {
@@ -270,6 +307,12 @@ private fun KindSwitch(label: String, checked: Boolean, onChange: (Boolean) -> U
 private fun Hint(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+/** Where the folder dialog opens: the first card or drive in the phone, if there is one. */
+private fun cardStart(context: Context): Uri? = context.getSystemService(StorageManager::class.java).storageVolumes
+    .firstOrNull { it.isRemovable && it.state == Environment.MEDIA_MOUNTED }
+    ?.uuid
+    ?.let { DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "$it:") }
 
 @Composable
 private fun UsbDevice.displayName(): String = productName ?: stringResource(R.string.usb_camera)

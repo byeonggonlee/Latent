@@ -44,8 +44,8 @@ class Listing(
 )
 
 /**
- * A place to pull media from. MTP is the only implementation today; a Mass Storage reader can be added
- * behind the same interface if a camera hides files in MTP mode.
+ * A place to pull media from: a camera over MTP ([MtpCameraSource]), or its card in a card reader or the camera
+ * connected as a drive, through a folder picked for it ([FolderCameraSource]).
  *
  * All calls block and must run off the main thread.
  */

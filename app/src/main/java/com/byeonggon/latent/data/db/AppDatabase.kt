@@ -98,6 +98,9 @@ interface MediaDao {
     @Query("UPDATE media_items SET sourceKey = :sourceKey WHERE id = :id")
     suspend fun setSourceKey(id: Long, sourceKey: String)
 
+    @Query("SELECT * FROM media_items WHERE sourceKey IN (:sourceKeys)")
+    suspend fun bySourceKeys(sourceKeys: List<String>): List<MediaItemEntity>
+
     @Query("DELETE FROM media_items WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
 

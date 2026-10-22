@@ -187,6 +187,23 @@ Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (th
 - [ ] Longer recordings of location in the background (hours).
 - [ ] EXIF rewritten into a JPEG keeps Sony's MakerNote intact (open it in another app).
 
+### From the card (card reader, or the ZV-E10 in Mass Storage mode)
+
+- [ ] Camera tab → "Card or drive" → "Choose folder": with a card reader in, the dialog opens on the card; choose the
+      card itself. Its name shows, and "Import" brings in what is new: photos, raw files and videos
+      (`PRIVATE/M4ROOT/CLIP`), and none of the videos' thumbnails (`THMBNL`) or smaller copies (`SUB`).
+- [ ] What came over MTP before is skipped, and the other way round: a sync over MTP after importing from the card
+      brings nothing twice. A file that only looks the same (name, size, time) is copied over and compared, whole, with
+      the library's copy (a JPEG's EXIF aside), then left out: the first such sync reads every one of them, so note
+      how long it takes; the folders are remembered after it. A photo deleted from the phone has no copy to compare
+      with, so the card brings it back. Compare the times in the viewer with the same
+      shots imported over MTP (a card's file times may be read in another zone; capture times come from EXIF either way).
+- [ ] The ZV-E10 set to Mass Storage: the Camera tab says so and points to the card section; the dialog opens on the
+      camera's drive.
+- [ ] Take the card out: the section says the folder cannot be read and offers another; an import started without the
+      card fails with a message, and nothing half-copied is left in the library.
+- [ ] A card with thousands of files: how long the listing takes compared with MTP.
+
 ## Release build
 
 - [ ] The R8 build (`./gradlew assembleRelease -PdebugSignedRelease`) runs through all of the above: no screen crashes, no missing classes (the S24 launch showed none; the screens themselves were not driven).
