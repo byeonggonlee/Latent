@@ -57,26 +57,40 @@ class GrantedFolder(private val context: Context, private val root: File) {
         false
     }
 
-    /** Moves [from] to [to], which must not exist yet; its folder is made if needed. Returns whether it moved. */
-    fun move(from: File, to: File): Boolean = try {
+    /**
+     * Moves [from] to [to], which must not exist yet; its folder is made if needed. Returns whether it moved. One that
+     * does not get there keeps its own name where it is, so that what looks for it by that name still finds it.
+     */
+    fun move(from: File, to: File): Boolean {
         val fromFolder = from.parentFile
         val toFolder = to.parentFile
         if (fromFolder == null || toFolder == null) return false
         toFolder.mkdirs()
+        val document = uriOf(from) ?: return false
+        if (from.name == to.name) return fromFolder == toFolder || moveDocument(document, fromFolder, toFolder)
         // Renamed where it is first: the target folder may already hold a file with the old name.
-        val renamed = File(fromFolder, to.name)
-        if (from.name != to.name) {
-            DocumentsContract.renameDocument(resolver, uriOf(from) ?: return false, to.name) ?: return false
+        val renamed = try {
+            DocumentsContract.renameDocument(resolver, document, to.name)
+        } catch (e: Exception) {
+            null
+        } ?: return false
+        // A provider gives a file a name of its own choosing when the one asked for is taken; that is no move to [to].
+        val moved = DocumentsContract.getDocumentId(renamed).endsWith("/${to.name}") &&
+            (fromFolder == toFolder || moveDocument(renamed, fromFolder, toFolder))
+        if (!moved) {
+            try {
+                DocumentsContract.renameDocument(resolver, renamed, from.name)
+            } catch (e: Exception) {
+                // Left under the other name; nothing more can be done about it here.
+            }
         }
-        if (fromFolder != toFolder) {
-            DocumentsContract.moveDocument(
-                resolver,
-                uriOf(renamed) ?: return false,
-                uriOf(fromFolder) ?: return false,
-                uriOf(toFolder) ?: return false,
-            ) ?: return false
-        }
-        true
+        return moved
+    }
+
+    private fun moveDocument(document: Uri, fromFolder: File, toFolder: File): Boolean = try {
+        val source = uriOf(fromFolder)
+        val target = uriOf(toFolder)
+        source != null && target != null && DocumentsContract.moveDocument(resolver, document, source, target) != null
     } catch (e: Exception) {
         false
     }

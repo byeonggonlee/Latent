@@ -4,6 +4,7 @@ import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaItemEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -19,39 +20,44 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
 
     @Throws(IOException::class)
     suspend fun throwAway(items: List<MediaItemEntity>) = withContext(Dispatchers.IO) {
-        for (item in items) {
-            if (item.trashedAt != null) continue
-            val file = File(item.path)
-            // Asked before anything moves: a photo whose original cannot go along stays where it is.
-            val original = storage.keptOriginal(file)
-            val folder = storage.trashFolder(item.id)
-            val kept = File(folder, file.name)
-            storage.move(file, kept)
-            sidecarOf(file).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(kept)) }
-            original?.let { storage.move(it, File(folder, ORIGINAL + file.name)) }
-            mediaDao.setPlace(item.id, kept.path, System.currentTimeMillis(), item.path)
-            // Gallery apps see the file gone.
-            storage.publish(file)
-        }
+        // Until its entry says where it went, a file on its way looks deleted to the library's check of its folder.
+        storage.moving.withLock { items.forEach { throwAway(it) } }
+    }
+
+    private suspend fun throwAway(item: MediaItemEntity) {
+        if (item.trashedAt != null) return
+        val file = File(item.path)
+        // Asked before anything moves: a photo whose original cannot go along stays where it is.
+        val original = storage.keptOriginal(file)
+        val folder = storage.trashFolder(item.id)
+        val kept = File(folder, file.name)
+        storage.move(file, kept)
+        sidecarOf(file).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(kept)) }
+        original?.let { storage.move(it, File(folder, ORIGINAL + file.name)) }
+        mediaDao.setPlace(item.id, kept.path, System.currentTimeMillis(), item.path)
+        // Gallery apps see the file gone.
+        storage.publish(file)
     }
 
     /** Puts files back where they were in the library; beside it under another name if that place is taken now. */
     @Throws(IOException::class)
     suspend fun restore(items: List<MediaItemEntity>) = withContext(Dispatchers.IO) {
-        for (item in items) {
-            val from = item.trashedFrom ?: continue
-            val kept = File(item.path)
-            val folder = kept.parentFile ?: continue
-            val target = storage.freeFileLike(File(from).also { it.parentFile?.mkdirs() })
-            storage.move(kept, target)
-            sidecarOf(kept).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(target)) }
-            File(folder, ORIGINAL + kept.name).takeIf(storage::exists)?.let { original ->
-                storage.originalOf(target).also { it.parentFile?.mkdirs() }.let { storage.move(original, it) }
-            }
-            storage.delete(folder)
-            mediaDao.setPlace(item.id, target.path, null, null)
-            storage.publish(target)
+        storage.moving.withLock { items.forEach { restore(it) } }
+    }
+
+    private suspend fun restore(item: MediaItemEntity) {
+        val from = item.trashedFrom ?: return
+        val kept = File(item.path)
+        val folder = kept.parentFile ?: return
+        val target = storage.freeFileLike(File(from).also { it.parentFile?.mkdirs() })
+        storage.move(kept, target)
+        sidecarOf(kept).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(target)) }
+        File(folder, ORIGINAL + kept.name).takeIf(storage::exists)?.let { original ->
+            storage.originalOf(target).also { it.parentFile?.mkdirs() }.let { storage.move(original, it) }
         }
+        storage.delete(folder)
+        mediaDao.setPlace(item.id, target.path, null, null)
+        storage.publish(target)
     }
 
     /**
@@ -59,9 +65,11 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
      * does not bring them back.
      */
     suspend fun deleteForever(items: List<MediaItemEntity>) = withContext(Dispatchers.IO) {
-        for (item in items) {
-            if (item.trashedAt == null) continue
-            File(item.path).parentFile?.let(storage::delete)
+        storage.moving.withLock {
+            for (item in items) {
+                if (item.trashedAt == null) continue
+                File(item.path).parentFile?.let(storage::delete)
+            }
         }
         items.filter { it.trashedAt != null }.map { it.id }.chunked(500).forEach { mediaDao.deleteByIds(it) }
     }

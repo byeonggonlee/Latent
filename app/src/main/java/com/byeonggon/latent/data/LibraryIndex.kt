@@ -10,8 +10,10 @@ import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.location.GeoPoint
 import com.byeonggon.latent.location.MediaMetadataReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.ZoneId
@@ -22,8 +24,6 @@ class LibraryIndex(
     private val database: AppDatabase,
     /** The zone to read the time of a photo in when it does not say which one it is: the camera's. */
     private val cameraZone: suspend () -> ZoneId = { ZoneId.systemDefault() },
-    /** The entries whose edits are being saved: saving moves a photo aside for a moment. */
-    private val beingSaved: () -> Set<Long> = { emptySet() },
 ) {
     private companion object {
         const val BATCH = 200
@@ -36,14 +36,16 @@ class LibraryIndex(
     suspend fun forgetMissingFiles() = withContext(Dispatchers.IO) {
         // While storage is unavailable every file looks missing, which must not empty the library.
         if (!storage.isAvailable()) return@withContext
-        val dao = database.mediaDao()
-        // A file the app cannot see by its path may still be there; the granted folder sees everything.
-        val saving = beingSaved()
-        // Photos listed from the phone are not the library's: PhoneLibrary looks after those.
-        val missing = dao.all().filter { it.origin == MediaOrigin.LIBRARY }.filterNot { it.id in saving || storage.exists(File(it.path)) }
-        // The hidden original of an edited photo would otherwise stay behind, taking up space unseen.
-        missing.forEach { storage.delete(storage.originalOf(File(it.path))) }
-        missing.map { it.id }.chunked(500).forEach { dao.deleteByIds(it) }
+        // A photo being edited, put in the trash or back is not missing for a moment between its two places.
+        storage.moving.withLock {
+            val dao = database.mediaDao()
+            // Photos listed from the phone are not the library's: PhoneLibrary looks after those. A file the app cannot
+            // see by its path may still be there; the granted folder sees everything.
+            val missing = dao.all().filter { it.origin == MediaOrigin.LIBRARY }.filterNot { storage.exists(File(it.path)) }
+            // The hidden original of an edited photo would otherwise stay behind, taking up space unseen.
+            missing.forEach { storage.delete(storage.originalOf(File(it.path))) }
+            missing.map { it.id }.chunked(500).forEach { dao.deleteByIds(it) }
+        }
     }
 
     /**
@@ -75,6 +77,11 @@ class LibraryIndex(
      */
     suspend fun adoptUnknownFiles(): Int = withContext(Dispatchers.IO) {
         if (!storage.isAvailable()) return@withContext 0
+        // A photo put back from the trash is in its place a moment before its entry says so.
+        storage.moving.withLock { adopt() }
+    }
+
+    private suspend fun adopt(): Int {
         val dao = database.mediaDao()
         val zone = cameraZone()
         val known = dao.all().mapTo(HashSet()) { it.path }
@@ -89,7 +96,7 @@ class LibraryIndex(
         val places = HashMap<String, GeoPoint>()
         val now = System.currentTimeMillis()
         for (batch in found.chunked(BATCH)) {
-            ensureActive()
+            currentCoroutineContext().ensureActive()
             val items = batch.map { (file, kind) ->
                 // An edited JPEG whose original came along can be put back; how it was edited is not known. An
                 // original that another installation kept is made the app's own, for the editor to read; where
@@ -115,7 +122,7 @@ class LibraryIndex(
             }
             database.withTransaction { items.forEach { dao.insertUnlessKnown(it) } }
         }
-        found.size
+        return found.size
     }
 
     /**

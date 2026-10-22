@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | Self-review of the library code pushed straight to `main` before the rules: one lock over library file moves (trash, edits, the folder check, places written in), a copy aside that takes its name only once whole, a failed SAF move that keeps its name, exports written under a hidden name, a backup written over truncated. Codex's review: no findings at `bd7c6e0`; waits for the merge | `claude/library-file-safety` | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryEdits.kt`, `data/LibraryIndex.kt`, `data/Trash.kt`, `location/Geotagger.kt`, `ui/BackupViewModel.kt`, `LatentApp.kt`, their tests | 2026-10-22 |
 
 ## For Codex
 

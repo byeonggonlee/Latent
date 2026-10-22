@@ -12,6 +12,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
+import kotlinx.coroutines.sync.Mutex
 
 /** The photo library on shared storage: DCIM/Latent/<year>/<date>/<file>. */
 class LibraryStorage(private val context: Context) : PhotoFiles {
@@ -22,6 +23,12 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
 
     /** Reaches what shared storage does not let the app reach by path. */
     val folder = GrantedFolder(context, root)
+
+    /**
+     * Held while library files are moved, put in place or written over, and while the library is checked against
+     * its folder: a file on its way from one place to another must not look gone, nor two edits of one photo meet.
+     */
+    val moving = Mutex()
 
     /**
      * Whether the app may read the photos and videos on shared storage, and was handed the library folder.
@@ -112,18 +119,32 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
      * Moves a photo the app did not make, copied in from another phone say, by copying it to a file of
      * the app's own and deleting it: moved as it is, it would stay another's, and in the folders whose
      * names start with a dot, where kept originals and the trash are, the app could not read it again.
-     * Returns whether it moved.
+     * It is copied beside [to] and takes that name only once whole: a move that breaks off never leaves part
+     * of a picture where a kept original is looked for. Returns whether it moved.
      */
-    private fun takeOver(from: File, to: File): Boolean {
+    private fun takeOver(from: File, to: File): Boolean = synchronized(takingOver) {
         val modifiedAt = from.lastModified()
-        return try {
+        val copying = copyingOf(to)
+        try {
             to.parentFile?.mkdirs()
             val input = if (from.canRead()) from.inputStream() else folder.openInput(from)
-            input.use { source -> to.outputStream().use { source.copyTo(it) } }
-            if (modifiedAt > 0) to.setLastModified(modifiedAt)
-            folder.delete(from).also { deleted -> if (!deleted) to.delete() }
+            input.use { source ->
+                FileOutputStream(copying).use { target ->
+                    source.copyTo(target)
+                    target.fd.sync()
+                }
+            }
+            if (modifiedAt > 0) copying.setLastModified(modifiedAt)
+            if (!copying.renameTo(to)) throw IOException("Cannot put ${to.name} in place")
+            // The copy is only given up while the file it was made from is still there.
+            if (folder.delete(from) || !exists(from)) {
+                true
+            } else {
+                to.delete()
+                false
+            }
         } catch (e: IOException) {
-            to.delete()
+            copying.delete()
             false
         }
     }

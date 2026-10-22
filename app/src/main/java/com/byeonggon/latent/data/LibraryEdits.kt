@@ -27,6 +27,7 @@ import com.byeonggon.latent.raw.RawRenderer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -172,18 +173,22 @@ class LibraryEdits(
             mediaDao.setEdit(item.id, edit.toJson())
             return
         }
-        if (!edit.changesPicture) {
-            remove(item)
-            return
+        // One edit of a photo at a time, from the editor, a batch or the viewer: the second would keep the first's
+        // picture as the original.
+        storage.moving.withLock {
+            if (!edit.changesPicture) {
+                removeEdit(item)
+                return
+            }
+            val photo = File(item.path)
+            // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
+            val original = storage.originalOf(photo)
+            if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
+            PhotoEnhancer.saveEdited(photo, original, edit, storage)
+            storage.publish(photo)
+            mediaDao.setSize(item.id, photo.length())
+            mediaDao.setEdit(item.id, edit.toJson())
         }
-        val photo = File(item.path)
-        // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
-        val original = storage.originalOf(photo)
-        if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
-        PhotoEnhancer.saveEdited(photo, original, edit, storage)
-        storage.publish(photo)
-        mediaDao.setSize(item.id, photo.length())
-        mediaDao.setEdit(item.id, edit.toJson())
     }
 
     /**
@@ -203,25 +208,7 @@ class LibraryEdits(
         val quality = exportOptions().quality
         // The export decodes the file itself, in the cache's turn: the cache lets go of its copy, and no other decode
         // runs beside it.
-        rawCache.decodingAlone { RawRenderer.export(source, target, edit, quality) }
-        val latitude = item.latitude
-        val longitude = item.longitude
-        if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
-        storage.publish(target)
-        mediaDao.insert(
-            item.copy(
-                id = 0,
-                path = target.absolutePath,
-                fileName = target.name,
-                kind = MediaKind.PHOTO,
-                sizeBytes = target.length(),
-                importedAt = System.currentTimeMillis(),
-                sourceKey = null,
-                edit = null,
-                origin = MediaOrigin.LIBRARY,
-            ),
-        )
-        return target
+        return addToLibrary(item, target) { rawCache.decodingAlone { RawRenderer.export(source, it, edit, quality) } }
     }
 
     /**
@@ -232,24 +219,46 @@ class LibraryEdits(
     suspend fun saveCopy(item: MediaItemEntity): File {
         val source = File(item.path)
         val target = storage.targetFor(source.nameWithoutExtension + "_edited.jpg", item.capturedAt)
-        PhotoEnhancer.exportEdited(source, target, editOf(item) ?: PhotoEdit(), exportOptions().quality)
-        val latitude = item.latitude
-        val longitude = item.longitude
-        if (latitude != null && longitude != null) geotagger.writeExif(target, GeoPoint(latitude, longitude, item.altitude))
-        storage.publish(target)
-        mediaDao.insert(
-            item.copy(
-                id = 0,
-                path = target.absolutePath,
-                fileName = target.name,
-                sizeBytes = target.length(),
-                importedAt = System.currentTimeMillis(),
-                sourceKey = null,
-                edit = null,
-                origin = MediaOrigin.LIBRARY,
-            ),
-        )
-        return target
+        val edit = editOf(item) ?: PhotoEdit()
+        val quality = exportOptions().quality
+        return addToLibrary(item, target) { PhotoEnhancer.exportEdited(source, it, edit, quality) }
+    }
+
+    /**
+     * Adds a JPEG made from [item] to the library, under [target]'s name or a free one like it, with [item]'s place written
+     * in. [write] makes it under a hidden name, which it gives up only once whole: until then, the check of the library's
+     * folder does not take it in, nor do other apps see it. Returns the new file.
+     */
+    private suspend fun addToLibrary(item: MediaItemEntity, target: File, write: suspend (File) -> Unit): File {
+        // Hidden, but still named as a photo: shared storage only takes photos and videos in DCIM.
+        val writing = File.createTempFile(".${target.nameWithoutExtension}-", "-writing.jpg", target.parentFile)
+        try {
+            write(writing)
+            val latitude = item.latitude
+            val longitude = item.longitude
+            if (latitude != null && longitude != null) geotagger.writeExif(writing, GeoPoint(latitude, longitude, item.altitude))
+            return storage.moving.withLock {
+                val added = storage.freeFileLike(target)
+                if (!writing.renameTo(added)) throw IOException("Cannot put ${added.name} in the library")
+                storage.publish(added)
+                mediaDao.insert(
+                    item.copy(
+                        id = 0,
+                        path = added.absolutePath,
+                        fileName = added.name,
+                        kind = MediaKind.PHOTO,
+                        sizeBytes = added.length(),
+                        importedAt = System.currentTimeMillis(),
+                        sourceKey = null,
+                        edit = null,
+                        origin = MediaOrigin.LIBRARY,
+                    ),
+                )
+                added
+            }
+        } finally {
+            writing.delete()
+        }
     }
 
     /**
@@ -312,7 +321,10 @@ class LibraryEdits(
 
     /** Takes the edit of [item] away: a JPEG gets its original back. */
     @Throws(IOException::class)
-    suspend fun remove(item: MediaItemEntity) {
+    suspend fun remove(item: MediaItemEntity) = storage.moving.withLock { removeEdit(item) }
+
+    /** [remove], with [LibraryStorage.moving] held. */
+    private suspend fun removeEdit(item: MediaItemEntity) {
         if (item.kind == MediaKind.PHOTO && item.origin == MediaOrigin.LIBRARY) {
             val photo = File(item.path)
             // The photo only gives way to an original that is there to take its place.
