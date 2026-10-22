@@ -48,6 +48,7 @@
     <string name="edit_copied">編集をコピーしました。ほかの写真に貼り付けられます。</string>
     <string name="filter_saved">フィルターとして保存しました。</string>
     <string name="open_failed">写真を開けませんでした。</string>
+    <string name="edit_loses_gain_map">HDR 写真です。編集すると HDR 画面でより明るく見える情報なしで表示・保存します。元の写真には残ります。</string>
     <plurals name="library_adopted">
         <item quantity="other">フォルダにあった %d 件をライブラリに追加しました。</item>
     </plurals>

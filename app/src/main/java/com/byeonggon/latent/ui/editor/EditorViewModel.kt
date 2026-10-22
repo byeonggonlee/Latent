@@ -27,6 +27,7 @@ import com.byeonggon.latent.enhance.PictureRegion
 import com.byeonggon.latent.enhance.Spot
 import com.byeonggon.latent.enhance.ToneCurves
 import com.byeonggon.latent.enhance.ToneRenderer
+import com.byeonggon.latent.enhance.UltraHdr
 import com.byeonggon.latent.enhance.bitmapOf
 import com.byeonggon.latent.enhance.framed
 import com.byeonggon.latent.raw.RawRenderer
@@ -665,6 +666,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         image = image,
                         scale = maxOf(image.width, image.height).toFloat() / PhotoEnhancer.longSideOf(original).coerceAtLeast(1),
                         region = { x, y -> PhotoEnhancer.region(original, x, y, DETAIL_SIZE) },
+                        hasGainMap = UltraHdr.hasGainMap(original),
                     )
                 }
             }
@@ -677,6 +679,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             ui.update { it.copy(loading = false, message = text(R.string.open_failed)) }
         } else {
             source.value = loaded
+            // Said once, as the photo opens: what is saved is not what an HDR screen showed of it.
+            if (loaded.hasGainMap) ui.update { it.copy(message = text(R.string.edit_loses_gain_map)) }
         }
     }
 
@@ -694,6 +698,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         private val scale: Float,
         private val region: (centreX: Float, centreY: Float) -> PictureRegion,
         val hasLensProfile: Boolean = true,
+        /** Whether the photo is an Ultra HDR one, whose gain map no edit keeps. */
+        val hasGainMap: Boolean = false,
     ) {
         private var spots = emptyList<Spot>()
         private var healed = image

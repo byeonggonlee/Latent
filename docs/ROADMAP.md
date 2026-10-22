@@ -98,7 +98,9 @@ Each is small or medium, works offline, and needs no new permission.
     Small to medium.
 11. **Keep the gain map, or say it is lost.** Editing and saving a copy of an Ultra HDR photo from the phone drops
     its gain map today and leaves an SDR picture. Either carry the gain map through (it can be edited along, or
-    kept for an untouched picture) or tell the person. Medium.
+    kept for an untouched picture) or tell the person. Medium. *Telling done 2026-10-22, to be seen on a phone:* the
+    editor says so once as such a photo opens (Ultra HDR's gain map XMP, or ISO 21496-1's mark, read from the JPEG's
+    header); the original keeps its gain map. Carrying it through is left for later.
 12. **10-bit video with LUTs and grading** (Log, HLG) on Media3 (ExoPlayer, Transformer and its OpenGL effects),
     together with the video stage of item 7 (the parser, `LutStore` and the lookup can be taken over as they are). Large; the one place where 10-bit has real demand, since the ZV-E10
     shoots stills in 8-bit JPEG and raw only.
