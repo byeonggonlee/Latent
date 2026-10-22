@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.request.ImageRequest
 import com.byeonggon.latent.appContainer
 import com.byeonggon.latent.data.LibraryStorage
+import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
@@ -138,7 +139,7 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.storage_needed), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.storage_intro), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.storage_intro, PhoneLibrary.LIBRARY_FOLDER.removeSuffix("/")), style = MaterialTheme.typography.bodyMedium)
             if (!canRead) {
                 Text(
                     stringResource(R.string.storage_step_media),
@@ -161,11 +162,11 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
                 }
             } else {
                 Text(
-                    stringResource(R.string.storage_step_folder),
+                    stringResource(R.string.storage_step_folder, PhoneLibrary.LIBRARY_FOLDER.removeSuffix("/")),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (wrongFolder) {
-                    Text(stringResource(R.string.storage_wrong_folder), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.storage_wrong_folder, PhoneLibrary.LIBRARY_FOLDER.removeSuffix("/")), style = MaterialTheme.typography.bodySmall)
                 }
                 Button(
                     onClick = {

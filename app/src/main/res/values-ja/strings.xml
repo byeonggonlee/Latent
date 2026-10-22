@@ -404,13 +404,13 @@
         <item quantity="other">位置情報 %d 件を保存</item>
     </plurals>
     <string name="storage_needed">ライブラリの設定</string>
-    <string name="storage_intro">Latent は写真を DCIM/Latent に保存します。ギャラリーやバックアップのアプリからも見られます。そのために、2つの許可が必要です。</string>
+    <string name="storage_intro">Latent は写真を %1$s に保存します。ギャラリーやバックアップのアプリからも見られます。そのために、2つの許可が必要です。</string>
     <string name="storage_step_media">ステップ 1/2 · アプリが写真や動画を位置情報つきで読めるように「すべて許可」を選んでください。</string>
     <string name="storage_refused">許可されていません。アプリの設定の「権限」から許可してください。</string>
     <string name="open_app_settings">アプリの設定を開く</string>
     <string name="allow_media">写真と動画を許可</string>
-    <string name="storage_step_folder">ステップ 2/2 · 写真を保存する DCIM/Latent フォルダを開き、「このフォルダを使用」をタップしてください。</string>
-    <string name="storage_wrong_folder">別のフォルダです。DCIM/Latent フォルダを選んでください。</string>
+    <string name="storage_step_folder">ステップ 2/2 · 写真を保存する %1$s フォルダを開き、「このフォルダを使用」をタップしてください。</string>
+    <string name="storage_wrong_folder">別のフォルダです。%1$s フォルダを選んでください。</string>
     <string name="choose_folder">フォルダを選ぶ</string>
     <string name="crop_area">切り抜き範囲</string>
     <string name="histogram">ヒストグラム</string>
@@ -687,7 +687,7 @@
     <string name="backup_restore_not_backup">Latent のバックアップファイルではありません。何も取り込まれていません。</string>
     <string name="backup_restore_damaged">バックアップファイルが壊れているか不完全なため、何も取り込まれていません。</string>
     <string name="backup_restore_too_new">新しいバージョンの Latent で作成されたバックアップです (形式 %1$d、このバージョンは %2$d まで読めます)。アプリを更新してから復元してください。何も取り込まれていません。</string>
-    <string name="backup_restore_no_access">バックアップの写真を見つけるには、写真と DCIM/Latent フォルダへのアクセスが必要です。先にライブラリで許可してから復元してください。何も取り込まれていません。</string>
+    <string name="backup_restore_no_access">バックアップの写真を見つけるには、写真と %1$s フォルダへのアクセスが必要です。先にライブラリで許可してから復元してください。何も取り込まれていません。</string>
     <string name="backup_restore_failed">復元できず、バックアップの内容は何も取り込まれていません: %1$s</string>
     <string name="backup_restore_wait_for_sync">カメラの同期中です。終わってから復元してください。</string>
     <string name="backup_restore_reimport_hint">写真がこのスマートフォンにないカメラのファイルは、もう一度は取り込まれません。カメラタブの「スマートフォンから削除したファイル」に数えられ、「もう一度取り込めるようにする」でカメラから取り込み直せます。</string>

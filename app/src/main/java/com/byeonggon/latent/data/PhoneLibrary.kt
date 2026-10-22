@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.room.withTransaction
+import com.byeonggon.latent.BuildConfig
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
@@ -106,7 +107,7 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
                 val folder = groupOf(cursor.getString(1) ?: continue)
                 val name = cursor.getString(2) ?: continue
                 val kind = MediaKind.fromFileName(name) ?: continue
-                if (folder.startsWith(LIBRARY_FOLDER)) continue
+                if (LIBRARY_FOLDERS.any(folder::startsWith)) continue
                 result += Row(path, folder, name, kind, cursor.getLong(3), cursor.getLong(4))
             }
         }
@@ -118,7 +119,10 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
         private const val READERS = 4
 
         /** The library's own folder as MediaStore names it. */
-        const val LIBRARY_FOLDER = "DCIM/Latent/"
+        const val LIBRARY_FOLDER = "DCIM/${BuildConfig.LIBRARY_FOLDER}/"
+
+        /** The libraries of both builds, the installed app's and the debug one's: neither lists the other's as the phone's. */
+        val LIBRARY_FOLDERS = listOf("DCIM/Latent/", "DCIM/Latent Debug/")
 
         /** The phone's own camera. */
         const val CAMERA_FOLDER = "DCIM/Camera/"
