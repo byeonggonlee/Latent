@@ -182,6 +182,20 @@ internal class FramedView(framing: Framing, turnedWidth: Float, turnedHeight: Fl
  * upright picture.
  */
 fun LinearImage.framed(framing: Framing, orientation: Orientation = Orientation.UPRIGHT): LinearImage {
+    // A framing that only a damaged edit or something else could have written (a backup's, say) can keep a rectangle
+    // thousands of times the picture, past what an Int counts: it is shrunk to fit the picture. None the editor makes
+    // comes near: a rectangle within the picture levelled and tilted is less than twice its size.
+    val far = abs(framing.width) > LARGEST_SIDE || abs(framing.height) > LARGEST_SIDE || abs(framing.width * framing.height) > LARGEST_AREA
+    if (!far) return keeping(framing, orientation)
+    val sideways = orientation.quarterTurns % 2 != 0
+    return keeping(framing.shrunkToFit(if (sideways) height.toFloat() else width.toFloat(), if (sideways) width.toFloat() else height.toFloat()), orientation)
+}
+
+/** At most this many times the picture's width or height, or its size, is kept: see [framed]. */
+private const val LARGEST_SIDE = 16f
+private const val LARGEST_AREA = 4f
+
+private fun LinearImage.keeping(framing: Framing, orientation: Orientation): LinearImage {
     val turns = (orientation.quarterTurns + framing.quarterTurns).mod(4)
     val unmirror = orientation.mirrored
     if (turns == 0 && !unmirror && framing.copy(quarterTurns = 0) == Framing()) return this

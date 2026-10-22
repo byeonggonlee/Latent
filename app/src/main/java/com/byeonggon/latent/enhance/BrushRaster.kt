@@ -80,10 +80,11 @@ class BrushRaster private constructor(mask: Mask, aspect: Float) {
         val longSide = max(width, height).toFloat()
         for (stroke in mask.strokes) {
             val radius = stroke.radius * longSide
-            if (radius <= 0f) continue
-            val inner = radius * (1f - mask.feather)
             val points = stroke.points
             val count = points.size / 2
+            // A stroke without a whole point, as only a damaged or foreign edit holds, paints nothing.
+            if (radius <= 0f || count == 0) continue
+            val inner = radius * (1f - mask.feather)
             for (segment in 0 until max(1, count - 1)) {
                 val fromX = points[2 * segment] * width
                 val fromY = points[2 * segment + 1] * height
