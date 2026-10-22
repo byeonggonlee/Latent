@@ -91,4 +91,24 @@ class HealingTest {
         assertEquals(edit.spots, edit.withLookOf(PhotoEdit(Adjustments(exposure = 1f))).spots)
         assertEquals(emptyList<Spot>(), PhotoEdit().withLookOf(edit).spots)
     }
+
+    @Test
+    fun copiesFromThePictureAsItWasWhenTheSourceOverlapsTheSpot() {
+        // Codex's legacy audit, LA-06: the source dragged four pixels left of the spot, onto the spot itself. Read from the
+        // plane being written, it copied pixels this spot had healed a moment before, and smeared.
+        val side = 128
+        val picture = LinearImage(side, side)
+        for (y in 0 until side) for (x in 0 until side) {
+            val level = (4000 + (x * 73 + y * 127 + x * y * 17) % 6000).toShort()
+            val at = y * side + x
+            picture.red[at] = level
+            picture.green[at] = level
+            picture.blue[at] = level
+        }
+
+        Healing.heal(picture, listOf(Spot(0.5f, 0.5f, 0.125f, 0.46875f, 0.5f)))
+
+        // The centre is the pixel four to its left as it was, evened out to the spot's surroundings.
+        assertEquals(9994f, picture.green[64 * side + 64].toFloat(), 1f)
+    }
 }

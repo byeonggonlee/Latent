@@ -196,6 +196,12 @@ Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (th
 - [ ] Longer recordings of location in the background (hours).
 - [ ] EXIF rewritten into a JPEG keeps Sony's MakerNote intact (open it in another app).
 
+- [ ] After a reinstall and a restore, or with photos copied into the library from another phone: the first sync
+      finds camera files that look like the library's by name and size. Up to 20 of them (and 2 GB) are copied over
+      and compared at once; more are left on the camera, and the result asks "Copy over and compare". Comparing claims
+      those that hold the same (nothing new in the library) and imports the rest; the next sync skips them all. Note
+      how long the comparison takes for a full card.
+
 ### From the card (card reader, or the ZV-E10 in Mass Storage mode)
 
 - [ ] Camera tab → "Card or drive" → "Choose folder": with a card reader in, the dialog opens on the card; choose the

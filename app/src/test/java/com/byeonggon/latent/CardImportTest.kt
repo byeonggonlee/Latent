@@ -1,5 +1,10 @@
 package com.byeonggon.latent
 
+import com.byeonggon.latent.camera.SyncService
+import org.junit.Assert.assertTrue
+import org.robolectric.Robolectric
+import android.os.Looper
+import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
@@ -64,6 +69,19 @@ class CardImportTest {
 
         val started = shadowOf(application).nextStartedService
         assertEquals(tree, started.getParcelableExtra("folder", Uri::class.java))
+    }
+
+    @Test
+    fun startsTheLastSyncAgainToCompareWhatLooksLikeTheLibrarys() {
+        val first = Intent(application, SyncService::class.java).setAction("com.byeonggon.latent.action.START_SYNC").putExtra("folder", tree)
+        Robolectric.buildService(SyncService::class.java, first).create().startCommand(0, 1)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(SyncService.compareLookAlikes(application))
+
+        val again = shadowOf(application).nextStartedService
+        assertEquals(tree, again.getParcelableExtra("folder", Uri::class.java))
+        assertTrue(again.getBooleanExtra("compare", false))
     }
 
     @Test

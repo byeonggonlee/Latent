@@ -91,6 +91,80 @@ class TimelineParserTest {
         assertEquals(emptyList<TimelinePoint>(), parse("""[{"startTime": "2026-10-01T09:00:00Z"}]"""))
     }
 
+    private fun visit(start: String, end: String) = """
+        {"semanticSegments": [{
+          "startTime": "$start", "endTime": "$end",
+          "visit": {"topCandidate": {"placeLocation": {"latLng": "37.5°, 127.0°"}}}
+        }]}
+    """
+
+    @Test
+    fun skipsATimeBeyondWhatMillisecondsCanCount() {
+        // Read as a date, but past the end of a Long's milliseconds: no point, and no crash of the import.
+        val points = parse(
+            """
+            {"rawSignals": [
+              {"position": {"timestamp": "+999999999-01-01T00:00:00Z", "LatLng": "37.5°, 127.0°"}},
+              {"position": {"timestamp": "2026-10-01T09:00:00Z", "LatLng": "37.5°, 127.0°"}}
+            ],
+            "semanticSegments": [{
+              "startTime": "-999999999-01-01T00:00:00Z", "endTime": "2026-10-01T10:00:00Z",
+              "activity": {"start": {"latLng": "37.5°, 127.0°"}, "end": {"latLng": "37.6°, 127.1°"}}
+            }]}
+            """,
+        )
+
+        assertEquals(listOf(millis("2026-10-01T09:00:00Z")), points.map { it.timestamp })
+    }
+
+    @Test
+    fun leavesOutAVisitTooLongToFillIn() {
+        // 162 characters that would have filled in over 500 million points.
+        var skipped = 0
+        val points = TimelineParser.parse(StringReader(visit("0001-01-01T00:00:00Z", "9999-12-31T23:59:59Z"))) { skipped++ }.toList()
+
+        assertEquals(emptyList<TimelinePoint>(), points)
+        assertEquals(1, skipped)
+    }
+
+    @Test
+    fun leavesOutAVisitBetweenTheEndsOfWhatMillisecondsCount() {
+        // Both times fit a Long, but the difference between them wraps round (Codex's review of pull request 20).
+        var skipped = 0
+        val points = TimelineParser.parse(StringReader(visit("-292275055-05-16T16:47:04.193Z", "+292278994-08-17T07:12:55.807Z"))) { skipped++ }
+            .take(10).toList()
+
+        assertEquals(emptyList<TimelinePoint>(), points)
+        assertEquals(1, skipped)
+    }
+
+    @Test
+    fun fillsInAShortVisitAtTheLastMillisecondWithoutWrappingRound() {
+        val points = TimelineParser.parse(StringReader(visit("+292278994-08-17T07:12:55.806Z", "+292278994-08-17T07:12:55.807Z"))).take(10).toList()
+
+        assertEquals(listOf(Long.MAX_VALUE - 1, Long.MAX_VALUE), points.map { it.timestamp })
+    }
+
+    @Test
+    fun leavesOutAVisitThatEndsBeforeItBegins() {
+        var skipped = 0
+        val points = TimelineParser.parse(StringReader(visit("2026-10-02T09:00:00Z", "2026-10-01T09:00:00Z"))) { skipped++ }.toList()
+
+        assertEquals(emptyList<TimelinePoint>(), points)
+        assertEquals(1, skipped)
+    }
+
+    @Test
+    fun fillsInAStayOfAFewDays() {
+        var skipped = 0
+        val points = TimelineParser.parse(StringReader(visit("2026-10-01T09:00:00Z", "2026-10-04T09:00:00Z"))) { skipped++ }.toList()
+
+        // Every ten minutes for three days, and the end.
+        assertEquals(3 * 24 * 6 + 1, points.size)
+        assertEquals(millis("2026-10-04T09:00:00Z"), points.last().timestamp)
+        assertEquals(0, skipped)
+    }
+
     @Test
     fun rejectsMalformedCoordinates() {
         assertNull(TimelineParser.parseLatLng("not a coordinate"))
