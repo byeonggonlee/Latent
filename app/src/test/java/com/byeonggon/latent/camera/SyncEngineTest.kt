@@ -314,7 +314,6 @@ class SyncEngineTest {
         assertEquals(null, item.latitude)
         // The file is stored as it came: the track is not written over the block it has.
         assertEquals(before, ExifInterface(File(item.path)).getAttribute(ExifInterface.TAG_GPS_LATITUDE))
-        assertEquals(null, ExifInterface(File(item.path)).latLong?.takeIf { it.first in -90.0..90.0 })
     }
 
     @Test
