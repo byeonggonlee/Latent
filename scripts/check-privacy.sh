@@ -8,7 +8,17 @@ cd "$(dirname "$0")/.."
 status=0
 
 banned='play-services|firebase|crashlytics|com\.google\.android\.gms|analytics|datatransport|mlkit|sentry|appcenter|bugsnag|amplitude|mixpanel'
-found=$(./gradlew -q :app:dependencies --configuration releaseRuntimeClasspath | grep -Ei "$banned" || true)
+# The list is read first and on its own: a listing that failed, or came back empty, proves nothing about the libraries.
+if ! libraries=$(./gradlew -q :app:dependencies --configuration releaseRuntimeClasspath); then
+  echo "::error::Could not list the release build's libraries, so they were not checked."
+  exit 1
+fi
+if [ -z "$libraries" ]; then
+  echo "::error::The list of the release build's libraries came back empty, so they were not checked."
+  exit 1
+fi
+# grep says 1 for no match, which is what is hoped for, and 2 or more for a failure of its own.
+found=$(printf '%s\n' "$libraries" | grep -Ei "$banned") || [ $? -eq 1 ]
 if [ -n "$found" ]; then
   echo "::error::The release build has a library that reports or services that PRIVACY.md says it has none of:"
   echo "$found"
