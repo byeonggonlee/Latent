@@ -141,7 +141,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | LA-09: the nightly and stable workflows build in a read-only job and publish in one of their own, before the `v0.1.0` tag (the owner's choice). Waits for Codex's review | `claude/split-publish` | `.github/workflows/release.yml`, `.github/workflows/nightly.yml`, `docs/RELEASES.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
 
@@ -366,7 +365,7 @@ without those temporary files. None use private photos.
   size on a phone. GPU divergence is not claimed as measured here.
 - **Risk**: low priority; no broad CPU/GPU precision redesign or camera-look change is justified by this small error.
 
-### LA-09. Separate build and publication permissions (hardening proposal, not a proven exploit)
+### LA-09. Separate build and publication permissions (hardening proposal, not a proven exploit) — done, PR #19
 
 - **Why / Where**: `release.yml:14-22` and `nightly.yml:21-22` grant `contents: write` to the whole job/workflow;
   the build job also exports GH_TOKEN. Build/plugin steps therefore inherit publication authority unnecessarily.
@@ -413,6 +412,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | LA-09: the nightly and stable workflows build in a read-only job and publish in one of their own, which takes the APK from the build's artifact, checks its checksum and never sees the signing secrets; before the `v0.1.0` tag, the owner's choice. Reviewed by Codex, no findings; neither workflow has run since, the next nightly is the first | [PR #19](https://github.com/byeonggonlee/Latent/pull/19), merged `5e1a6d6` |
 | 2026-10-22 | Claude Code (computer) | From a self-review of the library code pushed to `main` before the rules: one lock over library file moves (the trash, edits in place, the folder check, taking files in, exports, places written in); copies aside, exports and places written under a hidden name and given theirs once whole; a SAF move that fails keeps its name; a backup written over is truncated. Reviewed by Codex, no findings; not tried on a phone yet. Codex's audit of the rest is under *For Claude Code* (LA-01 to LA-09) | [PR #18](https://github.com/byeonggonlee/Latent/pull/18), merged `e57b35a` |
 | 2026-10-22 | Codex | Owner-requested independent legacy audit at `0f8af7e`: eight confirmed Claude-area findings (LA-01–08), one separately classified CI hardening proposal, owner tradeoffs in TODO, and coverage/limits above. Temporary reproductions were removed from the build; no Claude-owned production code changed. | `ca3b719`, `codex/legacy-safety-audit` |
 | 2026-10-22 | Codex | MPF optional-preview safety: Long offset/range checks stay inside APP2; truncated headers, wrapped table offsets and one-byte previews return no preview. Ten permanent normal/endian/malformed tests and related decoder checks pass. | `codex/legacy-safety-audit` |
