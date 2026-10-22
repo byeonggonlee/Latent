@@ -142,7 +142,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Claude Code (computer) | Compose UI tests (Robolectric) for today's UI: the sync's look-alike question, the gain-map warning, the detected-mask buttons, the viewer's HDR toggle, then other untested screens (trash, backup and restore) | `claude/compose-tests` | new `*Test.kt` under `app/src/test/java/com/byeonggon/latent/ui/`; small seams in `ui/` only if needed | 2026-10-22 |
-| Claude Code (computer) | Documentation for the `v0.1.0` tag: the 0.1.0 notes brought up to date, the phone checks in the order they are gone through, README, releases and roadmap against the code | `claude/release-docs` | `CHANGELOG.md`, `README.md`, `docs/DEVICE_CHECKS.md`, `docs/SMOKE_TEST.md`, `docs/RELEASES.md`, `docs/ROADMAP.md`, other docs where they contradict the code | 2026-10-22 |
 | Claude Code (computer) | Fuzz tests for the parsers of outside input (backup zip, Timeline JSON, JPEG metadata, Ultra HDR, XMP presets, `.cube` LUTs, camera listings), fixes for what they find; aggregate caps on a backup zip's entries and bytes | `claude/parser-fuzz` | `*FuzzTest.kt` under `app/src/test/`, the parsers they find crashing outside `raw/`, `backup/`, `docs/BACKUP_FORMAT.md` | 2026-10-22 |
 
 ## For Codex
@@ -234,6 +233,8 @@ Confirmed legacy-review findings follow below. Its own next items, so that Codex
 2026-10-21):
 
 - Tap to select (stage 3 of `AI_MASKS.md`): the sky (stage 2) is on `main` since 2026-10-22, to be judged on a phone.
+- Small, found by the release docs (2026-10-22): the Masks panel's hint (`masks_hint`, en, ko, ja) names the subject
+  and the background but not the sky.
 
 
 ### Legacy audit 2026-10-22 — independent main review
@@ -414,6 +415,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | Documentation for the `v0.1.0` tag: the 0.1.0 notes up to date with pull requests #3 to #29 (and a list of what was fixed since the nightlies); DEVICE_CHECKS in the order of a pass after a nightly (install, import, library, editor, backup, location, sharing, settings), every check kept, *New* on those since `nightly-20261022-219`, new checks for what had none, the debug-build tests apart; SMOKE_TEST in the same order with import, sky and HDR; README and RELEASES on the split workflows; the roadmap's shipped items; PRIVACY, SECURITY, AI_MASKS, BACKUP_FORMAT, PLAY_LISTING, TODO and AGENTS where they disagreed with the code | `1637c61`, `70d9568`, `68cb7ce`, `127fdec`, `7ce2c4d` |
 | 2026-10-22 | Claude Code (computer) | Roadmap 10: an HDR photo (Ultra HDR, or HEIF in HLG or PQ) in front in the viewer is decoded with its gain map or ten bits, and the window turns to HDR colour mode for it. Reviewed by Codex; not seen on a phone yet | [PR #28](https://github.com/byeonggonlee/Latent/pull/28), merged `fa386f9` |
 | 2026-10-22 | Claude Code (computer) | Stage 2 of the AI masks, the sky: EfficientViT-Seg B1 (ADE20K) converted to LiteRT, "+ Sky" in the editor, one model per kind (19.5 MB more in the APK). Reviewed by Codex; whether it runs on the GPU, and its quality, are for the phone | [PR #29](https://github.com/byeonggonlee/Latent/pull/29), merged `87daf12` |
 | 2026-10-22 | Claude Code (computer) | Roadmap 11: the editor says an Ultra HDR photo's edit is saved without its gain map, and a tone edit no longer carries the original's along (Codex's review found it did). Reviewed by Codex | [PR #27](https://github.com/byeonggonlee/Latent/pull/27), merged `50590e1` |
