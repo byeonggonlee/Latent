@@ -431,13 +431,13 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="other">%d locations stored</item>
     </plurals>
     <string name="storage_needed">Set up your library</string>
-    <string name="storage_intro">Latent keeps your photos in DCIM/Latent, where gallery and backup apps can see them too. Two permissions let it work with them.</string>
+    <string name="storage_intro">Latent keeps your photos in %1$s, where gallery and backup apps can see them too. Two permissions let it work with them.</string>
     <string name="storage_step_media">Step 1 of 2 · Choose \'Allow all\' so the app can read photos and videos, with their locations.</string>
     <string name="storage_refused">Not allowed. Allow it under Permissions in the app\'s settings.</string>
     <string name="open_app_settings">Open app settings</string>
     <string name="allow_media">Allow photos and videos</string>
-    <string name="storage_step_folder">Step 2 of 2 · Open the DCIM/Latent folder, where the photos are kept, and tap \'Use this folder\'.</string>
-    <string name="storage_wrong_folder">That is another folder. Choose the DCIM/Latent folder.</string>
+    <string name="storage_step_folder">Step 2 of 2 · Open the %1$s folder, where the photos are kept, and tap \'Use this folder\'.</string>
+    <string name="storage_wrong_folder">That is another folder. Choose the %1$s folder.</string>
     <string name="choose_folder">Choose folder</string>
     <string name="crop_area">Crop area</string>
     <string name="histogram">Histogram</string>
@@ -730,7 +730,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="backup_restore_not_backup">This file is not a Latent backup. Nothing was taken over.</string>
     <string name="backup_restore_damaged">This backup file is damaged or incomplete, so nothing of it was taken over.</string>
     <string name="backup_restore_too_new">This backup was made by a newer version of Latent (format %1$d; this version reads up to %2$d). Update the app, then restore it. Nothing was taken over.</string>
-    <string name="backup_restore_no_access">To find the photos of the backup, Latent needs access to your photos and to the DCIM/Latent folder. Give it in the library first, then restore. Nothing was taken over.</string>
+    <string name="backup_restore_no_access">To find the photos of the backup, Latent needs access to your photos and to the %1$s folder. Give it in the library first, then restore. Nothing was taken over.</string>
     <string name="backup_restore_failed">The restore failed, and nothing of the backup was taken over: %1$s</string>
     <string name="backup_restore_wait_for_sync">A camera sync is running. Restore once it has finished.</string>
     <string name="backup_restore_reimport_hint">Camera files whose photos are not on this phone are not imported again: the Camera tab counts them under \"Files deleted from the phone\", where \"Let them be imported again\" brings them back from the camera.</string>

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
 import android.os.Environment
+import com.byeonggon.latent.BuildConfig
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.PhotoFiles
 import java.io.File
@@ -14,9 +15,9 @@ import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.sync.Mutex
 
-/** The photo library on shared storage: DCIM/Latent/<year>/<date>/<file>. */
+/** The photo library on shared storage: DCIM/Latent/<year>/<date>/<file> (DCIM/Latent Debug/ for the debug build). */
 class LibraryStorage(private val context: Context) : PhotoFiles {
-    val root = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Latent")
+    val root = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), BuildConfig.LIBRARY_FOLDER)
     // Folders whose names start with a dot are kept out of gallery apps.
     private val incoming = File(root, ".incoming")
     private val originals = File(root, ".originals")

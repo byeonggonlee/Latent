@@ -22,6 +22,7 @@ import com.byeonggon.latent.backup.NoLibraryAccessException
 import com.byeonggon.latent.backup.NotABackupException
 import com.byeonggon.latent.backup.RestorePlan
 import com.byeonggon.latent.backup.RestoreResult
+import com.byeonggon.latent.data.PhoneLibrary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -164,7 +165,7 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
         } catch (e: NewerBackupException) {
             text(R.string.backup_restore_too_new, e.version, BackupFormat.VERSION)
         } catch (e: NoLibraryAccessException) {
-            text(R.string.backup_restore_no_access)
+            text(R.string.backup_restore_no_access, PhoneLibrary.LIBRARY_FOLDER.removeSuffix("/"))
         } catch (e: IOException) {
             text(R.string.backup_restore_failed, e.message.orEmpty())
         } catch (e: SecurityException) {

@@ -404,13 +404,13 @@
         <item quantity="other">저장된 위치 %d개</item>
     </plurals>
     <string name="storage_needed">사진 보관함 설정</string>
-    <string name="storage_intro">사진은 갤러리와 백업 앱에서도 보이는 DCIM/Latent 폴더에 보관됩니다. 사진을 다루려면 두 가지 권한이 필요합니다.</string>
+    <string name="storage_intro">사진은 갤러리와 백업 앱에서도 보이는 %1$s 폴더에 보관됩니다. 사진을 다루려면 두 가지 권한이 필요합니다.</string>
     <string name="storage_step_media">1단계 · 사진과 동영상, 그 위치 정보를 읽을 수 있게 \'모두 허용\'을 선택해주세요.</string>
     <string name="storage_refused">허용되지 않았습니다. 앱 설정의 권한에서 허용해주세요.</string>
     <string name="open_app_settings">앱 설정 열기</string>
     <string name="allow_media">사진·동영상 접근 허용</string>
-    <string name="storage_step_folder">2단계 · 사진을 정리할 DCIM/Latent 폴더를 열어 \'이 폴더 사용\'을 눌러주세요.</string>
-    <string name="storage_wrong_folder">다른 폴더입니다. DCIM/Latent 폴더를 골라주세요.</string>
+    <string name="storage_step_folder">2단계 · 사진을 정리할 %1$s 폴더를 열어 \'이 폴더 사용\'을 눌러주세요.</string>
+    <string name="storage_wrong_folder">다른 폴더입니다. %1$s 폴더를 골라주세요.</string>
     <string name="choose_folder">폴더 선택</string>
     <string name="crop_area">자를 영역</string>
     <string name="histogram">히스토그램</string>
@@ -688,7 +688,7 @@
     <string name="backup_restore_not_backup">Latent 백업 파일이 아닙니다. 아무것도 들어오지 않았습니다.</string>
     <string name="backup_restore_damaged">백업 파일이 손상되었거나 덜 만들어져서 아무것도 들어오지 않았습니다.</string>
     <string name="backup_restore_too_new">더 새로운 버전의 Latent가 만든 백업입니다(형식 %1$d, 이 버전은 %2$d까지 읽음). 앱을 업데이트한 뒤 복원하세요. 아무것도 들어오지 않았습니다.</string>
-    <string name="backup_restore_no_access">백업의 사진을 찾으려면 사진과 DCIM/Latent 폴더에 접근할 수 있어야 합니다. 보관함에서 먼저 허용한 뒤 복원하세요. 아무것도 들어오지 않았습니다.</string>
+    <string name="backup_restore_no_access">백업의 사진을 찾으려면 사진과 %1$s 폴더에 접근할 수 있어야 합니다. 보관함에서 먼저 허용한 뒤 복원하세요. 아무것도 들어오지 않았습니다.</string>
     <string name="backup_restore_failed">복원하지 못했고 백업의 내용은 하나도 들어오지 않았습니다: %1$s</string>
     <string name="backup_restore_wait_for_sync">카메라 동기화가 진행 중입니다. 끝난 뒤에 복원하세요.</string>
     <string name="backup_restore_reimport_hint">사진이 이 휴대전화에 없는 카메라 파일은 다시 가져오지 않습니다. 카메라 탭의 \"폰에서 지운 파일\"에 세어지며, \"다시 가져올 수 있게 하기\"로 카메라에서 다시 가져올 수 있습니다.</string>
