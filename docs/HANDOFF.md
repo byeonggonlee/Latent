@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Owner-requested follow-up to PR #35: review governance changes through PRs, one deep reviewer by default, evidence-based routing and honest effort reporting | `codex/review-governance` | `AGENTS.md`, `docs/architecture/antigravity-review-orchestration.md`, this board | 2026-10-23 |
 | Claude Code (computer) | Fixes the parser fuzzing found that need review: a backup's limits and its places off the Earth (#31), places off the Earth from Exif and a Timeline (#32), stored edits holding NaN or a crop far outside the picture (#33) | [PR #31](https://github.com/byeonggonlee/Latent/pull/31), [PR #32](https://github.com/byeonggonlee/Latent/pull/32), [PR #33](https://github.com/byeonggonlee/Latent/pull/33) | `backup/`, `camera/ImportedFiles.kt`, `location/MediaMetadataReader.kt`, `location/TimelineParser.kt`, `enhance/PhotoEdit.kt`, `Framing.kt`, `ToneCurve.kt`, `BrushRaster.kt`, `docs/BACKUP_FORMAT.md` | 2026-10-22 |
 
 ## For Codex
