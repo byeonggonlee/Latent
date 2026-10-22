@@ -88,11 +88,13 @@ with `-e jpegSample <path> -e arwSample <path>` (or `-e videoSample <path>`):
 
 ```bash
 adb shell am instrument -w -e class com.byeonggon.latent.enhance.EditOnDeviceTest -e jpegSample <path> \
-  com.latentimage.latent.test/androidx.test.runner.AndroidJUnitRunner
+  com.latentimage.latent.debug.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Gradle's `connectedAndroidTest` uninstalls the app afterwards, taking its database with it. The debug build cannot
-be installed over a nightly (another key) either: see [`docs/DEVICE_CHECKS.md`](docs/DEVICE_CHECKS.md), section 9.
+The debug build is another app, "Latent Debug" (`com.latentimage.latent.debug`), with its own database and its own
+library folder, `DCIM/Latent Debug`: it installs beside a nightly and leaves the nightly's photos and data alone.
+Gradle's `connectedAndroidTest` uninstalls it afterwards, taking its database with it. See
+[`docs/DEVICE_CHECKS.md`](docs/DEVICE_CHECKS.md), section 9.
 
 ## Notes for contributors
 

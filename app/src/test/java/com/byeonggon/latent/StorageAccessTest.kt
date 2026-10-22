@@ -65,12 +65,14 @@ class StorageAccessTest {
         assertFalse(folder.accept(treeOf("primary:Pictures")))
         assertFalse(folder.accept(treeOf("primary:DCIM/Camera")))
         assertFalse(folder.accept(treeOf("primary:DCIM/LatentOld")))
+        // The installed app's library is not the debug build's, which these tests run.
+        assertFalse(folder.accept(treeOf("primary:DCIM/Latent")))
         assertFalse(folder.isGranted())
 
-        assertTrue(folder.accept(treeOf("primary:DCIM/Latent")))
+        assertTrue(folder.accept(treeOf("primary:DCIM/Latent Debug")))
         assertTrue(folder.isGranted())
         val persisted = ApplicationProvider.getApplicationContext<LatentApp>().contentResolver.persistedUriPermissions
         assertTrue(persisted.single().isWritePermission)
-        assertTrue(persisted.single().uri.toString().endsWith("primary%3ADCIM%2FLatent"))
+        assertTrue(persisted.single().uri.toString().endsWith("primary%3ADCIM%2FLatent%20Debug"))
     }
 }
