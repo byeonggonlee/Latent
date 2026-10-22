@@ -167,6 +167,10 @@ class DamagedBackupException(entry: String, line: Int? = null, cause: Throwable?
 /** Written by a newer app, in a format this one does not know. */
 class NewerBackupException(val version: Int) : BackupException("Backup format $version is newer than ${BackupFormat.VERSION}")
 
+/** A library whose backup would be larger than a restore reads, so that it is not written: it could not be restored. */
+class BackupTooLargeException(val mostEntries: Int, val mostUnpacked: Long) :
+    IOException("A backup holds at most $mostEntries entries and $mostUnpacked bytes unpacked")
+
 /** The photos of the backup cannot be found without access to the library and the phone's photos. */
 class NoLibraryAccessException : BackupException("No access to the library")
 

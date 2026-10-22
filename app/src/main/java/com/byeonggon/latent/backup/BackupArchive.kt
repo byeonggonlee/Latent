@@ -131,6 +131,19 @@ internal class BackupArchive private constructor(
          */
         internal const val MOST_UNPACKED = 4L * 1024 * 1024 * 1024
 
+        /**
+         * Whether [sizes] add up to [limit] at most, a size not known (-1) counting as none. Added up only as far as the
+         * limit: Zip64's sizes are Longs, and a sum past Long.MAX_VALUE would wrap round to a small one.
+         */
+        internal fun fitsWithin(sizes: Sequence<Long>, limit: Long): Boolean {
+            var total = 0L
+            for (size in sizes) {
+                if (size > limit - total) return false
+                total += size.coerceAtLeast(0)
+            }
+            return true
+        }
+
         private const val CANCEL_CHECK = 512
         private const val DRAIN = 8192
         private const val SMALL_ENTRY = 1024 * 1024
@@ -154,7 +167,7 @@ internal class BackupArchive private constructor(
                 val entry = zip.getEntry(BackupFormat.MANIFEST) ?: throw NotABackupException()
                 // What the zip's own directory says, before anything is unpacked; what it leaves out is counted as it unpacks.
                 if (zip.size() > mostEntries) throw DamagedBackupException("(${zip.size()} entries)")
-                if (zip.entries().asSequence().sumOf { it.size.coerceAtLeast(0) } > mostUnpacked) throw DamagedBackupException("(sizes)")
+                if (!fitsWithin(zip.entries().asSequence().map { it.size }, mostUnpacked)) throw DamagedBackupException("(sizes)")
                 val manifest = try {
                     val bytes = CheckedInputStream(zip.getInputStream(entry), CRC32()).use { checked ->
                         checked.readLimited(SMALL_ENTRY, entry.name).also {

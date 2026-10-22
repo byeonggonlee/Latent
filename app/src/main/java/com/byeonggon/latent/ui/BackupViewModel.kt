@@ -14,6 +14,7 @@ import com.byeonggon.latent.backup.BackupCounts
 import com.byeonggon.latent.backup.BackupFormat
 import com.byeonggon.latent.backup.BackupProgress
 import com.byeonggon.latent.backup.BackupStep
+import com.byeonggon.latent.backup.BackupTooLargeException
 import com.byeonggon.latent.backup.DamagedBackupException
 import com.byeonggon.latent.backup.MissingPhotos
 import com.byeonggon.latent.backup.NewerBackupException
@@ -77,6 +78,9 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
             val deleted = withContext(NonCancellable + Dispatchers.IO) { discard(uri) }
             _state.update { BackupUiState(message = text(if (deleted) R.string.backup_cancelled else R.string.backup_cancelled_left)) }
             throw e
+        } catch (e: BackupTooLargeException) {
+            withContext(Dispatchers.IO) { discard(uri) }
+            text(R.string.backup_too_large)
         } catch (e: IOException) {
             withContext(Dispatchers.IO) { discard(uri) }
             text(R.string.backup_failed, e.message.orEmpty())
