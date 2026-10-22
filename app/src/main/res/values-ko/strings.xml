@@ -413,6 +413,9 @@
     <plurals name="timeline_added">
         <item quantity="other">위치 %2$d개 중 %1$d개를 새로 추가했습니다. (%3$s)</item>
     </plurals>
+    <plurals name="timeline_visits_skipped">
+        <item quantity="other">머문 기록 %d개는 빼놓았습니다. 일주일보다 길거나 끝이 시작보다 앞섭니다.</item>
+    </plurals>
     <plurals name="stars">
         <item quantity="other">별점 %d</item>
     </plurals>
