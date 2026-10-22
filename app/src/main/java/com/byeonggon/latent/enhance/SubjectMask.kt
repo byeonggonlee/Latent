@@ -31,7 +31,7 @@ interface Segmenter : AutoCloseable {
 class SegmenterException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /**
- * Finds the subject of a picture and draws its outline. The model answers on a coarse grid; a guided
+ * Finds the subject or the sky of a picture and draws its outline. The model answers on a coarse grid; a guided
  * filter works out, at that size, how its answer follows the picture's brightness, and that is applied to
  * the brightness at the outline's full size, so that the edge is as sharp as the picture's own there:
  * the way phones bring up a sky found at low resolution. It sharpens an edge the model put in the right
@@ -46,6 +46,9 @@ object SubjectMasks {
     /** Below this, the most the model is sure of anywhere, nothing in the picture stands out. */
     private const val LEAST_PEAK = 0.2f
 
+    /** Below this, the sky's greatest probability anywhere, the picture has no sky. */
+    private const val LEAST_SKY = 0.3f
+
     /** How far the refinement looks around each cell of the model's grid, as a fraction of its long side. */
     private const val REACH = 0.01f
 
@@ -53,17 +56,17 @@ object SubjectMasks {
     private const val EDGE_VARIANCE = 0.0005f
 
     /**
-     * The outline of the subject of [picture], the whole upright picture as the camera made it, at most
-     * [STORED_EDGE] cells on its long side; null if nothing in it stands out.
+     * The outline of the [kind] of thing in [picture], the whole upright picture as the camera made it, at most
+     * [STORED_EDGE] cells on its long side; null if nothing in it stands out, or it has no sky.
      */
     @Throws(SegmenterException::class)
-    fun outline(picture: LinearImage, segmenter: Segmenter): MaskRaster? {
+    fun outline(picture: LinearImage, segmenter: Segmenter, kind: DetectedKind = DetectedKind.SUBJECT): MaskRaster? {
         val started = System.nanoTime()
         val shown = shownAt(picture, STORED_EDGE)
         val asked = System.nanoTime()
         val found = segmenter.segment(shown)
         val answered = System.nanoTime()
-        val outline = refined(shown, found) ?: return null.also { Log.i(TAG, "Nothing stands out in a ${shown.width}x${shown.height} picture") }
+        val outline = refined(shown, found, kind) ?: return null.also { Log.i(TAG, "No ${kind.name.lowercase()} in a ${shown.width}x${shown.height} picture") }
         Log.i(
             TAG,
             "Outline ${shown.width}x${shown.height} by ${segmenter.model} v${segmenter.modelVersion} in ${millis(started)} ms: " +
@@ -73,10 +76,11 @@ object SubjectMasks {
     }
 
     /**
-     * The model's [found] grid laid over [shown] and made to follow its edges; null if nothing stands out.
-     * The model is read as its authors do: stretched so that its least and most certain cells are 0 and 1.
+     * The model's [found] grid laid over [shown] and made to follow its edges; null if nothing stands out, or there is no
+     * sky. A subject is read as U²-Net's authors do: stretched so that its least and most certain cells are 0 and 1. The
+     * sky's grid is a probability already, taken as it is: stretched, a picture with a scrap of sky would get a whole one.
      */
-    internal fun refined(shown: ShownPicture, found: Segmentation): FloatArray? {
+    internal fun refined(shown: ShownPicture, found: Segmentation, kind: DetectedKind = DetectedKind.SUBJECT): FloatArray? {
         var lowest = Float.MAX_VALUE
         var highest = -Float.MAX_VALUE
         for (value in found.values) {
@@ -84,9 +88,17 @@ object SubjectMasks {
             lowest = min(lowest, value)
             highest = max(highest, value)
         }
-        if (highest < LEAST_PEAK) return null
-        // A picture that is all subject, or all of one kind, has nothing to stretch apart: it is taken as it is.
-        val stretched = if (highest - lowest < LEAST_PEAK) found.values else FloatArray(found.values.size) { (found.values[it] - lowest) / (highest - lowest) }
+        val stretched = when (kind) {
+            DetectedKind.SKY -> {
+                if (highest < LEAST_SKY) return null
+                found.values
+            }
+            DetectedKind.SUBJECT -> {
+                if (highest < LEAST_PEAK) return null
+                // A picture that is all subject, or all of one kind, has nothing to stretch apart: it is taken as it is.
+                if (highest - lowest < LEAST_PEAK) found.values else FloatArray(found.values.size) { (found.values[it] - lowest) / (highest - lowest) }
+            }
+        }
         val width = shown.width
         val height = shown.height
         val brightness = FloatArray(width * height) { LUMA_RED * shown.red[it] + LUMA_GREEN * shown.green[it] + LUMA_BLUE * shown.blue[it] }

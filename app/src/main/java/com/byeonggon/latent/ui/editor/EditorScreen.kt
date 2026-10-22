@@ -380,7 +380,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                     CompareButton(onCompare = viewModel::setComparing, modifier = Modifier.align(Alignment.BottomEnd))
                 }
                 if (state.comparing) Pill(stringResource(R.string.original), Modifier.align(Alignment.TopCenter))
-                if (state.loading || state.saving || state.detecting) CircularProgressIndicator()
+                if (state.loading || state.saving || state.detecting != null) CircularProgressIndicator()
             }
             // In a wide window the controls go beside the picture, the full height of the window.
             if (window.sidePanel) editorPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
@@ -760,7 +760,7 @@ private fun EditorPanel(
                             available = state.canDetect,
                             busy = state.detecting,
                             lost = state.lostOutlines,
-                            onAdd = { background -> viewModel.addSubjectMask(background, onAdded = onSelectLocal) },
+                            onAdd = { kind, inverted -> viewModel.addDetectedMask(kind, inverted, onAdded = onSelectLocal) },
                             onFindAgain = { viewModel.findOutlineAgain(selectedLocal) },
                         ),
                     )

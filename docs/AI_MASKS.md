@@ -117,6 +117,63 @@ memory; whether every op stays on the GPU; the quality on real photos; GPU and C
 the shader with a detected mask. `SubjectMaskOnDeviceTest` checks the shapes, the sigmoid range and a plain
 subject on both accelerators and logs their times; see `DEVICE_CHECKS.md`.
 
+## Stage 2 as built (2026-10-22): the sky
+
+"+ Sky" in the Masks panel, after "+ Background". As for the subject, nothing runs until it is tapped; the sky's
+model is set up the first time and kept while the app runs, beside the subject's. Inverted ("All but the sky"),
+brush add and erase, feather, "Find again" and the rest are the subject's, unchanged. The owner approved the
+downloads on 2026-10-22; the training-data question was settled on 2026-10-15 (below).
+
+| | |
+|---|---|
+| Model | EfficientViT-Seg B1 trained on ADE20K (Cai et al., ICCV 2023), 150 classes of scenes, of which sky is class 2 (`eval_efficientvit_seg_model.py` lists them: wall, building, sky, ...) |
+| Licence | Apache 2.0, code [21] and weights [26]; trained on ADE20K, whose images are for research and education [37] (the owner's decision on training data, below) |
+| Weights used | `efficientvit_seg_b1_ade20k.pt` from https://huggingface.co/han-cai/efficientvit-seg, 19,339,726 bytes, SHA-256 `59cca6a7ff4d1a6494b7f12072c6a68fee40ef401e971f26af01a2e0f3c8f5e7` (the Hub's LFS object id); model code from https://github.com/mit-han-lab/efficientvit at `de7d7733cc0329f391b33f1f459271562ec27bd5`; loaded with `strict=True` |
+| Conversion | `litert-torch` 0.9.4 (torch 2.13.0, torchvision 0.28.0) in a throwaway venv outside the repo, as for stage 1. The graph ends in the softmax over the 150 classes, and only the sky's share is kept. Channels-last input and output. Weights unchanged, float32: the quantizer offers int8 weights, not float16, and int8 on the graphics processor is not tried here |
+| File | `app/src/main/assets/efficientvit_seg_b1_ade20k_sky.tflite`, 19,549,512 bytes, SHA-256 `11608a61b683cc8bac25c8417a3581136d0618a55ed93e56646180501f9dfe69`, float32 |
+| Checked | Against PyTorch on random input: largest difference 9.4e-8; on a synthetic picture (a blue gradient over green and gray ground): 1.0e-5, sky 0.976 in the top rows and 0.165 at the bottom. The landscape of `SkyMaskOnDeviceTest`, prepared as the app does: sky 0.982, ground 0.029 |
+| Input (read from the model) | `serving_default_args_0` (`args_0`), `[1, 512, 512, 3]` float32, RGB |
+| Output (read from the model) | `serving_default_output_0_output` (`output_0`), `[1, 64, 64, 1]` float32, the sky's probability, 0 to 1 |
+| Ops | `CONV_2D` 61, `TRANSPOSE` 61, `ADD` 60, `RESHAPE` 60, `MUL` 40, `CONCATENATION` 39, `HARD_SWISH` 36, `SLICE` 36, `GATHER_ND` 32, `DEPTHWISE_CONV_2D` 25, `BROADCAST_TO` 16, `RELU` 14, `BATCH_MATMUL` 14, `PADV2` 7, `DIV` 7, `PAD` 5, `SOFTMAX` 1. `GATHER_ND` and `BROADCAST_TO` (from the linear attention) may keep it off the graphics processor: `LiteRtSegmenter` then runs it on the cores, which the phone's log will say |
+| Preparation | The picture stretched to 512 × 512 (not letterboxed, upright: a sky on its side is not what ADE20K's scenes show), then `(v − mean) / std` with ImageNet's mean and std, as the authors' demo does; not divided by the brightest value first, which U²-Net's script does |
+| Reading the answer | As it is: it is a probability already. Stretched like the subject's, a picture with a scrap of sky would get a whole one. Below 0.3 at its most, "no sky" is said. Then the same guided filter as the subject's carries the 64 × 64 answer to the picture's edges at 1024 |
+
+Conversion script (run with `python -I`, after `pip install litert-torch==0.9.4 torchvision==0.28.0 pillow omegaconf
+segment_anything` and `pip install --no-deps timm onnx onnxsim`, which the repository's imports reach without B1 using
+them). EfficientViT's triton RMS norm, which only its other models use and which has no macOS build, is stood in for:
+
+```python
+import sys, types, torch, litert_torch
+sys.path.insert(0, CODE_DIR)            # a checkout of mit-han-lab/efficientvit
+stub = types.ModuleType("efficientvit.models.nn.triton_rms_norm")
+stub.TritonRMSNorm2dFunc = None         # unused by B1, which normalises with batch norm
+stub.__all__ = ["TritonRMSNorm2dFunc"]
+sys.modules[stub.__name__] = stub
+from efficientvit.models.efficientvit.seg import efficientvit_seg_b1
+
+class Sky(torch.nn.Module):
+    def __init__(self, net): super().__init__(); self.net = net
+    def forward(self, x): return torch.softmax(self.net(x), dim=1)[:, 2:3]   # class 2, the sky
+
+net = efficientvit_seg_b1(dataset="ade20k")
+net.load_state_dict(torch.load("efficientvit_seg_b1_ade20k.pt", map_location="cpu", weights_only=True)["state_dict"], strict=True)
+model = litert_torch.to_channel_last_io(Sky(net.eval()).eval(), args=[0], outputs=[0])
+litert_torch.convert(model, (torch.randn(1, 512, 512, 3),)).export("efficientvit_seg_b1_ade20k_sky.tflite")
+```
+
+In the app: `SegmenterModel.SKY` (name `efficientvit-seg-b1-ade20k-sky`, version 1) is what `LiteRtSegmenter` runs for
+`DetectedKind.SKY`; `MaskDetector` keeps one segmenter for each kind, and a kind whose model cannot run here hides
+only its own buttons. The licence and the notice are in `assets/licenses/` (`efficientvit-LICENSE.txt`, `NOTICE.txt`),
+and the About dialog names EfficientViT.
+
+### Not verified (no phone was attached)
+
+Everything stage 1 lists, for this model too: whether it runs on the S24/S26's graphics processor at all or only on the
+cores, the times (about 1.5 times stage 1's operations at 512), the memory, and the quality on real skies: tree branches
+and wires against the sky, haze, sunsets, night, reflections in water. `SkyMaskOnDeviceTest` checks the shapes and a
+plain sky on both accelerators and logs their times; see `DEVICE_CHECKS.md`. The APK grows by the model's 19.5 MB
+(stored uncompressed like the subject's).
+
 ## The answer
 
 **Yes, and without giving up "no network".** Latent can offer Lightroom-style Subject, Background, Sky and

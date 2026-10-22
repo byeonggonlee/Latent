@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.byeonggon.latent.enhance.DetectedKind
 import com.byeonggon.latent.enhance.LocalEdit
 import com.byeonggon.latent.enhance.Mask
 import com.byeonggon.latent.enhance.MaskShape
@@ -58,6 +59,13 @@ private fun newMask(shape: MaskShape) = when (shape) {
     MaskShape.DETECTED -> Mask(shape, startX = 0f, startY = 0f, endX = 0f, endY = 0f, feather = 0f)
 }
 
+/** The masks a model finds, as the panel offers them: what is found, whether the mask is the rest, and its button. */
+private val DETECTED_MASKS = listOf(
+    Triple(DetectedKind.SUBJECT, false, R.string.add_subject),
+    Triple(DetectedKind.SUBJECT, true, R.string.add_background),
+    Triple(DetectedKind.SKY, false, R.string.add_sky),
+)
+
 /** The blue of a sky, which is what a colour range is first put on. */
 private const val FIRST_HUE = 215f
 
@@ -68,21 +76,25 @@ private fun nameOf(local: LocalEdit, index: Int) = stringResource(
         MaskShape.RADIAL -> R.string.mask_radial
         MaskShape.BRUSH -> R.string.mask_brush
         MaskShape.EVERYWHERE -> R.string.mask_colour
-        MaskShape.DETECTED -> if (local.mask.inverted) R.string.mask_background else R.string.mask_subject
+        MaskShape.DETECTED -> when {
+            local.mask.detection?.kind == DetectedKind.SKY -> if (local.mask.inverted) R.string.mask_not_sky else R.string.mask_sky
+            local.mask.inverted -> R.string.mask_background
+            else -> R.string.mask_subject
+        }
     },
     index + 1,
 )
 
 /**
- * What can be done about masks that a model finds: whether it can run here at all ([available]), whether
- * it is at work right now ([busy]), which outlines are lost ([lost], by their ids), and how to ask for a
- * subject mask, inverted for the background, or to find the selected mask's outline again.
+ * What can be done about masks that a model finds: the kinds it can find here ([available]), what it is
+ * looking for right now ([busy], null while nothing), which outlines are lost ([lost], by their ids), and how to ask
+ * for a subject or sky mask, inverted for the background, or to find the selected mask's outline again.
  */
 internal class Detecting(
-    val available: Boolean = false,
-    val busy: Boolean = false,
+    val available: Set<DetectedKind> = emptySet(),
+    val busy: DetectedKind? = null,
     val lost: Set<String> = emptySet(),
-    val onAdd: (background: Boolean) -> Unit = {},
+    val onAdd: (kind: DetectedKind, inverted: Boolean) -> Unit = { _, _ -> },
     val onFindAgain: () -> Unit = {},
 )
 
@@ -125,23 +137,21 @@ internal fun LocalPanel(
                 enabled = enabled && locals.size < MOST_MASKS,
             ) { Text(stringResource(label)) }
         }
-        if (detecting.available) {
-            for ((background, label) in listOf(false to R.string.add_subject, true to R.string.add_background)) {
-                OutlinedButton(
-                    onClick = { detecting.onAdd(background) },
-                    enabled = enabled && !detecting.busy && locals.size < MOST_MASKS,
-                ) { Text(stringResource(label)) }
-            }
+        for ((kind, inverted, label) in DETECTED_MASKS.filter { it.first in detecting.available }) {
+            OutlinedButton(
+                onClick = { detecting.onAdd(kind, inverted) },
+                enabled = enabled && detecting.busy == null && locals.size < MOST_MASKS,
+            ) { Text(stringResource(label)) }
         }
     }
-    if (detecting.busy) {
+    if (detecting.busy != null) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text(stringResource(R.string.finding_subject), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(if (detecting.busy == DetectedKind.SKY) R.string.finding_sky else R.string.finding_subject), style = MaterialTheme.typography.bodyMedium)
         }
     }
     if (current == null) {
@@ -192,8 +202,8 @@ internal fun LocalPanel(
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.weight(1f),
             )
-            if (detecting.available) {
-                TextButton(onClick = detecting.onFindAgain, enabled = enabled && !detecting.busy) { Text(stringResource(R.string.detect_again)) }
+            if (current.mask.detection?.kind in detecting.available) {
+                TextButton(onClick = detecting.onFindAgain, enabled = enabled && detecting.busy == null) { Text(stringResource(R.string.detect_again)) }
             }
         }
     }

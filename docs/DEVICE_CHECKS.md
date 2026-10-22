@@ -149,6 +149,20 @@ items below stay open until each is looked at. Read the times with `adb logcat -
 - [ ] A mask whose outline file is deleted (`adb shell run-as com.latentimage.latent rm files/masks/<id>.mask`, then reopen the photo): "The outline of this mask is missing" and "Find again".
 - [ ] Release build: the R8 rules keep LiteRT's classes; "+ Subject" works in `assembleRelease -PdebugSignedRelease` (a missing class would show as a crash or "cannot run" in logcat).
 
+## Sky masks (EfficientViT-Seg B1 on LiteRT)
+
+Built 2026-10-22 on the subject masks' path; read the times with `adb logcat -s SubjectMask SkyMaskOnDeviceTest`.
+
+- [ ] Run `SkyMaskOnDeviceTest` (`-e class com.byeonggon.latent.enhance.SkyMaskOnDeviceTest`, with `-e jpegSample <path>` of a
+      photo with sky): 1 × 512 × 512 × 3 in, 1 × 64 × 64 × 1 out, a plain sky found on both accelerators. Does the GPU set up,
+      or does the log say it fell back to the CPU (the model's `GATHER_ND` and `BROADCAST_TO`)? Cold and warm times.
+- [ ] Quality: tree branches and wires against the sky, haze, sunsets, night, reflections in water, a sky seen through a
+      window, a portrait photo (stretched to the square the model takes), a photo with no sky ("No sky was found").
+- [ ] "+ Sky" on a photo, then darker exposure and more saturation on it, and "All but the sky" (Invert): the edges
+      follow the horizon and the trees in the preview and the saved JPEG; brush add and erase work on it.
+- [ ] Subject and sky on one photo: each model is set up once (two "set up in" lines), and both stay.
+- [ ] APK size: the release APK grows by about the model's 19.5 MB (stored uncompressed).
+
 ## Phone raw files (DNG)
 
 Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (three samples a pixel). Pro mode (lossless JPEG, 4080x2298) now develops, upright and in plausible colours, in about 0.6 s to read on a computer. Expert RAW (JPEG XL, 4000x3000) develops too, through jxlatte (MIT, `third_party/jxlatte`, patched to need 384 MB of heap instead of more than 1.2 GB), in about 1.3 s to read on a computer. Its samples stay under an eighth of white (the brightest 8026 of 65535) with a `BaselineExposure` of +3, which the reader now applies, as far as the brightest sample reaches white: it then looks as bright as the phone's JPEG. Pro mode's is 0.

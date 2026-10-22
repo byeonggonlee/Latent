@@ -14,8 +14,27 @@ enum class SegmenterAccelerator(internal val litert: Accelerator) {
 }
 
 /**
- * U²-Netp (Qin et al., Apache 2.0), a small salient object model, run by LiteRT from the app's own
- * assets: nothing is downloaded. See docs/AI_MASKS.md for where the file came from and how it was made.
+ * A model file among the app's assets, named and numbered as the masks it makes record it, and how a picture is
+ * prepared for it. See docs/AI_MASKS.md for where each file came from and how it was made.
+ */
+class SegmenterModel(
+    val name: String,
+    val version: Int,
+    val asset: String,
+    /** Whether the picture is first divided by its brightest value, as U²-Net's authors do, before ImageNet's normalising. */
+    val toBrightest: Boolean,
+) {
+    companion object {
+        /** U²-Netp (Qin et al., Apache 2.0), a small salient object model: the subject. */
+        val SUBJECT = SegmenterModel("u2netp", 1, "u2netp.tflite", toBrightest = true)
+
+        /** EfficientViT-Seg B1 (MIT HAN Lab, Apache 2.0) trained on ADE20K, giving only the sky's probability. */
+        val SKY = SegmenterModel("efficientvit-seg-b1-ade20k-sky", 1, "efficientvit_seg_b1_ade20k_sky.tflite", toBrightest = false)
+    }
+}
+
+/**
+ * A [SegmenterModel] run by LiteRT from the app's own assets: nothing is downloaded.
  *
  * It is tried on each of [accelerators] in turn, the graphics processor first: where one cannot be set
  * up, or fails while running, the next one takes over for as long as this lives. Which one ran and how
@@ -24,9 +43,10 @@ enum class SegmenterAccelerator(internal val litert: Accelerator) {
 class LiteRtSegmenter(
     private val assets: AssetManager,
     accelerators: List<SegmenterAccelerator> = DEFAULT_ACCELERATORS,
+    private val spec: SegmenterModel = SegmenterModel.SUBJECT,
 ) : Segmenter {
-    override val model = MODEL
-    override val modelVersion = MODEL_VERSION
+    override val model = spec.name
+    override val modelVersion = spec.version
 
     private val untried = ArrayDeque(accelerators)
 
@@ -40,7 +60,7 @@ class LiteRtSegmenter(
     val inputWidth: Int get() = running?.width ?: 0
     val inputHeight: Int get() = running?.height ?: 0
 
-    /** The model compiled for one accelerator, with its input and output and what they hold. */
+    /** The model compiled for one accelerator, with its input and output and what they hold: a picture in, a grid out. */
     private class Running(
         val accelerator: SegmenterAccelerator,
         val compiled: CompiledModel,
@@ -48,6 +68,8 @@ class LiteRtSegmenter(
         val outputs: List<TensorBuffer>,
         val width: Int,
         val height: Int,
+        val gridWidth: Int,
+        val gridHeight: Int,
     ) {
         var runs = 0
 
@@ -64,29 +86,30 @@ class LiteRtSegmenter(
             val accelerator = untried.removeFirst()
             val started = System.nanoTime()
             try {
-                val compiled = CompiledModel.create(assets, ASSET, CompiledModel.Options(accelerator.litert))
+                val compiled = CompiledModel.create(assets, spec.asset, CompiledModel.Options(accelerator.litert))
                 try {
                     val inputType = compiled.getInputTensorType(INPUT)
                     val outputType = compiled.getOutputTensorType(OUTPUT)
                     val input = inputType.layout?.dimensions.orEmpty()
                     val output = outputType.layout?.dimensions.orEmpty()
-                    // One picture of floats, rows, columns and red, green and blue in; one channel out, at the same size.
+                    // One picture of floats, rows, columns and red, green and blue in; one channel out, on a grid of the model's own.
                     val floats = inputType.elementType == TensorType.ElementType.FLOAT && outputType.elementType == TensorType.ElementType.FLOAT
-                    if (!floats || input.size != 4 || input[0] != 1 || input[3] != 3 || output != listOf(1, input[1], input[2], 1)) {
+                    val shaped = input.size == 4 && input[0] == 1 && input[3] == 3 && output.size == 4 && output[0] == 1 && output[3] == 1
+                    if (!floats || !shaped || output[1] < 1 || output[2] < 1) {
                         throw SegmenterException("The model takes $inputType and gives $outputType")
                     }
-                    val running = Running(accelerator, compiled, compiled.createInputBuffers(), compiled.createOutputBuffers(), input[2], input[1])
-                    Log.i(LOG_TAG, "$MODEL v$MODEL_VERSION on $accelerator: set up in ${millis(started)} ms, input $input, output $output")
+                    val running = Running(accelerator, compiled, compiled.createInputBuffers(), compiled.createOutputBuffers(), input[2], input[1], output[2], output[1])
+                    Log.i(LOG_TAG, "${spec.name} v${spec.version} on $accelerator: set up in ${millis(started)} ms, input $input, output $output")
                     return running
                 } catch (e: Exception) {
                     compiled.close()
                     throw e
                 }
             } catch (e: Exception) {
-                Log.w(LOG_TAG, "$MODEL cannot be set up on $accelerator after ${millis(started)} ms", e)
+                Log.w(LOG_TAG, "${spec.name} cannot be set up on $accelerator after ${millis(started)} ms", e)
             } catch (e: LinkageError) {
                 // The accelerator's native library is missing or will not load on this phone.
-                Log.w(LOG_TAG, "$MODEL cannot be set up on $accelerator", e)
+                Log.w(LOG_TAG, "${spec.name} cannot be set up on $accelerator", e)
             }
         }
         return null
@@ -94,18 +117,18 @@ class LiteRtSegmenter(
 
     override fun segment(picture: ShownPicture): Segmentation {
         while (true) {
-            val current = running ?: throw SegmenterException("$MODEL cannot run any more")
+            val current = running ?: throw SegmenterException("${spec.name} cannot run any more")
             val started = System.nanoTime()
             try {
                 val values = run(current, picture)
                 current.runs++
-                Log.i(LOG_TAG, "$MODEL on ${current.accelerator}: ${if (current.runs == 1) "first (cold)" else "warm"} run in ${millis(started)} ms")
-                return Segmentation(current.width, current.height, values)
+                Log.i(LOG_TAG, "${spec.name} on ${current.accelerator}: ${if (current.runs == 1) "first (cold)" else "warm"} run in ${millis(started)} ms")
+                return Segmentation(current.gridWidth, current.gridHeight, values)
             } catch (e: Exception) {
-                Log.w(LOG_TAG, "$MODEL failed on ${current.accelerator}", e)
+                Log.w(LOG_TAG, "${spec.name} failed on ${current.accelerator}", e)
                 current.close()
                 running = next()
-                if (running == null) throw SegmenterException("$MODEL failed on every accelerator", e)
+                if (running == null) throw SegmenterException("${spec.name} failed on every accelerator", e)
             }
         }
     }
@@ -115,8 +138,8 @@ class LiteRtSegmenter(
         val width = running.width
         val height = running.height
         val planes = listOf(picture.red, picture.green, picture.blue).map { resampled(it, picture.width, picture.height, width, height) }
-        // Divided by the brightest value, then normalised with ImageNet's means and spreads.
-        val brightest = planes.maxOf { plane -> plane.max() }.takeIf { it > 0f } ?: 1f
+        // Divided by the brightest value where the model's authors do, then normalised with ImageNet's means and spreads.
+        val brightest = if (spec.toBrightest) planes.maxOf { plane -> plane.max() }.takeIf { it > 0f } ?: 1f else 1f
         val input = FloatArray(width * height * 3)
         for (index in 0 until width * height) {
             for (channel in 0 until 3) {
@@ -126,7 +149,9 @@ class LiteRtSegmenter(
         running.inputs[0].writeFloat(input)
         running.compiled.run(running.inputs, running.outputs)
         val output = running.outputs[0].readFloat()
-        if (output.size != width * height) throw SegmenterException("The model gave ${output.size} values for $width by $height")
+        if (output.size != running.gridWidth * running.gridHeight) {
+            throw SegmenterException("The model gave ${output.size} values for ${running.gridWidth} by ${running.gridHeight}")
+        }
         // A graphics processor working in half precision can overflow; such an answer is no answer.
         if (output.any { !it.isFinite() }) throw SegmenterException("The model gave values that are not numbers")
         return output
@@ -140,13 +165,8 @@ class LiteRtSegmenter(
     private fun millis(since: Long) = (System.nanoTime() - since) / 1_000_000
 
     companion object {
-        /** Where to read about the model on a phone: `adb logcat -s SubjectMask`. */
+        /** Where to read about the models on a phone: `adb logcat -s SubjectMask`. */
         const val LOG_TAG = "SubjectMask"
-        const val MODEL = "u2netp"
-        const val MODEL_VERSION = 1
-
-        /** The model file among the app's assets. */
-        const val ASSET = "u2netp.tflite"
 
         /** The graphics processor first; the processor's cores where it cannot be used. */
         val DEFAULT_ACCELERATORS = listOf(SegmenterAccelerator.GPU, SegmenterAccelerator.CPU)

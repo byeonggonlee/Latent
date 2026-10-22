@@ -146,10 +146,18 @@ class DetectedMaskTest {
     }
 
     @Test
+    fun keepsASkyMaskThroughItsJson() {
+        val sky = Detection(DetectedKind.SKY, leftHalf, "efficientvit-seg-b1-ade20k-sky", 1)
+        val edit = PhotoEdit(locals = listOf(LocalEdit(detected(sky).copy(inverted = true), Adjustments(exposure = -1f))))
+
+        assertEquals(edit, PhotoEdit.fromJson(edit.toJson()))
+    }
+
+    @Test
     fun aKindOfThingThisVersionDoesNotKnowCoversNothing() {
         keepLeftHalf()
         val stored = """{"locals":[{"shape":"DETECTED","mask":[0,0,0,0,0],"inverted":true,"exposure":1.0,""" +
-            """"detected":{"kind":"SKY","raster":"$leftHalf","model":"later","modelVersion":3}}]}"""
+            """"detected":{"kind":"PEOPLE","raster":"$leftHalf","model":"later","modelVersion":3}}]}"""
 
         val edit = PhotoEdit.fromJson(stored)!!
 

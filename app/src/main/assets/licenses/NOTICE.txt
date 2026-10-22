@@ -21,6 +21,22 @@ the fused output (d0, after its sigmoid) kept. The weights are unchanged. The co
 4,776,700 bytes, SHA-256 f491640e47ddf93365f3961e8df2500b0bc3d44c2b2c0fa2065cc765dca8bd3b.
 
 
+EfficientViT-Seg B1 segmentation model, the sky (assets/efficientvit_seg_b1_ade20k_sky.tflite)
+-----------------------------------------------------------------------------------------------
+EfficientViT by Han Cai, Junyan Li, Muyan Hu, Chuang Gan and Song Han (MIT HAN Lab). Licensed under the
+Apache License, Version 2.0; see efficientvit-LICENSE.txt.
+Source: https://github.com/mit-han-lab/efficientvit, commit de7d7733cc0329f391b33f1f459271562ec27bd5, and the
+weights efficientvit_seg_b1_ade20k.pt from https://huggingface.co/han-cai/efficientvit-seg (Apache 2.0),
+19,339,726 bytes, SHA-256 59cca6a7ff4d1a6494b7f12072c6a68fee40ef401e971f26af01a2e0f3c8f5e7. The weights were
+trained on ADE20K (MIT CSAIL), whose images are offered for research and education.
+Paper: Cai et al., "EfficientViT: Lightweight Multi-Scale Attention for High-Resolution Dense Prediction", ICCV 2023.
+
+Changed for Latent: converted from PyTorch to the LiteRT (.tflite) format with litert-torch 0.9.4, for a picture of
+1 x 512 x 512 x 3, channels last, and ending in the softmax over the 150 ADE20K classes of which only the sky's share
+is kept (1 x 64 x 64 x 1). The weights are unchanged. The converted file is 19,549,512 bytes, SHA-256
+11608a61b683cc8bac25c8417a3581136d0618a55ed93e56646180501f9dfe69.
+
+
 LiteRT 2.3.0 (com.google.ai.edge.litert:litert, litert-gpu)
 -----------------------------------------------------------
 Copyright Google LLC. Licensed under the Apache License, Version 2.0; see litert-LICENSE.txt.

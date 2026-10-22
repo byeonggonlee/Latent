@@ -178,7 +178,7 @@ class SubjectMaskTest {
         assertEquals(DetectionResult.Failed, detector.detect(disc, DetectedKind.SUBJECT))
         assertEquals(DetectionResult.Failed, detector.detect(disc, DetectedKind.SUBJECT))
         assertEquals(2, made)
-        assertTrue(detector.available.value)
+        assertTrue(detector.unavailable.value.isEmpty())
     }
 
     @Test
@@ -186,7 +186,68 @@ class SubjectMaskTest {
         val detector = MaskDetector { throw UnsatisfiedLinkError("no LiteRt here") }
 
         assertEquals(DetectionResult.Unavailable, detector.detect(disc, DetectedKind.SUBJECT))
-        assertFalse(detector.available.value)
+        assertEquals(setOf(DetectedKind.SUBJECT), detector.unavailable.value)
+    }
+
+    @Test
+    fun keepsTheOtherKindWhereOnlyOneModelCannotRun() = runBlocking {
+        val detector = MaskDetector { kind -> if (kind == DetectedKind.SKY) throw UnsatisfiedLinkError("no sky here") else BrightIsSubject() }
+
+        assertEquals(DetectionResult.Unavailable, detector.detect(disc, DetectedKind.SKY))
+        assertTrue(detector.detect(disc, DetectedKind.SUBJECT) is DetectionResult.Found)
+        assertEquals(setOf(DetectedKind.SKY), detector.unavailable.value)
+    }
+
+    /** Sky above row 40 of 120, sure of it; the ground below, sure it is none. */
+    private class SkyAbove(private val grid: Int = 16) : Segmenter {
+        override val model = "sky"
+        override val modelVersion = 3
+        var calls = 0
+
+        override fun segment(picture: ShownPicture): Segmentation {
+            calls++
+            return Segmentation(grid, grid, FloatArray(grid * grid) { cell -> if ((cell / grid + 0.5f) / grid < 1f / 3) 0.96f else 0.01f })
+        }
+    }
+
+    @Test
+    fun findsTheSkyWithAModelOfItsOwn() = runBlocking {
+        val sky = SkyAbove()
+        val subject = BrightIsSubject()
+        val asked = ArrayList<DetectedKind>()
+        val detector = MaskDetector { kind -> asked += kind; if (kind == DetectedKind.SKY) sky else subject }
+
+        val found = detector.detect(disc, DetectedKind.SKY) as DetectionResult.Found
+        detector.detect(disc, DetectedKind.SKY)
+        detector.detect(disc, DetectedKind.SUBJECT)
+
+        assertEquals(Detection(DetectedKind.SKY, found.detection.raster, "sky", 3), found.detection)
+        // Each kind's model is made once and kept.
+        assertEquals(listOf(DetectedKind.SKY, DetectedKind.SUBJECT), asked)
+        assertEquals(2, sky.calls)
+        assertEquals(1, subject.calls)
+        val coverage = MaskStore.load(found.detection.raster)!!.coverage()
+        assertTrue(coverage[10 * 160 + 80] > 0.9f)
+        assertTrue(coverage[100 * 160 + 80] < 0.1f)
+    }
+
+    @Test
+    fun takesTheSkysProbabilityAsItIsWithoutStretchingIt() = runBlocking {
+        // Unsure everywhere, at most 0.5: a sky that is not stretched to a sure one, as a subject would be.
+        val unsure = MaskDetector { Answering { Segmentation(4, 4, FloatArray(16) { if (it < 4) 0.5f else 0.1f }) } }
+
+        val found = unsure.detect(disc, DetectedKind.SKY) as DetectionResult.Found
+
+        assertTrue(MaskStore.load(found.detection.raster)!!.coverage().all { it < 0.6f })
+    }
+
+    @Test
+    fun saysWhenThePictureHasNoSky() = runBlocking {
+        // A scrap of sky, 0.25 at most: below what counts, where a subject that faint would have been stretched to a whole one.
+        val detector = MaskDetector { Answering { Segmentation(4, 4, FloatArray(16) { if (it == 0) 0.25f else 0.01f }) } }
+
+        assertEquals(DetectionResult.NothingFound, detector.detect(disc, DetectedKind.SKY))
+        assertTrue(MaskStore.kept().isEmpty())
     }
 
     @Test

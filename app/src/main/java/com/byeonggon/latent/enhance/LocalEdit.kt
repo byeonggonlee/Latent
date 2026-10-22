@@ -23,6 +23,9 @@ enum class MaskShape {
 enum class DetectedKind {
     /** What stands out: a person, an animal, a thing in front of its background. */
     SUBJECT,
+
+    /** The sky. */
+    SKY,
 }
 
 /**

@@ -33,61 +33,59 @@ sealed interface DetectionResult {
 }
 
 /**
- * Finds subjects in pictures and keeps their outlines in [MaskStore], one picture at a time. The model is
- * made the first time it is needed, never at start, and kept for the next picture. Where it cannot be
- * made, as on a phone the runtime does not support, [available] turns false for as long as the app runs.
+ * Finds subjects and skies in pictures and keeps their outlines in [MaskStore], one picture at a time. Each kind's model
+ * is made the first time it is needed, never at start, and kept for the next picture. Where one cannot be made, as on a
+ * phone the runtime does not support, its kind is [unavailable] for as long as the app runs.
  */
 class MaskDetector(
-    /** Makes the model; throws, with an exception or an error such as a missing native library, where it cannot run. */
-    internal var makeSegmenter: () -> Segmenter,
+    /** Makes the model for a kind; throws, with an exception or an error such as a missing native library, where it cannot run. */
+    internal var makeSegmenter: (DetectedKind) -> Segmenter,
 ) {
     private val turn = Mutex()
-    private var segmenter: Segmenter? = null
-    private val _available = MutableStateFlow(true)
+    private val segmenters = HashMap<DetectedKind, Segmenter>()
+    private val _unavailable = MutableStateFlow<Set<DetectedKind>>(emptySet())
 
-    /** Whether a model can run here, as far as is known: true until making one failed. */
-    val available: StateFlow<Boolean> = _available.asStateFlow()
+    /** The kinds whose model cannot run here, as far as is known: those it failed to make. */
+    val unavailable: StateFlow<Set<DetectedKind>> = _unavailable.asStateFlow()
 
     /** Finds the [kind] of thing in [picture], the whole upright picture as the camera made it, and keeps its outline. */
     suspend fun detect(picture: LinearImage, kind: DetectedKind): DetectionResult = turn.withLock {
         withContext(Dispatchers.Default) {
-            val model = segmenter ?: try {
-                makeSegmenter().also { segmenter = it }
+            val model = segmenters[kind] ?: try {
+                makeSegmenter(kind).also { segmenters[kind] = it }
             } catch (e: OutOfMemoryError) {
                 Log.w(TAG, "No memory to make the model", e)
                 return@withContext DetectionResult.Failed
             } catch (e: Exception) {
-                return@withContext unavailable(e)
+                return@withContext unavailable(kind, e)
             } catch (e: LinkageError) {
                 // Native code that cannot load shows up as an error, not an exception.
-                return@withContext unavailable(e)
+                return@withContext unavailable(kind, e)
             }
             try {
-                val outline = when (kind) {
-                    DetectedKind.SUBJECT -> SubjectMasks.outline(picture, model)
-                } ?: return@withContext DetectionResult.NothingFound
+                val outline = SubjectMasks.outline(picture, model, kind) ?: return@withContext DetectionResult.NothingFound
                 val id = MaskStore.newId()
                 MaskStore.save(id, outline)
                 DetectionResult.Found(Detection(kind, id, model.model, model.modelVersion))
             } catch (e: SegmenterException) {
-                Log.w(TAG, "Finding the subject failed", e)
+                Log.w(TAG, "Finding the ${kind.name.lowercase()} failed", e)
                 // Made afresh next time, on every accelerator again.
-                segmenter = null
+                segmenters.remove(kind)
                 runCatching { model.close() }
                 DetectionResult.Failed
             } catch (e: IOException) {
                 Log.w(TAG, "The outline could not be kept", e)
                 DetectionResult.Failed
             } catch (e: OutOfMemoryError) {
-                Log.w(TAG, "Finding the subject ran out of memory", e)
+                Log.w(TAG, "Finding the ${kind.name.lowercase()} ran out of memory", e)
                 DetectionResult.Failed
             }
         }
     }
 
-    private fun unavailable(cause: Throwable): DetectionResult {
-        Log.w(TAG, "The model cannot run on this phone", cause)
-        _available.value = false
+    private fun unavailable(kind: DetectedKind, cause: Throwable): DetectionResult {
+        Log.w(TAG, "The ${kind.name.lowercase()} model cannot run on this phone", cause)
+        _unavailable.value = _unavailable.value + kind
         return DetectionResult.Unavailable
     }
 
