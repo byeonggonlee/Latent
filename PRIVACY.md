@@ -21,9 +21,9 @@ how the app starts out, it makes no network request at all.
   places in it are kept in the same database for the same purpose.
 - **The locations it adds to photos**: written into JPEG files (EXIF) and into sidecar files next to
   raw files (XMP), so that other apps can show where a photo was taken. A shared photo carries its
-  location along.
-- **Automatic masks** (subject and background) are made on the phone by a model inside the app; the photo
-  is not sent anywhere for it.
+  location along, unless you turn on "Leave out the place when sharing" in Settings.
+- **Automatic masks** (subject, background and sky) are made on the phone by models inside the app; the photo
+  is not sent anywhere for them.
 
 ## Permissions
 
@@ -72,7 +72,7 @@ reads them from `DCIM/Latent`.
 
 ## Deleting
 
-Photos you delete go to the app's trash for 30 days, then they are deleted. Uninstalling the app
+Photos you delete go to the app's trash for 30 days (or the 7 or 90 chosen in Settings), then they are deleted. Uninstalling the app
 deletes its database, with the recorded locations; the photos in `DCIM/Latent` stay until you delete
 them, and so does a backup file you made, wherever you saved it.
 

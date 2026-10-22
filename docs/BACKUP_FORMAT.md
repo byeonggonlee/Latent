@@ -146,7 +146,7 @@ uses comes along as a file without a line.
 
 ### masks/&lt;id&gt;.mask
 
-The outline of a detected (subject or background) mask as `MaskStore` keeps it: `MSK1`, width and height (big-endian
+The outline of a detected (subject, background or sky) mask as `MaskStore` keeps it: `MSK1`, width and height (big-endian
 32-bit integers, 1 to 8192), then one level from 0 to 255 per cell, row by row, packed with zlib (deflate). The id is
 32 hexadecimal digits. Only outlines that an edit or a version names are written.
 

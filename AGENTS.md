@@ -76,7 +76,7 @@ you start it, and log it there when it is done.
 Latent is a Kotlin/Compose Android app for USB imports, editing, and geotagging.
 
 - `app/src/main/java/com/byeonggon/latent/`: application code; `camera/` handles MTP sync, `data/` storage and Room, `raw/` decoding, `enhance/` image processing, and `ui/` screens and view models.
-- `app/src/main/res/`: English, Korean, and Japanese resources. `app/src/main/assets/`: subject-mask model and licenses.
+- `app/src/main/res/`: English, Korean, and Japanese resources. `app/src/main/assets/`: the subject and sky mask models and their licenses.
 - `app/src/test/`: JVM tests; `app/src/androidTest/`: device tests; `app/schemas/`: committed Room schemas.
 - `third_party/jxlatte/`: vendored Java JPEG XL decoder, built as `:jxlatte`.
 - `docs/`: releases, backup format, roadmap, and device checklists. `store/`: store graphics.

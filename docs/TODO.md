@@ -80,6 +80,7 @@ Last updated 2026-10-22.
 
 ## Later
 
-- Video: LUTs and grading on Media3, 10-bit with them; HDR in the viewer; keeping the gain map (ROADMAP items 7, 10,
-  11, 12).
+- Video: LUTs and grading on Media3, 10-bit with them; carrying an Ultra HDR photo's gain map through an edit
+  (ROADMAP items 7, 11, 12). HDR in the viewer, and telling that an edit drops the gain map, are done (2026-10-22,
+  pull requests #27 and #28).
 - The stable workflow's first run, a baseline profile and the closed test that a personal Play account needs.

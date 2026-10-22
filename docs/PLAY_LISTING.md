@@ -66,6 +66,7 @@ Sony와 ZV-E10은 Sony Group Corporation의 상표입니다. Latent는 Sony, Goo
 | `RECEIVE_BOOT_COMPLETED` | After a restart, to tell the user that location recording has stopped (it cannot start itself without background access). Nothing runs at boot. |
 | `INTERNET` | Only for the optional map: OpenStreetMap tiles. Off until the user turns on online maps and confirms. With it off, the app makes no request. |
 | USB host (`uses-feature`, optional in effect) | To read the camera. |
+| `ACCESS_NETWORK_STATE`, `WAKE_LOCK` | Normal permissions, no declaration form: asked for by the video and map libraries; the app uses them to know whether it is online and to finish a sync with the screen off. |
 
 For the foreground service declarations Play asks for a short video: show turning on recording (notification
 visible) and starting a sync (notification with progress).
@@ -75,7 +76,7 @@ visible) and starting a sync (notification with progress).
 - Does the app collect or share user data? **Collected: none by the developer. No data is sent to the developer or to any analytics or ad service.**
 - With online maps on, map tile requests go from the phone straight to OpenStreetMap's servers. That reveals an IP address and the map area looked at, not photos or a list of places. If the console asks about it, answer for *Approximate location* (the area of the map shown), **shared with a third party (OpenStreetMap), optional, not linked to the user, for app functionality**, and name it in the policy (it is: see PRIVACY.md, "Online maps").
 - Photos and videos, location history, and edits stay on the device. Not collected, not shared.
-- Subject and background masks are worked out on the device by a model shipped inside the app (LiteRT, no Google Play services, no ML Kit): processing on the device is not collection, so nothing changes in the form.
+- Subject, background and sky masks are worked out on the device by models shipped inside the app (LiteRT, no Google Play services, no ML Kit): processing on the device is not collection, so nothing changes in the form.
 - Data encrypted in transit: yes, for the map tiles (HTTPS); nothing else is transmitted.
 - Can users ask to delete their data? Everything is local; uninstalling deletes the app's database. Photos are ordinary files the user owns.
 - Cloud backup: the database (it holds recorded locations) is excluded from Android's cloud backup.
@@ -93,7 +94,7 @@ visible) and starting a sync (notification with progress).
 
 ## Before the first upload
 
-- [ ] Create an upload keystore; put `keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) next to `settings.gradle.kts`. It is ignored by git.
+- [x] Create an upload keystore (2026-10-22: the release key, alias `latent`, which is Play's upload key; RELEASES.md, "Signing"). To build on a computer, put `keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) next to `settings.gradle.kts`. It is ignored by git.
 - [ ] `./gradlew bundleRelease` and upload `app/build/outputs/bundle/release/app-release.aab`. Do not use `-PdebugSignedRelease` for Play: Play refuses debug-signed packages.
 - [ ] Raise `versionCode` for every upload.
 - [ ] Take phone screenshots (library, viewer, editor, map, sync) on real photos.

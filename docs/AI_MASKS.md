@@ -1,10 +1,10 @@
-# Subject, background and sky masks on the phone (spike)
+# Subject, background and sky masks on the phone
 
 Roadmap item 6. The spike below was research only, written 2026-10-15; every fact carries a source number
 (list at the end). Sizes marked *measured* were read here from the published Maven AARs (ELF program headers
 of the arm64 `.so`, read in a scratch folder outside the repo). Everything marked *estimate* is a guess to be
-checked on the S24 Ultra. **Stage 1 (subject and background) is built**; what was built, and where the model
-came from, is in the next section.
+checked on the S24 Ultra. **Stage 1 (subject and background) and stage 2 (the sky) are built**; what was built, and
+where the models came from, is in "Stage 1 as built" and "Stage 2 as built". Stage 3, tap to select, is next.
 
 ## Stage 1 as built (2026-10-16)
 
