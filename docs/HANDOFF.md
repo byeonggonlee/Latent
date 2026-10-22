@@ -233,8 +233,6 @@ Confirmed legacy-review findings follow below. Its own next items, so that Codex
 2026-10-21):
 
 - Tap to select (stage 3 of `AI_MASKS.md`): the sky (stage 2) is on `main` since 2026-10-22, to be judged on a phone.
-- Small, found by the release docs (2026-10-22): the Masks panel's hint (`masks_hint`, en, ko, ja) names the subject
-  and the background but not the sky.
 
 
 ### Legacy audit 2026-10-22 — independent main review
@@ -415,6 +413,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | The Masks panel's hint names the sky; trashing the rejected photos says the days chosen in Settings, not always 30 | `7bbcc8b` |
 | 2026-10-22 | Claude Code (computer) | Documentation for the `v0.1.0` tag: the 0.1.0 notes up to date with pull requests #3 to #29 (and a list of what was fixed since the nightlies); DEVICE_CHECKS in the order of a pass after a nightly (install, import, library, editor, backup, location, sharing, settings), every check kept, *New* on those since `nightly-20261022-219`, new checks for what had none, the debug-build tests apart; SMOKE_TEST in the same order with import, sky and HDR; README and RELEASES on the split workflows; the roadmap's shipped items; PRIVACY, SECURITY, AI_MASKS, BACKUP_FORMAT, PLAY_LISTING, TODO and AGENTS where they disagreed with the code | `1637c61`, `70d9568`, `68cb7ce`, `127fdec`, `7ce2c4d` |
 | 2026-10-22 | Claude Code (computer) | Roadmap 10: an HDR photo (Ultra HDR, or HEIF in HLG or PQ) in front in the viewer is decoded with its gain map or ten bits, and the window turns to HDR colour mode for it. Reviewed by Codex; not seen on a phone yet | [PR #28](https://github.com/byeonggonlee/Latent/pull/28), merged `fa386f9` |
 | 2026-10-22 | Claude Code (computer) | Stage 2 of the AI masks, the sky: EfficientViT-Seg B1 (ADE20K) converted to LiteRT, "+ Sky" in the editor, one model per kind (19.5 MB more in the APK). Reviewed by Codex; whether it runs on the GPU, and its quality, are for the phone | [PR #29](https://github.com/byeonggonlee/Latent/pull/29), merged `87daf12` |
