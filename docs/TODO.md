@@ -8,11 +8,10 @@ Last updated 2026-10-22.
 
 ## Waiting for the owner
 
-- [ ] **Verified reinstallation imports, transfer cost** (legacy audit LA-01, HANDOFF): name/size alone can
-      permanently suppress a different camera photo; correctness needs content verification before success is
-      recorded. Decide the one-time candidate-verification UX (automatic transfer with progress/cancel, or an
-      explicit verification step) for thousands of copied library files. Codex recommends verified comparison;
-      declining/waiting for verification must not mark an unverified file imported. Claude owns the implementation.
+- [x] **Verified reinstallation imports, transfer cost** (legacy audit LA-01, HANDOFF; decided 2026-10-22): a camera
+      file that only looks like one in the library by name and size is compared whole before it is left out, and the
+      person is asked first before the one-time transfer that comparing many of them takes. A file not compared, the
+      person having declined or not yet answered, is never recorded as imported. Claude Code implements it.
 - [ ] **Release/nightly token scope priority** (legacy audit LA-09, HANDOFF): prefer separate read-only build and
       write-permitted publication jobs. Current broad token scope is verified; no exploit was demonstrated.
       Decide timing for a reviewed workflow change; this audit changes neither signing nor publication settings.
