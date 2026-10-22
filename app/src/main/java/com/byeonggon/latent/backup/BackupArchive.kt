@@ -7,6 +7,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.Closeable
 import java.io.File
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.Reader
@@ -19,7 +20,11 @@ import java.util.zip.ZipFile
  * A backup file opened for reading. Its entries can come in any order; each is read as a stream and checked
  * against its checksum, so that a file damaged anywhere is found out before anything is changed.
  */
-internal class BackupArchive private constructor(private val zip: ZipFile, val manifest: BackupManifest) : Closeable {
+internal class BackupArchive private constructor(
+    private val zip: ZipFile,
+    val manifest: BackupManifest,
+    private val mostUnpacked: Long,
+) : Closeable {
     /** The names of the entries, in the order they are in the file. */
     val names: List<String> = zip.entries().asSequence().map { it.name }.toList()
 
@@ -75,13 +80,19 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
 
     override fun close() = zip.close()
 
+    /** The entries read whole so far, and the bytes they unpacked to: each counts once, however often it is read. */
+    private val counted = HashSet<String>()
+    private var unpacked = 0L
+
     private suspend fun <R> readChecked(entry: ZipEntry, block: suspend (InputStream) -> R): R = try {
-        CheckedInputStream(zip.getInputStream(entry), CRC32()).use { checked ->
+        val first = entry.name !in counted
+        CheckedInputStream(Unpacked(zip.getInputStream(entry), entry.name, counting = first), CRC32()).use { checked ->
             val result = block(checked)
             // What the reader left unread counts too.
             val rest = ByteArray(DRAIN)
             while (checked.read(rest) >= 0) Unit
             if (entry.crc != -1L && checked.checksum.value != entry.crc) throw DamagedBackupException(entry.name)
+            if (first) counted += entry.name
             result
         }
     } catch (e: BackupException) {
@@ -91,7 +102,35 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
         throw DamagedBackupException(entry.name, cause = e)
     }
 
+    /**
+     * An entry as it unpacks, counted towards [mostUnpacked] when [counting]: a file a few kilobytes long can unpack
+     * to many gigabytes, whatever sizes its headers say.
+     */
+    private inner class Unpacked(input: InputStream, private val name: String, private val counting: Boolean) : FilterInputStream(input) {
+        override fun read(): Int = super.read().also { if (it >= 0) count(1) }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int = super.read(buffer, offset, length).also { if (it > 0) count(it) }
+
+        private fun count(bytes: Int) {
+            if (!counting) return
+            unpacked += bytes
+            if (unpacked > mostUnpacked) throw DamagedBackupException(name)
+        }
+    }
+
     companion object {
+        /**
+         * The most entries a backup is read with. The app writes eleven and one a LUT or a detected mask that is used:
+         * tens or hundreds for a library, never near this.
+         */
+        internal const val MOST_ENTRIES = 200_000
+
+        /**
+         * The most the entries a restore reads may unpack to, together. The largest, the timeline, takes about 100 bytes
+         * a place: this is some 40 million places, decades recorded every minute.
+         */
+        internal const val MOST_UNPACKED = 4L * 1024 * 1024 * 1024
+
         private const val CANCEL_CHECK = 512
         private const val DRAIN = 8192
         private const val SMALL_ENTRY = 1024 * 1024
@@ -99,9 +138,13 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
         /** The longest line of a records file: a version's edit or a place is a few KB; a line without an end is not one. */
         private const val LINE_LIMIT = 4 * 1024 * 1024
 
-        /** Opens [file]; throws [NotABackupException] for what is no Latent backup and [NewerBackupException] for a newer one. */
+        /**
+         * Opens [file]; throws [NotABackupException] for what is no Latent backup, [NewerBackupException] for a newer one,
+         * and [DamagedBackupException] for one of more than [mostEntries] entries, or whose entries unpack to more than
+         * [mostUnpacked] bytes together, then or as they are read.
+         */
         @Throws(IOException::class)
-        suspend fun open(file: File): BackupArchive {
+        suspend fun open(file: File, mostEntries: Int = MOST_ENTRIES, mostUnpacked: Long = MOST_UNPACKED): BackupArchive {
             val zip = try {
                 ZipFile(file)
             } catch (e: IOException) {
@@ -109,6 +152,9 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
             }
             try {
                 val entry = zip.getEntry(BackupFormat.MANIFEST) ?: throw NotABackupException()
+                // What the zip's own directory says, before anything is unpacked; what it leaves out is counted as it unpacks.
+                if (zip.size() > mostEntries) throw DamagedBackupException("(${zip.size()} entries)")
+                if (zip.entries().asSequence().sumOf { it.size.coerceAtLeast(0) } > mostUnpacked) throw DamagedBackupException("(sizes)")
                 val manifest = try {
                     val bytes = CheckedInputStream(zip.getInputStream(entry), CRC32()).use { checked ->
                         checked.readLimited(SMALL_ENTRY, entry.name).also {
@@ -126,7 +172,7 @@ internal class BackupArchive private constructor(private val zip: ZipFile, val m
                     throw NotABackupException(e)
                 }
                 currentCoroutineContext().ensureActive()
-                return BackupArchive(zip, manifest)
+                return BackupArchive(zip, manifest, mostUnpacked)
             } catch (e: Throwable) {
                 zip.close()
                 throw e

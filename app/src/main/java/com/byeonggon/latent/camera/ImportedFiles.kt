@@ -58,8 +58,14 @@ internal class ImportedFiles(sourceKeys: Collection<String>) {
 
     private fun matches(file: RemoteFile): List<Import> =
         imports["${file.name}|${file.sizeBytes}"].orEmpty().filter { import ->
-            val shift = abs(import.time - file.modifiedAt)
-            shift <= ZONE_OFFSET_SPAN_MS && shift % ZONE_OFFSET_STEP_MS == 0L
+            // Between times near either end of what a Long counts, as a damaged key or camera might give, the difference
+            // itself wraps round, and could come to a quarter hour.
+            val shift = try {
+                abs(Math.subtractExact(import.time, file.modifiedAt))
+            } catch (e: ArithmeticException) {
+                return@filter false
+            }
+            shift in 0..ZONE_OFFSET_SPAN_MS && shift % ZONE_OFFSET_STEP_MS == 0L
         }
 }
 
