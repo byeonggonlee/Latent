@@ -71,8 +71,15 @@ you start it, and log it there when it is done.
   - permissions, network access, privacy or location data;
   - signing, the release and nightly workflows, or what CI checks;
   - a new dependency, native code, the ABIs, or an update of `third_party/`;
-  - another agent's area.
-- Small changes are not reviewed: a reviewer is for the changes above, not for every patch.
+  - another agent's area;
+  - review governance: reviewer eligibility, mandatory-review triggers, fallback or independence rules, and merge
+    gates, even when changed only in documentation or agent instructions. Apply the target branch's existing rules
+    when assessing the PR; a proposed relaxation cannot qualify its own review.
+- One qualified deep reviewer is the default for a mandatory-review PR and must cover the full diff and all
+  applicable risk categories. Add a reviewer only for an explicit coverage gap or conflicting findings; record
+  the reason. Mechanical triage does not replace deep review.
+- Small changes outside the mandatory-review list are not reviewed: a reviewer is for the changes above, not for
+  every patch.
 - Never push with force to `main`, never rewrite another agent's commits, and never skip, disable or loosen a test
   to get green.
 - Every commit names its agent: Claude Code's `Co-Authored-By: Claude ...` line, or a trailer line `Agent: Codex`
@@ -90,6 +97,10 @@ you start it, and log it there when it is done.
   Antigravity, fallback for Gemini 4 Argon; same model family as author, independent session)`, or `Reviewed by
   Claude Sonnet 5.5 (high thinking) (via Claude Code, fresh session, fallback for Gemini 4 Argon; same model family
   as author)`), along with which primary checks a fallback reviewer did and did not cover.
+- Report only model and reasoning-effort settings supported by the harness or an explicit owner-provided setting,
+  and state that source. If unavailable, write `unverified`; never infer `high`/`max` from a model name or answer.
+  An unverified setting does not satisfy a minimum-effort requirement: use a qualified reviewer or leave the
+  required review pending.
 - A concise LGTM is enough when no actionable issues are found; keep the inspected commit and material validation
   limits clear.
 - Post a review even when no bugs are found. Because every agent currently posts through the owner's single GitHub

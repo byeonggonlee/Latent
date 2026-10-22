@@ -42,10 +42,10 @@ Review & Orchestration** (shared across agents and orchestrated across models).
 - **Claude Sonnet 5.5 authoring & reasoning-effort rules (in Claude Code)**:
   - **Claude Sonnet 5.5** may author code and tests within Claude Code's area only when running with a **minimum
     reasoning effort of `high` (extended thinking enabled)**—never at `low` or `medium`.
-  - For changes touching any of the **eight mandatory-review categories** in [`AGENTS.md`](../../AGENTS.md) (the
+  - For changes touching any of the **mandatory-review categories** in [`AGENTS.md`](../../AGENTS.md) (the
     decoder seam, colour/precision, buffers/locks/cancellation, Room migrations/backup format/data-loss paths,
-    privacy/permissions, signing/CI, dependencies/ABIs), **Claude Opus 5.5** is preferred; if authored by **Claude
-    Sonnet 5.5**, **`high` or `max` (extended thinking)** reasoning effort is strictly required, and the PR description
+    privacy/permissions, signing/CI, dependencies/ABIs, another agent's area, and review governance), **Claude Opus
+    5.5** is preferred; if authored by **Claude Sonnet 5.5**, **`high` or `max` (extended thinking)** reasoning effort is strictly required, and the PR description
     must note the authoring model and reasoning effort.
 
 ### 2.2 Code Review & Orchestration
@@ -67,12 +67,29 @@ Reviews are conducted by **Claude Code**, **Codex**, and **Antigravity**:
 Antigravity hosts three distinct model tiers. Orchestration and status upkeep are separated from deep safety review so
 that high-reasoning token budgets are spent where bugs cost user data:
 
+### Review scope, evidence and cost
+
+- **One deep reviewer by default.** Select one qualified reviewer under §3.4 who can inspect the full diff and all
+  applicable mandatory-review risks. Focus expensive analysis and tests on the relevant invariants and their callers;
+  do not reduce the review to a path-only scan. Add a second reviewer for a named coverage gap or conflicting findings,
+  and record that reason; a second full review is not routine. Uncovered mandatory risks keep the review pending.
+- **Roles are routing defaults, not demonstrated model rankings.** The specialties below guide assignment; a model
+  name, higher effort setting or different model family does not establish correctness. Reviewers inspect the source
+  and evidence independently, using the PR description as context rather than proof. Revisit routing with the owner
+  using reproducible findings, false positives and exposed usage/cost from existing reviews; no benchmark or new
+  measurement service is required by this policy.
+- **Reuse mechanical results.** Prefer CLI/API queries or scripts for head-SHA comparisons, CI status and duplicate
+  detection. Key completed review coverage to the inspected head SHA and base/diff scope. Do not repeat an unchanged
+  review or its unchanged merge; a changed head or base requires checking what changed and retaining only still-valid
+  coverage. A CI status change alone calls for a status update, not another model review. This does not start or resume
+  any monitor; monitoring still needs owner authorization.
+
 ### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher, Intake & Surface Checker
 
 - **Primary focus (Orchestration & Dispatch)**:
   - **Intake and status tracking**: Scanning open PRs (`gh pr list`, `gh pr view`, `gh pr diff --name-only`), checking
     CI status (`gh pr checks`), and keeping `docs/HANDOFF.md` claims and status tables up to date.
-  - **Mechanical classification against `AGENTS.md`**: Matching touched paths and topics against the eight mandatory
+  - **Mechanical classification against `AGENTS.md`**: Matching touched paths and topics against the mandatory
     review categories in [`AGENTS.md`](../../AGENTS.md) ("Getting to main") and selecting the required deep reviewer
     according to the author's model family (§3.4).
   - **One-way escalation ("when unsure, escalate")**: Classification is strictly mechanical. Any path or topic on the
@@ -168,6 +185,9 @@ that high-reasoning token budgets are spent where bugs cost user data:
    - Signing, release/nightly workflows, or CI checks
    - New dependencies, native code, ABIs, or `third_party/` updates
    - Cross-area changes touching another agent's partition
+   - Review governance: reviewer eligibility, mandatory triggers, fallback/independence rules or merge gates,
+     including changes only to docs or agent instructions. Judge the PR under the target branch's existing rules;
+     the proposed change cannot relax the qualifications for its own review.
 4. **Escalate unconditionally**: If any path or topic matches the list above—or if there is any doubt ("when unsure,
    escalate")—assign the PR to the appropriate deep reviewer under §3.2–§3.4 without judging whether the diff is safe.
 
@@ -185,13 +205,17 @@ When publishing a review via `gh pr review`, always comply with these formatting
    exact model that performed the review (and its reasoning effort / fallback / family-independence status when
    applicable):
    ```markdown
-   Reviewed by **<Model Name>** (via Antigravity) — inspected commit `<short-sha>`.
+   Reviewed by **<Model Name>** (via <Agent>) — inspected commit `<short-sha>`.
    ```
    Synthetic examples:
    - `Reviewed by **Gemini 3.8 Flash** (via Antigravity, mechanical triage & contract check) — inspected commit 1111111.`
    - `Reviewed by **Gemini 4 Argon** (via Antigravity) — inspected commit 2222222.`
    - `Reviewed by **Claude Opus 5.5** (via Antigravity, fallback for Gemini 4 Argon; same model family as author, independent session) — inspected commit 3333333.`
    - `Reviewed by **Claude Sonnet 5.5 (high thinking)** (via Claude Code, fresh session, fallback for Gemini 4 Argon; same model family as author) — inspected commit 4444444.`
+   Report settings only when exposed by the harness or explicitly supplied by the owner, and identify that source.
+   When the exact model or reasoning effort cannot be verified, label it `unverified` rather than guessing. A review
+   with unverified effort does not satisfy a minimum-effort requirement (§3.4); choose a qualified reviewer or keep
+   the required review pending. The same reporting rule applies to authoring settings in a PR description (§2.1).
 2. **Structured body**:
    - **Scope & fallback coverage**: Brief statement of the files and invariants inspected; when acting as a fallback,
      state which of the primary reviewer's checks (numerical bounds, colour invariants, locks and cancellation) were
