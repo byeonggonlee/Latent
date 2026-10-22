@@ -144,7 +144,8 @@ object TimelineParser {
                 "LatLng", "latLng" -> latLng = parseLatLng(json.nextStringOrNull())
                 "timestamp" -> time = parseTime(json.nextStringOrNull())
                 "altitudeMeters" -> altitude = json.nextNumberOrNull()
-                "accuracyMeters" -> accuracy = json.nextNumberOrNull()?.toFloat()
+                // Finite as a Float too: 1e300 metres is no accuracy.
+                "accuracyMeters" -> accuracy = json.nextNumberOrNull()?.toFloat()?.takeIf { it.isFinite() }
                 else -> json.skipValue()
             }
         }
@@ -203,6 +204,7 @@ object TimelineParser {
         }
     }
 
+    /** A number, or null for anything else; "NaN" and "Infinity", which a string can hold, are none. */
     private fun JsonReader.nextNumberOrNull(): Double? = when (peek()) {
         JsonToken.NUMBER -> nextDouble()
         JsonToken.STRING -> nextString().toDoubleOrNull()
@@ -210,5 +212,5 @@ object TimelineParser {
             skipValue()
             null
         }
-    }
+    }?.takeIf { it.isFinite() }
 }

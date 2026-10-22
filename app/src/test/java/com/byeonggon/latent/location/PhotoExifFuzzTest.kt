@@ -7,6 +7,8 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.fuzz
 import com.byeonggon.latent.ui.viewer.PhotoDetails
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +22,7 @@ import java.time.ZoneOffset
 
 /**
  * Photos whose Exif a camera or another app wrote damaged: their time, place, details and what Find searches them by
- * are read or left out, never thrown.
+ * are read or left out, never thrown, and a place read is one on the Earth.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -50,7 +52,11 @@ class PhotoExifFuzzTest {
     }
 
     private fun check(file: File) {
-        MediaMetadataReader.read(file, MediaKind.PHOTO, ZoneOffset.UTC)
+        val metadata = MediaMetadataReader.read(file, MediaKind.PHOTO, ZoneOffset.UTC)
+        metadata.location?.let { place ->
+            assertTrue("$place", place.latitude in -90.0..90.0 && place.longitude in -180.0..180.0)
+            assertTrue("$place", place.altitude?.isFinite() ?: true)
+        }
         ExifSummary.read(file)?.focalLength?.let { assertTrue("$it", it.isFinite()) }
         PhotoDetails.all(file)
         PhotoDetails.of(file)
@@ -84,5 +90,34 @@ class PhotoExifFuzzTest {
             ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM,
         )
         check(photo { repeat(1 + random.nextInt(4)) { setAttribute(tags[random.nextInt(tags.size)], values[random.nextInt(values.size)]) } })
+    }
+
+    @Test
+    fun aPlaceOffTheEarthIsNoPlaceButLeavesTheBlockMarkedDamaged() {
+        // 200 degrees north, or 1262 east, is nowhere: the photo has no place then, but its GPS block is still its own.
+        for (damaged in listOf(
+            photo { setAttribute(ExifInterface.TAG_GPS_LATITUDE, "200/1,0/1,0/1") },
+            photo { setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "1262/1,57/1,48/1") },
+        )) {
+            val metadata = MediaMetadataReader.read(damaged, MediaKind.PHOTO)
+            assertNull(metadata.location)
+            assertTrue(metadata.locationDamaged)
+        }
+    }
+
+    @Test
+    fun aPhotoWithoutAGpsBlockIsNotDamagedAndOneWithAGoodBlockHasItsPlace() {
+        val bare = MediaMetadataReader.read(
+            photo {
+                for (tag in listOf(ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF, ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF)) setAttribute(tag, null)
+            },
+            MediaKind.PHOTO,
+        )
+        assertNull(bare.location)
+        assertFalse(bare.locationDamaged)
+
+        val good = MediaMetadataReader.read(photo(), MediaKind.PHOTO)
+        assertEquals(37.5665, good.location!!.latitude, 1e-4)
+        assertFalse(good.locationDamaged)
     }
 }

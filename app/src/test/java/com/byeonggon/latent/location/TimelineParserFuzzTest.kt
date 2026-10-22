@@ -57,7 +57,11 @@ class TimelineParserFuzzTest {
         } catch (e: IllegalStateException) {
             return@fuzz
         }
-        for (point in points) assertTrue("$point", point.latitude in -90.0..90.0 && point.longitude in -180.0..180.0)
+        for (point in points) {
+            assertTrue("$point", point.latitude in -90.0..90.0 && point.longitude in -180.0..180.0)
+            assertTrue("$point", point.altitude?.isFinite() ?: true)
+            assertTrue("$point", point.accuracy?.isFinite() ?: true)
+        }
         // A visit is filled in at ten-minute steps for a week at most; nothing grows past what the text could say.
         assertTrue("${points.size} points from ${text.length} characters", points.size <= 1_100 * (1 + text.length / 40))
     }

@@ -104,7 +104,8 @@ class LibraryIndex(
                 val edited = kind == MediaKind.PHOTO && storage.keepsOriginal(file)
                 val metadata = MediaMetadataReader.read(file, kind, zone)
                 val shot = shotOf(file)
-                val place = metadata.location ?: places[shot].takeIf { kind == MediaKind.RAW }
+                // A raw file with a GPS block of its own, damaged as it may be, is not given its JPEG's place.
+                val place = metadata.location ?: places[shot].takeIf { kind == MediaKind.RAW && !metadata.locationDamaged }
                 if (kind == MediaKind.PHOTO && metadata.location != null) places[shot] = metadata.location
                 MediaItemEntity(
                     path = file.absolutePath,

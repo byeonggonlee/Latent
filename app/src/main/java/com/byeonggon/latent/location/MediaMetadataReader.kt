@@ -7,7 +7,12 @@ import java.io.File
 import java.io.IOException
 import java.time.ZoneId
 
-data class MediaMetadata(val capturedAt: Long?, val location: GeoPoint?)
+/**
+ * What a file says of when and where it was shot. [locationDamaged] is for a file that has a GPS block whose
+ * coordinates are no place on the Earth, or cannot be read: [location] is null then, as when it has none, but the
+ * block is the file's own, so no place is to be put in its stead, nor written over it.
+ */
+data class MediaMetadata(val capturedAt: Long?, val location: GeoPoint?, val locationDamaged: Boolean = false)
 
 object MediaMetadataReader {
     /** [cameraZone] is where a photo whose time has no zone of its own is taken to have been shot. */
@@ -33,10 +38,14 @@ object MediaMetadataReader {
                 ?: exif.getAttribute(ExifInterface.TAG_OFFSET_TIME),
             fallbackZone = cameraZone,
         )
-        val location = exif.latLong?.let { (latitude, longitude) ->
-            GeoPoint(latitude, longitude, exif.getAltitude(Double.NaN).takeUnless { it.isNaN() })
+        // Exif's degrees are ratios, which a damaged file can make 200 north, or a degree over nothing: no place on the Earth.
+        val location = exif.latLong?.takeIf { (latitude, longitude) -> latitude in -90.0..90.0 && longitude in -180.0..180.0 }?.let { (latitude, longitude) ->
+            GeoPoint(latitude, longitude, exif.getAltitude(Double.NaN).takeIf { it.isFinite() })
         }
-        return MediaMetadata(capturedAt, location)
+        // A block that is there but gives no place is not the same as no block: the file keeps what it has.
+        val hasGpsBlock = !exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE).isNullOrBlank() ||
+            !exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE).isNullOrBlank()
+        return MediaMetadata(capturedAt, location, locationDamaged = location == null && hasGpsBlock)
     }
 
     private fun readVideo(file: File): MediaMetadata = MediaMetadataRetriever().use { retriever ->
