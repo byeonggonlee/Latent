@@ -90,14 +90,17 @@ object TimelineParser {
         val from = start ?: return
         val to = end ?: return
         visit?.let { (latitude, longitude) ->
-            if (to < from || to - from > LONGEST_VISIT_MS) {
+            // Between times near either end of what a Long counts, the difference itself wraps round to below zero.
+            val span = to - from
+            if (to < from || span < 0 || span > LONGEST_VISIT_MS) {
                 onSkippedVisit()
                 return@let
             }
-            var time = from
-            while (time < to) {
-                yield(TimelinePoint(time, latitude, longitude))
-                time += VISIT_STEP_MS
+            // Counted from the start, so that no step is ever added past the end.
+            var offset = 0L
+            while (offset < span) {
+                yield(TimelinePoint(from + offset, latitude, longitude))
+                offset += VISIT_STEP_MS
             }
             yield(TimelinePoint(to, latitude, longitude))
         }

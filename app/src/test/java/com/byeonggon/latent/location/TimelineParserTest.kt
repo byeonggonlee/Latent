@@ -128,6 +128,24 @@ class TimelineParserTest {
     }
 
     @Test
+    fun leavesOutAVisitBetweenTheEndsOfWhatMillisecondsCount() {
+        // Both times fit a Long, but the difference between them wraps round (Codex's review of pull request 20).
+        var skipped = 0
+        val points = TimelineParser.parse(StringReader(visit("-292275055-05-16T16:47:04.193Z", "+292278994-08-17T07:12:55.807Z"))) { skipped++ }
+            .take(10).toList()
+
+        assertEquals(emptyList<TimelinePoint>(), points)
+        assertEquals(1, skipped)
+    }
+
+    @Test
+    fun fillsInAShortVisitAtTheLastMillisecondWithoutWrappingRound() {
+        val points = TimelineParser.parse(StringReader(visit("+292278994-08-17T07:12:55.806Z", "+292278994-08-17T07:12:55.807Z"))).take(10).toList()
+
+        assertEquals(listOf(Long.MAX_VALUE - 1, Long.MAX_VALUE), points.map { it.timestamp })
+    }
+
+    @Test
     fun leavesOutAVisitThatEndsBeforeItBegins() {
         var skipped = 0
         val points = TimelineParser.parse(StringReader(visit("2026-10-02T09:00:00Z", "2026-10-01T09:00:00Z"))) { skipped++ }.toList()
