@@ -36,7 +36,7 @@ class BackupWriterLimitsTest {
     private lateinit var phone: TestPhone
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking<Unit> {
         settings.update { AppSettings() }
         phone = TestPhone(context, folders.newFolder("phone"), user = 0, settings)
         phone.use()
@@ -46,7 +46,7 @@ class BackupWriterLimitsTest {
     }
 
     @After
-    fun tearDown() = runBlocking {
+    fun tearDown() = runBlocking<Unit> {
         phone.close()
         settings.update { AppSettings() }
         LutStore.directory = null
@@ -80,7 +80,7 @@ class BackupWriterLimitsTest {
         BackupArchive.open(file, mostEntries = entries, mostUnpacked = unpacked).use { archive ->
             assertEquals(500, archive.eachRecord(BackupFormat.LOCATIONS, { json: JsonObject -> json }) {})
             assertTrue(archive.json(BackupFormat.SETTINGS) != null)
-            assertEquals(28 + 4 * 24, archive.bytes(BackupFormat.lutEntry(LUT), 4096).size)
+            assertEquals(LutStore.fileOf(LUT)!!.length().toInt(), archive.bytes(BackupFormat.lutEntry(LUT), 4096).size)
         }
     }
 
