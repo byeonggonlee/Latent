@@ -86,6 +86,8 @@ class PhotoEditFuzzTest {
         assertNull(PhotoEdit.fromJson("""{"exposure":NaN}"""))
         assertNull(PhotoEdit.fromJson("""{"spots":[[0.5,0.5,NaN,0.2,0.2]]}"""))
         assertNull(PhotoEdit.fromJson("""{"curves":{"all":[[0,0],[NaN,1]]}}"""))
+        assertNull(PhotoEdit.fromJson("""{"curves":{"all":[[0,0],[Infinity,1]]}}"""))
+        assertNull(PhotoEdit.fromJson("""{"curves":{"red":[[0,-Infinity],[1,1]]}}"""))
         assertNull(PhotoEdit.fromJson("""{"mixer":{"hue":[Infinity]}}"""))
         assertEquals(0.5f, PhotoEdit.fromJson("""{"exposure":0.5}""")!!.adjustments.exposure)
     }
@@ -100,6 +102,36 @@ class PhotoEditFuzzTest {
             assertTrue("${kept.width} by ${kept.height}", kept.width <= 48 && kept.height <= 32)
             assertTrue(PhotoEnhancer.preview(photo, PhotoEdit(framing = far), maxEdge = 48).width > 0)
         }
+    }
+
+    @Test
+    fun aBrushOnACropFarOutsideThePictureIsPlacedByTheCropThatWasKept() {
+        // The bounds overflow a Float's width to infinity, or lie wholly outside the picture: either way the crop kept is
+        // another than the edit's, and the brush has to be placed by that, not by a width of infinity or nothing.
+        val brushed = PhotoEdit.fromJson("""{"locals":[{"shape":"BRUSH","mask":[0,0,0,0,0.5],"strokes":[{"radius":0.3,"points":[0.2,0.2,0.8,0.8]}],"exposure":1}]}""")!!
+        assertTrue(brushed.locals.isNotEmpty())
+        val framings = listOf(
+            Framing(left = -3e38f, top = -3e38f, right = 3e38f, bottom = 3e38f),
+            Framing(left = 1e30f, top = 1e30f, right = 3e30f, bottom = 3e30f),
+            Framing(left = -1e6f, top = -1e6f, right = 1e6f, bottom = 1e6f, quarterTurns = 1),
+        )
+        for (far in framings) {
+            val bitmap = PhotoEnhancer.preview(photo, brushed.copy(framing = far), maxEdge = 48)
+
+            assertTrue("$far: ${bitmap.width} by ${bitmap.height}", bitmap.width in 1..48 && bitmap.height in 1..48)
+        }
+    }
+
+    @Test
+    fun aCropFarOutsideThePictureIsKeptAsAFramingThatIsSomething() {
+        for (far in listOf(Framing(left = -3e38f, right = 3e38f, top = -3e38f, bottom = 3e38f), Framing(left = 1e30f, top = 1e30f, right = 3e30f, bottom = 3e30f), Framing(right = 1e6f, bottom = 1e6f))) {
+            val kept = far.keptWithin(48f, 32f)
+
+            assertTrue("$kept", kept.width > 0f && kept.height > 0f && kept.width.isFinite() && kept.height.isFinite())
+            assertTrue("$kept", kept.fits(48f, 32f))
+        }
+        val reasonable = Framing(left = 0.1f, top = 0.1f, right = 0.9f, bottom = 0.9f, angle = 2f)
+        assertEquals(reasonable, reasonable.keptWithin(48f, 32f))
     }
 
     @Test
