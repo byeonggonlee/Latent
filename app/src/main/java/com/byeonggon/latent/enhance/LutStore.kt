@@ -121,12 +121,16 @@ object LutStore {
             if (size !in ColorLut.SMALLEST..ColorLut.LARGEST) return null
             val domainMin = FloatArray(3) { buffer.getFloat() }
             val domainMax = FloatArray(3) { buffer.getFloat() }
-            val table = FloatArray(size * size * size * 3)
-            if (buffer.remaining() != table.size * 4) return null
+            // Its values must be there before room is made for them: a header alone could ask for 3 MB.
+            val values = size * size * size * 3
+            if (buffer.remaining() != values * 4) return null
+            val table = FloatArray(values)
             buffer.asFloatBuffer().get(table)
+            // Every value a number: NaN or infinity spreads over the picture. Neither .cube files nor this store make them.
+            if (!table.all { it.isFinite() } || !(domainMin + domainMax).all { it.isFinite() }) return null
             ColorLut(size, table, domainMin, domainMax)
         } catch (e: IllegalArgumentException) {
-            // A domain with nothing in it: not a file written here.
+            // A domain with nothing in it, or none the points can be spread over: not a file written here.
             null
         }
     }

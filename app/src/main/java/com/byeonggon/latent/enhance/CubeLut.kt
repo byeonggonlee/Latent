@@ -134,7 +134,13 @@ object CubeLut {
         }
         if (points * 3 != values.size) throw UnusableLutException(LutProblem.WRONG_COUNT)
         if ((0..2).any { domainMin[it] >= domainMax[it] }) throw UnusableLutException(LutProblem.BAD_DOMAIN)
-        return Cube(title, ColorLut(size, values, domainMin, domainMax))
+        val lut = try {
+            ColorLut(size, values, domainMin, domainMax)
+        } catch (e: IllegalArgumentException) {
+            // A domain too narrow, or too wide, to spread the points over.
+            throw UnusableLutException(LutProblem.BAD_DOMAIN)
+        }
+        return Cube(title, lut)
     }
 
     /**

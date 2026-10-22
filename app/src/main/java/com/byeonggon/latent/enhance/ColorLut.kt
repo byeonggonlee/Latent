@@ -23,6 +23,11 @@ class ColorLut(
     internal val scale = FloatArray(3) { (size - 1) / (domainMax[it] - domainMin[it]) }
     internal val offset = FloatArray(3) { -domainMin[it] * scale[it] }
 
+    init {
+        // A domain too narrow or too wide for a Float to spread the points over: no colour would find its place.
+        require((scale + offset).all { it.isFinite() } && scale.all { it > 0f }) { "a domain the points cannot be spread over" }
+    }
+
     /**
      * Writes to [out] what the colour ([red], [green], [blue]) turns into: the eight points of the cube
      * around it, mixed by how near it is to each (trilinear). Colours outside the domain take its edge.

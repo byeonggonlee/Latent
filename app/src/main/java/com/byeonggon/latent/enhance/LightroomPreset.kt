@@ -52,7 +52,8 @@ object LightroomPreset {
     }
 
     private class Settings(val values: Map<String, String>, val lists: Map<String, List<String>>) {
-        fun number(key: String): Float? = values[key]?.trim()?.removePrefix("+")?.toFloatOrNull()
+        /** The number under [key]; none for what is not one, "NaN" and "Infinity" among them. */
+        fun number(key: String): Float? = values[key]?.trim()?.removePrefix("+")?.toFloatOrNull()?.takeIf { it.isFinite() }
     }
 
     private fun readSettings(input: InputStream): Settings? {
@@ -64,7 +65,8 @@ object LightroomPreset {
         val lists = LinkedHashMap<String, MutableList<String>>()
         val prefixes = HashSet<String>()
         var property: String? = null
-        var inItem = false
+        // The setting whose list the item being read belongs to: a setting written inside the item ends before it does.
+        var itemOf: String? = null
         val text = StringBuilder()
         val item = StringBuilder()
         var found = false
@@ -87,7 +89,7 @@ object LightroomPreset {
                             }
                         }
                     } else if (local == "li" && property != null) {
-                        inItem = true
+                        itemOf = property
                         item.clear()
                     } else if (':' in tag && tag.substringBefore(':') in prefixes) {
                         property = local
@@ -95,13 +97,14 @@ object LightroomPreset {
                         found = true
                     }
                 }
-                XmlPullParser.TEXT -> if (inItem) item.append(parser.text) else if (property != null) text.append(parser.text)
+                XmlPullParser.TEXT -> if (itemOf != null) item.append(parser.text) else if (property != null) text.append(parser.text)
                 XmlPullParser.END_TAG -> {
                     val tag = parser.name
                     val local = tag.substringAfter(':')
-                    if (local == "li" && inItem) {
-                        lists.getOrPut(property!!) { ArrayList() } += item.toString().trim()
-                        inItem = false
+                    val list = itemOf
+                    if (local == "li" && list != null) {
+                        lists.getOrPut(list) { ArrayList() } += item.toString().trim()
+                        itemOf = null
                     } else if (property != null && local == property && ':' in tag && tag.substringBefore(':') in prefixes) {
                         if (property !in lists && text.isNotBlank()) values[property] = text.toString().trim()
                         property = null
@@ -200,7 +203,7 @@ object LightroomPreset {
     /** The curve under [key], points of 0 to 255; straight when there is none, or it is not one. */
     private fun Settings.curve(key: String, taken: MutableSet<String>): ToneCurve {
         val points = lists[key]?.mapNotNull { pair ->
-            val parts = pair.split(',').map { it.trim().toFloatOrNull() }
+            val parts = pair.split(',').map { it.trim().toFloatOrNull()?.takeIf { value -> value.isFinite() } }
             if (parts.size == 2 && parts[0] != null && parts[1] != null) CurvePoint((parts[0]!! / 255f).coerceIn(0f, 1f), (parts[1]!! / 255f).coerceIn(0f, 1f)) else null
         }.orEmpty().sortedBy { it.x }
         if (points.size < 2 || isDiagonal(points)) return ToneCurve()

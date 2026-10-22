@@ -40,6 +40,7 @@ object MaskStore {
     private const val MAGIC = 0x4D534B31 // "MSK1"
     private const val KEPT = 6
     private const val LARGEST_SIDE = 8192
+    private const val CHUNK = 64 * 1024
     private val ID = Regex("[0-9a-f]{32}")
 
     // In the order they were last asked for.
@@ -79,8 +80,30 @@ object MaskStore {
         synchronized(kept) { remember(id, raster) }
     }
 
-    /** Whether [bytes] are an outline as [save] writes it to a file. */
-    fun isOutline(bytes: ByteArray): Boolean = read(bytes.inputStream()) != null
+    /**
+     * Whether [bytes] are an outline as [save] writes it to a file. Its cells are counted as they unpack, not kept: a
+     * header of a few bytes, as a damaged backup might hold, could otherwise have 64 MB set aside for it.
+     */
+    fun isOutline(bytes: ByteArray): Boolean = try {
+        DataInputStream(bytes.inputStream()).use { data ->
+            if (data.readInt() != MAGIC) return false
+            val width = data.readInt()
+            val height = data.readInt()
+            if (width !in 1..LARGEST_SIDE || height !in 1..LARGEST_SIDE) return false
+            val cells = width.toLong() * height
+            val inflated = InflaterInputStream(data)
+            val chunk = ByteArray(CHUNK)
+            var counted = 0L
+            while (counted < cells) {
+                val read = inflated.read(chunk, 0, minOf(CHUNK.toLong(), cells - counted).toInt())
+                if (read < 0) return false
+                counted += read
+            }
+            true
+        }
+    } catch (e: IOException) {
+        false
+    }
 
     /**
      * Keeps the file of an outline brought back from a backup under [id], unless one is kept already. Returns
