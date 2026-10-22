@@ -52,6 +52,7 @@ object Dng {
     private const val TAG_BLACK_DELTA_H = 0xC61B
     private const val TAG_BLACK_DELTA_V = 0xC61C
     private const val TAG_WHITE_LEVEL = 0xC61D
+    private const val TAG_DEFAULT_SCALE = 0xC61E
     private const val TAG_CROP_ORIGIN = 0xC61F
     private const val TAG_CROP_SIZE = 0xC620
     private const val TAG_COLOR_MATRIX_1 = 0xC621
@@ -66,6 +67,7 @@ object Dng {
     private const val TAG_BASELINE_EXPOSURE = 0xC62A
     private const val TAG_ACTIVE_AREA = 0xC68D
     private const val TAG_OPCODES_2 = 0xC741
+    private const val TAG_OPCODES_3 = 0xC742
 
     private const val PHOTOMETRIC_CFA = 32803
     private const val PHOTOMETRIC_LINEAR_RAW = 34892
@@ -184,6 +186,9 @@ object Dng {
         val cropHeight = minOf(size[1].toInt(), activeHeight - cropTop) and 1.inv()
         if (cropWidth < 4 || cropHeight < 4) throw IOException("Damaged default crop")
 
+        val scale = raw.floats(TAG_DEFAULT_SCALE)
+        val squarePixels = TAG_DEFAULT_SCALE !in raw ||
+            (scale != null && scale.size == 2 && scale.all { it.isFinite() && it > 0f } && scale[0] == scale[1])
         val color = Colors(::floatsOf, ::intOf)
         val image = ArwImage(
             width = width,
@@ -201,6 +206,8 @@ object Dng {
             orientation = main.int(TAG_ORIENTATION)?.takeIf { it in 1..8 } ?: 1,
             sensor = sensor,
             channels = channels,
+            dngWarp = if (squarePixels) DngWarp.read(raw.bytes(TAG_OPCODES_3), active,
+                intArrayOf(activeLeft + cropLeft, activeTop + cropTop, cropWidth, cropHeight)) else null,
         )
         val corrections = buildSet {
             add(RawCorrection.DNG_LEVELS)

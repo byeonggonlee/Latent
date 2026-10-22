@@ -1,5 +1,6 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.enhance.Orientation
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.render
 import org.junit.Assert.assertTrue
@@ -60,11 +61,13 @@ class RawSampleTest {
             val started = System.nanoTime()
             val image = Dng.read(dng.readBytes())
             val read = System.nanoTime()
-            val linear = RawDeveloper.developPreview(image)
+            val linear = RawDeveloper.developPreview(image, lensCorrection = true)
+                .oriented(Orientation.ofExif(image.orientation))
             val developed = System.nanoTime()
             println(
                 "${dng.name}: ${image.width}x${image.height}x${image.channels}, read in ${(read - started) / 1_000_000} ms, " +
-                    "preview of ${linear.width}x${linear.height} in ${(developed - read) / 1_000_000} ms",
+                    "preview of ${linear.width}x${linear.height} in ${(developed - read) / 1_000_000} ms, " +
+                    "DNG warp available: ${image.dngWarp != null}",
             )
             write(Picture(linear.width, linear.height, linear.render(PhotoEdit())), File(out, dng.nameWithoutExtension + ".png"))
         }

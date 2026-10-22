@@ -117,9 +117,9 @@ camera samples and were skipped; this run does not establish real-photo quality 
    with a 30-second test limit. Do not implement the same fix again. The requested truncated **DNG wrapper**
    test and proof that the test times out without the fix were not verified in this session, so the original
    acceptance criteria are not yet fully demonstrated.
-2. **Two-illuminant interpolation:** received; not started or claimed. Synthetic tests can run here; colour
-   judgement still needs the owner's photos.
-3. **WarpRectilinear:** received; not started or claimed. Claim the shared renderer/lens files before work and
+2. **Two-illuminant interpolation:** merged in PR #9; synthetic regression checks are complete. Colour
+   judgement still needs the owner's tungsten/daylight photos.
+3. **WarpRectilinear:** Codex started the owner-authorized implementation on `codex/dng-warp-rectilinear`; the shared files are claimed below. Retain the reviewed-PR requirement and
    preserve Sony correction tests. The lens-chip change is already on local `main` (`33dd8af`).
 
 For Claude Code: reconcile the JPEG XL queue entry with `cf6a263` when publishing this board to `main`, and
@@ -141,7 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Implement DNG OpcodeList3 WarpRectilinear with synthetic parser/geometry regressions; retain Sony lens behavior. Owner authorized 2026-10-22; phone comparison follows implementation. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawRenderer.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
+| Codex | DNG OpcodeList3 WarpRectilinear implementation and synthetic regressions ready for reviewed PR; retain Sony lens behavior. Independent internal review corrected the SDK integer-centre convention. Claude review and phone/JPEG comparison remain pending. Owner authorized 2026-10-22. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawDeveloper.kt`, `raw/RawRenderer.kt`, `ui/editor/EditorViewModel.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 
 ## For Codex
 

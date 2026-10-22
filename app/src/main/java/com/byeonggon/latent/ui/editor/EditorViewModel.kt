@@ -656,7 +656,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         image = RawRenderer.proxy(raw, PROXY_CELLS, lensCorrection),
                         scale = 1f / (2 * PROXY_CELLS),
                         region = { x, y -> RawRenderer.region(raw, x, y, DETAIL_SIZE) },
-                        hasLensProfile = raw.lens != null,
+                        hasLensProfile = raw.lens != null || raw.dngWarp != null,
                     )
                 } else {
                     val original = edits.originalOf(item)

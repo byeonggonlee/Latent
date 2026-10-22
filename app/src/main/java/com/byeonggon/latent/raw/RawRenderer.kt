@@ -40,7 +40,7 @@ object RawRenderer {
      * as in [RawDeveloper.developPreview].
      */
     fun proxy(image: ArwImage, cells: Int, lensCorrection: Boolean): LinearImage = timed("proxy") {
-        val linear = RawDeveloper.developPreview(image, cells)
+        val linear = RawDeveloper.developPreview(image, cells, lensCorrection)
         if (lensCorrection) straighten(linear, image.lens)
         linear.oriented(Orientation.ofExif(image.orientation))
     }
@@ -105,7 +105,7 @@ object RawRenderer {
     // A function of its own so the decoded sensor data can be freed before more copies of the picture are made.
     private fun developStraight(source: File, lensCorrection: Boolean): Pair<LinearImage, Orientation> {
         val image = read(source)
-        val linear = RawDeveloper.develop(image)
+        val linear = RawDeveloper.develop(image, lensCorrection)
         if (lensCorrection) straighten(linear, image.lens)
         return linear to Orientation.ofExif(image.orientation)
     }
