@@ -10,6 +10,9 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+/** What emptying the trash freed: the [photos] deleted and the [bytes] their files took. */
+data class TrashFreed(val photos: Int, val bytes: Long)
+
 /**
  * Where deleted photos go first, as in a gallery app: out of the library and out of other apps'
  * sight, but not gone. They can be put back, or deleted for good; after the days set in the settings ([KEPT_DAYS] at first) that happens by
@@ -76,9 +79,46 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
 
     /** Deletes what has been in the trash for longer than [keptDays]. */
     suspend fun emptyExpired(now: Long = System.currentTimeMillis(), keptDays: Int = KEPT_DAYS) {
+        emptyExpiredCounting(now, keptDays)
+    }
+
+    /** Like [emptyExpired], and says how many photos it deleted and how many bytes that freed. */
+    suspend fun emptyExpiredCounting(
+        now: Long = System.currentTimeMillis(),
+        keptDays: Int = KEPT_DAYS,
+    ): TrashFreed = withContext(Dispatchers.IO) {
         // While storage cannot be reached the files cannot be deleted either; their entries wait.
-        if (!storage.isAvailable()) return
-        deleteForever(mediaDao.trashedBefore(now - TimeUnit.DAYS.toMillis(keptDays.toLong())))
+        if (!storage.isAvailable()) return@withContext TrashFreed(0, 0L)
+        val expired = mediaDao.trashedBefore(now - TimeUnit.DAYS.toMillis(keptDays.toLong()))
+        val going = expired.filter { item ->
+            try {
+                deleteExtras(item)
+            } catch (e: IOException) {
+                // The file stays and its entry waits for the next pass.
+                false
+            }
+        }
+        going.map { it.id }.chunked(500).forEach { mediaDao.deleteByIds(it) }
+        var bytes = 0L
+        for (item in going) {
+            try {
+                bytes += deleteFolder(item)
+            } catch (e: Exception) {
+                // On to the next photo.
+            }
+        }
+        TrashFreed(going.size, bytes)
+    }
+
+    private fun deleteExtras(item: MediaItemEntity): Boolean {
+        val kept = File(item.path)
+        return storage.delete(sidecarOf(kept)) && storage.delete(File(kept.parentFile, ORIGINAL + kept.name))
+    }
+
+    private suspend fun deleteFolder(item: MediaItemEntity): Long = withContext(Dispatchers.IO) {
+        val kept = File(item.path)
+        kept.parentFile?.let(storage::delete)
+        kept.length()
     }
 
     private fun sidecarOf(file: File) = File(file.parentFile, "${file.nameWithoutExtension}.xmp")
@@ -87,5 +127,16 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
         /** How long, in days, photos stay unless the settings say otherwise. */
         const val KEPT_DAYS = 30
         private const val ORIGINAL = "original-"
+        private const val MILLIS_PER_DAY = 86_400_000
+
+        /**
+         * How many whole days [item] has left in the trash, counting a started day as a whole one; 0 once its
+         * time is up, and null for a photo that is not in the trash.
+         */
+        fun daysLeft(item: MediaItemEntity, keptDays: Int = KEPT_DAYS, now: Long = System.currentTimeMillis()): Int? {
+            val trashedAt = item.trashedAt ?: return null
+            val left = trashedAt + keptDays * MILLIS_PER_DAY - now
+            return if (left <= 0) 0 else ((left + MILLIS_PER_DAY - 1) / MILLIS_PER_DAY).toInt()
+        }
     }
 }

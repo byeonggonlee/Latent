@@ -136,4 +136,35 @@ class TrashTest {
         runBlocking { trash.emptyExpired(now + TimeUnit.DAYS.toMillis(8), keptDays = 7) }
         assertEquals(0, runBlocking { trash.items.first() }.size)
     }
+
+    @Test
+    fun reportsHowManyPhotosEmptyingDeleted() {
+        runBlocking { trash.throwAway(listOf(item())) }
+        val kept = File(item().path)
+        val now = System.currentTimeMillis()
+
+        assertEquals(0, runBlocking { trash.emptyExpiredCounting(now + TimeUnit.DAYS.toMillis(29)) }.photos)
+        assertTrue(kept.exists())
+        assertEquals(1, runBlocking { trash.emptyExpiredCounting(now + TimeUnit.DAYS.toMillis(31)) }.photos)
+
+        assertFalse(kept.exists())
+        assertNull(runBlocking { mediaDao.byId(rawId) })
+        assertEquals(0, runBlocking { trash.emptyExpiredCounting(now + TimeUnit.DAYS.toMillis(31)) }.photos)
+    }
+
+    @Test
+    fun countsTheDaysAPhotoHasLeft() {
+        val day = TimeUnit.DAYS.toMillis(1)
+        val trashed = item().copy(trashedAt = 1_000_000L)
+
+        assertEquals(7, Trash.daysLeft(trashed, keptDays = 7, now = 1_000_000L))
+        assertEquals(5, Trash.daysLeft(trashed, keptDays = 7, now = 1_000_000L + 2 * day + 1))
+        assertEquals(1, Trash.daysLeft(trashed, keptDays = 7, now = 1_000_000L + 7 * day - 1))
+        assertEquals(0, Trash.daysLeft(trashed, keptDays = 7, now = 1_000_000L + 7 * day))
+    }
+
+    @Test
+    fun hasNoDaysLeftForAPhotoThatIsNotInTheTrash() {
+        assertNull(Trash.daysLeft(item(), keptDays = 7))
+    }
 }
