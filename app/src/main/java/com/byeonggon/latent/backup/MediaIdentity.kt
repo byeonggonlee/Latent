@@ -55,16 +55,14 @@ internal class MediaMatcher(targets: Collection<MediaItemEntity>, paths: MediaPa
     }
 
     /**
-     * For a record not found at its place: the one photo of its origin and kind with the same name and size; of several,
-     * the one taken at the same moment, as far as clocks in different time zones can tell.
+     * For a record not found at its place: a photo of its origin and kind with the same name and size, taken at the same
+     * moment as far as clocks in different time zones can tell; of several, the nearest in time. One alone is not taken on
+     * its name and size: camera file names come round again, and an uncompressed raw file's size is the camera's.
      */
     fun elsewhere(record: MediaRecord): MediaItemEntity? {
         val candidates = byFile[fileKey(record.origin, record.kind, record.name, record.size)]?.filter { it.id !in claimed }.orEmpty()
-        val chosen = when (candidates.size) {
-            0 -> null
-            1 -> candidates[0]
-            else -> candidates.filter { sameMoment(it.capturedAt, record.capturedAt) }.minByOrNull { abs(it.capturedAt - record.capturedAt) }
-        } ?: return null
+        val chosen = candidates.filter { sameMoment(it.capturedAt, record.capturedAt) }.minByOrNull { abs(it.capturedAt - record.capturedAt) }
+            ?: return null
         claimed += chosen.id
         return chosen
     }

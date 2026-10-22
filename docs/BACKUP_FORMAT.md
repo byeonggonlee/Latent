@@ -173,9 +173,10 @@ A photo's absolute path differs between phones, so a restore finds each photo of
    the backup's phone photos are in (`PhoneLibrary.refresh`). That needs access to the photos and the library folder;
    without it the restore is refused with a message, and nothing is changed.
 2. A photo of the same origin and kind at the same relative path is the one. Its size may differ: an edit changes it.
-3. Otherwise, a photo of the same origin and kind with the same name (in any case) and size: if there is one, it is the
-   one; of several, the one taken at the same moment (the same time, or one off by whole quarter hours up to 26 hours,
-   as a clock in another time zone reads it), the nearest of them.
+3. Otherwise, a photo of the same origin and kind with the same name (in any case) and size, taken at the same moment
+   (the same time, or one off by whole quarter hours up to 26 hours, as a clock in another time zone reads it); of
+   several, the nearest of them. One alone is not taken on its name and size (since 2026-10-22): camera file names
+   come round again, and every uncompressed raw file of a camera has the same size.
 4. Each photo on the phone is taken by one record at most, and places are tried for every record before names are, so
    that a photo found by its name never takes the one another record is at the place of.
 
@@ -191,6 +192,8 @@ Where it fails:
 - **Another origin**: a library photo copied into a folder of the phone (`DCIM/Camera`) is another app's photo there,
   and is not taken: its edit, kept as settings there, would be laid over a JPEG that already has it.
 - **Camera file names come round again** (DSC00001 after DSC09999): told apart by size and time.
+- **A moved photo whose time reads differently** on this phone, by more than a time zone explains: a file without a
+  time of its own, dated by when it was copied, say, is not found once it has moved.
 - **A phone photo on an SD card and one at the same relative path on the phone's own storage** cannot be told apart
   (the volume is not part of the path); the first by path is taken.
 
