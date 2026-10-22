@@ -45,8 +45,8 @@ Review & Orchestration** (shared across agents and orchestrated across models).
   - For changes touching any of the **mandatory-review categories** in [`AGENTS.md`](../../AGENTS.md) (the
     decoder seam, colour/precision, buffers/locks/cancellation, Room migrations/backup format/data-loss paths,
     privacy/permissions, signing/CI, dependencies/ABIs, another agent's area, and review governance), **Claude Opus
-    5.5** is preferred; if authored by **Claude Sonnet 5.5**, **`high` or `max` (extended thinking)** reasoning effort is strictly required, and the PR description
-    must note the authoring model and reasoning effort.
+    5.5** is preferred; if authored by **Claude Sonnet 5.5**, **`high` or `max` (extended thinking)** reasoning effort
+    is strictly required, and the PR description must note the authoring model and reasoning effort.
 
 ### 2.2 Code Review & Orchestration
 
@@ -80,10 +80,11 @@ that high-reasoning token budgets are spent where bugs cost user data:
   using reproducible findings, false positives and exposed usage/cost from existing reviews; no benchmark or new
   measurement service is required by this policy.
 - **Reuse mechanical results.** Prefer CLI/API queries or scripts for head-SHA comparisons, CI status and duplicate
-  detection. Key completed review coverage to the inspected head SHA and base/diff scope. Do not repeat an unchanged
-  review or its unchanged merge; a changed head or base requires checking what changed and retaining only still-valid
-  coverage. A CI status change alone calls for a status update, not another model review. This does not start or resume
-  any monitor; monitoring still needs owner authorization.
+  detection. Key completed review coverage to the inspected head SHA and base/diff scope. Reuse that coverage while
+  the head and scope are unchanged. After merge, inspect only changes not already covered; a changed head or base
+  requires checking what changed and retaining only still-valid coverage. A CI status change alone calls for a status
+  update, not another model review. This does not start or resume any monitor; monitoring still needs owner
+  authorization.
 
 ### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher & First-Pass Candidate Finder
 
@@ -113,31 +114,8 @@ that high-reasoning token budgets are spent where bugs cost user data:
   `high` effort. Its triage alone never satisfies the mandatory review requirement in `AGENTS.md`. Classification
   remains one-way escalation, and does not impose a review on small changes outside the mandatory list.
 
-#### Evidence and possible follow-up evaluation
-
-The owner supplied a comparison of Flash's review of draft [PR #36](https://github.com/byeonggonlee/Latent/pull/36)
-at `af7d12c3f193e44846a5bf0f9e615443c29b905d` with an answer key kept outside the repository: four of five seeded
-defects were detected, and one decoy was reported as a defect. The chat evaluations also corrected numerical
-overstatements and severity judgements, and the initial independent evaluation also had a material omission.
-This is one small, deliberately flawed PR, not an established detection rate or a comparison with other models.
-It supports candidate finding with verification, not promotion to sole deep reviewer. It did not test Flash's primary
-job of dispatch. No answer key or per-seed scoring details belong in this document.
-
-If the owner requests another benchmark, the suggested scope is:
-
-- **Dispatch first**: Three or four small PRs covering a mandatory-review trigger, plain docs, cancellation, and
-  location data. Score required escalation, no downgrades, and no safety clearance of mandatory-review changes.
-  Plain docs still require escalation when they change review governance or another mandatory topic.
-- **Finding quality separately**: Include cancellation through broad exception handlers and helpers whose names do
-  not suggest coroutine work, low-impact/no-caller defects beside data-loss risks, and harmless design-smell decoys.
-  Score detection, numerical accuracy, user impact and severity ordering, fix sufficiency, false positives and decoy
-  hits separately. Predeclare acceptable severity per defect rather than accepting every result within one level.
-- **Benchmark integrity**: Existing tests, lint and CI stay green with the seeds present; added PR tests do not expose
-  them. Use a neutral body with a benchmark/never-merge notice and the required authoring identity/settings line.
-  Keep the answer key outside the repo, pinned to exact pushed-head lines, with precise conditional claims and one
-  predeclared scoring rule per defect. A benchmark is never merged, and is closed after the authorized evaluation.
-
-These are follow-up suggestions, not authorization to create benchmarks, seed bugs, or resume monitoring.
+Evaluation history and optional follow-up proposals are recorded separately in
+[`flash-review-evaluation.md`](flash-review-evaluation.md).
 
 ### 3.2 Gemini 4 Argon — Systems, Numerical, Concurrency & Seam Deep Reviewer
 
