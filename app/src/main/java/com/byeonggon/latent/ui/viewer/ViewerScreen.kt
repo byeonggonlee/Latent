@@ -151,13 +151,7 @@ fun ViewerScreen(
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     // The window shows HDR while an HDR photo is in front, and ordinary pictures again once it is not, or the viewer closes.
-    val view = LocalView.current
-    val showingHdr = state.hdr != null && state.rendered == null
-    DisposableEffect(showingHdr) {
-        val activity = view.context as? Activity
-        activity?.let { HdrPictures.showHdr(it, showingHdr) }
-        onDispose { activity?.let { HdrPictures.showHdr(it, false) } }
-    }
+    HdrWindow(showing = state.hdr != null && state.rendered == null)
     val item = state.item
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -420,6 +414,17 @@ fun ViewerScreen(
             dismissButton = { TextButton(onClick = { confirmingRestore = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+    }
+}
+
+/** Lets the window show HDR while [showing], and only ordinary pictures once it is not, or once this leaves the screen. */
+@Composable
+internal fun HdrWindow(showing: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(showing) {
+        val activity = view.context as? Activity
+        activity?.let { HdrPictures.showHdr(it, showing) }
+        onDispose { activity?.let { HdrPictures.showHdr(it, false) } }
     }
 }
 
