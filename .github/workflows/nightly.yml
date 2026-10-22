@@ -3,7 +3,9 @@ name: Nightly
 # A build of the day for the phones, published as a pre-release that can be installed over the one before it. It is
 # made when `main` has commits that the last nightly does not, at 03:00 in Korea or when asked for; the policy
 # is in docs/RELEASES.md. Without the signing secrets it only builds, and keeps the APK as an artifact: an APK that
-# is signed with a key no phone knows would not update anything.
+# is signed with a key no phone knows would not update anything. The build, with its tests, Gradle plugins and the
+# signing secrets, may only read the repository; the pre-release is made by a job of its own, which may write to it but
+# runs nothing of the build's and never sees the secrets.
 on:
   schedule:
     - cron: "0 18 * * *"
@@ -19,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   changes:
@@ -46,8 +48,13 @@ jobs:
     if: needs.changes.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      signed: ${{ steps.version.outputs.signed }}
+      tag: ${{ steps.version.outputs.tag }}
+      file: ${{ steps.version.outputs.file }}
+      day: ${{ steps.version.outputs.day }}
+      code: ${{ steps.version.outputs.code }}
     env:
-      GH_TOKEN: ${{ github.token }}
       SIGNED: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v7
@@ -81,6 +88,7 @@ jobs:
           echo "tag=nightly-$day-$count" >> "$GITHUB_OUTPUT"
           echo "day=$day" >> "$GITHUB_OUTPUT"
           echo "file=latent-$base-nightly.$day-$count-arm64-v8a.apk" >> "$GITHUB_OUTPUT"
+          echo "signed=$SIGNED" >> "$GITHUB_OUTPUT"
 
       - name: Tests and lint
         run: ./gradlew testDebugUnitTest lintDebug lintRelease --stacktrace
@@ -120,15 +128,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "${{ steps.version.outputs.file }}"
           sha256sum "${{ steps.version.outputs.file }}" > "${{ steps.version.outputs.file }}.sha256"
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: latent-nightly-apk
-          path: |
-            latent-*.apk
-            latent-*.apk.sha256
-          retention-days: 14
-
-      - name: Publish
+      - name: Notes
         if: env.SIGNED == 'true'
         env:
           LAST: ${{ needs.changes.outputs.last }}
@@ -142,13 +142,49 @@ jobs:
             echo "Changes since the last nightly:"
             git log --pretty='- %s' $range | head -80
           } > notes.md
-          gh release create "${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.file }}" "${{ steps.version.outputs.file }}.sha256" \
+
+      # The APK for whoever downloads it, and what the publish job puts out: nothing else of the workspace, not
+      # keystore.properties.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: latent-nightly-apk
+          path: |
+            latent-*.apk
+            latent-*.apk.sha256
+            notes.md
+          retention-days: 14
+
+  publish:
+    needs: nightly
+    if: needs.nightly.outputs.signed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # A download whose digest differs from the upload's fails.
+      - uses: actions/download-artifact@v8
+        with:
+          name: latent-nightly-apk
+
+      - name: Publish
+        env:
+          TAG: ${{ needs.nightly.outputs.tag }}
+          FILE: ${{ needs.nightly.outputs.file }}
+          DAY: ${{ needs.nightly.outputs.day }}
+          CODE: ${{ needs.nightly.outputs.code }}
+        run: |
+          # The APK the build signed, as it left it.
+          sha256sum -c "$FILE.sha256"
+          gh release create "$TAG" "$FILE" "$FILE.sha256" \
             --prerelease --target "$GITHUB_SHA" \
-            --title "Nightly ${{ steps.version.outputs.day }} (build ${{ steps.version.outputs.code }})" \
+            --title "Nightly $DAY (build $CODE)" \
             --notes-file notes.md
 
       - name: Keep the last seven
-        if: env.SIGNED == 'true'
         run: |
           gh release list --limit 100 --json tagName --jq '[.[] | select(.tagName | startswith("nightly-"))] | .[7:] | .[].tagName' |
             while read -r old; do gh release delete "$old" --cleanup-tag --yes; done

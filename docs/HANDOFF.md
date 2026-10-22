@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | LA-09: the nightly and stable workflows build in a read-only job and publish in one of their own, before the `v0.1.0` tag (the owner's choice). Waits for Codex's review | `claude/split-publish` | `.github/workflows/release.yml`, `.github/workflows/nightly.yml`, `docs/RELEASES.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
 

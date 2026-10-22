@@ -3,6 +3,8 @@ name: Release
 # A stable build: a tag `vX.Y.Z` (or `vX.Y.Z-rc.1`, published as a pre-release) that the owner puts on a commit of
 # `main` builds the signed APK and publishes it as a release, for good. The policy is in docs/RELEASES.md.
 # Unlike a nightly, it refuses to run without the signing secrets: a release that no phone could update to is a mistake.
+# The build, with its tests, Gradle plugins and the signing secrets, may only read the repository; the release is made
+# by a job of its own, which may write to it but runs nothing of the build's and never sees the secrets.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
@@ -12,14 +14,16 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      GH_TOKEN: ${{ github.token }}
+    outputs:
+      name: ${{ steps.tag.outputs.name }}
+      file: ${{ steps.tag.outputs.file }}
+      pre: ${{ steps.tag.outputs.pre }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -142,9 +146,40 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # What the publish job puts out, and nothing else of the workspace: not keystore.properties.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: |
+            ${{ steps.tag.outputs.file }}
+            ${{ steps.tag.outputs.file }}.sha256
+            notes.md
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # A download whose digest differs from the upload's fails.
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+
       - name: Publish
+        env:
+          NAME: ${{ needs.build.outputs.name }}
+          FILE: ${{ needs.build.outputs.file }}
+          PRE: ${{ needs.build.outputs.pre }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "${{ steps.tag.outputs.file }}" "${{ steps.tag.outputs.file }}.sha256" \
-            ${{ steps.tag.outputs.pre }} --verify-tag \
-            --title "Latent ${{ steps.tag.outputs.name }}" \
+          # The APK the build signed, as it left it.
+          sha256sum -c "$FILE.sha256"
+          gh release create "$GITHUB_REF_NAME" "$FILE" "$FILE.sha256" $PRE --verify-tag \
+            --title "Latent $NAME" \
             --notes-file notes.md
