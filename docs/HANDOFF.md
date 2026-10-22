@@ -119,8 +119,8 @@ camera samples and were skipped; this run does not establish real-photo quality 
    acceptance criteria are not yet fully demonstrated.
 2. **Two-illuminant interpolation:** merged in PR #9; synthetic regression checks are complete. Colour
    judgement still needs the owner's tungsten/daylight photos.
-3. **WarpRectilinear:** Codex started the owner-authorized implementation on `codex/dng-warp-rectilinear`; the shared files are claimed below. Retain the reviewed-PR requirement and
-   preserve Sony correction tests. The lens-chip change is already on local `main` (`33dd8af`).
+3. **WarpRectilinear:** merged in PR #17 after Claude review and green CI. Sony correction tests remain unchanged;
+   real OpcodeList3-to-JPEG matching and phone performance/memory remain in DEVICE_CHECKS.
 
 For Claude Code: reconcile the JPEG XL queue entry with `cf6a263` when publishing this board to `main`, and
 refresh your progress rows then. Sharing this response with Claude Code requires a push or PR after the local commit.
@@ -141,9 +141,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Repair three reproduced MPF optional-preview bounds crashes: wrapped directory offset, truncated TIFF header and one-byte preview; add malformed and valid-preview regression tests. | `codex/legacy-safety-audit` | `data/MpfPreview.kt`, `data/MpfPreviewTest.kt` | 2026-10-22 |
-| Codex | Owner-requested independent audit of pre-collaboration main code at `0f8af7e`; read-only source review and synthetic reproductions; confirmed Claude findings go to its queue, decoder work to Codex, policy decisions to TODO. PR #18 exact head already reviewed. | `codex/legacy-safety-audit` | `docs/HANDOFF.md`, `docs/TODO.md`; temporary audit tests only until a decoder fix is separately claimed | 2026-10-22 |
-| Codex | DNG OpcodeList3 WarpRectilinear implementation and synthetic regressions ready for reviewed PR; retain Sony lens behavior. Independent internal review corrected the SDK integer-centre convention. Claude review and phone/JPEG comparison remain pending. Owner authorized 2026-10-22. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawDeveloper.kt`, `raw/RawRenderer.kt`, `ui/editor/EditorViewModel.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 
 ## For Codex
 
@@ -206,7 +203,7 @@ touch the seam, as it reviews yours.
   short of its rows still fails.
 - **Done**: `113ca0b`, on main; [CI 39584546602](https://github.com/byeonggonlee/Latent/actions/runs/39584546602) green. WORDS/PACKED_12 counts 1 and Int.MAX_VALUE match normal samples; missing row bytes fail; JPEG XL declared bounds stay strict.
 
-### Legacy audit decoder item — MPF bounds (P2, claimed)
+### Legacy audit decoder item — MPF bounds (P2, fixed)
 
 - **Why / Where**: `data/MpfPreview.kt:22,59-70` narrows unsigned offsets before adding and reads one-byte previews
   as two-byte JPEG signatures. Three bounded fixtures produced unchecked ArrayIndexOutOfBoundsException in JVM
@@ -214,7 +211,10 @@ touch the seam, as it reviews yours.
   Thumbnail decoding calls this optional reader without catching that exception.
 - **Do / Test first**: validate header, APP2/TIFF extents and offsets with Long before indexing/narrowing; require
   at least two preview signature bytes; keep valid little/big-endian largest-preview selection. The three
-  `AuditMpfBoundsTest` cases already fail against baseline. Codex owns and will implement this small parser fix.
+  `AuditMpfBoundsTest` cases failed against baseline. Codex implemented the fix in `MpfPreview.kt` with
+  10 permanent `MpfPreviewTest` cases; all 36 related MPF/thumbnail/decoder tests passed. The full required host command
+  `testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest --offline` also passed: 613 tests total,
+  609 passed and 4 fixture-dependent skips; lint has 0 errors and 6 existing warnings, schemas unchanged.
 - **Done when / Risk**: malformed previews return null so the full JPEG fallback remains usable; positive valid
   fixture tests and required CI pass. Do not change valid preview pixels or invent a phone memory budget.
 
@@ -239,7 +239,7 @@ Confirmed legacy-review findings follow below. Its own next items, so that Codex
 Owner requested the review through Claude's `codex-review-prompt.md`. Source revision: `0f8af7e` (before
 PR #18), not another agent's working tree. Three independently scoped reviewers covered colour/geometry,
 external inputs/sync/restore, and decoder boundaries; Codex validated the findings against the actual JVM
-classes. No Claude production code was changed. PR #18 at `bd7c6e0` already has
+classes. No production code in Claude's assigned area was changed. PR #18 at `bd7c6e0` already has
 [Codex's clean review](https://github.com/byeonggonlee/Latent/pull/18#pullrequestreview-5608631908), 53 passing
 related tests and green exact-head CI. The findings below are outside its changes.
 
@@ -397,7 +397,7 @@ without those temporary files. None use private photos.
 - **Decoders (B8)**: ARW sample products use Long and check compressed input size before allocation; explicit
   DecodeRequest budgets and TIFF checked payload/directory ranges close the old small-file/huge-allocation R7
   hypothesis. Lossless JPEG bounds its frame against the tile before row allocation. No new confirmed
-  TIFF/Sony/lossless-JPEG bug found. MPF's separate unchecked offsets/one-byte-preview crashes are claimed by Codex.
+  TIFF/Sony/lossless-JPEG bug found. MPF's separate unchecked offsets/one-byte-preview crashes were reproduced and fixed by Codex, with 10 permanent tests.
 - **PR18 specifics (A)**: Android 15's [FileSystemProvider](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-15.0.0_r1/core/java/com/android/internal/content/FileSystemProvider.java)
   uses buildUniqueFile on rename and returns the actual new document ID; move rejects an occupied target.
   Its behavior agrees with checking the returned name and attempting rollback. No new lock cycle was found
@@ -412,6 +412,9 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Codex | Owner-requested independent legacy audit at `0f8af7e`: eight confirmed Claude-area findings (LA-01–08), one separately classified CI hardening proposal, owner tradeoffs in TODO, and coverage/limits above. Temporary reproductions were removed from the build; no Claude-owned production code changed. | `ca3b719`, `codex/legacy-safety-audit` |
+| 2026-10-22 | Codex | MPF optional-preview safety: Long offset/range checks stay inside APP2; truncated headers, wrapped table offsets and one-byte previews return no preview. Ten permanent normal/endian/malformed tests and related decoder checks pass. | `codex/legacy-safety-audit` |
+| 2026-10-22 | Codex | DNG WarpRectilinear merged after independent Claude LGTM and green CI; synthetic geometry and real linear-DNG decode checks complete. OpcodeList3 camera-JPEG matching and S26 latency/memory remain device checks. | [PR #17](https://github.com/byeonggonlee/Latent/pull/17), merged `0f8af7e` |
 | 2026-10-22 | Claude Code (computer) | Import from a card reader or a camera in Mass Storage mode: a folder picked once, read as a `CameraSource` that leaves out what a camera does not show over MTP. Across a card and MTP, a file that only looks imported is copied over and compared whole (a JPEG's EXIF value by value, all but the place) before it is left out. Four rounds of Codex's review; not tried with a card reader or the ZV-E10 in Mass Storage yet | [PR #13](https://github.com/byeonggonlee/Latent/pull/13), merged `93cd30b` |
 | 2026-10-22 | Codex | Two-illuminant DNG interpolation merged; numerical/regression validation complete, tungsten photo judgement remains open in DEVICE_CHECKS. | [PR #9](https://github.com/byeonggonlee/Latent/pull/9) |
 | 2026-10-22 | Codex | Publish PR review guidance, permit concise LGTM for clean reviews, reconcile completed decoder work, and claim the owner-authorized WarpRectilinear work. | `codex/review-posting-rule` |
