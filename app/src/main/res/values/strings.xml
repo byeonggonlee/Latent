@@ -187,6 +187,9 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="nothing_new">There is nothing new to import.</string>
     <string name="failed_retry_hint">Files that failed are tried again at the next sync.</string>
     <string name="sync_out_of_space">The phone is almost full, so the sync stopped.</string>
+    <string name="sync_look_alikes">%1$s on the camera look like photos already in the library, by name and size (%2$s together). They are left on the camera until they are copied over and compared.</string>
+    <string name="sync_look_alikes_hint">Only what holds the same as the library\'s photo is then left out, and remembered as imported; anything else comes in as a photo of its own. Copying them takes as long as importing them.</string>
+    <string name="sync_compare_look_alikes">Copy over and compare</string>
     <string name="sync_out_of_space_hint">Free up some space, then sync again: the rest is imported from where it stopped.</string>
     <string name="sync_failed">Sync failed</string>
     <string name="sync_failed_hint">Check the cable and the camera\'s USB connection setting (MTP).</string>
@@ -212,6 +215,10 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <plurals name="geotagged_files">
         <item quantity="one">%d geotagged</item>
         <item quantity="other">%d geotagged</item>
+    </plurals>
+    <plurals name="look_alike_files">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
     </plurals>
     <plurals name="failed_files">
         <item quantity="one">%d failed: </item>
@@ -441,6 +448,10 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <plurals name="timeline_added">
         <item quantity="one">Added %1$d new of %2$d locations (%3$s).</item>
         <item quantity="other">Added %1$d new of %2$d locations (%3$s).</item>
+    </plurals>
+    <plurals name="timeline_visits_skipped">
+        <item quantity="one">%d stay was left out: it lasted more than a week, or ended before it began.</item>
+        <item quantity="other">%d stays were left out: they lasted more than a week, or ended before they began.</item>
     </plurals>
     <plurals name="stars">
         <item quantity="one">%d star</item>

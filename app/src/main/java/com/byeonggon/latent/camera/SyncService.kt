@@ -54,6 +54,8 @@ class SyncService : Service() {
             }
         }
         val dates = intent?.syncDates()
+        val compare = intent?.getBooleanExtra(EXTRA_COMPARE, false) == true
+        lastStart = intent?.let { Intent(it).apply { removeExtra(EXTRA_COMPARE) } }
 
         job = scope.launch {
             val progress = launch {
@@ -63,7 +65,7 @@ class SyncService : Service() {
                 }
             }
             try {
-                engine.run(source, dates)
+                engine.run(source, dates, compareLookAlikes = compare)
             } finally {
                 progress.cancel()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -123,7 +125,22 @@ class SyncService : Service() {
         private const val EXTRA_START_DAY = "start_day"
         private const val EXTRA_END_DAY = "end_day"
         private const val EXTRA_FOLDER = "folder"
+        private const val EXTRA_COMPARE = "compare"
         private const val NOTIFICATION_INTERVAL_MS = 500L
+
+        /** How the last sync was started, for [compareLookAlikes] to start it again; gone with the process, as its result is. */
+        private var lastStart: Intent? = null
+
+        /**
+         * Starts the last sync again, from the same camera or card and for the same dates, this time copying over and
+         * comparing the files that look like photos in the library, which it left on the camera as too many to ask for.
+         * Returns false when there is no last sync to start again.
+         */
+        fun compareLookAlikes(context: Context): Boolean {
+            val intent = lastStart ?: return false
+            context.startForegroundService(Intent(intent).putExtra(EXTRA_COMPARE, true))
+            return true
+        }
 
         fun start(context: Context, device: UsbDevice, dates: SyncDates?) =
             start(context, Intent(context, SyncService::class.java).putExtra(UsbManager.EXTRA_DEVICE, device), dates)

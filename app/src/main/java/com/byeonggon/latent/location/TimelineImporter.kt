@@ -11,16 +11,18 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 
 class TimelineImporter(private val context: Context, private val locationDao: LocationDao) {
-    data class Result(val parsed: Int, val added: Int, val from: Long?, val to: Long?)
+    /** What an import found: points read and added, the time they span, and visits too long to be filled in. */
+    data class Result(val parsed: Int, val added: Int, val from: Long?, val to: Long?, val skippedVisits: Int = 0)
 
     suspend fun import(uri: Uri): Result = withContext(Dispatchers.IO) {
         var parsed = 0
         var added = 0
         var from: Long? = null
         var to: Long? = null
+        var skippedVisits = 0
         val stream = context.contentResolver.openInputStream(uri) ?: throw IOException("Cannot open $uri")
         stream.bufferedReader().use { reader ->
-            for (chunk in TimelineParser.parse(reader).chunked(BATCH_SIZE)) {
+            for (chunk in TimelineParser.parse(reader) { skippedVisits++ }.chunked(BATCH_SIZE)) {
                 ensureActive()
                 val rows = chunk.map {
                     LocationPointEntity(
@@ -38,7 +40,7 @@ class TimelineImporter(private val context: Context, private val locationDao: Lo
                 to = maxOf(to ?: Long.MIN_VALUE, chunk.maxOf { it.timestamp })
             }
         }
-        Result(parsed, added, from, to)
+        Result(parsed, added, from, to, skippedVisits)
     }
 
     private companion object {

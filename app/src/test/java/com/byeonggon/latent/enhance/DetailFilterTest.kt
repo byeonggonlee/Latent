@@ -142,6 +142,39 @@ class DetailFilterTest {
     }
 
     @Test
+    fun readsAroundABandAsFarAsItsStagesReachTogether() {
+        // Noise reduction, texture and sharpening each work on the one before: their reaches add up (Codex's legacy audit,
+        // LA-08, where 21 rows were needed and 18 read). What lies further off changes a pixel by a hair too little to
+        // show reliably, so the rows read are what is checked.
+        for (scale in listOf(1f, 0.5f)) {
+            val filter = DetailFilter(Adjustments(noiseReduction = 1f, texture = 1f, sharpening = 1f), scale)
+            assertTrue("scale $scale reads ${filter.reach}", filter.reach >= 2 * filter.noiseReach + 2 * filter.textureReach + 1)
+        }
+        val colour = DetailFilter(Adjustments(colorNoiseReduction = 1f), scale = 1f)
+        assertTrue(colour.reach >= 2 * colour.colorNoiseReach)
+    }
+
+    @Test
+    fun givesInBandsWhatItGivesForTheWholePictureWithEveryStageTogether() {
+        // Rows of every level, unrelated to their neighbours: what a band's edge cuts off shows at once.
+        val tall = 4 * DetailFilter.BAND_ROWS
+        val narrow = 4
+        val random = java.util.Random(0)
+        val pixels = IntArray(narrow * tall).also { values -> for (y in 0 until tall) { val level = random.nextInt(256); for (x in 0 until narrow) values[y * narrow + x] = gray(level) } }
+        for (scale in listOf(1f, 0.5f)) {
+            val filter = DetailFilter(Adjustments(noiseReduction = 1f, texture = 1f, sharpening = 1f, colorNoiseReduction = 1f), scale)
+            val banded = filter.apply(pixels, narrow, tall)
+            val whole = IntArray(narrow * tall).also { filter.process(pixels, narrow, tall, 0, tall, it) }
+
+            for (index in whole.indices) {
+                // Sums started at another row may come out a hair apart, hence the one level.
+                val apart = abs(green(banded[index]) - green(whole[index]))
+                assertTrue("scale $scale, row ${index / narrow}: $apart levels apart", apart <= 1)
+            }
+        }
+    }
+
+    @Test
     fun handsOverEveryRowExactlyOnce() {
         val pixels = picture { x, y -> gray((x + y) % 256) }
         val written = IntArray(height)

@@ -265,7 +265,8 @@ class LibraryEdits(
      * A copy of [item] to send to another app: a JPEG at its full size, or no larger than [longSide]
      * pixels. A raw file is developed with its edit; with no [longSide], a JPEG file is shared as it is,
      * unless [forceCopy] asks for a copy of it (for an app that is to edit it, which keeps its place) or the
-     * settings say the place is to be left out, which a copy is made for.
+     * settings say the place is to be left out, which a copy is made for. A HEIF picture's Exif cannot be
+     * rewritten: to leave its place out, a JPEG is made from it.
      */
     @Throws(IOException::class)
     suspend fun shareCopy(item: MediaItemEntity, longSide: Int?, alongsideOthers: Boolean = false, forceCopy: Boolean = false): File {
@@ -273,7 +274,7 @@ class LibraryEdits(
         val options = exportOptions()
         val leaveOutPlace = options.removeLocation && !forceCopy
         val phoneEdit = if (item.origin == MediaOrigin.PHONE || item.isHeif) editOf(item) else null
-        if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null) {
+        if (item.kind != MediaKind.RAW && longSide == null && phoneEdit == null && !(leaveOutPlace && item.isHeif)) {
             if (!forceCopy && !leaveOutPlace) return source
             // A copy of the file as it is, for an app that may do what it likes with it.
             return (if (alongsideOthers) storage.sharedFile(source.name) else storage.shareFile(source.name)).also {
@@ -306,8 +307,11 @@ class LibraryEdits(
                     full.delete()
                 }
             }
+        } else if (longSide == null) {
+            // A HEIF picture at its full size, made a JPEG so that its place can be taken out.
+            PhotoEnhancer.exportEdited(source, target, PhotoEdit(), options.quality)
         } else {
-            PhotoEnhancer.writeSmaller(source, target, longSide!!, options.quality)
+            PhotoEnhancer.writeSmaller(source, target, longSide, options.quality)
         }
         val latitude = item.latitude
         val longitude = item.longitude

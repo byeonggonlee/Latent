@@ -214,6 +214,79 @@ class SyncEngineTest {
         assertEquals(0, database.syncRecordDao().observeCountWithoutLibraryFile().first())
     }
 
+    /** A photo in the library, copied there from elsewhere: it does not know which camera it came from. */
+    private suspend fun unclaimedInLibrary(name: String, bytes: ByteArray, kind: MediaKind = MediaKind.RAW): File {
+        val copy = File(storage.root, "2026/2026-10-01/$name").apply {
+            parentFile!!.mkdirs()
+            writeBytes(bytes)
+        }
+        database.mediaDao().insert(MediaItemEntity(path = copy.absolutePath, fileName = name, kind = kind, sizeBytes = copy.length(), capturedAt = capturedAt, importedAt = 1))
+        return copy
+    }
+
+    @Test
+    fun importsAFileThatOnlyLooksLikeOneInTheLibrary() = runBlocking {
+        // Codex's legacy audit, LA-01: the camera's numbers came round, and its uncompressed raw files all have one size.
+        unclaimedInLibrary("DSC00060.ARW", RAW_BYTES)
+        val other = RAW_BYTES.reversedArray()
+        val source = FakeCameraSource(mapOf(remote("DSC00060.ARW", MediaKind.RAW, other) to other))
+        var downloads = 0
+        source.onDownload = { downloads++ }
+
+        engine.run(source)
+
+        assertEquals(1, downloads)
+        assertEquals(1, (engine.state.value as SyncState.Finished).imported)
+        val library = database.mediaDao().all()
+        assertEquals(2, library.size)
+        // The photo that was there is still of no known camera; the new one is this camera's, and not taken again.
+        assertEquals(1, library.count { it.sourceKey == null })
+        assertTrue(library.single { it.sourceKey != null }.path.let { File(it).readBytes().contentEquals(other) })
+        engine.run(FakeCameraSource(mapOf(remote("DSC00060.ARW", MediaKind.RAW, other) to other)).also { it.onDownload = { downloads++ } })
+        assertEquals(1, downloads)
+    }
+
+    @Test
+    fun asksBeforeCopyingOverManyLookAlikesToCompare() = runBlocking {
+        val files = (1..21).associate { index ->
+            val name = "DSC%05d.ARW".format(index)
+            unclaimedInLibrary(name, RAW_BYTES)
+            remote(name, MediaKind.RAW, RAW_BYTES) to RAW_BYTES
+        }
+        var downloads = 0
+
+        engine.run(FakeCameraSource(files).also { it.onDownload = { downloads++ } })
+
+        val waiting = engine.state.value as SyncState.Finished
+        assertEquals(LookAlikes(21, 21L * RAW_BYTES.size), waiting.toCompare)
+        assertEquals(0, waiting.imported)
+        assertEquals(0, downloads)
+        // Nothing of them is recorded until they are compared: not as imported, nor their folder as read in full.
+        assertTrue(database.mediaDao().all().all { it.sourceKey == null })
+        assertEquals(emptyList<String>(), database.syncRecordDao().allKeys())
+        assertTrue(database.syncedFolderDao().forCamera("SERIAL").isEmpty())
+
+        engine.run(FakeCameraSource(files).also { it.onDownload = { downloads++ } }, compareLookAlikes = true)
+
+        val compared = engine.state.value as SyncState.Finished
+        assertEquals(null, compared.toCompare)
+        assertEquals(0, compared.imported)
+        assertEquals(21, downloads)
+        assertTrue(database.mediaDao().all().all { it.sourceKey != null })
+        assertEquals(21, database.mediaDao().all().size)
+    }
+
+    @Test
+    fun knowsAnEditedPhotoInTheLibraryByTheOriginalItKeeps() = runBlocking {
+        val photo = unclaimedInLibrary("DSC00070.JPG", byteArrayOf(1, 2, 3), MediaKind.PHOTO)
+        storage.originalOf(photo).apply { parentFile!!.mkdirs() }.writeBytes(RAW_BYTES)
+
+        engine.run(FakeCameraSource(mapOf(remote("DSC00070.JPG", MediaKind.PHOTO, RAW_BYTES) to RAW_BYTES)))
+
+        assertEquals(0, (engine.state.value as SyncState.Finished).imported)
+        assertTrue(database.mediaDao().all().single().sourceKey != null)
+    }
+
     @Test
     fun leavesFilesUntaggedWhenNoTrackCoversTheCaptureTime() = runBlocking {
         val photo = jpegTakenAt("2026:10:01 12:00:00", "+09:00")
