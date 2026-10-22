@@ -86,7 +86,7 @@ Latent is a Kotlin/Compose Android app for USB imports, editing, and geotagging.
 Run the Gradle wrapper from the repository root. CI uses JDK 21; compile SDK is 37; devices require Android 15/API 35 or newer.
 
 - `./gradlew assembleDebug`: build the debug APK.
-- `./gradlew installDebug`: install on a device or emulator; launch Latent there.
+- `./gradlew installDebug`: install on a device or emulator; launch "Latent Debug" there (`com.latentimage.latent.debug`, beside the nightly, with its own database and `DCIM/Latent Debug` library).
 - `./gradlew testDebugUnitTest`: run JVM tests.
 - `./gradlew lintDebug lintRelease assembleDebugAndroidTest`: run Android Lint and compile instrumentation tests, matching CI checks.
 - `git diff --exit-code -- app/schemas`: verify committed schemas after building.
