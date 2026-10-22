@@ -53,12 +53,17 @@ sealed interface SyncState {
         val cancelled: Boolean,
         /** Stopped because the phone was nearly full; the files not yet imported are still on the camera. */
         val outOfSpace: Boolean = false,
+        /** Files that look like photos in the library, too many to copy over and compare without asking; left on the camera. */
+        val toCompare: LookAlikes? = null,
     ) : SyncState
 
     data class Failed(val message: String) : SyncState
 
     val isRunning: Boolean get() = this is Scanning || this is Transferring
 }
+
+/** Camera files that look like photos in the library, by name and size: how many, and how large together. */
+data class LookAlikes(val files: Int, val bytes: Long)
 
 /** Limits a sync to files shot between [start] and [end], both inclusive. */
 data class SyncDates(val start: LocalDate, val end: LocalDate) {
@@ -84,11 +89,15 @@ class SyncEngine(
         cancelRequested = true
     }
 
-    /** Imports everything new on [source], or only what was shot within [dates] when given. */
-    suspend fun run(source: CameraSource, dates: SyncDates? = null) = withContext(Dispatchers.IO) {
+    /**
+     * Imports everything new on [source], or only what was shot within [dates] when given. Files that look like photos
+     * in the library are copied over and compared before they are left out; when there are many, only once
+     * [compareLookAlikes] says the person agreed to.
+     */
+    suspend fun run(source: CameraSource, dates: SyncDates? = null, compareLookAlikes: Boolean = false) = withContext(Dispatchers.IO) {
         cancelRequested = false
         try {
-            source.use { sync(it, dates) }
+            source.use { sync(it, dates, compareLookAlikes) }
         } catch (e: SyncCancelledException) {
             _state.value = SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = true)
         } catch (e: CancellationException) {
@@ -103,7 +112,7 @@ class SyncEngine(
         }
     }
 
-    private suspend fun sync(source: CameraSource, dates: SyncDates?) {
+    private suspend fun sync(source: CameraSource, dates: SyncDates?, compareLookAlikes: Boolean) {
         _state.value = SyncState.Scanning(0)
         val camera = source.open()
         val options = settings.settings.first()
@@ -124,7 +133,12 @@ class SyncEngine(
             .filter { dates == null || Instant.ofEpochMilli(it.modifiedAt).atZone(zone).toLocalDate() in dates }
         val elsewhere = importedElsewhere(listed, cameraId, alreadyImported)
         val seenElsewhere = HashSet<RemoteFile>()
-        val pending = withoutCopiesInLibrary(listed, cameraId, alreadyImported)
+        val lookAlikes = lookAlikesInLibrary(listed)
+        // Comparing them means copying them over: a few go along, many wait until the person says so.
+        val toCompare = LookAlikes(lookAlikes.size, lookAlikes.keys.sumOf { it.sizeBytes })
+            .takeIf { !compareLookAlikes && (it.files > ASK_BEFORE_COMPARING_FILES || it.bytes > ASK_BEFORE_COMPARING_BYTES) }
+        var inLibraryAlready = 0
+        val pending = listed.filter { toCompare == null || it !in lookAlikes }
             .sortedBy { it.modifiedAt }
         Log.i(
             SYNC_LOG_TAG,
@@ -160,7 +174,18 @@ class SyncEngine(
                     cancelling = cancelRequested,
                 )
             }
-            // Copied over to be compared: if the library holds it already, come in from elsewhere, it is not stored twice.
+            // Copied over to be compared: a file the library holds already, without knowing where it came from, is
+            // recorded as come from here, and not stored twice.
+            val inLibrary = if (downloaded) lookAlikes[file]?.firstOrNull { sameAsImported(part, it.file) } else null
+            if (inLibrary != null) {
+                part.delete()
+                claim(inLibrary.item, file, cameraId)
+                alreadyImported.add(file.sourceKey(cameraId))
+                inLibraryAlready++
+                doneBytes += file.sizeBytes
+                continue
+            }
+            // Come in from elsewhere, it is not stored twice either.
             if (downloaded && elsewhere[file].orEmpty().any { sameAsImported(part, it) }) {
                 part.delete()
                 seenElsewhere += file
@@ -187,9 +212,10 @@ class SyncEngine(
         Log.i(
             SYNC_LOG_TAG,
             "Finished: imported=$imported, geotagged=$geotagged, failed=$failed, cancelled=$cancelRequested, " +
-                "outOfSpace=$outOfSpace, in the library from elsewhere already=${seenElsewhere.size}",
+                "outOfSpace=$outOfSpace, in the library from elsewhere already=${seenElsewhere.size}, " +
+                "in the library already=$inLibraryAlready, left to compare=${toCompare?.files ?: 0}",
         )
-        _state.value = SyncState.Finished(imported, geotagged, failed, cancelled = cancelRequested, outOfSpace = outOfSpace)
+        _state.value = SyncState.Finished(imported, geotagged, failed, cancelled = cancelRequested, outOfSpace = outOfSpace, toCompare = toCompare)
     }
 
     /** Folders that can be skipped while unchanged: fully imported for at least the kinds wanted now. */
@@ -342,36 +368,41 @@ class SyncEngine(
         return storage.originalOf(file).takeIf { item.kind == MediaKind.PHOTO && it.canRead() } ?: file
     }
 
+    /** A photo of the library, and a file of it that a camera file may hold the same as: the photo, or its kept original. */
+    private class LibraryCopy(val item: MediaItemEntity, val file: File)
+
     /**
-     * [files] less those the library holds already without knowing they came from this camera: copied
-     * from another phone, say. A copy has the camera file's name and size, or its kept original has,
-     * if it was edited. They are remembered as imported from now on, as if this sync had brought them.
+     * Of [files], those that look like photos the library holds without knowing where they came from, copied there from
+     * another phone or left by an earlier installation, with the library's files they look like: the same name and size
+     * as the photo, or as the original it keeps if it was edited. Only candidates: a camera's file names come round
+     * again, and its uncompressed raw files all have one size, so each is copied over and compared whole before it is
+     * left out ([sameAsImported]).
      */
-    private suspend fun withoutCopiesInLibrary(files: List<RemoteFile>, cameraId: String, imported: ImportedFiles): List<RemoteFile> {
+    private suspend fun lookAlikesInLibrary(files: List<RemoteFile>): Map<RemoteFile, List<LibraryCopy>> {
         val unclaimed = database.mediaDao().all().filter { it.sourceKey == null && it.origin == MediaOrigin.LIBRARY }
-        if (unclaimed.isEmpty()) return files
-        val copies = HashMap<String, MediaItemEntity>()
+        if (unclaimed.isEmpty()) return emptyMap()
+        val copies = HashMap<String, MutableList<LibraryCopy>>()
         for (item in unclaimed) {
             val file = File(item.path)
-            copies["${item.fileName}|${item.sizeBytes}"] = item
+            copies.getOrPut("${item.fileName}|${item.sizeBytes}") { ArrayList(1) } += LibraryCopy(item, file)
             if (item.kind == MediaKind.PHOTO) {
-                storage.originalOf(file).takeIf { it.exists() }?.let { copies["${item.fileName}|${it.length()}"] = item }
+                storage.originalOf(file).takeIf { it.exists() }?.let { copies.getOrPut("${item.fileName}|${it.length()}") { ArrayList(1) } += LibraryCopy(item, it) }
             }
         }
-        val (copied, fresh) = files.partition { it.sizeBytes != RemoteFile.UNKNOWN_SIZE && "${it.name}|${it.sizeBytes}" in copies }
-        if (copied.isNotEmpty()) {
-            val now = System.currentTimeMillis()
-            database.withTransaction {
-                for (file in copied) {
-                    val key = file.sourceKey(cameraId)
-                    database.mediaDao().setSourceKey(copies.getValue("${file.name}|${file.sizeBytes}").id, key)
-                    database.syncRecordDao().insert(SyncRecordEntity(key, now))
-                    imported.add(key)
-                }
-            }
-            Log.i(SYNC_LOG_TAG, "${copied.size} files are in the library already, copied there")
+        val lookAlikes = files.filter { it.sizeBytes != RemoteFile.UNKNOWN_SIZE }
+            .mapNotNull { file -> copies["${file.name}|${file.sizeBytes}"]?.let { file to it } }
+            .toMap()
+        if (lookAlikes.isNotEmpty()) Log.i(SYNC_LOG_TAG, "${lookAlikes.size} files look like photos in the library already")
+        return lookAlikes
+    }
+
+    /** Records that [item], in the library already, is [file] of this camera: from now on it is known as imported. */
+    private suspend fun claim(item: MediaItemEntity, file: RemoteFile, cameraId: String) {
+        val key = file.sourceKey(cameraId)
+        database.withTransaction {
+            database.mediaDao().setSourceKey(item.id, key)
+            database.syncRecordDao().insert(SyncRecordEntity(key, System.currentTimeMillis()))
         }
-        return fresh
     }
 
     private class SyncCancelledException : RuntimeException()
@@ -385,5 +416,9 @@ class SyncEngine(
 
         /** A file whose size the camera could not give is one of 4 GB or more: the 32 bits of its object info overflowed. */
         const val AT_LEAST_BYTES_WHEN_SIZE_UNKNOWN = 4L * 1024 * 1024 * 1024
+
+        /** Beyond this many look-alikes, or bytes of them, the person is asked before they are copied over to be compared. */
+        const val ASK_BEFORE_COMPARING_FILES = 20
+        const val ASK_BEFORE_COMPARING_BYTES = 2L * 1024 * 1024 * 1024
     }
 }

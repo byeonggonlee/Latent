@@ -164,7 +164,7 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
             }
         }
 
-        SyncStatus(syncState, onCancel = viewModel::cancel)
+        SyncStatus(syncState, onCancel = viewModel::cancel, onCompare = viewModel::compareLookAlikes)
     }
 
     if (confirmingReimport) {
@@ -235,7 +235,7 @@ private fun SyncDatesDialog(initial: SyncDates?, onConfirm: (SyncDates) -> Unit,
 }
 
 @Composable
-private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
+private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> Unit) {
     when (state) {
         SyncState.Idle -> Unit
         is SyncState.Scanning -> SectionCard(stringResource(R.string.progress)) {
@@ -265,7 +265,7 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
         }
         is SyncState.Finished -> SectionCard(stringResource(if (state.cancelled || state.outOfSpace) R.string.sync_stopped else R.string.sync_done)) {
             if (state.imported == 0 && state.failed.isEmpty()) {
-                Text(stringResource(if (state.cancelled) R.string.nothing_imported else R.string.nothing_new))
+                if (state.toCompare == null || state.cancelled) Text(stringResource(if (state.cancelled) R.string.nothing_imported else R.string.nothing_new))
             } else {
                 Text(
                     stringResource(
@@ -274,6 +274,18 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit) {
                         pluralStringResource(R.plurals.geotagged_files, state.geotagged, state.geotagged),
                     ),
                 )
+            }
+            state.toCompare?.let { toCompare ->
+                val context = LocalContext.current
+                Text(
+                    stringResource(
+                        R.string.sync_look_alikes,
+                        pluralStringResource(R.plurals.look_alike_files, toCompare.files, toCompare.files),
+                        Formatter.formatShortFileSize(context, toCompare.bytes),
+                    ),
+                )
+                Hint(stringResource(R.string.sync_look_alikes_hint))
+                Button(onClick = onCompare) { Text(stringResource(R.string.sync_compare_look_alikes)) }
             }
             if (state.outOfSpace) {
                 Text(stringResource(R.string.sync_out_of_space), color = MaterialTheme.colorScheme.error)
