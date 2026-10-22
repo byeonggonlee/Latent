@@ -70,19 +70,6 @@ class MtpCameraSource(
         }
     }
 
-    override fun readTail(file: RemoteFile, length: Int): ByteArray? {
-        if (file.sizeBytes == RemoteFile.UNKNOWN_SIZE) return null
-        val tail = ByteArray(minOf(length.toLong(), file.sizeBytes).toInt())
-        return try {
-            // A camera that cannot hand out part of a file says so with an error; the file is then compared no further.
-            val read = requireDevice().getPartialObject(file.handle, file.sizeBytes - tail.size, tail.size.toLong(), tail)
-            tail.takeIf { read == tail.size.toLong() }
-        } catch (e: IOException) {
-            Log.w(SYNC_LOG_TAG, "Cannot read the end of ${file.name}", e)
-            null
-        }
-    }
-
     override fun close() {
         device?.close()
         device = null

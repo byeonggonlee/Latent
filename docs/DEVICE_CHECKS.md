@@ -193,10 +193,10 @@ Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (th
       card itself. Its name shows, and "Import" brings in what is new: photos, raw files and videos
       (`PRIVATE/M4ROOT/CLIP`), and none of the videos' thumbnails (`THMBNL`) or smaller copies (`SUB`).
 - [ ] What came over MTP before is skipped, and the other way round: a sync over MTP after importing from the card
-      brings nothing twice. A file that only looks the same (name, size, time) is compared by its last bytes with the
-      library's copy: over MTP that reads part of a file (`GetPartialObject`); if the ZV-E10 refuses, logcat
-      `CameraSync` says "Cannot read the end of …" and those files are imported again. A photo deleted from the
-      phone has no copy to compare with, so the card brings it back. Compare the times in the viewer with the same
+      brings nothing twice. A file that only looks the same (name, size, time) is copied over and compared, whole, with
+      the library's copy (a JPEG's EXIF aside), then left out: the first such sync reads every one of them, so note
+      how long it takes; the folders are remembered after it. A photo deleted from the phone has no copy to compare
+      with, so the card brings it back. Compare the times in the viewer with the same
       shots imported over MTP (a card's file times may be read in another zone; capture times come from EXIF either way).
 - [ ] The ZV-E10 set to Mass Storage: the Camera tab says so and points to the card section; the dialog opens on the
       camera's drive.

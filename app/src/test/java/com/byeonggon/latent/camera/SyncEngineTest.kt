@@ -162,6 +162,22 @@ class SyncEngineTest {
     }
 
     @Test
+    fun importsAFileWhoseEndIsTheSameButNotTheRest() = runBlocking {
+        // Raw files whose top rows differ can end in the same rows, or the same padding.
+        val end = ByteArray(128 * 1024) { (it % 251).toByte() }
+        val first = byteArrayOf(1, 2, 3, 4) + end
+        val second = byteArrayOf(9, 2, 3, 4) + end
+        val onFirstCard = remote("DSC00001.DNG", MediaKind.RAW, first)
+        val onSecondCard = remote("DSC00001.DNG", MediaKind.RAW, second, modifiedAt = capturedAt + 15 * minute)
+        engine.run(FakeCameraSource(mapOf(onFirstCard to first), CameraInfo("", "Card", "folder:1111-AAAA:")))
+
+        engine.run(FakeCameraSource(mapOf(onSecondCard to second), CameraInfo("", "Card", "folder:2222-BBBB:")))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(2, database.mediaDao().all().size)
+    }
+
+    @Test
     fun importsOffTheCardAFileThatOnlyLooksLikeOneThatCameOverMtp() = runBlocking {
         val overMtp = remote("DSC00001.ARW", MediaKind.RAW, RAW_BYTES)
         engine.run(FakeCameraSource(mapOf(overMtp to RAW_BYTES)))
@@ -490,9 +506,6 @@ class SyncEngineTest {
             val storage = listStorage(tree, FakeTree.ROOT, STORAGE, request, onFound)
             return Listing(storage.files, storage.fingerprints)
         }
-
-        override fun readTail(file: RemoteFile, length: Int): ByteArray? =
-            files[file]?.let { it.copyOfRange(maxOf(0, it.size - length), it.size) }
 
         override fun download(file: RemoteFile, destination: File): Boolean {
             val bytes = files[file] ?: return false

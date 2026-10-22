@@ -7,7 +7,6 @@ import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.util.Log
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 
 /** What the id of every folder source starts with: see [isFolderCamera]. */
@@ -65,18 +64,6 @@ class FolderCameraSource(private val context: Context, private val tree: Uri) : 
         val input = resolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, id)) ?: return false
         input.use { source -> destination.outputStream().use { source.copyTo(it) } }
         return true
-    }
-
-    override fun readTail(file: RemoteFile, length: Int): ByteArray? {
-        val id = documents.getOrNull(file.handle) ?: return null
-        return try {
-            resolver.openFileDescriptor(DocumentsContract.buildDocumentUriUsingTree(tree, id), "r")?.use { descriptor ->
-                FileInputStream(descriptor.fileDescriptor).channel.use { tailOf(it, length) }
-            }
-        } catch (e: IOException) {
-            Log.w(SYNC_LOG_TAG, "Cannot read the end of ${file.name}", e)
-            null
-        }
     }
 
     override fun close() {
