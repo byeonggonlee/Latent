@@ -287,19 +287,26 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         val (phone, own) = selectedItems().partition { it.origin == MediaOrigin.PHONE }
         val partners = if (current.stacked) mediaDao.byIds(own.mapNotNull { current.partners[it.id] }) else emptyList()
         trash.throwAway(own + partners.filter { partner -> own.none { it.id == partner.id } })
-        // What other apps made is theirs to delete: the system asks the person, and keeps it in its own trash.
-        if (phone.isNotEmpty()) {
+        // What other apps made is theirs to delete: the system asks the person, and keeps it in its own trash. Only
+        // what is in the app's trash is said to be there; the person's answer to the system is still to come.
+        val allAsked = phone.isEmpty() || run {
             val phonePartners = if (current.stacked) mediaDao.byIds(phone.mapNotNull { current.partners[it.id] }) else emptyList()
             requestDeletion(phone + phonePartners.filter { partner -> partner.origin == MediaOrigin.PHONE && phone.none { it.id == partner.id } })
         }
-        plural(R.plurals.trashed_count, own.size + phone.size)
+        listOfNotNull(
+            plural(R.plurals.trashed_count, own.size).takeIf { own.isNotEmpty() },
+            text(R.string.trash_failed).takeUnless { allAsked },
+        ).joinToString(" ").ifEmpty { null }
     }
 
-    private suspend fun requestDeletion(items: List<MediaItemEntity>) {
+    /** Asks the system to put [items] in its trash; whether it knew every one of them. */
+    private suspend fun requestDeletion(items: List<MediaItemEntity>): Boolean {
         val uris = withContext(Dispatchers.IO) { items.mapNotNull { container.phoneLibrary.uriOf(it.path) } }
-        if (uris.isEmpty()) return
-        val request = MediaStore.createTrashRequest(getApplication<Application>().contentResolver, uris, true).intentSender
-        activity.update { it.copy(deleteRequest = request) }
+        if (uris.isNotEmpty()) {
+            val request = MediaStore.createTrashRequest(getApplication<Application>().contentResolver, uris, true).intentSender
+            activity.update { it.copy(deleteRequest = request) }
+        }
+        return uris.size == items.size
     }
 
     /** The system has dealt with the request to delete photos of other apps; the library drops those that are gone. */
@@ -455,7 +462,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /** Runs [work] and reports what it says it did, or [failure]; the selection is cleared either way. */
-    private fun whileBusy(@StringRes failure: Int, work: suspend () -> String) {
+    private fun whileBusy(@StringRes failure: Int, work: suspend () -> String?) {
         viewModelScope.launch {
             val message = try {
                 work()
