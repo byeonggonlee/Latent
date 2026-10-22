@@ -163,6 +163,32 @@ class ShareCopyTest {
     }
 
     @Test
+    fun leavesThePlaceOutOfAHeifPictureByMakingAJpegOfIt() {
+        // A JPEG under a HEIF name, as the JVM cannot encode HEIF: what counts is that no Exif is written into a HEIF file,
+        // which a phone's ExifInterface refuses, so that the share failed every time.
+        val file = File(File(photo.path).parentFile, "DSC00004.HIF")
+        File(photo.path).copyTo(file)
+        ExifInterface(file).apply { setLatLong(37.5, 127.0); saveAttributes() }
+        val heif = photo.copy(path = file.path, fileName = file.name, sizeBytes = file.length())
+        val original = file.readBytes()
+
+        assertEquals(file.path, runBlocking { container.libraryEdits.shareCopy(heif, null) }.path)
+
+        runBlocking { container.settings.update { it.copy(removeLocationWhenSharing = true) } }
+        val shared = runBlocking { container.libraryEdits.shareCopy(heif, null) }
+
+        assertEquals("DSC00004.jpg", shared.name)
+        assertEquals(null, ExifInterface(shared).latLong)
+        assertEquals("ZV-E10", ExifInterface(shared).getAttribute(ExifInterface.TAG_MODEL))
+        assertEquals(sizeOf(file), sizeOf(shared))
+        org.junit.Assert.assertArrayEquals(original, file.readBytes())
+        // For another app to edit, the file goes as it is, with its place.
+        val forEditing = runBlocking { container.libraryEdits.shareCopy(heif, null, forceCopy = true) }
+        assertEquals("DSC00004.HIF", forEditing.name)
+        assertEquals(37.5, ExifInterface(forEditing).latLong!![0], 1e-4)
+    }
+
+    @Test
     fun keepsThePlaceInACopyMadeForAnotherAppToEdit() {
         ExifInterface(File(photo.path)).apply { setLatLong(37.5, 127.0); saveAttributes() }
         runBlocking { container.settings.update { it.copy(removeLocationWhenSharing = true) } }
