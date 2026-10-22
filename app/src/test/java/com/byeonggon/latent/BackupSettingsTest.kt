@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -123,6 +124,22 @@ class BackupSettingsTest {
         compose.onNodeWithText("복원").performClick()
         waitForText("복원했습니다")
         assertEquals(listOf("Mine"), runBlocking { container.database.backupDao().filters() }.map { it.name })
+    }
+
+    @Test
+    fun saysSoWhenTheBackupCannotBeWritten() {
+        // A place that cannot hold a file: its folder is a file.
+        val blocked = File(files.root, "blocked").apply { writeText("a file, not a folder") }
+        openSettings()
+
+        compose.onNodeWithText("백업…").performScrollTo().performClick()
+        answerFileDialog(File(blocked, "latent.zip"))
+
+        waitForText("백업을 저장하지 못했습니다")
+        assertEquals(0, compose.onAllNodesWithText("백업을 저장했습니다", substring = true).fetchSemanticsNodes().size)
+        // Both buttons are back for another try.
+        compose.onNodeWithText("백업…").performScrollTo().assertIsEnabled()
+        compose.onNodeWithText("복원…").performScrollTo().assertIsEnabled()
     }
 
     @Test
