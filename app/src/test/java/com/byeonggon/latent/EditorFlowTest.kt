@@ -195,6 +195,27 @@ class EditorFlowTest {
     }
 
     @Test
+    fun keepsTheEditWhenPuttingTheOriginalBackIsCancelled() {
+        openEditor("DSC00001.JPG")
+        slide("노출", to = 1f)
+        compose.onNodeWithText("완료").performClick()
+        waitForText("원본으로 되돌리기")
+        waitForSaved()
+        val edited = photo.readBytes()
+
+        compose.onNodeWithText("원본으로 되돌리기").performClick()
+        compose.onNodeWithText("원본으로 되돌릴까요?").assertIsDisplayed()
+        compose.onNodeWithText("이 사진에 저장한 보정 값이 지워집니다.").assertIsDisplayed()
+        compose.onNodeWithText("취소").performClick()
+        compose.waitForIdle()
+
+        compose.onAllNodesWithText("원본으로 되돌릴까요?").assertCountEquals(0)
+        assertArrayEquals(edited, photo.readBytes())
+        assertTrue(container.storage.originalOf(photo).exists())
+        assertEquals(PhotoEdit(Adjustments(exposure = 1f)), PhotoEdit.fromJson(runBlocking { mediaDao.byId(photoId)!!.edit }))
+    }
+
+    @Test
     fun reopensAnEditWhereItWasLeft() {
         openEditor("DSC00001.JPG")
         slide("대비", to = 0.4f)
