@@ -711,6 +711,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="backup_done">Backup saved.</string>
     <string name="backup_counts">Photos %1$s · albums %2$s · versions %3$s · my filters %4$s · LUTs %5$s · masks %6$s · timeline places %7$s · camera imports %8$s</string>
     <string name="backup_failed">The backup could not be written: %1$s</string>
+    <string name="backup_too_large">This library is larger than one backup can hold (200,000 files or 4 GB), so it could not be restored. Nothing was saved.</string>
     <string name="backup_cancelled">The backup was cancelled, and the unfinished file deleted.</string>
     <string name="backup_cancelled_left">The backup was cancelled. The unfinished file could not be deleted; delete it yourself, as it cannot be restored.</string>
     <string name="backup_restore_question">Restore this backup?</string>

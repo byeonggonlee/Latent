@@ -167,6 +167,10 @@ class DamagedBackupException(entry: String, line: Int? = null, cause: Throwable?
 /** Written by a newer app, in a format this one does not know. */
 class NewerBackupException(val version: Int) : BackupException("Backup format $version is newer than ${BackupFormat.VERSION}")
 
+/** A library whose backup would be larger than a restore reads, so that it is not written: it could not be restored. */
+class BackupTooLargeException(val mostEntries: Int, val mostUnpacked: Long) :
+    IOException("A backup holds at most $mostEntries entries and $mostUnpacked bytes unpacked")
+
 /** The photos of the backup cannot be found without access to the library and the phone's photos. */
 class NoLibraryAccessException : BackupException("No access to the library")
 
@@ -237,7 +241,8 @@ internal data class MediaRecord(
             val kind = enumOrNull<MediaKind>(json.string("kind")) ?: return null
             val latitude = json.optDouble("latitude")
             val longitude = json.optDouble("longitude")
-            val located = latitude != null && longitude != null
+            // A place off the Earth is no place: the phone's own, read from the file, stays.
+            val located = latitude != null && longitude != null && isPlace(latitude, longitude)
             return MediaRecord(
                 id = json.long("id"),
                 origin = origin,
@@ -252,7 +257,7 @@ internal data class MediaRecord(
                 edit = json.optString("edit"),
                 latitude = latitude.takeIf { located },
                 longitude = longitude.takeIf { located },
-                altitude = json.optDouble("altitude").takeIf { located },
+                altitude = json.optDouble("altitude")?.takeIf { located && it.isFinite() },
                 // A place the reader cannot read is no place.
                 geoSource = if (located) enumOrNull<GeoSource>(json.optString("geoSource")) ?: GeoSource.CAMERA else GeoSource.NONE,
                 sourceKey = json.optString("sourceKey"),
@@ -355,15 +360,19 @@ internal object LocationRecord {
         addProperty("source", point.source.name)
     }
 
-    /** Null for a source this version does not know. */
+    /** Null for a source this version does not know, and for a place off the Earth, which nothing records. */
     fun fromJson(json: JsonObject): LocationPointEntity? {
         val source = enumOrNull<LocationSource>(json.string("source")) ?: return null
+        val latitude = json.double("latitude")
+        val longitude = json.double("longitude")
+        if (!isPlace(latitude, longitude)) return null
         return LocationPointEntity(
             timestamp = json.long("timestamp"),
-            latitude = json.double("latitude"),
-            longitude = json.double("longitude"),
-            altitude = json.optDouble("altitude"),
-            accuracy = json.optDouble("accuracy")?.toFloat(),
+            latitude = latitude,
+            longitude = longitude,
+            // What is no number is left out, as a missing one: NaN or infinity, as only something else writes.
+            altitude = json.optDouble("altitude")?.takeIf { it.isFinite() },
+            accuracy = json.optDouble("accuracy")?.toFloat()?.takeIf { it.isFinite() },
             source = source,
         )
     }
@@ -460,6 +469,9 @@ internal data class BackupSettings(
 }
 
 internal inline fun <reified T : Enum<T>> enumOrNull(name: String?): T? = enumValues<T>().firstOrNull { it.name == name }
+
+/** Whether [latitude] and [longitude] are a place on the Earth, in degrees; NaN is none. */
+internal fun isPlace(latitude: Double, longitude: Double): Boolean = latitude in -90.0..90.0 && longitude in -180.0..180.0
 
 private fun JsonObject.present(name: String): JsonElement? = get(name)?.takeUnless { it.isJsonNull }
 
