@@ -25,8 +25,15 @@ responsible authoring agent.
 - Antigravity never writes or edits code, tests, build scripts or CI workflows. Any defect or missing test it finds
   is published in the PR review and/or added to the responsible authoring agent's queue in `docs/HANDOFF.md`.
 - Every PR review published from Antigravity explicitly states both the reviewing model and the agent at the top of
-  the review (`Reviewed by <Model> (via Antigravity)`), anchored to the inspected commit SHA.
-- Important changes (as listed in `AGENTS.md`) may be reviewed by Claude Code, Codex, or Antigravity's hosted models.
+  the review (`Reviewed by <Model> (via Antigravity)`), anchored to the inspected commit SHA, and uses `--comment`
+  because all agents currently share the owner's `gh` account.
+- Important changes (as listed in `AGENTS.md`) require a deep review rather than a **Gemini 3.8 Flash** pre-screen
+  alone, preferring a different model family from the PR author (**Gemini 4 Argon** or **Codex** for a Claude Code
+  PR; **Gemini 4 Argon**, **Claude Opus 5.5**, or **Claude Code** for a Codex PR). When **Gemini 4 Argon** or the
+  primary cross-family reviewer is out of tokens/quota, the review falls back to another deep reviewer (including an
+  independent-context Claude review on a Claude Code PR when Argon and Codex are both exhausted), naming the fallback
+  and any unverified checks at the top of the review; if no deep reviewer is available, the PR waits under "Waiting
+  for the owner" in `docs/TODO.md`.
 
 **Opens again** if the owner changes the agent roster, model assignments, or authoring boundaries.
 

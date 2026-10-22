@@ -46,9 +46,17 @@ you start it, and log it there when it is done.
   Before pushing, bring `origin/main` in, run what CI runs as far as your setup can (`testDebugUnitTest lintDebug
   lintRelease assembleDebugAndroidTest`, then `git diff --exit-code -- app/schemas`), and push a fast-forward. An
   agent without the Android SDK (a cloud session) cannot prove a change itself, so it always opens a pull request.
-- **Changes that need review go through a pull request**, reviewed by another agent (Claude Code, Codex, or
-  Antigravity), and are merged once CI is green and the review is done; the owner decides when reviewers disagree.
-  That is any change to:
+- **Changes that need review go through a pull request**, reviewed by a deep reviewer from another model family by
+  default—**Gemini 4 Argon** (via Antigravity) or **Codex** for a Claude Code PR; **Gemini 4 Argon** (via
+  Antigravity), **Claude Opus 5.5** (via Antigravity), or **Claude Code** for a Codex PR—and are merged once CI is
+  green and the review is done; the owner decides when reviewers disagree. **Gemini 3.8 Flash** may triage and
+  pre-screen, but does not by itself satisfy this review requirement. **Gemini 4 Argon** has a tight token budget: if
+  it is out of tokens, the review it was assigned falls back first to the non-author model family (**Codex** or
+  **Claude Code** / **Opus 5.5**), or—when cross-family deep reviewers are also out of quota—to an independent-context
+  same-family deep reviewer (**Claude Opus 5.5** via Antigravity or **Claude Sonnet 5.5** via Claude Code). The
+  review names the fallback at its top and states which Argon checks (numerical bounds, colour invariants, locks and
+  cancellation) it did and did not cover; if no deep reviewer is available, the PR waits and goes under "Waiting for
+  the owner" in `docs/TODO.md`. A review is required for any change to:
   - the seam between decoders and the rest (`ArwImage`, `LensProfile`, `RawDeveloper`, `LensCorrection`,
     `RawRenderer`, `RawCache`), or what `LinearImage` means;
   - colour, precision, white balance, demosaicing, the look, crop or orientation;
@@ -71,13 +79,14 @@ you start it, and log it there when it is done.
   owner explicitly asks for a private or chat-only review.
 - Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
   found), checks verified, and any unverified builds or device checks. Identify the reviewing agent and active
-  model explicitly at the top of the review (for example, `Reviewed by Gemini 3.8 Flash (via Antigravity)`,
-  `Reviewed by Gemini 4 Argon (via Antigravity)`, or `Reviewed by Claude Opus 5.5 (via Antigravity)`), as well as
-  any fallback reviewer.
+  model explicitly at the top of the review (for example, `Reviewed by Gemini 3.8 Flash (via Antigravity, pre-screen)`,
+  `Reviewed by Gemini 4 Argon (via Antigravity)`, or `Reviewed by Claude Opus 5.5 (via Antigravity, fallback for
+  Gemini 4 Argon)`), along with which primary checks a fallback reviewer did and did not cover.
 - A concise LGTM is enough when no actionable issues are found; keep the inspected commit and material validation
   limits clear.
-- Post a review even when no bugs are found. Use a COMMENT review when reviewing through the PR author's own
-  account, since that account cannot approve its own PR. Publishing a review does not authorize a merge.
+- Post a review even when no bugs are found. Because every agent currently posts through the owner's single GitHub
+  account (`gh`), which cannot approve or request changes on its own PR, always publish with `--comment` and state
+  the outcome explicitly in the body. Publishing a review does not authorize a merge.
 
 ## Project Structure & Module Organization
 
