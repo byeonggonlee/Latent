@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | Compose UI tests (Robolectric) for today's UI: the sync's look-alike question, the gain-map warning, the detected-mask buttons, the viewer's HDR toggle, then other untested screens (trash, backup and restore) | `claude/compose-tests` | new `*Test.kt` under `app/src/test/java/com/byeonggon/latent/ui/`; small seams in `ui/` only if needed | 2026-10-22 |
 
 ## For Codex
 
