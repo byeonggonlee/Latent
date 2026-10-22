@@ -36,7 +36,15 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
     /** Rows above and below a band that its result depends on. */
     internal val reach get() = margin
 
-    private val margin = max(if (texturing) 2 * textureReach else 0, max(2 * noiseReach, 2 * colorNoiseReach)) + 2
+    /**
+     * Noise reduction, texture and sharpening work one on the other's result, so what a pixel depends on reaches as far
+     * as theirs together: each filter twice (a guided filter's two averages, texture's two blurs), sharpening one row.
+     * Colour noise is worked out beside them, from the picture as it was. Two rows more to spare.
+     */
+    private val margin = max(
+        (if (noiseReduction > 0f) 2 * noiseReach else 0) + (if (texturing) 2 * textureReach else 0) + (if (sharpening > 0f) 1 else 0),
+        if (colorNoiseReduction > 0f) 2 * colorNoiseReach else 0,
+    ) + 2
 
     /** The picture in [pixels] with its detail changed; [pixels] themselves are left as they are. */
     fun apply(pixels: IntArray, width: Int, height: Int): IntArray {
@@ -79,8 +87,8 @@ class DetailFilter(adjustments: Adjustments, scale: Float) {
         }
     }
 
-    /** Fills [band] with the rows from [top] of the finished picture, reading as far around them as it takes. */
-    private fun process(pixels: IntArray, width: Int, height: Int, top: Int, rows: Int, band: IntArray) {
+    /** Fills [band] with the rows from [top] of the finished picture, reading as far around them as it takes. Internal for tests. */
+    internal fun process(pixels: IntArray, width: Int, height: Int, top: Int, rows: Int, band: IntArray) {
         val first = max(0, top - margin)
         val last = min(height, top + rows + margin)
         val count = (last - first) * width
