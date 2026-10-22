@@ -86,6 +86,38 @@ class JpegMetadataTest {
         return segment(0xE1, "Exif".toByteArray() + bytes(0, 0) + tiff)
     }
 
+    /** An Exif block whose TIFF header points its first directory at [offset], read unsigned. */
+    private fun exifPointingAt(offset: Long, littleEndian: Boolean = true): ByteArray {
+        val value = offset.toInt()
+        val header = if (littleEndian) {
+            "II".toByteArray() + bytes(42, 0) + bytes(value and 0xFF, (value shr 8) and 0xFF, (value shr 16) and 0xFF, (value ushr 24) and 0xFF)
+        } else {
+            "MM".toByteArray() + bytes(0, 42) + bytes((value ushr 24) and 0xFF, (value shr 16) and 0xFF, (value shr 8) and 0xFF, value and 0xFF)
+        }
+        return segment(0xE1, "Exif".toByteArray() + bytes(0, 0) + header)
+    }
+
+    @Test
+    fun leavesOutABlockWhoseDirectoryLiesOutsideItWhenThePictureWasTurned() {
+        // 0x7ffffff5 from the header is 2^31 - 1 into the segment, where 2 more wrapped round to below its size.
+        for (block in listOf(exifPointingAt(0x7ffffff5), exifPointingAt(0x7ffffff5, littleEndian = false), exifPointingAt(0xfffffff0), exifPointingAt(4))) {
+            val original = startOfImage + block + pictureData
+            val image = startOfImage + quantization + pictureData
+
+            assertArrayEquals(startOfImage + quantization + pictureData, JpegMetadata.withExifOf(original, image, upright = true))
+            // Not turned, the block goes along as it is.
+            assertArrayEquals(startOfImage + block + quantization + pictureData, JpegMetadata.withExifOf(original, image))
+        }
+    }
+
+    @Test
+    fun leavesOutABlockTooShortForItsHeaderWhenThePictureWasTurned() {
+        val original = startOfImage + exif("II*") + pictureData
+        val image = startOfImage + quantization + pictureData
+
+        assertArrayEquals(startOfImage + quantization + pictureData, JpegMetadata.withExifOf(original, image, upright = true))
+    }
+
     @Test
     fun tellsViewersNotToTurnAPictureThatWasTurnedAlready() {
         for (littleEndian in listOf(true, false)) {
