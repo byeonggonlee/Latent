@@ -53,6 +53,19 @@ class MediaMatcherTest {
     }
 
     @Test
+    fun takesNoLonePhotoOfTheSameNameAndSizeShotAtAnotherTime() {
+        // The camera's numbers came round: last year's raw file is gone, this year's has its name and, uncompressed, its size.
+        val thisYear = onPhone("$library/2026/2026-01-01/DSC00001.DNG", size = 24_000_000, capturedAt = 1_767_268_800_000L, kind = MediaKind.RAW)
+        val matcher = MediaMatcher(listOf(thisYear), paths)
+        val lastYear = record("2025/2025-01-01/DSC00001.DNG", "DSC00001.DNG", size = 24_000_000, capturedAt = 1_735_732_800_000L, kind = MediaKind.RAW)
+
+        assertNull(matcher.atPath(lastYear))
+        assertNull(matcher.elsewhere(lastYear))
+        // Read in another time zone, the same moment is still the same photo.
+        assertEquals(thisYear, matcher.elsewhere(record("2025/2025-12-31/DSC00001.DNG", "DSC00001.DNG", size = 24_000_000, capturedAt = 1_767_268_800_000L - 9 * hour, kind = MediaKind.RAW)))
+    }
+
+    @Test
     fun takesEachPhotoOnce() {
         val only = onPhone("$library/2026/2026-10-08/DSC00001.JPG")
         val matcher = MediaMatcher(listOf(only), paths)
