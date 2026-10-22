@@ -24,10 +24,12 @@ import com.byeonggon.latent.location.GpsTags
 import com.byeonggon.latent.location.Geotagger
 import com.byeonggon.latent.raw.RawCache
 import com.byeonggon.latent.raw.RawRenderer
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -184,10 +186,14 @@ class LibraryEdits(
             // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
             val original = storage.originalOf(photo)
             if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
-            PhotoEnhancer.saveEdited(photo, original, edit, storage)
-            storage.publish(photo)
-            mediaDao.setSize(item.id, photo.length())
-            mediaDao.setEdit(item.id, edit.toJson())
+            // Once the photo is being written, it is recorded too, however the work is stopped: a photo written without
+            // its edit recorded would be taken for one auto enhanced, and be made again from the wrong edit.
+            withContext(NonCancellable) {
+                PhotoEnhancer.saveEdited(photo, original, edit, storage)
+                storage.publish(photo)
+                mediaDao.setSize(item.id, photo.length())
+                mediaDao.setEdit(item.id, edit.toJson())
+            }
         }
     }
 
@@ -327,8 +333,8 @@ class LibraryEdits(
     @Throws(IOException::class)
     suspend fun remove(item: MediaItemEntity) = storage.moving.withLock { removeEdit(item) }
 
-    /** [remove], with [LibraryStorage.moving] held. */
-    private suspend fun removeEdit(item: MediaItemEntity) {
+    /** [remove], with [LibraryStorage.moving] held. The photo put back is recorded too, however the work is stopped. */
+    private suspend fun removeEdit(item: MediaItemEntity) = withContext(NonCancellable) {
         if (item.kind == MediaKind.PHOTO && item.origin == MediaOrigin.LIBRARY) {
             val photo = File(item.path)
             // The photo only gives way to an original that is there to take its place.
