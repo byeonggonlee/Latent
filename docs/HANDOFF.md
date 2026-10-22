@@ -141,10 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | CI upkeep: the actions on their Node 24 majors, the SDK handed over folder by folder instead of recursively, lint's findings printed into the log | `claude/ci-upkeep` (pull request) | `.github/workflows/`, `app/build.gradle.kts` (`lint`) | 2026-10-22 |
 | Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
-| Claude Code (computer) | The map's credit links to OpenStreetMap's copyright page; the map servers are told the installed version | `claude/map-credit-agent` (pull request) | `map/OnlineAccess.kt`, `ui/map/MapScreen.kt`, `ui/common/Common.kt`, `ui/library/AboutDialog.kt`, `LatentApp.kt`, `PRIVACY.md`, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
-| Claude Code (computer) | Room's `MigrationTestHelper` (`room-testing`, tests only) set up against the committed schemas, with a first test that a database made from `13.json` opens as it is | `claude/room-migration-helper` (pull request) | `gradle/libs.versions.toml`, `app/build.gradle.kts`, `data/CommittedSchemaTest.kt` | 2026-10-22 |
 | Claude Code (computer) | Import from a card reader or a camera in Mass Storage mode: a folder picked once, read as a `CameraSource`; what came over MTP and off a card is recognised either way | `claude/card-reader-import` (pull request) | `camera/FolderCameraSource.kt`, `camera/ImportedFiles.kt`, `camera/SyncService.kt`, `data/SettingsRepository.kt`, `ui/sync/`, strings, `PRIVACY.md`, `CHANGELOG.md`, `docs/DEVICE_CHECKS.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
@@ -226,11 +223,6 @@ Nothing handed over yet. Its own next items, so that Codex does not pick them to
   a Sony in Mass Storage mode is offered that instead of only being asked to switch to MTP. No new permission.
 - The sky mask (stage 2 of `AI_MASKS.md`): the owner found the subject mask fine on the phone (2026-10-21), which
   was what held it back. The model and its conversion are downloads: ask the owner first, with sizes and sources.
-- Test the next migration against `app/schemas/.../13.json` with Room's `MigrationTestHelper` (`room-testing`).
-- The map: make the OpenStreetMap credit a link to its copyright page, and send the installed version in the
-  `User-Agent` (under *In progress*).
-- CI upkeep: the actions still on their Node 20 majors (`checkout`, `setup-java`, `setup-gradle`,
-  `upload-artifact` `@v4`), the recursive `chown` of the SDK (about 70 s a run), lint findings printed into the log.
 
 ## For Antigravity
 
@@ -240,6 +232,9 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | CI's actions on their Node 24 majors (checkout v7, setup-java v6, setup-gradle v6, upload-artifact v7); the SDK handed over folder by folder (41 s to 8 s); lint's findings printed into the log. Reviewed by Codex | [PR #15](https://github.com/byeonggonlee/Latent/pull/15), merged `1217517` |
+| 2026-10-22 | Claude Code (computer) | The map's credit links to OpenStreetMap's copyright page; the map servers are told the installed version. Reviewed by Codex; the tap on a phone is not tried yet | [PR #14](https://github.com/byeonggonlee/Latent/pull/14), merged `02bca02` |
+| 2026-10-22 | Claude Code (computer) | Room's `MigrationTestHelper` (`room-testing`, tests only) against the committed schemas, which the debug build carries as assets; a database made from `13.json` opens as it is. Reviewed by Codex | [PR #16](https://github.com/byeonggonlee/Latent/pull/16), merged `1d4b62e` |
 | 2026-10-22 | Claude Code (computer) | The originals the old package kept in `DCIM/Latent/.originals` are made the new one's own where they are (Codex's P2 on PR #11): copied beside themselves and swapped in only when whole, a move stopped at any point finished or started again, and a photo never given up for an original that is not in its place. Three more rounds of Codex's review found and closed the stopped-move cases; the move itself is not tried on a phone yet | [PR #12](https://github.com/byeonggonlee/Latent/pull/12), merged `895cf77` |
 | 2026-10-22 | Claude Code (computer) | The package name `com.latentimage.latent` (the owner's choice, developer name Latent Image on Play): `applicationId` only, the Kotlin namespace stays; the release key and the signing secrets recorded. Codex's review found one P2 left open at the merge: the originals the old app kept in `DCIM/Latent/.originals/` stay the old package's, and the new app reads them by path. The phones wait for its fix | [PR #11](https://github.com/byeonggonlee/Latent/pull/11), merged `3ea92c5` |
 | 2026-10-21 | Claude Code (computer) | Native code for 64-bit ARM only in every build, the owner's choice: `arm64-v8a` by default, `-PlatentAbis` left for an emulator of another kind. Reviewed by Codex, CI green; the ABIs inside the APK and an `x86_64` build were not checked again | [PR #10](https://github.com/byeonggonlee/Latent/pull/10), merged `f82145d` |
