@@ -84,6 +84,22 @@ class PhotoEnhancerTest {
     }
 
     @Test
+    fun cutsAPhotoWhoseExifPointsFarOutsideItself() {
+        // A picture that decodes, with an Exif block whose directory offset, added up in Int, wrapped round.
+        val picture = File(folder, "DAMAGED.JPG")
+        val encoded = java.io.ByteArrayOutputStream().also { Bitmap.createBitmap(32, 24, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 95, it) }.toByteArray()
+        val tiff = "II".toByteArray() + byteArrayOf(42, 0, 0xF5.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0x7F)
+        val payload = "Exif".toByteArray() + byteArrayOf(0, 0) + tiff
+        val app1 = byteArrayOf(0xFF.toByte(), 0xE1.toByte(), ((payload.size + 2) shr 8).toByte(), (payload.size + 2).toByte()) + payload
+        picture.writeBytes(encoded.copyOfRange(0, 2) + app1 + encoded.copyOfRange(2, encoded.size))
+        val cut = File(folder, "DAMAGED_cut.jpg")
+
+        PhotoEnhancer.exportEdited(picture, cut, PhotoEdit(framing = Framing(bottom = 0.5f)))
+
+        assertEquals(32 to 12, BitmapFactory.decodeFile(cut.path).let { it.width to it.height })
+    }
+
+    @Test
     fun cutsAndTurnsThePhotoAsItIsSeenUpright() {
         // Stored 96 wide and 64 high and shown on its side: 64 wide and 96 high, of which the top half is kept.
         PhotoEnhancer.saveEdited(photo, backup, PhotoEdit(framing = Framing(bottom = 0.5f)))
