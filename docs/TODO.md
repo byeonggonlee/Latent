@@ -12,6 +12,11 @@ Last updated 2026-10-22.
       file that only looks like one in the library by name and size is compared whole before it is left out, and the
       person is asked first before the one-time transfer that comparing many of them takes. A file not compared, the
       person having declined or not yet answered, is never recorded as imported. Claude Code implements it.
+- [x] **Autopilot of 2026-10-22** (decided that day): Claude Code works through the legacy audit's findings, the HEIF
+      share, roadmap items 10 and 11 and the sky mask, one reviewed pull request each, and merges what Codex approves
+      without asking again, for this run only. The owner asks Codex for a thorough review of the roadmap items. The
+      sky mask's downloads are approved: EfficientViT-Seg B1 (ADE20K) weights and the tools to convert them, outside
+      the repository. The Timeline's limit on a stay is left to Claude Code (a week).
 - [x] **Release/nightly token scope priority** (legacy audit LA-09, HANDOFF; decided 2026-10-22): before the
       `v0.1.0` tag. The nightly and stable workflows build in a read-only job and publish in a job of its own
       (RELEASES.md, Signing); a reviewed pull request, the nightly after it shows the split works.

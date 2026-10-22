@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | Autopilot of 2026-10-22, one pull request each, in this order: LA-03 and LA-05 (Timeline bounds), LA-04 (Exif offsets), LA-02 (restore matching), LA-07 (privacy check), the HEIF share with the place left out, LA-06 and LA-08 (healing, detail bands), LA-01 (sync compares look-alikes), roadmap 11 (gain map), roadmap 10 (HDR in the viewer), the sky mask (stage 2). Codex reviews each; the owner lets Claude Code merge what Codex approves, for this run only | `claude/timeline-bounds` and the branches after it | as each pull request lists | 2026-10-22 |
 
 ## For Codex
 
