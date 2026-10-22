@@ -141,6 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Owner-requested independent audit of pre-collaboration main code at `0f8af7e`; read-only source review and synthetic reproductions; confirmed Claude findings go to its queue, decoder work to Codex, policy decisions to TODO. PR #18 exact head already reviewed. | `codex/legacy-safety-audit` | `docs/HANDOFF.md`, `docs/TODO.md`; temporary audit tests only until a decoder fix is separately claimed | 2026-10-22 |
 | Codex | DNG OpcodeList3 WarpRectilinear implementation and synthetic regressions ready for reviewed PR; retain Sony lens behavior. Independent internal review corrected the SDK integer-centre convention. Claude review and phone/JPEG comparison remain pending. Owner authorized 2026-10-22. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawDeveloper.kt`, `raw/RawRenderer.kt`, `ui/editor/EditorViewModel.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 
 ## For Codex
