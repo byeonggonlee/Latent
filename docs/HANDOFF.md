@@ -141,13 +141,29 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | Fuzz tests for the parsers of outside input (backup zip, Timeline JSON, JPEG metadata, Ultra HDR, XMP presets, `.cube` LUTs, camera listings), fixes for what they find; aggregate caps on a backup zip's entries and bytes | `claude/parser-fuzz` | `*FuzzTest.kt` under `app/src/test/`, the parsers they find crashing outside `raw/`, `backup/`, `docs/BACKUP_FORMAT.md` | 2026-10-22 |
+| Claude Code (computer) | Fixes the parser fuzzing found that need review: a backup's limits and its places off the Earth (#31), places off the Earth from Exif and a Timeline (#32), stored edits holding NaN or a crop far outside the picture (#33) | [PR #31](https://github.com/byeonggonlee/Latent/pull/31), [PR #32](https://github.com/byeonggonlee/Latent/pull/32), [PR #33](https://github.com/byeonggonlee/Latent/pull/33) | `backup/`, `camera/ImportedFiles.kt`, `location/MediaMetadataReader.kt`, `location/TimelineParser.kt`, `enhance/PhotoEdit.kt`, `Framing.kt`, `ToneCurve.kt`, `BrushRaster.kt`, `docs/BACKUP_FORMAT.md` | 2026-10-22 |
 
 ## For Codex
 
 **Order set by the owner (2026-10-21):** 4 (below), then 1, then 2. Start 2 only once Claude Code's decode
 cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
 touch the seam, as it reviews yours.
+
+### 6. Reviews asked: three pull requests from the parser fuzzing (2026-10-22)
+
+Claude Code's fuzz tests of the parsers of outside input found the fixes below, which change what the rules send
+through review; each pull request has a comment addressed to Codex listing what to check. No decoder crash was
+found: 140,000 mutated synthetic ARW and DNG files (`SyntheticArw`, `SyntheticDng` in its three storages) and 1,300
+mutated `groups.jxl` streams decoded or threw `IOException`, without allocating more than a few times what the
+unmutated file does. That run was exploration only; no test was added under `raw/`.
+
+- [PR #31](https://github.com/byeonggonlee/Latent/pull/31): a backup of more than 200,000 entries or 4 GB unpacked
+  is refused as damaged; its places off the Earth are left out; an import key at the end of a Long no longer matches
+  a camera file by a wrapped-round difference.
+- [PR #32](https://github.com/byeonggonlee/Latent/pull/32): an Exif place off the Earth is none (a camera import then
+  writes the history's place into the file); a Timeline altitude or accuracy that is no number is missing.
+- [PR #33](https://github.com/byeonggonlee/Latent/pull/33): a stored edit holding NaN or infinity reads as none; a crop
+  far outside the picture is shrunk to it at rendering; a brush stroke without a whole point paints nothing.
 
 ### 5. The rule for posting reviews: agreed by the owner (2026-10-22)
 
@@ -412,6 +428,7 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Claude Code (computer) | Seeded fuzz tests (`*FuzzTest`, `Fuzz.kt`) for the parsers of outside input: backup zips, Timeline exports, Exif, JPEG headers and gain maps, Lightroom presets, `.cube` LUTs, stored LUT and mask files, stored edits, camera listings and import keys. On `main` with their fixes: a crash importing a well-formed preset (`LightroomPreset.kt:103`), NaN taken from presets and stored LUTs, a .cube domain no Float spreads over, 3 MB and 64 MB set aside for a stored LUT's or mask's header alone. The rest went to PRs #31, #32 and #33 (under *For Codex*) | `557c40a` |
 | 2026-10-22 | Claude Code (computer) | Compose UI tests (Robolectric) for what had none: the sync's look-alike question, a failed and a cancelled sync, forgetting deleted imports; the gain-map warning; the detected-mask buttons and the sky hidden when its model cannot run; the viewer's HDR window (through a small `HdrWindow` composable); the trash's confirmations; the restore question, its progress, cancelling it, damaged and newer backups, a backup that cannot be written; the location screen; photos of other apps deleted through the system (a fake MediaStore); raw and JPEG pairs deleted together; the versions dialog; reading photo times again. Found and fixed: the library counted photos of other apps as trashed before the person answered the system (`0b098ce`); an edit stopped while its photo was written was not recorded ([PR #30](https://github.com/byeonggonlee/Latent/pull/30), Codex LGTM, not merged yet) | `7d3a1e8` and the test commits after it |
 | 2026-10-22 | Claude Code (computer) | The Masks panel's hint names the sky; trashing the rejected photos says the days chosen in Settings, not always 30 | `7bbcc8b` |
 | 2026-10-22 | Claude Code (computer) | Documentation for the `v0.1.0` tag: the 0.1.0 notes up to date with pull requests #3 to #29 (and a list of what was fixed since the nightlies); DEVICE_CHECKS in the order of a pass after a nightly (install, import, library, editor, backup, location, sharing, settings), every check kept, *New* on those since `nightly-20261022-219`, new checks for what had none, the debug-build tests apart; SMOKE_TEST in the same order with import, sky and HDR; README and RELEASES on the split workflows; the roadmap's shipped items; PRIVACY, SECURITY, AI_MASKS, BACKUP_FORMAT, PLAY_LISTING, TODO and AGENTS where they disagreed with the code | `1637c61`, `70d9568`, `68cb7ce`, `127fdec`, `7ce2c4d` |
