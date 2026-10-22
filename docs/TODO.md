@@ -56,8 +56,9 @@ Last updated 2026-10-22.
 
 - [ ] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md)), then tap to select (stage 3): no longer held back, the
       owner found the subject mask fine on the phone (2026-10-21). Queued for Claude Code in `HANDOFF.md`.
-- [ ] **Import from a card reader** or a camera in Mass Storage mode, as a sync over MTP does (2026-10-21). Queued
-      for Claude Code in `HANDOFF.md`.
+- [x] **Import from a card reader** or a camera in Mass Storage mode, as a sync over MTP does (2026-10-22,
+      [PR #13](https://github.com/byeonggonlee/Latent/pull/13)): the Camera tab's "Card or drive". The phone checks are in
+      DEVICE_CHECKS, "From the card".
 
 ## On hold
 

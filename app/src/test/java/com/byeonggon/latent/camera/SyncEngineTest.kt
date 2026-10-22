@@ -110,6 +110,86 @@ class SyncEngineTest {
     }
 
     @Test
+    fun skipsOnTheCardWhatCameOverMtpAndTheOtherWayRound() = runBlocking {
+        val photo = jpegTakenAt("2026:10:01 12:00:00", "+09:00")
+        val overMtp = remote("DSC00001.JPG", MediaKind.PHOTO, photo)
+        val onCard = remote("DSC00002.ARW", MediaKind.RAW, RAW_BYTES)
+        val card = CameraInfo("", "Card", "folder:1234-ABCD:")
+        engine.run(FakeCameraSource(mapOf(overMtp to photo)))
+        // The card's reader gives the time of the same file in another zone.
+        val zoneShift = 9 * 60 * minute
+        val sameOnCard = overMtp.copy(handle = nextHandle++, modifiedAt = overMtp.modifiedAt + zoneShift)
+
+        engine.run(FakeCameraSource(mapOf(sameOnCard to photo, onCard to RAW_BYTES), card))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        engine.run(FakeCameraSource(mapOf(overMtp to photo, onCard.copy(handle = nextHandle++) to RAW_BYTES)))
+
+        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(setOf("DSC00001.JPG", "DSC00002.ARW"), database.mediaDao().all().map { it.fileName }.toSet())
+    }
+
+    @Test
+    fun knowsOnTheCardAJpegWhosePlaceWasWrittenInOnTheWayIn() = runBlocking {
+        recordTrackAroundCapture()
+        val photo = jpegTakenAt("2026:10:01 12:00:00", "+09:00")
+        val overMtp = remote("DSC00001.JPG", MediaKind.PHOTO, photo)
+        engine.run(FakeCameraSource(mapOf(overMtp to photo)))
+        val inLibrary = File(database.mediaDao().all().single().path)
+        assertFalse("its EXIF was rewritten with the place", inLibrary.readBytes().contentEquals(photo))
+
+        engine.run(FakeCameraSource(mapOf(overMtp.copy(handle = nextHandle++) to photo), CameraInfo("", "Card", "folder:1234-ABCD:")))
+
+        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+    }
+
+    @Test
+    fun importsWhatTwoCardsHoldUnderOneNameWhenItIsNotTheSame() = runBlocking {
+        // Two cameras whose numbers started again: the same name and size, times a quarter hour apart, other pictures.
+        val first = RAW_BYTES
+        val second = ByteArray(RAW_BYTES.size) { (it * 3 + 1).toByte() }
+        val onFirstCard = remote("DSC00001.ARW", MediaKind.RAW, first)
+        val onSecondCard = remote("DSC00001.ARW", MediaKind.RAW, second, modifiedAt = capturedAt + 15 * minute)
+        engine.run(FakeCameraSource(mapOf(onFirstCard to first), CameraInfo("", "Card", "folder:1111-AAAA:")))
+
+        engine.run(FakeCameraSource(mapOf(onSecondCard to second), CameraInfo("", "Card", "folder:2222-BBBB:")))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(
+            setOf(first.toList(), second.toList()),
+            database.mediaDao().all().map { File(it.path).readBytes().toList() }.toSet(),
+        )
+    }
+
+    @Test
+    fun importsAFileWhoseEndIsTheSameButNotTheRest() = runBlocking {
+        // Raw files whose top rows differ can end in the same rows, or the same padding.
+        val end = ByteArray(128 * 1024) { (it % 251).toByte() }
+        val first = byteArrayOf(1, 2, 3, 4) + end
+        val second = byteArrayOf(9, 2, 3, 4) + end
+        val onFirstCard = remote("DSC00001.DNG", MediaKind.RAW, first)
+        val onSecondCard = remote("DSC00001.DNG", MediaKind.RAW, second, modifiedAt = capturedAt + 15 * minute)
+        engine.run(FakeCameraSource(mapOf(onFirstCard to first), CameraInfo("", "Card", "folder:1111-AAAA:")))
+
+        engine.run(FakeCameraSource(mapOf(onSecondCard to second), CameraInfo("", "Card", "folder:2222-BBBB:")))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(2, database.mediaDao().all().size)
+    }
+
+    @Test
+    fun importsOffTheCardAFileThatOnlyLooksLikeOneThatCameOverMtp() = runBlocking {
+        val overMtp = remote("DSC00001.ARW", MediaKind.RAW, RAW_BYTES)
+        engine.run(FakeCameraSource(mapOf(overMtp to RAW_BYTES)))
+        val other = ByteArray(RAW_BYTES.size) { (it * 5).toByte() }
+
+        engine.run(FakeCameraSource(mapOf(overMtp.copy(handle = nextHandle++) to other), CameraInfo("", "Card", "folder:1234-ABCD:")))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(2, database.mediaDao().all().size)
+    }
+
+    @Test
     fun takesCopiesAlreadyInTheLibraryForImported() = runBlocking {
         // Copied over from another phone: the library holds it, without knowing which camera it came from.
         val copy = File(storage.root, "2026/2026-10-01/DSC00060.ARW").apply {
@@ -403,7 +483,10 @@ class SyncEngineTest {
     }
 
     /** A camera whose single storage holds [files] in their folders; a null payload simulates a failing transfer. */
-    private class FakeCameraSource(private val files: Map<RemoteFile, ByteArray?>) : CameraSource {
+    private class FakeCameraSource(
+        private val files: Map<RemoteFile, ByteArray?>,
+        private val info: CameraInfo = CameraInfo("Sony", "ZV-E10", "SERIAL"),
+    ) : CameraSource {
         val tree = FakeTree()
         var closed = false
         var onDownload: () -> Unit = {}
@@ -417,7 +500,7 @@ class SyncEngineTest {
             }
         }
 
-        override fun open() = CameraInfo("Sony", "ZV-E10", "SERIAL")
+        override fun open() = info
 
         override fun listFiles(request: ListingRequest, onFound: (Int) -> Unit): Listing {
             val storage = listStorage(tree, FakeTree.ROOT, STORAGE, request, onFound)

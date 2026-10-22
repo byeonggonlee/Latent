@@ -50,6 +50,11 @@ data class AppSettings(
     val jpegQuality: Int = 95,
     /** Whether the pictures shared with other apps leave their place out. */
     val removeLocationWhenSharing: Boolean = false,
+    /**
+     * The folder a camera's card or a camera read as a drive was last imported from, as the system's folder dialog
+     * gave it (a tree `content:` URI); null until one is picked. Kept on this phone only: its access is.
+     */
+    val cardFolder: String? = null,
 ) {
     fun exportOptions() = ExportOptions(jpegQuality.coerceIn(1, 100), removeLocationWhenSharing)
 
@@ -91,6 +96,7 @@ class SettingsRepository(private val context: Context) {
             preferences[JPEG_QUALITY] = next.jpegQuality
             preferences[REMOVE_LOCATION_WHEN_SHARING] = next.removeLocationWhenSharing
             if (next.cameraZoneId == null) preferences.remove(CAMERA_ZONE_ID) else preferences[CAMERA_ZONE_ID] = next.cameraZoneId
+            if (next.cardFolder == null) preferences.remove(CARD_FOLDER) else preferences[CARD_FOLDER] = next.cardFolder
         }
     }
 
@@ -114,6 +120,7 @@ class SettingsRepository(private val context: Context) {
             allExif = this[ALL_EXIF] ?: defaults.allExif,
             jpegQuality = this[JPEG_QUALITY] ?: defaults.jpegQuality,
             removeLocationWhenSharing = this[REMOVE_LOCATION_WHEN_SHARING] ?: defaults.removeLocationWhenSharing,
+            cardFolder = this[CARD_FOLDER],
         )
     }
 
@@ -135,5 +142,6 @@ class SettingsRepository(private val context: Context) {
         val ALL_EXIF = booleanPreferencesKey("all_exif")
         val JPEG_QUALITY = intPreferencesKey("jpeg_quality")
         val REMOVE_LOCATION_WHEN_SHARING = booleanPreferencesKey("remove_location_when_sharing")
+        val CARD_FOLDER = stringPreferencesKey("card_folder")
     }
 }
