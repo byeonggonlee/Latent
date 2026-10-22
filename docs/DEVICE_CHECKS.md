@@ -14,9 +14,10 @@ settings and screens. Each check says what to do, then what should happen. The s
 The command that reads the phone's log while going through is at the top of `SMOKE_TEST.md`.
 
 A nightly is a release build signed with the release key. The tests that run on a phone (`*OnDeviceTest`) and
-`adb shell run-as` need a debug build from the computer, which cannot be installed over the nightly (another key),
-and uninstalling takes the database along: those checks are together at the end, under "With a build from the
-computer".
+`adb shell run-as` need the debug build from the computer. That is another app, "Latent Debug"
+(`com.latentimage.latent.debug`), with its own database and its own library folder, `DCIM/Latent Debug`: it installs
+beside the nightly and leaves the nightly's photos and data alone. Those checks are together at the end, under "With
+a build from the computer".
 
 ## 1. Install or upgrade
 
@@ -442,16 +443,20 @@ needs the app uninstalled or its data cleared. The move across package names is 
 
 ## 9. With a build from the computer
 
-These need the debug build and its test APK (`./gradlew installDebug installDebugAndroidTest`), signed with the
-computer's debug key: on a phone that has the nightly, that means uninstalling it, which takes its database along
-(back up first, section 5). Use a phone without the nightly where possible. Run a test with
+These need the debug build and its test APK (`./gradlew installDebug installDebugAndroidTest`). The debug build is
+"Latent Debug", `com.latentimage.latent.debug`, beside the nightly: its database is its own and its library is
+`DCIM/Latent Debug`, so the nightly's stay as they are. Run a test with
 
 ```bash
 adb shell am instrument -w -e class com.byeonggon.latent.enhance.<Test> -e jpegSample <path on the phone> \
-  com.latentimage.latent.test/androidx.test.runner.AndroidJUnitRunner
+  com.latentimage.latent.debug.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-not with Gradle's `connectedAndroidTest`, whose cleanup uninstalls the app.
+not with Gradle's `connectedAndroidTest`, whose cleanup uninstalls Latent Debug and its database.
+
+- [ ] **New.** On a phone with the nightly, `./gradlew installDebug` adds a second app, "Latent Debug", and the
+      nightly is still there with its library. Latent Debug asks for the `DCIM/Latent Debug` folder (its storage
+      steps say so), and neither app lists the other's library folder among the phone's folders.
 
 - [ ] Run `SubjectMaskOnDeviceTest` (with `-e jpegSample <path>`): it reads the model's input and output shapes
       (1 × 320 × 320 × 3 in, 1 × 320 × 320 × 1 out, 0 to 1), finds a plain disc on both accelerators and logs set-up,
@@ -461,11 +466,12 @@ not with Gradle's `connectedAndroidTest`, whose cleanup uninstalls the app.
       GPU against the CPU, and the cold and warm times.
 - [ ] Run `GpuToneOnDeviceTest` (with `-e jpegSample <path>`): it compares the shader with the CPU renderer with a
       33-point and a 65-point LUT and logs the times.
-- [ ] A mask whose outline file is deleted (`adb shell run-as com.latentimage.latent rm files/masks/<id>.mask`, then
+- [ ] A mask whose outline file is deleted (`adb shell run-as com.latentimage.latent.debug rm files/masks/<id>.mask`, then
       reopen the photo): "The outline of this mask is missing" and "Find again". `run-as` works on the debug build
       only.
 - [ ] The R8 build made on the computer (`./gradlew assembleRelease -PdebugSignedRelease`, signed with the debug key)
-      installs over the debug build and keeps the data (same key).
+      is the nightly's package with another key, so it installs only on a phone without the nightly: there it opens,
+      imports, edits and exports as the nightly does.
 
 ## Not yet decided
 

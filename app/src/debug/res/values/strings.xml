@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The debug build is another app beside the installed one: its name says which is which. -->
+    <string name="app_name" translatable="false">Latent Debug</string>
+</resources>

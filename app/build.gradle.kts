@@ -30,6 +30,9 @@ android {
         // the owner's choice, 2026-10-21. An emulator of another kind takes -PlatentAbis=x86_64.
         val abis = (project.findProperty("latentAbis") as String?) ?: "arm64-v8a"
         ndk { abiFilters += abis.split(',').map(String::trim) }
+        // The library's folder in DCIM. The debug build keeps its own (below), so that it never moves or deletes the
+        // photos of the installed app.
+        buildConfigField("String", "LIBRARY_FOLDER", "\"Latent\"")
     }
 
     // The upload key stays out of the repository: keystore.properties (storeFile, storePassword,
@@ -49,14 +52,20 @@ android {
     }
 
     buildTypes {
+        // The debug build is another app beside the nightly or the one from Play, "Latent Debug": it installs next to
+        // them although its key differs, keeps its own database, and its tests and `run-as` leave theirs alone.
+        debug {
+            applicationIdSuffix = ".debug"
+            buildConfigField("String", "LIBRARY_FOLDER", "\"Latent Debug\"")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = when {
                 keystoreProperties.isNotEmpty() -> signingConfigs.getByName("release")
-                // For trying the release build on a phone that has the debug build: same key, so it installs over it.
-                // Play refuses a package signed like this, which is why it is not the default.
+                // For trying the release build on a phone without the nightly or Play's (their key differs, so it
+                // cannot install over them). Play refuses a package signed like this, which is why it is not the default.
                 project.hasProperty("debugSignedRelease") -> signingConfigs.getByName("debug")
                 else -> null
             }
@@ -74,6 +83,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // The committed schemas, for the migration tests to build a database from: MigrationTestHelper reads them from the
