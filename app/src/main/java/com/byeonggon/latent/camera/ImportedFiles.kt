@@ -1,5 +1,6 @@
 package com.byeonggon.latent.camera
 
+import androidx.exifinterface.media.ExifInterface
 import java.io.DataInputStream
 import java.io.EOFException
 import java.io.File
@@ -65,8 +66,10 @@ internal class ImportedFiles(sourceKeys: Collection<String>) {
 
 /**
  * Whether [copy], just copied off a camera or a card, holds what [imported] held when it came in: byte for byte, but
- * for a JPEG's EXIF, which the place found for it was written into on the way in. Nothing less than the whole file
- * is compared: two different raw files can share a name, a size and every byte of their ends.
+ * for a JPEG's EXIF segment, which the place found for it was written into on the way in. That one is compared value
+ * by value instead, all but the place: two JPEGs of the same pixels turned another way, or taken at another time, are
+ * two photos. Nothing less than the whole file is compared: two different raw files can share a name, a size and every
+ * byte of their ends.
  */
 internal fun sameAsImported(copy: File, imported: File): Boolean = try {
     val copyParts = jpegParts(copy)
@@ -74,13 +77,40 @@ internal fun sameAsImported(copy: File, imported: File): Boolean = try {
     if (copyParts != null && importedParts != null) {
         copyParts.segments.size == importedParts.segments.size &&
             copyParts.segments.zip(importedParts.segments).all { (a, b) -> a.contentEquals(b) } &&
-            sameFrom(copy, copyParts.scanAt, imported, importedParts.scanAt)
+            sameFrom(copy, copyParts.scanAt, imported, importedParts.scanAt) &&
+            sameExifButPlace(copy, imported)
     } else {
         sameFrom(copy, 0, imported, 0)
     }
 } catch (e: IOException) {
     false
 }
+
+/** Whether the EXIF of two JPEGs says the same, but for the place, which the app writes in. */
+private fun sameExifButPlace(a: File, b: File): Boolean {
+    val x = ExifInterface(a)
+    val y = ExifInterface(b)
+    return EXIF_BUT_PLACE.all { x.getAttribute(it) == y.getAttribute(it) }
+}
+
+/** What a JPEG's EXIF says of its photo: what a photo's details show, but its place, and the maker's notes. */
+private val EXIF_BUT_PLACE = listOf(
+    ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL, ExifInterface.TAG_BODY_SERIAL_NUMBER, ExifInterface.TAG_LENS_MAKE,
+    ExifInterface.TAG_LENS_MODEL, ExifInterface.TAG_LENS_SPECIFICATION, ExifInterface.TAG_LENS_SERIAL_NUMBER,
+    ExifInterface.TAG_SOFTWARE, ExifInterface.TAG_ARTIST, ExifInterface.TAG_COPYRIGHT, ExifInterface.TAG_CAMERA_OWNER_NAME,
+    ExifInterface.TAG_EXPOSURE_TIME, ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY,
+    ExifInterface.TAG_EXPOSURE_PROGRAM, ExifInterface.TAG_EXPOSURE_MODE, ExifInterface.TAG_EXPOSURE_BIAS_VALUE,
+    ExifInterface.TAG_METERING_MODE, ExifInterface.TAG_FOCAL_LENGTH, ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM,
+    ExifInterface.TAG_FLASH, ExifInterface.TAG_LIGHT_SOURCE, ExifInterface.TAG_WHITE_BALANCE, ExifInterface.TAG_DIGITAL_ZOOM_RATIO,
+    ExifInterface.TAG_SCENE_CAPTURE_TYPE, ExifInterface.TAG_CONTRAST, ExifInterface.TAG_SATURATION, ExifInterface.TAG_SHARPNESS,
+    ExifInterface.TAG_PIXEL_X_DIMENSION, ExifInterface.TAG_PIXEL_Y_DIMENSION, ExifInterface.TAG_IMAGE_WIDTH,
+    ExifInterface.TAG_IMAGE_LENGTH, ExifInterface.TAG_ORIENTATION, ExifInterface.TAG_COLOR_SPACE,
+    ExifInterface.TAG_IMAGE_UNIQUE_ID, ExifInterface.TAG_IMAGE_DESCRIPTION, ExifInterface.TAG_USER_COMMENT,
+    ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_SUBSEC_TIME_ORIGINAL, ExifInterface.TAG_OFFSET_TIME_ORIGINAL,
+    ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_SUBSEC_TIME_DIGITIZED, ExifInterface.TAG_OFFSET_TIME_DIGITIZED,
+    ExifInterface.TAG_DATETIME, ExifInterface.TAG_SUBSEC_TIME, ExifInterface.TAG_OFFSET_TIME,
+    ExifInterface.TAG_MAKER_NOTE,
+)
 
 /** A JPEG's segments before its image data, less its EXIF, and where its image data starts. */
 private class JpegParts(val segments: List<ByteArray>, val scanAt: Long)

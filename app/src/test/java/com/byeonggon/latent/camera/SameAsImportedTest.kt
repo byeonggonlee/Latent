@@ -44,6 +44,30 @@ class SameAsImportedTest {
     }
 
     @Test
+    fun tellsApartTheSamePixelsTurnedAnotherWay() {
+        val upright = jpeg("upright.jpg", 0x80)
+        val turned = upright.copyTo(File(folder.root, "turned.jpg"))
+        ExifInterface(turned).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            saveAttributes()
+        }
+
+        assertFalse(sameAsImported(upright, turned))
+    }
+
+    @Test
+    fun tellsApartTheSamePixelsTakenAtAnotherTime() {
+        val first = jpeg("first.jpg", 0x80)
+        val later = first.copyTo(File(folder.root, "later.jpg"))
+        ExifInterface(later).apply {
+            setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, "2026:10:01 12:15:00")
+            saveAttributes()
+        }
+
+        assertFalse(sameAsImported(first, later))
+    }
+
+    @Test
     fun tellsApartJpegsWithTheSameExifAndOtherPictures() {
         assertFalse(sameAsImported(jpeg("a.jpg", 0x80), jpeg("b.jpg", 0x81)))
     }
