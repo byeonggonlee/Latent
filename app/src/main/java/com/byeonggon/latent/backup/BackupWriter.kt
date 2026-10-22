@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.File
+import java.io.FilterOutputStream
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.time.Instant
@@ -46,13 +47,19 @@ class BackupWriter(
     private val app: AppIdentity,
     private val clock: () -> Long = System::currentTimeMillis,
     phoneRelativePath: (String) -> String = PhoneLibrary::relativePathOf,
+    /** What a restore reads at most (see [BackupArchive]): a backup past it is not written, as it could not be restored. */
+    private val mostEntries: Int = BackupArchive.MOST_ENTRIES,
+    private val mostUnpacked: Long = BackupArchive.MOST_UNPACKED,
 ) {
     private val paths = MediaPaths(libraryRoot, phoneRelativePath)
 
-    /** Writes the backup to [output], which is left open. Returns what it holds. */
+    /**
+     * Writes the backup to [output], which is left open. Returns what it holds. Throws [BackupTooLargeException], with
+     * [output] written in part, for a library whose backup would be larger than a restore reads.
+     */
     suspend fun write(output: OutputStream, progress: BackupProgress = BackupProgress.NONE): BackupCounts = withContext(Dispatchers.IO) {
         val dao = database.backupDao()
-        val zip = ZipLines(output)
+        val zip = ZipLines(output, mostEntries, mostUnpacked)
         val luts = LinkedHashSet<String>()
         val masks = LinkedHashSet<String>()
         fun refer(edit: String?) {
@@ -222,12 +229,35 @@ class BackupWriter(
         item.rating != 0 || item.flag != 0 || item.edit != null || item.geoSource == GeoSource.TRACK || item.sourceKey != null ||
             item.id in inAlbums || item.id in withVersions
 
-    /** A zip of text entries, written one line at a time. */
-    private class ZipLines(output: OutputStream) {
+    /** A zip of text entries, written one line at a time, of at most [mostEntries] entries and [mostUnpacked] bytes before packing. */
+    private class ZipLines(output: OutputStream, private val mostEntries: Int, private val mostUnpacked: Long) {
         private val zip = ZipOutputStream(output.buffered(BUFFER))
-        private val text = BufferedWriter(OutputStreamWriter(zip, Charsets.UTF_8), BUFFER)
+        private var entries = 0
+        private var unpacked = 0L
 
-        fun begin(name: String) = zip.putNextEntry(ZipEntry(name))
+        /** What goes into the zip, counted as a restore counts it unpacked. */
+        private val counted = object : FilterOutputStream(zip) {
+            override fun write(byte: Int) {
+                count(1)
+                zip.write(byte)
+            }
+
+            override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                count(length)
+                zip.write(bytes, offset, length)
+            }
+
+            private fun count(bytes: Int) {
+                unpacked += bytes
+                if (unpacked > mostUnpacked) throw BackupTooLargeException(mostEntries, mostUnpacked)
+            }
+        }
+        private val text = BufferedWriter(OutputStreamWriter(counted, Charsets.UTF_8), BUFFER)
+
+        fun begin(name: String) {
+            if (++entries > mostEntries) throw BackupTooLargeException(mostEntries, mostUnpacked)
+            zip.putNextEntry(ZipEntry(name))
+        }
 
         fun line(json: JsonObject) {
             text.write(json.toString())
@@ -243,7 +273,7 @@ class BackupWriter(
 
         fun copy(name: String, file: File) {
             begin(name)
-            file.inputStream().use { it.copyTo(zip) }
+            file.inputStream().use { it.copyTo(counted) }
             end()
         }
 

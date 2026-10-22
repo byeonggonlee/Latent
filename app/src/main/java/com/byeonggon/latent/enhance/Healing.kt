@@ -74,8 +74,12 @@ object Healing {
         if (radius < 1f) return
         val centreX = x * image.width
         val centreY = y * image.height
-        val shiftX = ((fromX * image.width) - centreX).roundToInt()
-        val shiftY = ((fromY * image.height) - centreY).roundToInt()
+        val sourceX = fromX * image.width
+        val sourceY = fromY * image.height
+        // Only a damaged or foreign edit holds a spot that lies past what a Float holds in pixels: it takes nothing out.
+        if (!(radius.isFinite() && centreX.isFinite() && centreY.isFinite() && sourceX.isFinite() && sourceY.isFinite())) return
+        val shiftX = (sourceX - centreX).roundToInt()
+        val shiftY = (sourceY - centreY).roundToInt()
         for (plane in listOf(image.red, image.green, image.blue)) {
             // The patch is evened out to its new surroundings: what tells the two apart is the difference of their averages.
             val correction = meanOfRing(plane, image.width, image.height, centreX, centreY, radius) -

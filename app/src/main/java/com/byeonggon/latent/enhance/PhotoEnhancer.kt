@@ -96,7 +96,7 @@ object PhotoEnhancer {
     fun preview(file: File, edit: PhotoEdit, maxEdge: Int): Bitmap {
         val image = load(file, maxEdge)
         val scale = max(image.width, image.height).toFloat() / longSideOf(file).coerceAtLeast(1)
-        return renderedBitmap(edit, scale) { image.also { Healing.heal(it, edit.spots) }.framed(edit.framing) }
+        return renderedBitmap(edit, scale) { Developed(image.also { Healing.heal(it, edit.spots) }.framedAs(edit.framing)) }
     }
 
     /** Writes the edited version of [original] to [target], a new file, compressed to [quality]; [original] stays as it is. */
@@ -196,7 +196,7 @@ object PhotoEnhancer {
                     BitmapFactory.decodeFile(original.path) ?: throw IOException("Cannot decode ${original.name}")
                 }
                 val linear = timed("${original.name}: to linear") { linear(bitmap) }
-                timed("${original.name}: heal and reframe") { linear.also { Healing.heal(it, edit.spots, upright) }.framed(edit.framing, upright) }
+                timed("${original.name}: heal and reframe") { Developed(linear.also { Healing.heal(it, edit.spots, upright) }.framedAs(edit.framing, upright)) }
             }
         }
     }

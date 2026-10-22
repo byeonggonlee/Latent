@@ -91,10 +91,13 @@ data class ToneCurve(val points: List<CurvePoint> = STRAIGHT) {
         val STRAIGHT = listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
         private const val SMALLEST_STEP = 1e-4f
 
+        /** A number from 0 to 1; throws for what is no finite number: NaN holds no range, and infinity is no point of a curve. */
+        private fun JsonElement.unit(): Float = asFloat.also { require(it.isFinite()) { "Not a finite number: $this" } }.coerceIn(0f, 1f)
+
         /** Reads what [toJson] wrote, putting the points in order. Throws on anything else. */
         fun fromJson(stored: JsonElement): ToneCurve {
             val points = stored.asJsonArray
-                .map { it.asJsonArray.let { pair -> CurvePoint(pair[0].asFloat.coerceIn(0f, 1f), pair[1].asFloat.coerceIn(0f, 1f)) } }
+                .map { it.asJsonArray.let { pair -> CurvePoint(pair[0].unit(), pair[1].unit()) } }
                 .sortedBy { it.x }
             return if (points.size < 2) ToneCurve() else ToneCurve(points)
         }

@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Environment
 import androidx.exifinterface.media.ExifInterface
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.enhance.Adjustments
@@ -135,6 +136,23 @@ class PhoneLibraryTest {
         // The time MediaStore gives, and the place the file has.
         assertEquals(5_000L, item.capturedAt)
         assertEquals(37.5, item.latitude!!, 1e-4)
+    }
+
+    @Test
+    fun listsAPhotoWhosePlaceIsOffTheEarthWithoutAPlace() = runBlocking {
+        val damaged = photo(camera, "A.jpg", location = 37.5 to 127.0)
+        ExifInterface(damaged).apply {
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "200/1,0/1,0/1")
+            saveAttributes()
+        }
+        list(damaged)
+
+        assertEquals(1, container.phoneLibrary.refresh(setOf("DCIM/Camera/")))
+
+        val item = dao.all().single()
+        assertNull(item.latitude)
+        assertNull(item.longitude)
+        assertEquals(GeoSource.NONE, item.geoSource)
     }
 
     @Test

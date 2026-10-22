@@ -1,13 +1,32 @@
 package com.byeonggon.latent.enhance
 
+import android.graphics.Bitmap
 import com.byeonggon.latent.fuzz
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+import java.io.IOException
+import kotlin.math.pow
 
 /**
  * A stored edit comes back from a backup or a filter as text, which may be damaged or written by something else:
- * [PhotoEdit.fromJson] reads it or says it cannot (null).
+ * [PhotoEdit.fromJson] reads it or says it cannot (null), and what it reads can be rendered.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PhotoEditFuzzTest {
     private val seed = PhotoEdit(
         adjustments = Adjustments(exposure = 0.4f, contrast = 0.2f, clarity = 0.3f, vignette = -0.2f, grain = 0.1f, sharpening = 0.4f, noiseReduction = 0.2f),
@@ -33,6 +52,18 @@ class PhotoEditFuzzTest {
         lut = LutLook("0123456789abcdef0123456789abcdef", 0.5f),
     ).toJson()
 
+    private val folder = File(RuntimeEnvironment.getApplication().cacheDir, "fuzz")
+    private val photo = File(folder, "DSC00001.JPG")
+
+    @Before
+    fun writePhoto() {
+        folder.deleteRecursively()
+        folder.mkdirs()
+        val bitmap = Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888)
+        for (y in 0 until 32) for (x in 0 until 48) bitmap.setPixel(x, y, (0xFF shl 24) or ((x * 5) shl 16) or ((y * 7) shl 8) or 128)
+        photo.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+    }
+
     @Test
     fun theSeedReadsBackAsItWasWritten() {
         assertEquals(seed, PhotoEdit.fromJson(seed)!!.toJson())
@@ -41,5 +72,216 @@ class PhotoEditFuzzTest {
     @Test
     fun aDamagedEditIsReadOrIsNone() = fuzz(seed = 51, cases = 5_000) { mutator ->
         PhotoEdit.fromJson(mutator.json(seed))
+    }
+
+    @Test
+    fun anEditReadFromElsewhereRenders() = fuzz(seed = 52, cases = 1_500, slowest = 5_000) { mutator ->
+        val edit = PhotoEdit.fromJson(mutator.json(seed)) ?: return@fuzz
+        val bitmap = try {
+            PhotoEnhancer.preview(photo, edit, maxEdge = 48)
+        } catch (e: IOException) {
+            return@fuzz
+        }
+        assertTrue(bitmap.width > 0 && bitmap.height > 0)
+    }
+
+    @Test
+    fun anEditWithANumberThatIsNoneIsNone() {
+        // Healing rounded a spot of NaN and threw; any NaN would spread over the picture.
+        assertNull(PhotoEdit.fromJson("""{"exposure":NaN}"""))
+        assertNull(PhotoEdit.fromJson("""{"spots":[[0.5,0.5,NaN,0.2,0.2]]}"""))
+        assertNull(PhotoEdit.fromJson("""{"curves":{"all":[[0,0],[NaN,1]]}}"""))
+        assertNull(PhotoEdit.fromJson("""{"curves":{"all":[[0,0],[Infinity,1]]}}"""))
+        assertNull(PhotoEdit.fromJson("""{"curves":{"red":[[0,-Infinity],[1,1]]}}"""))
+        assertNull(PhotoEdit.fromJson("""{"mixer":{"hue":[Infinity]}}"""))
+        assertEquals(0.5f, PhotoEdit.fromJson("""{"exposure":0.5}""")!!.adjustments.exposure)
+    }
+
+    @Test
+    fun aCropFarOutsideThePictureIsShrunkToIt() {
+        // 2000 times the photo's width was a picture of that size; a million, past what an Int holds, a crash.
+        val picture = LinearImage(48, 32)
+        for (far in listOf(Framing(left = 0.5f, top = -3f, right = 2000f, bottom = 0.5f), Framing(right = 1e6f, bottom = 1e6f), Framing(left = -5e5f, right = 5e5f, angle = 3f))) {
+            val kept = picture.framed(far)
+
+            assertTrue("${kept.width} by ${kept.height}", kept.width <= 48 && kept.height <= 32)
+            assertTrue(PhotoEnhancer.preview(photo, PhotoEdit(framing = far), maxEdge = 48).width > 0)
+        }
+    }
+
+    @Test
+    fun aBrushOnACropFarOutsideThePictureIsPlacedByTheCropThatWasKept() {
+        // The bounds overflow a Float's width to infinity, or lie wholly outside the picture: either way the crop kept is
+        // another than the edit's, and the brush has to be placed by that, not by a width of infinity or nothing.
+        val brushed = PhotoEdit.fromJson("""{"locals":[{"shape":"BRUSH","mask":[0,0,0,0,0.5],"strokes":[{"radius":0.3,"points":[0.2,0.2,0.8,0.8]}],"exposure":1}]}""")!!
+        assertTrue(brushed.locals.isNotEmpty())
+        val framings = listOf(
+            Framing(left = -3e38f, top = -3e38f, right = 3e38f, bottom = 3e38f),
+            Framing(left = 1e30f, top = 1e30f, right = 3e30f, bottom = 3e30f),
+            Framing(left = -1e6f, top = -1e6f, right = 1e6f, bottom = 1e6f, quarterTurns = 1),
+        )
+        for (far in framings) {
+            val bitmap = PhotoEnhancer.preview(photo, brushed.copy(framing = far), maxEdge = 48)
+
+            assertTrue("$far: ${bitmap.width} by ${bitmap.height}", bitmap.width in 1..48 && bitmap.height in 1..48)
+        }
+    }
+
+    @Test
+    fun aCropFarOutsideThePictureIsKeptAsAFramingThatIsSomething() {
+        for (far in listOf(Framing(left = -3e38f, right = 3e38f, top = -3e38f, bottom = 3e38f), Framing(left = 1e30f, top = 1e30f, right = 3e30f, bottom = 3e30f), Framing(right = 1e6f, bottom = 1e6f))) {
+            val kept = far.keptWithin(48f, 32f)
+
+            assertTrue("$kept", kept.width > 0f && kept.height > 0f && kept.width.isFinite() && kept.height.isFinite())
+            assertTrue("$kept", kept.fits(48f, 32f))
+        }
+        val reasonable = Framing(left = 0.1f, top = 0.1f, right = 0.9f, bottom = 0.9f, angle = 2f)
+        assertEquals(reasonable, reasonable.keptWithin(48f, 32f))
+    }
+
+    @Test
+    fun aLevelledCropReachingPastTheFrameIsKeptAsItIs() {
+        // Levelled by 45 degrees, a square reaches past its own frame along its middle: the editor can keep a strip there.
+        val strip = Framing(angle = 45f, left = -0.15f, top = 0.45f, right = 1.15f, bottom = 0.55f)
+        assertTrue(strip.fits(32f, 32f))
+        assertEquals(strip, PhotoEdit.fromJson(PhotoEdit(framing = strip).toJson())!!.framing)
+
+        val kept = LinearImage(32, 32).framed(strip)
+
+        assertEquals(42 to 3, kept.width to kept.height)
+    }
+
+    private val brushed = """"locals":[{"shape":"BRUSH","mask":[0,0,0,0,0.5],"strokes":[{"radius":0.3,"points":[0.2,0.2,0.8,0.8]}],"exposure":1}]"""
+
+    @Test
+    fun aCropOfNoSizeOrBackwardsIsKeptAsAFramingThatIsSomething() {
+        // Such a crop passed for one near the picture, and a brush was placed on it with a width of nothing or of infinity.
+        val crops = listOf(
+            """"cropLeft":0.5,"cropRight":0.5,"cropTop":0.5,"cropBottom":0.5""",
+            """"cropLeft":0.8,"cropRight":0.2""",
+            """"cropTop":0.9,"cropBottom":-0.5,"angle":3""",
+            """"cropLeft":0,"cropRight":1e-40,"cropTop":0,"cropBottom":1e-40""",
+            """"cropLeft":0.3,"cropRight":0.30001,"quarterTurns":1""",
+        )
+        for (crop in crops) {
+            val edit = PhotoEdit.fromJson("{$crop,$brushed}")!!
+
+            val bitmap = PhotoEnhancer.preview(photo, edit, maxEdge = 48)
+            assertTrue("$crop: ${bitmap.width} by ${bitmap.height}", bitmap.width in 1..48 && bitmap.height in 1..48)
+            val kept = edit.framing.keptWithin(48f, 32f)
+            assertTrue("$kept", kept.width > 0f && kept.height > 0f && kept.fits(48f, 32f))
+            val framed = LinearImage(48, 32).framedAs(edit.framing)
+            val placement = Placement(framed.framing, framed.image.width, framed.image.height)
+            assertTrue("$crop: ${placement.wholeWidth} by ${placement.wholeHeight}", placement.wholeWidth.isFinite() && placement.wholeHeight.isFinite())
+        }
+    }
+
+    @Test
+    fun aSpotPastWhatAFloatHoldsInPixelsIsLeftOut() {
+        // Multiplied by the picture's size, the spot's place or radius was infinite, and healing rounded what is no number.
+        for (spots in listOf("[[1e38,0.5,0.1,1e38,0.5]]", "[[1e20,0.5,1e38,0.5,0.5]]", "[[0.5,-3e38,0.2,0.5,3e38]]", "[[0.5,0.5,3e38,0.4,0.4]]")) {
+            val edit = PhotoEdit.fromJson("""{"spots":$spots}""")!!
+
+            assertTrue(spots, PhotoEnhancer.preview(photo, edit, maxEdge = 48).width > 0)
+        }
+    }
+
+    /** Runs [block] with the outline of what a model found kept, as the editor keeps it, and hands over its id. */
+    private fun withOutline(block: (String) -> Unit) {
+        MaskStore.directory = File(folder, "masks").apply { mkdirs() }
+        try {
+            val subject = "0123456789abcdef0123456789abcdef"
+            MaskStore.save(subject, MaskRaster.of(60, 40, FloatArray(60 * 40) { if (it % 60 < 30) 1f else 0f }))
+            block(subject)
+        } finally {
+            MaskStore.directory = null
+        }
+    }
+
+    private fun detectedOn(raster: String) = PhotoEdit(
+        locals = listOf(LocalEdit(Mask(MaskShape.DETECTED, 0f, 0f, 0f, 0f, detection = Detection(DetectedKind.SUBJECT, raster, "m", 1)), Adjustments(exposure = 1f))),
+    ).toJson()
+
+    @Test
+    fun aDetectedMaskWithAFeatherFarPastFullRenders() {
+        // The feather was taken as it was stored: the radius of the softening came out past what an Int counts, and wrapped.
+        withOutline { subject ->
+            fun feathered(feather: String) = PhotoEdit.fromJson(detectedOn(subject).replace(Regex(""""mask":\[[^]]*]"""), """"mask":[0,0,0,0,$feather]"""))!!
+            val full = PhotoEnhancer.preview(photo, feathered("1"), maxEdge = 48)
+            for (feather in listOf("1e10", "3e38", "1e5")) {
+                val edit = feathered(feather)
+                assertTrue(feather, edit.locals.single().mask.feather > 1f)
+
+                assertTrue("$feather softens as far as a full feather", PhotoEnhancer.preview(photo, edit, maxEdge = 48).sameAs(full))
+            }
+        }
+    }
+
+    @Test
+    fun anEditWithCropsSpotsAndFeathersAtTheEdgesOfAFloatRenders() {
+        // Every finite number is read; the ones near nothing and near the largest a Float holds are where rendering broke.
+        withOutline { subject ->
+            fuzz(seed = 53, cases = 400, slowest = 5_000) { mutator ->
+                val random = mutator.random
+                fun timesTen(from: Int, until: Int) = (if (random.nextBoolean()) 1f else -1f) * (1f + 2f * random.nextFloat()) * 10f.pow(random.nextInt(from, until))
+                fun number(): Float = when (random.nextInt(6)) {
+                    0 -> 0f
+                    1 -> random.nextFloat() * 2f - 0.5f
+                    2 -> timesTen(30, 39)
+                    3 -> timesTen(-45, -30)
+                    else -> timesTen(-45, 39)
+                }
+                fun numbers(count: Int) = JsonArray().apply { repeat(count) { add(JsonPrimitive(number())) } }
+                // A side where the other one is, or a hair beyond it: a crop of no size, or one too thin to place anything by.
+                fun sideFrom(other: Float): Float = when (random.nextInt(3)) {
+                    0 -> other
+                    1 -> other + (1f + random.nextFloat()) * 10f.pow(random.nextInt(-45, -3))
+                    else -> number()
+                }
+                val stored = JsonObject()
+                if (random.nextBoolean()) {
+                    val left = number()
+                    val top = number()
+                    stored.addProperty("cropLeft", left)
+                    stored.addProperty("cropTop", top)
+                    stored.addProperty("cropRight", sideFrom(left))
+                    stored.addProperty("cropBottom", sideFrom(top))
+                }
+                if (random.nextBoolean()) stored.addProperty("angle", number())
+                stored.addProperty("quarterTurns", random.nextInt(4))
+                stored.add("spots", JsonArray().apply {
+                    repeat(random.nextInt(3)) {
+                        val x = number()
+                        val y = number()
+                        add(JsonArray().apply { for (value in listOf(x, y, number(), sideFrom(x), sideFrom(y))) add(JsonPrimitive(value)) })
+                    }
+                })
+                val brush = JsonObject().apply {
+                    addProperty("shape", "BRUSH")
+                    add("mask", numbers(5))
+                    add("strokes", JsonArray().apply { add(JsonObject().apply { addProperty("radius", number()); add("points", numbers(4)) }) })
+                    addProperty("exposure", 1)
+                }
+                // A detected mask as the editor writes it, its feather and strokes from the edges too.
+                val detected = JsonParser.parseString(detectedOn(subject)).asJsonObject.getAsJsonArray("locals")[0].asJsonObject.apply {
+                    add("mask", numbers(5))
+                    add("strokes", brush.getAsJsonArray("strokes").deepCopy())
+                }
+                stored.add("locals", JsonArray().apply { add(brush); add(detected) })
+                // Every number in it is finite, so it is read.
+                val edit = PhotoEdit.fromJson(stored.toString())!!
+
+                assertTrue(PhotoEnhancer.preview(photo, edit, maxEdge = 48).width > 0)
+            }
+        }
+    }
+
+    @Test
+    fun aStrokeWithoutAWholePointPaintsNothing() {
+        for (points in listOf("[]", "[0.5]")) {
+            val edit = PhotoEdit.fromJson("""{"locals":[{"shape":"BRUSH","mask":[0,0,0,0,0.5],"strokes":[{"radius":0.1,"points":$points}],"exposure":1}]}""")!!
+
+            assertTrue(PhotoEnhancer.preview(photo, edit, maxEdge = 48).width > 0)
+        }
     }
 }

@@ -48,6 +48,10 @@ Times are milliseconds since 1970 (UTC); places are degrees (WGS 84). The order 
   default. A record with a value it does not know where it must know it (a photo's `kind` or `origin`, a place's
   `source` in the timeline) is left out of the restore, and not counted; a `geoSource` it does not know is taken as
   `CAMERA`. A line that is no JSON object, or lacks a field that is not optional, makes the file damaged.
+- A place off the Earth (a `latitude` outside -90 to 90, a `longitude` outside -180 to 180, or either NaN or
+  infinite, which only something else writes) is no place (since 2026-10-22): such a line of `locations.jsonl` is left
+  out of the restore, and not counted; a photo's is not taken, and the place the phone read from the file stays. An
+  `altitude` or `accuracy` that is NaN or infinite is taken as missing.
 - A change that an older reader can ignore without harm (a new optional field, a new entry) keeps the version. Any other
   change (a field renamed, removed, or given another meaning or unit; something an older reader must not skip) makes a
   new `formatVersion`, and the reader keeps reading every older one.
@@ -233,5 +237,17 @@ the same file again changes nothing more.
 Backup and restore run off the main thread, can be cancelled, and go through the database a page at a time: on the
 JVM, 150,000 places are backed up in under a second and restored in about three, with well under a megabyte of them in
 memory at any time (`BackupSizeTest`). A restore first copies the chosen file into the app's cache, so that it can be
-read twice in any order; the copy is deleted afterwards. How long a real library takes on a phone, and how large its
+read twice in any order; the copy is deleted afterwards.
+
+A file that only something else could have written is refused as damaged before it takes long, and nothing changes
+(`BackupArchive`, since 2026-10-22):
+
+- **At most 200,000 entries.** The app writes eleven, and one for each LUT and detected mask in use.
+- **At most 4 GB unpacked**, the entries a restore reads together, each counted once however often it is read. The
+  zip's directory is checked first; since a zip of a few kilobytes can unpack to gigabytes whatever its directory
+  says, the bytes are counted again as they unpack. The timeline, the largest entry, takes about 100 bytes a place: the
+  limit is some 40 million places.
+- Within those: a line of a records file is at most 4 MB, `manifest.json` and `settings.json` 1 MB, a LUT's table
+  4 MB, a mask's outline 64 MB packed. A mask's header is checked against the cells its data unpacks to before room
+  is made for them. How long a real library takes on a phone, and how large its
 file is, is to be measured (`DEVICE_CHECKS.md`).

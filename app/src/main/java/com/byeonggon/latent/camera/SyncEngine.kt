@@ -293,7 +293,8 @@ class SyncEngine(
         val metadata = MediaMetadataReader.read(part, file.kind, options.cameraZone())
         val capturedAt = metadata.capturedAt ?: file.modifiedAt
         // Matched by when it really was, though it is filed under the time the camera gave it.
-        val matched = if (metadata.location == null) geotagger.locate(options.realTimeOf(capturedAt), maxGapMs) else null
+        // A file whose own GPS block is damaged keeps it: the track is not written over it, nor stands in for it.
+        val matched = if (metadata.location == null && !metadata.locationDamaged) geotagger.locate(options.realTimeOf(capturedAt), maxGapMs) else null
 
         // EXIF is written before the file becomes visible, so gallery and backup apps never see an untagged copy.
         if (matched != null && file.kind == MediaKind.PHOTO && !isHeifName(file.name)) geotagger.writeExif(part, matched)

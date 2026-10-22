@@ -669,6 +669,7 @@
     <string name="backup_done">백업을 저장했습니다.</string>
     <string name="backup_counts">사진 %1$s · 앨범 %2$s · 버전 %3$s · 내 필터 %4$s · LUT %5$s · 마스크 %6$s · 타임라인 위치 %7$s · 카메라 가져오기 %8$s</string>
     <string name="backup_failed">백업을 저장하지 못했습니다: %1$s</string>
+    <string name="backup_too_large">이 라이브러리는 백업 하나에 담을 수 있는 크기(파일 200,000개 또는 4GB)를 넘어 복원할 수 없으므로 저장하지 않았습니다.</string>
     <string name="backup_cancelled">백업을 취소하고 덜 만들어진 파일을 지웠습니다.</string>
     <string name="backup_cancelled_left">백업을 취소했습니다. 덜 만들어진 파일을 지우지 못했으니 직접 지워 주세요. 그 파일로는 복원할 수 없습니다.</string>
     <string name="backup_restore_question">이 백업을 복원할까요?</string>

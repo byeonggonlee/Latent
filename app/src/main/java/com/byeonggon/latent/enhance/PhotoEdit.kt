@@ -306,7 +306,8 @@ data class PhotoEdit(
 
         /**
          * Reads what [toJson] wrote. Settings that a stored edit does not mention, because they were
-         * left alone or added to the app later, are left alone. Returns null for anything unreadable.
+         * left alone or added to the app later, are left alone. Returns null for anything unreadable, a number that is
+         * NaN or infinite among it: one would spread over the whole picture, or stop it being drawn.
          */
         fun fromJson(json: String?): PhotoEdit? {
             if (json == null) return null
@@ -320,7 +321,7 @@ data class PhotoEdit(
 
         /** Like [fromJson], but throws on values of the wrong kind. */
         fun fromJsonObject(stored: JsonObject): PhotoEdit {
-            fun number(name: String, otherwise: Float = 0f) = stored.get(name)?.asFloat ?: otherwise
+            fun number(name: String, otherwise: Float = 0f) = stored.get(name)?.finite ?: otherwise
             return PhotoEdit(
                 adjustments = Adjustment.entries.fold(Adjustments()) { all, each -> each.set(all, number(each.key)) },
                 autoEnhance = stored.get(AUTO_ENHANCE)?.asBoolean ?: false,
@@ -347,13 +348,13 @@ data class PhotoEdit(
                         shadows = tint(grading.get(SHADOWS)),
                         midtones = tint(grading.get(MIDTONES)),
                         highlights = tint(grading.get(HIGHLIGHTS)),
-                        balance = grading.get(BALANCE)?.asFloat ?: 0f,
+                        balance = grading.get(BALANCE)?.finite ?: 0f,
                     )
                 } ?: ColorGrading(),
                 monochrome = stored.get(MONOCHROME)?.asBoolean ?: false,
                 locals = stored.getAsJsonArray(LOCALS)?.map { each ->
                     val local = each.asJsonObject
-                    val mask = local.getAsJsonArray(MASK).map { it.asFloat }
+                    val mask = local.getAsJsonArray(MASK).map { it.finite }
                     LocalEdit(
                         Mask(
                             shape = MaskShape.valueOf(local.get(SHAPE).asString),
@@ -366,25 +367,25 @@ data class PhotoEdit(
                             strokes = local.getAsJsonArray(STROKES)?.map { one ->
                                 val stroke = one.asJsonObject
                                 BrushStroke(
-                                    points = stroke.getAsJsonArray(POINTS).map { it.asFloat },
-                                    radius = stroke.get(RADIUS).asFloat,
+                                    points = stroke.getAsJsonArray(POINTS).map { it.finite },
+                                    radius = stroke.get(RADIUS).finite,
                                     erasing = stroke.get(ERASING)?.asBoolean ?: false,
                                 )
                             } ?: emptyList(),
                             detection = local.getAsJsonObject(DETECTED)?.let(::detection),
                         ),
-                        Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.asFloat ?: 0f) },
-                        darkest = local.get(DARKEST)?.asFloat ?: 0f,
-                        brightest = local.get(BRIGHTEST)?.asFloat ?: 1f,
-                        hue = local.get(COLOUR_HUE)?.asFloat,
-                        hueSpread = local.get(COLOUR_SPREAD)?.asFloat ?: LocalEdit.DEFAULT_HUE_SPREAD,
+                        Adjustment.entries.fold(Adjustments()) { all, setting -> setting.set(all, local.get(setting.key)?.finite ?: 0f) },
+                        darkest = local.get(DARKEST)?.finite ?: 0f,
+                        brightest = local.get(BRIGHTEST)?.finite ?: 1f,
+                        hue = local.get(COLOUR_HUE)?.finite,
+                        hueSpread = local.get(COLOUR_SPREAD)?.finite ?: LocalEdit.DEFAULT_HUE_SPREAD,
                     )
                 } ?: emptyList(),
                 spots = stored.getAsJsonArray(SPOTS)?.map { each ->
-                    val values = each.asJsonArray.map { it.asFloat }
+                    val values = each.asJsonArray.map { it.finite }
                     Spot(values[0], values[1], values[2], values[3], values[4])
                 } ?: emptyList(),
-                lut = stored.get(LUT)?.asString?.let { LutLook(it, (stored.get(LUT_INTENSITY)?.asFloat ?: 1f).coerceIn(0f, 1f)) },
+                lut = stored.get(LUT)?.asString?.let { LutLook(it, (stored.get(LUT_INTENSITY)?.finite ?: 1f).coerceIn(0f, 1f)) },
             )
         }
 
@@ -399,16 +400,20 @@ data class PhotoEdit(
             )
         }
 
+        /** The number in this element, which must be one, and finite as a Float. */
+        private val JsonElement.finite: Float
+            get() = asFloat.also { require(it.isFinite()) { "Not a finite number: $this" } }
+
         private fun numbers(values: List<Float>) = JsonArray().apply { values.forEach(::add) }
 
         private fun bandValues(stored: JsonElement?): List<Float> {
-            val values = stored?.asJsonArray?.map { it.asFloat } ?: return ColorMixer.UNCHANGED
+            val values = stored?.asJsonArray?.map { it.finite } ?: return ColorMixer.UNCHANGED
             return List(MixerBand.entries.size) { values.getOrElse(it) { 0f } }
         }
 
         private fun tint(stored: JsonElement?): Tint {
             val values = stored?.asJsonArray ?: return Tint()
-            return Tint(hue = values[0].asFloat, amount = values[1].asFloat)
+            return Tint(hue = values[0].finite, amount = values[1].finite)
         }
     }
 }

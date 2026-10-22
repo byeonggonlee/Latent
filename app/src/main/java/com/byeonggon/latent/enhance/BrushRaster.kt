@@ -69,7 +69,8 @@ class BrushRaster private constructor(mask: Mask, aspect: Float) {
 
     /** [outline] with its edge spread over up to [FEATHER_REACH] of the long side, the more the higher [feather] is. */
     private fun softened(outline: FloatArray, feather: Float): FloatArray {
-        val radius = (feather * FEATHER_REACH * max(width, height)).roundToInt()
+        // The editor's feather goes up to 1; a damaged or foreign edit's could spread the edge past what an Int counts.
+        val radius = (feather.coerceIn(0f, 1f) * FEATHER_REACH * max(width, height)).roundToInt()
         if (radius < 1) return outline
         // Two box blurs in a row fade out evenly, without the steps one leaves at its edges.
         return GuidedMap.blurred(GuidedMap.blurred(outline, width, height, radius), width, height, radius)
@@ -80,10 +81,11 @@ class BrushRaster private constructor(mask: Mask, aspect: Float) {
         val longSide = max(width, height).toFloat()
         for (stroke in mask.strokes) {
             val radius = stroke.radius * longSide
-            if (radius <= 0f) continue
-            val inner = radius * (1f - mask.feather)
             val points = stroke.points
             val count = points.size / 2
+            // A stroke without a whole point, as only a damaged or foreign edit holds, paints nothing.
+            if (radius <= 0f || count == 0) continue
+            val inner = radius * (1f - mask.feather)
             for (segment in 0 until max(1, count - 1)) {
                 val fromX = points[2 * segment] * width
                 val fromY = points[2 * segment + 1] * height

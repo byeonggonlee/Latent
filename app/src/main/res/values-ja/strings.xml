@@ -669,6 +669,7 @@
     <string name="backup_done">バックアップを保存しました。</string>
     <string name="backup_counts">写真 %1$s · アルバム %2$s · バージョン %3$s · マイフィルター %4$s · LUT %5$s · マスク %6$s · タイムラインの位置 %7$s · カメラの取り込み %8$s</string>
     <string name="backup_failed">バックアップを書き込めませんでした: %1$s</string>
+    <string name="backup_too_large">このライブラリは1つのバックアップに収まる大きさ（ファイル200,000個または4 GB）を超え、復元できないため、保存しませんでした。</string>
     <string name="backup_cancelled">バックアップをキャンセルし、途中までのファイルを削除しました。</string>
     <string name="backup_cancelled_left">バックアップをキャンセルしました。途中までのファイルを削除できなかったので、手動で削除してください。そのファイルからは復元できません。</string>
     <string name="backup_restore_question">このバックアップを復元しますか？</string>
