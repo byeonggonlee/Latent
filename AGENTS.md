@@ -19,8 +19,8 @@ you start it, and log it there when it is done.
   `third_party/jxlatte`, the MPF preview), their tests and fixtures, and reviews changes in Claude Code's area and
   the shared seam.
 - **Antigravity** (code review, mechanical dispatch & documentation; never authors code): dispatches reviews
-  mechanically through **Gemini 3.8 Flash** and conducts deep code reviews across **Gemini 4 Argon** and
-  **Claude Opus 5.5** alongside Claude Code and Codex, following
+  mechanically through **Gemini 3.8 Flash**, treats its first-pass findings as candidates, and conducts deep reviews
+  across **Gemini 4 Argon** and **Claude Opus 5.5** alongside Claude Code and Codex, following
   [`docs/architecture/antigravity-review-orchestration.md`](docs/architecture/antigravity-review-orchestration.md).
   It never changes source, tests, build files, schemas or CI. It writes only under `docs/` (its own files,
   `docs/HANDOFF.md`, and owner-decision queues in `docs/TODO.md`) and to agent governance files when asked by the
@@ -77,7 +77,9 @@ you start it, and log it there when it is done.
     when assessing the PR; a proposed relaxation cannot qualify its own review.
 - One qualified deep reviewer is the default for a mandatory-review PR and must cover the full diff and all
   applicable risk categories. Add a reviewer only for an explicit coverage gap or conflicting findings; record
-  the reason. Mechanical triage does not replace deep review.
+  the reason. Mechanical triage does not replace deep review. Flash is never the sole code reviewer or a fallback
+  deep reviewer. A qualified deep reviewer must re-check its candidate findings against the base and head, including
+  numerical claims, failure/cancellation handling, user impact, severity and whether the proposed fix is sufficient.
 - Small changes outside the mandatory-review list are not reviewed: a reviewer is for the changes above, not for
   every patch.
 - Never push with force to `main`, never rewrite another agent's commits, and never skip, disable or loosen a test

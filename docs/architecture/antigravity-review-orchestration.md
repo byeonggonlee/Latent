@@ -54,7 +54,8 @@ Reviews are conducted by **Claude Code**, **Codex**, and **Antigravity**:
 
 - **Antigravity** serves as the cross-cutting review and model-orchestration hub. Because it has no authoring stake in
   either codebase partition, it dispatches reviews mechanically through **Gemini 3.8 Flash** and conducts deep reviews
-  across **Gemini 4 Argon** and **Claude Opus 5.5**.
+  across **Gemini 4 Argon** and **Claude Opus 5.5**. Antigravity keeps mechanical results, unverified candidate
+  findings and deep-review conclusions distinct, and routes only confirmed actionable findings as required fixes.
 - **Codex** and **Claude Code** continue to review each other's pull requests—especially on the decoder seam,
   domain-specific invariants, and cross-agent handoffs—either independently or alongside Antigravity's reviews.
 - **The owner** remains the final arbiter when reviewers disagree, and decides package identity, keys/secrets,
@@ -84,7 +85,7 @@ that high-reasoning token budgets are spent where bugs cost user data:
   coverage. A CI status change alone calls for a status update, not another model review. This does not start or resume
   any monitor; monitoring still needs owner authorization.
 
-### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher, Intake & Surface Checker
+### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher & First-Pass Candidate Finder
 
 - **Primary focus (Orchestration & Dispatch)**:
   - **Intake and status tracking**: Scanning open PRs (`gh pr list`, `gh pr view`, `gh pr diff --name-only`), checking
@@ -97,8 +98,46 @@ that high-reasoning token budgets are spent where bugs cost user data:
     does not judge whether a mandatory-review change is safe, and may only escalate—never downgrade—a review.**
   - **Surface and contract checks**: Checking caller/callee alignment (`ArwImage` callers), commit trailers,
     `docs/DEVICE_CHECKS.md` entries, and resource translation completeness (`values/`, `values-ko/`, `values-ja/`).
-- **Mandatory-review limit**: **A Gemini 3.8 Flash review alone never satisfies the mandatory review requirement** in
-  `AGENTS.md`, and never serves as a fallback for a deep reviewer.
+- **Optional first-pass finding search**: Flash may flag suspected bugs while checking the surface contracts, but
+  this is not a required extra pass on every PR. Its findings are **candidates**, not confirmed defects or merge
+  clearance. Label unverified candidates explicitly; do not present them as required fixes or a safety verdict.
+- **Deep-review validation duty**: A qualified deep reviewer independently checks each candidate's mechanism against
+  the base and inspected head, recomputes numerical examples and bounds, checks failure and cancellation paths,
+  assesses actual user impact and severity, and verifies that the proposed fix is sufficient. Do not assume a helper
+  succeeds because it did not throw: check Boolean/error return contracts as well. Reuse validated candidates in the
+  one deep review; Flash's pass does not require a second qualified reviewer by itself.
+- **No inflated finding counts**: Fold weak-test observations and helper/design comments into the underlying defect
+  when they describe the same failure. Redundancy or a design smell alone is not an actionable bug; require a concrete
+  failing scenario. Distinguish newly introduced regressions from existing problems and route the latter separately.
+- **Reviewer limit**: **Flash is never the sole code reviewer and never a fallback for a deep reviewer**, even at
+  `high` effort. Its triage alone never satisfies the mandatory review requirement in `AGENTS.md`. Classification
+  remains one-way escalation, and does not impose a review on small changes outside the mandatory list.
+
+#### Evidence and possible follow-up evaluation
+
+The owner supplied a comparison of Flash's review of draft [PR #36](https://github.com/byeonggonlee/Latent/pull/36)
+at `af7d12c3f193e44846a5bf0f9e615443c29b905d` with an answer key kept outside the repository: four of five seeded
+defects were detected, and one decoy was reported as a defect. The chat evaluations also corrected numerical
+overstatements and severity judgements, and the initial independent evaluation also had a material omission.
+This is one small, deliberately flawed PR, not an established detection rate or a comparison with other models.
+It supports candidate finding with verification, not promotion to sole deep reviewer. It did not test Flash's primary
+job of dispatch. No answer key or per-seed scoring details belong in this document.
+
+If the owner requests another benchmark, the suggested scope is:
+
+- **Dispatch first**: Three or four small PRs covering a mandatory-review trigger, plain docs, cancellation, and
+  location data. Score required escalation, no downgrades, and no safety clearance of mandatory-review changes.
+  Plain docs still require escalation when they change review governance or another mandatory topic.
+- **Finding quality separately**: Include cancellation through broad exception handlers and helpers whose names do
+  not suggest coroutine work, low-impact/no-caller defects beside data-loss risks, and harmless design-smell decoys.
+  Score detection, numerical accuracy, user impact and severity ordering, fix sufficiency, false positives and decoy
+  hits separately. Predeclare acceptable severity per defect rather than accepting every result within one level.
+- **Benchmark integrity**: Existing tests, lint and CI stay green with the seeds present; added PR tests do not expose
+  them. Use a neutral body with a benchmark/never-merge notice and the required authoring identity/settings line.
+  Keep the answer key outside the repo, pinned to exact pushed-head lines, with precise conditional claims and one
+  predeclared scoring rule per defect. A benchmark is never merged, and is closed after the authorized evaluation.
+
+These are follow-up suggestions, not authorization to create benchmarks, seed bugs, or resume monitoring.
 
 ### 3.2 Gemini 4 Argon — Systems, Numerical, Concurrency & Seam Deep Reviewer
 
@@ -196,6 +235,10 @@ that high-reasoning token budgets are spent where bugs cost user data:
 1. Inspect the full diff (`gh pr diff <id>`) and surrounding source context in read-only mode.
 2. Check CI status on the exact head commit (`gh pr checks <id>`) and note what was verified by CI versus what
    remains a phone-only check in [`docs/DEVICE_CHECKS.md`](../DEVICE_CHECKS.md).
+3. Independently validate any Flash candidates under §3.1 without limiting the review to those candidates. Inspect
+   the relevant callers and helper contracts, including error returns and cancellation propagation, and compare the
+   base behavior. Record accepted findings, rejected candidates and material unresolved questions in the synthesis;
+   report only distinct confirmed defects as actionable findings. An unresolved mandatory risk keeps review pending.
 
 ### Step 3: Identity-Transparent Review Publication
 
@@ -220,9 +263,12 @@ When publishing a review via `gh pr review`, always comply with these formatting
    - **Scope & fallback coverage**: Brief statement of the files and invariants inspected; when acting as a fallback,
      state which of the primary reviewer's checks (numerical bounds, colour invariants, locks and cancellation) were
      and were not covered.
-   - **Findings**: Prioritized list (`P1` data loss / crash / security, `P2` correctness / boundary / contract bug,
-     `P3` minor edge case) with exact file paths, line numbers, concrete reproduction inputs, and expected behavior—or
-     a concise `LGTM — no actionable issues found.` when clean.
+   - **Findings**: Prioritize by demonstrated impact, reachability and urgency, not just labels such as "overflow"
+     or "data loss". `P1` requires urgent action for a concrete serious impact; `P2` is a normal-priority correctness
+     or contract defect; `P3` is a low-priority issue. A no-caller display helper does not become P1 just because its
+     arithmetic is wrong. Check the relative ordering of data-integrity and display-only failures. Give exact paths,
+     lines, concrete reproduction inputs and expected behavior, or a concise `LGTM — no actionable issues found.`
+     when clean. Keep unverified candidates distinct from the confirmed finding count.
    - **Verification & limits**: Which CI checks or local read-only verifications were confirmed on the head SHA, and
      which device/hardware checks remain unverified.
 3. **GitHub review event (`--comment` always)**:
