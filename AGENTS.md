@@ -59,6 +59,18 @@ you start it, and log it there when it is done.
 - Every commit names its agent: Claude Code's `Co-Authored-By: Claude ...` line, or a trailer line `Agent: Codex`
   or `Agent: Antigravity`.
 
+### Publishing PR reviews
+
+- When the owner asks for a PR review, publish the completed findings and conclusion on that PR as part of the
+  request, then link the posted review in the chat. No separate publication confirmation is needed unless the
+  owner explicitly asks for a private or chat-only review.
+- Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
+  found), checks verified, and any unverified builds or device checks. Identify any fallback reviewer accurately.
+- A concise LGTM is enough when no actionable issues are found; keep the inspected commit and material validation
+  limits clear.
+- Post a review even when no bugs are found. Use a COMMENT review when reviewing through the PR author's own
+  account, since that account cannot approve its own PR. Publishing a review does not authorize a merge.
+
 ## Project Structure & Module Organization
 
 Latent is a Kotlin/Compose Android app for USB imports, editing, and geotagging.

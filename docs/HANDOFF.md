@@ -141,7 +141,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Two-illuminant DNG colour interpolation implemented; independent Claude CLI review addressed, integration PR/phone tungsten judgement pending; single-matrix path preserved. | `codex/dng-illuminants` | `raw/Dng.kt`, numerical illuminant helper, `raw/DngTest.kt`, `raw/SyntheticDng.kt`, `docs/DEVICE_CHECKS.md` (one tungsten check) | 2026-10-21 |
+| Codex | Implement DNG OpcodeList3 WarpRectilinear with synthetic parser/geometry regressions; retain Sony lens behavior. Owner authorized 2026-10-22; phone comparison follows implementation. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawRenderer.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
 | Claude Code (computer) | Import from a card reader or a camera in Mass Storage mode: a folder picked once, read as a `CameraSource`; what came over MTP and off a card is recognised either way | `claude/card-reader-import` (pull request) | `camera/FolderCameraSource.kt`, `camera/ImportedFiles.kt`, `camera/SyncService.kt`, `data/SettingsRepository.kt`, `ui/sync/`, strings, `PRIVACY.md`, `CHANGELOG.md`, `docs/DEVICE_CHECKS.md`, `docs/TODO.md` | 2026-10-22 |
 
 ## For Codex
@@ -232,6 +232,9 @@ Nothing asked yet.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Codex | Two-illuminant DNG interpolation merged; numerical/regression validation complete, tungsten photo judgement remains open in DEVICE_CHECKS. | [PR #9](https://github.com/byeonggonlee/Latent/pull/9) |
+| 2026-10-22 | Codex | Publish PR review guidance, permit concise LGTM for clean reviews, reconcile completed decoder work, and claim the owner-authorized WarpRectilinear work. | `codex/review-posting-rule` |
+| 2026-10-21 | Codex | Posted PR #10 review: no actionable bugs, exact-head CI passed, local builds/device tests not rerun. Added owner-requested guidance to publish future PR reviews with scope and verification limits. | `codex/review-posting-rule`; [review](https://github.com/byeonggonlee/Latent/pull/10#pullrequestreview-5601635855) |
 | 2026-10-22 | Claude Code (computer) | CI's actions on their Node 24 majors (checkout v7, setup-java v6, setup-gradle v6, upload-artifact v7); the SDK handed over folder by folder (41 s to 8 s); lint's findings printed into the log. Reviewed by Codex | [PR #15](https://github.com/byeonggonlee/Latent/pull/15), merged `1217517` |
 | 2026-10-22 | Claude Code (computer) | The map's credit links to OpenStreetMap's copyright page; the map servers are told the installed version. Reviewed by Codex; the tap on a phone is not tried yet | [PR #14](https://github.com/byeonggonlee/Latent/pull/14), merged `02bca02` |
 | 2026-10-22 | Claude Code (computer) | Room's `MigrationTestHelper` (`room-testing`, tests only) against the committed schemas, which the debug build carries as assets; a database made from `13.json` opens as it is. Reviewed by Codex | [PR #16](https://github.com/byeonggonlee/Latent/pull/16), merged `1d4b62e` |
