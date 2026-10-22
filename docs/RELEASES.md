@@ -6,9 +6,9 @@ How the app is built on GitHub, which builds there are, and how a phone gets the
 
 | Channel | When | What it does | Kept |
 |---|---|---|---|
-| **CI** (`build.yml`) | every push to `main`, every pull request, "Run workflow" | tests, lint, release APK as an artifact | artifact 14 days, reports 7 days |
-| **Nightly** (`nightly.yml`) | 03:00 in Korea (18:00 UTC), when `main` has commits the last nightly lacks; "Run workflow" (with *force*) at any time | tests, lint, signed release APK, published as a **pre-release** `nightly-YYYYMMDD-<build>` with the commits since the last one as its notes | the last seven releases; older ones and their tags are deleted |
-| **Stable** (`release.yml`) | a tag `vX.Y.Z` (or `vX.Y.Z-rc.1`, a pre-release) that the owner pushes on a commit of `main` | tests, lint, signed release APK with its checksum, published as a release with the version's section of `CHANGELOG.md` as its notes | for good |
+| **CI** (`build.yml`) | every push to `main`, every pull request, "Run workflow" | tests, lint, the phone tests compiled, the shaders checked with glslang, the Room schema and the release build checked against `PRIVACY.md`; a release APK signed with the runner's debug key, as an artifact | artifact 14 days, reports 7 days |
+| **Nightly** (`nightly.yml`) | 03:00 in Korea (18:00 UTC; GitHub may start it later), when `main` has commits the last nightly lacks; "Run workflow" (with *force*) at any time | tests, lint, signed release APK with its checksum; a second job publishes it as a **pre-release** `nightly-YYYYMMDD-<build>` with the commits since the last one as its notes | the last seven releases; older ones and their tags are deleted. The build's artifact (APK, checksum, notes) 14 days |
+| **Stable** (`release.yml`) | a tag `vX.Y.Z` (or `vX.Y.Z-rc.1`, a pre-release) that the owner pushes on a commit of `main` | tests, lint, signed release APK with its checksum; a second job publishes it as a release with the version's section of `CHANGELOG.md` as its notes | for good. The build's artifact 7 days; on a failure, the test and lint reports 7 days |
 
 A nightly is for the phones: open the release page in the phone's browser (no login needed), download the APK,
 install it over the one before. The owner can put one out at any time with *Run workflow*; the schedule only
@@ -36,9 +36,9 @@ download link and a file manager:
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
 from is the one in the CI name, or in the release notes for a nightly. The version name is also what the About
-dialog shows. Every build carries the native code of 64-bit ARM only (`arm64-v8a`, 20 MB instead of 39 MB; every
-phone the app is for is that kind), the owner's choice of 2026-10-21; the CI and nightly builds say so at the end of
-the name. So does the AAB for Play: phones of another kind (32-bit ARM, x86 Chromebooks) are not offered the app. An
+dialog shows. Every build carries the native code of 64-bit ARM only (`arm64-v8a`; every phone the app is for is that
+kind), the owner's choice of 2026-10-21, which took the APK from 39 MB to 20 MB; the sky's model (19.5 MB, since
+2026-10-22) brings it to about 40 MB. The CI and nightly builds say so at the end of the name. So does the AAB for Play: phones of another kind (32-bit ARM, x86 Chromebooks) are not offered the app. An
 emulator of another kind takes `-PlatentAbis=x86_64`. The checksum is for checking a download: `shasum -a 256 -c <file>.sha256`.
 
 ## Signing
@@ -61,7 +61,10 @@ choice before `v0.1.0`). The build job, which runs the tests, the Gradle plugins
 and holds the secrets, may only read the repository. The publish job may write to it, to make the release, but runs
 nothing of the build's and never sees the secrets: it takes the APK the build kept as an artifact, checks it against
 its checksum, and puts it out. A plugin or library that turned bad could still read the signing key, which the build
-needs to sign, but it could not publish a release or change the repository.
+needs to sign, but it could not publish a release or change the repository. A publish that fails can be run again on
+its own (*Re-run failed jobs* on the run's page) without building again, while the build's artifact lasts (7 days for
+a stable release, 14 for a nightly). The first nightly after the split (2026-10-22) is the first run of it; the first
+`v*` tag is the first run of the stable workflow.
 
 - **Since 2026-10-22** the secrets hold the release key: alias `latent`, `CN=Latent Image, C=KR`, RSA 4096, valid
   for 100 years, made on the owner's computer and kept outside the repository, in a password manager and two
@@ -115,14 +118,17 @@ The new app reads the backup of an older one; an older app refuses the backup of
 ## Making a stable release
 
 1. Everything wanted is in `main` and the CI of its head is green. Run the release build on a phone through
-   [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md) (a nightly signed with the release key is the same build).
+   [`SMOKE_TEST.md`](SMOKE_TEST.md) and [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md) (a nightly signed with the release key
+   is the same build), the checks marked *New* first.
 2. `CHANGELOG.md` has a `## [X.Y.Z] - date` section; write the date in. `latent.versionBase` in `gradle.properties` is `X.Y.Z`
    (the workflow refuses a tag that disagrees, as it refuses a commit that is not on `main`).
    The workflow also refuses a section still marked `unreleased`, a signing key whose alias is `androiddebugkey`, and
    any of the four secrets being empty, before it builds; a failed build leaves its test and lint reports as an artifact.
 3. Tag and push: `git tag -a vX.Y.Z -m "Latent X.Y.Z" && git push origin vX.Y.Z`.
-4. The workflow publishes the release in about seven minutes. Download the APK on a phone, check the checksum, and
-   install it over the nightly before it.
+4. The workflow publishes the release in about seven minutes: the *build* job, then *publish*. Download the APK on a
+   phone, check the checksum, and install it over the nightly before it. As the stable workflow has never run, a
+   `vX.Y.Z-rc.1` tag first tries it as a pre-release (the changelog's section may still say `unreleased` for it),
+   at the cost of a pre-release that stays.
 5. Raise `latent.versionBase` to the next release (`X.Y.Z+1`) in a commit of its own, and start the next section of
    `CHANGELOG.md`, so that nightlies carry the new name.
 
