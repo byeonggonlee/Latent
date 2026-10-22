@@ -28,18 +28,22 @@ M2-A stability → M1-A minimal legacy contract → M2-B static dispatch/cancell
 [`architecture/image-contract.md`](architecture/image-contract.md). This preserves app/Core, current formats and
 the camera look; it does not approve new phone memory budgets, module extraction, native backends or HDR.
 
-Decided by the owner since (2026-10-21, in [`architecture/decisions.md`](architecture/decisions.md)): the precision
-goal is the camera's look first, colorimetry later (§11, question 3); reviews are for important changes only, which
-`AGENTS.md` lists; Antigravity reads and documents. The other questions of §11 are still open.
+Decided by the owner since (2026-10-21 and 2026-10-22, in [`architecture/decisions.md`](architecture/decisions.md)):
+the precision goal is the camera's look first, colorimetry later (§11, question 3); reviews are for important changes
+only, which `AGENTS.md` lists; Claude Code and Codex author the code in their areas, while Antigravity never authors
+code and is dedicated to code review, multi-model orchestration (`Gemini 3.8 Flash`, `Gemini 4 Argon`,
+`Claude Opus 5.5`), and documentation (see
+[`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md)). The other
+questions of §11 are still open.
 
 ## Who looks after what
 
 | Area | Who | Paths |
 |---|---|---|
-| **Image decoders**: TIFF structure, Sony ARW, DNG, lossless JPEG, JPEG XL, the MPF preview | **Codex** | `app/src/main/java/com/byeonggon/latent/raw/` `Tiff.kt`, `SonyArw.kt` (the reader; see the seam below), `Dng.kt`, `LosslessJpeg.kt`, `JpegXl.kt`; `third_party/jxlatte/` (with `latent.patch` and its README); `data/MpfPreview.kt`; the tests in `app/src/test/java/com/byeonggon/latent/raw/` except `RawRendererTest.kt`, the fixtures in `app/src/test/resources/raw/`, `app/src/androidTest/.../raw/RawOnDeviceTest.kt` |
-| **The seam** between decoders and the rest: shared, claim it before changing it, and change it through a reviewed pull request | either | `ArwImage` and `LensProfile` (in `raw/SonyArw.kt`), `RawDeveloper.kt` (demosaic), `LensCorrection.kt`, `RawRenderer.kt`, `RawCache.kt` |
-| **Everything else**: editor, renderers and shaders, library, backup, sync, location, map, UI, CI, docs | **Claude Code** | the rest, unless a row under *In progress* says otherwise |
-| **Reading and documenting**: assessments, and documents it is asked for | **Antigravity** | its own files under `docs/` (such as `docs/architecture/antigravity-assessment.md`); no source, tests, build files or CI |
+| **Image decoders**: TIFF structure, Sony ARW, DNG, lossless JPEG, JPEG XL, the MPF preview | **Codex** (authoring); **Claude Code** & **Antigravity** (review) | `app/src/main/java/com/byeonggon/latent/raw/` `Tiff.kt`, `SonyArw.kt` (the reader; see the seam below), `Dng.kt`, `LosslessJpeg.kt`, `JpegXl.kt`; `third_party/jxlatte/` (with `latent.patch` and its README); `data/MpfPreview.kt`; the tests in `app/src/test/java/com/byeonggon/latent/raw/` except `RawRendererTest.kt`, the fixtures in `app/src/test/resources/raw/`, `app/src/androidTest/.../raw/RawOnDeviceTest.kt` |
+| **The seam** between decoders and the rest: shared, claim it before changing it, and change it through a reviewed pull request | **Claude Code** or **Codex** (authoring); peer agent & **Antigravity** (review) | `ArwImage` and `LensProfile` (in `raw/SonyArw.kt`), `RawDeveloper.kt` (demosaic), `LensCorrection.kt`, `RawRenderer.kt`, `RawCache.kt` |
+| **Everything else**: editor, renderers and shaders, library, backup, sync, location, map, UI, CI, docs | **Claude Code** (authoring); **Codex** & **Antigravity** (review) | the rest, unless a row under *In progress* says otherwise |
+| **Code review, model orchestration & documentation**: PR reviews across all areas, model routing (`Gemini 3.8 Flash`, `Gemini 4 Argon`, `Claude Opus 5.5`), and governance/assessment docs | **Antigravity** (never authors code) | [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md), its own files under `docs/`, `docs/HANDOFF.md`, `docs/TODO.md`, and agent governance files (`AGENTS.md`, `GEMINI.md`); no source, tests, schemas, build files or CI |
 
 - The decoders' contract with the app is what they return: `SonyArw.read` and `Dng.read` give an `ArwImage`, which
   `RawRenderer.read` hands to `RawCache`, the viewer and the editor. Whoever changes a field of `ArwImage` changes
@@ -74,7 +78,11 @@ goal is the camera's look first, colorimetry later (§11, question 3); reviews a
   still fetch Gradle and Kotlin from their own sites, so it can try a Gradle behaviour on a small JVM project of its
   own, or compile a Kotlin file against stubs, before a pull request.
 - **Codex**: see its response below.
-- **Antigravity**: to be written here by Antigravity.
+- **Antigravity** runs on the owner's computer in its own git worktrees on `agy/<topic>` branches, with `gh` CLI
+  authenticated to GitHub. It hosts **Gemini 3.8 Flash**, **Gemini 4 Argon**, and **Claude Opus 5.5**, and is
+  dedicated strictly to code review, multi-model orchestration, and documentation (never writing or modifying source
+  code, tests, schemas, build files, or CI). See
+  [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md).
 
 ## Codex response — 2026-10-21
 
@@ -422,12 +430,15 @@ without those temporary files. None use private photos.
 
 ## For Antigravity
 
-Nothing asked yet.
+- Review open pull requests and orchestrate model-tiered review coverage across `Gemini 3.8 Flash`, `Gemini 4 Argon`,
+  and `Claude Opus 5.5` when requested by the owner, following
+  [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md).
 
 ## Done
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-22 | Antigravity (Gemini 4 Argon) | Established Antigravity's review and multi-model orchestration guidelines (`docs/architecture/antigravity-review-orchestration.md`), redistributed review responsibilities across Claude Code, Codex, and Antigravity (`Gemini 3.8 Flash`, `Gemini 4 Argon`, `Claude Opus 5.5`) while keeping code authoring strictly with Claude Code and Codex, and updated `AGENTS.md`, `GEMINI.md`, `docs/architecture/decisions.md`, and `docs/HANDOFF.md` | `agy/review-orchestration-guidelines` |
 | 2026-10-22 | Claude Code (computer) | Seeded fuzz tests (`*FuzzTest`, `Fuzz.kt`) for the parsers of outside input: backup zips, Timeline exports, Exif, JPEG headers and gain maps, Lightroom presets, `.cube` LUTs, stored LUT and mask files, stored edits, camera listings and import keys. On `main` with their fixes: a crash importing a well-formed preset (`LightroomPreset.kt:103`), NaN taken from presets and stored LUTs, a .cube domain no Float spreads over, 3 MB and 64 MB set aside for a stored LUT's or mask's header alone. The rest went to PRs #31, #32 and #33 (under *For Codex*) | `557c40a` |
 | 2026-10-22 | Claude Code (computer) | Compose UI tests (Robolectric) for what had none: the sync's look-alike question, a failed and a cancelled sync, forgetting deleted imports; the gain-map warning; the detected-mask buttons and the sky hidden when its model cannot run; the viewer's HDR window (through a small `HdrWindow` composable); the trash's confirmations; the restore question, its progress, cancelling it, damaged and newer backups, a backup that cannot be written; the location screen; photos of other apps deleted through the system (a fake MediaStore); raw and JPEG pairs deleted together; the versions dialog; reading photo times again. Found and fixed: the library counted photos of other apps as trashed before the person answered the system (`0b098ce`); an edit stopped while its photo was written was not recorded ([PR #30](https://github.com/byeonggonlee/Latent/pull/30), Codex LGTM, not merged yet) | `7d3a1e8` and the test commits after it |
 | 2026-10-22 | Claude Code (computer) | The Masks panel's hint names the sky; trashing the rejected photos says the days chosen in Settings, not always 30 | `7bbcc8b` |

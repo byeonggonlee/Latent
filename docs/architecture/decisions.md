@@ -5,6 +5,31 @@ what was decided, why, what it means for a change, and what would open it again.
 owner decides again; then the old text stays, marked as replaced. Proposals that wait for a decision live in the
 assessments in this folder (for example [`codex-assessment.md`](codex-assessment.md)) and in `docs/TODO.md`.
 
+## 2026-10-22 · Antigravity reviews and orchestrates models; Claude Code and Codex write the code
+
+**Decided.** Code authoring stays strictly with **Claude Code** (editor, renderers and shaders, library, backup, sync,
+location, map, UI, CI and docs) and **Codex** (image decoders, their tests and fixtures). **Antigravity** never
+authors or modifies production code, tests, schemas, build files or CI; instead, it is dedicated to **code review,
+multi-model review/task orchestration, and documentation** across its hosted models (**Gemini 3.8 Flash**,
+**Gemini 4 Argon**, and **Claude Opus 5.5**), alongside reviews by Claude Code and Codex. Detailed operating rules
+live in [`antigravity-review-orchestration.md`](antigravity-review-orchestration.md).
+
+**Why.** Separating code authoring from cross-cutting multi-model review lets each authoring agent stay focused on
+its domain while Antigravity provides an independent review pass matched to the change's risk (fast triage and
+contract checks with Gemini 3.8 Flash; numerical, concurrency and seam checks with Gemini 4 Argon; deep data
+durability, lifecycle and architecture checks with Claude Opus 5.5) and routes actionable findings back to the
+responsible authoring agent.
+
+**What it means for a change:**
+
+- Antigravity never writes or edits code, tests, build scripts or CI workflows. Any defect or missing test it finds
+  is published in the PR review and/or added to the responsible authoring agent's queue in `docs/HANDOFF.md`.
+- Every PR review published from Antigravity explicitly states both the reviewing model and the agent at the top of
+  the review (`Reviewed by <Model> (via Antigravity)`), anchored to the inspected commit SHA.
+- Important changes (as listed in `AGENTS.md`) may be reviewed by Claude Code, Codex, or Antigravity's hosted models.
+
+**Opens again** if the owner changes the agent roster, model assignments, or authoring boundaries.
+
 ## 2026-10-21 · Precision: the camera's look first, colorimetry later
 
 **Decided.** For now the goal of raw development and of the editor is that a photo looks as the camera's own JPEG of
@@ -61,7 +86,7 @@ the Android SDK always opens a pull request.
 **Why.** On 2026-10-21 two agents worked in the same checkout: one's branch switches and staging could take in the
 other's files, and commits landed on a `main` that had not been pushed.
 
-## 2026-10-21 · Antigravity reads and documents
+## 2026-10-21 · Antigravity reads and documents *(replaced on 2026-10-22 above)*
 
 **Decided.** Antigravity reads the code and writes documents only (under `docs/`); it changes no source, test,
 build file or CI. Its findings go to the agent whose area they are in. Its assessment stays separate from Codex's,

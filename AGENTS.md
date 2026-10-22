@@ -9,15 +9,20 @@ you start it, and log it there when it is done.
 
 ### Who does what
 
-- **Claude Code**: everything but the image decoders: editor, renderers and shaders, library, backup, sync,
-  location, map, UI, CI and docs. It may run on the owner's computer and in cloud sessions at the same time.
-- **Codex**: the image decoders (TIFF, Sony ARW, DNG, lossless JPEG, JPEG XL with `third_party/jxlatte`, the MPF
-  preview), their tests and fixtures.
-- **Antigravity**: reads and documents. It writes only under `docs/`: its own files, such as
-  `docs/architecture/antigravity-assessment.md`, or what it is asked to write. It never changes source, tests,
-  build files or CI, nor another agent's document beyond adding to `docs/HANDOFF.md`. What it finds that needs code
-  goes into the queue of the agent whose area it is.
-- **The owner** decides the package name, keys and secrets, what ships, what waits for a phone, and between two
+- **Claude Code** (code authoring & review): authors everything but the image decoders—editor, renderers and
+  shaders, library, backup, sync, location, map, UI, CI and docs—and reviews changes in Codex's area and the shared
+  seam. It may run on the owner's computer and in cloud sessions at the same time.
+- **Codex** (code authoring & review): authors the image decoders (TIFF, Sony ARW, DNG, lossless JPEG, JPEG XL with
+  `third_party/jxlatte`, the MPF preview), their tests and fixtures, and reviews changes in Claude Code's area and
+  the shared seam.
+- **Antigravity** (code review, model orchestration & documentation; never authors code): conducts code reviews and
+  orchestrates review/task routing across its hosted models (**Gemini 3.8 Flash**, **Gemini 4 Argon**, and
+  **Claude Opus 5.5**) alongside Claude Code and Codex, following
+  [`docs/architecture/antigravity-review-orchestration.md`](docs/architecture/antigravity-review-orchestration.md).
+  It never changes source, tests, build files, schemas or CI. It writes only under `docs/` (its own files,
+  `docs/HANDOFF.md`, and owner-decision queues in `docs/TODO.md`) and to agent governance files when asked by the
+  owner. What it finds that needs code goes into the PR review or the queue of the authoring agent whose area it is.
+- **The owner** decides the package name, keys and secrets, what ships, what waits for a phone, and between
   agents who disagree. No agent decides that for them: the question goes under "Waiting for the owner" in
   `docs/TODO.md`.
 
@@ -41,9 +46,9 @@ you start it, and log it there when it is done.
   Before pushing, bring `origin/main` in, run what CI runs as far as your setup can (`testDebugUnitTest lintDebug
   lintRelease assembleDebugAndroidTest`, then `git diff --exit-code -- app/schemas`), and push a fast-forward. An
   agent without the Android SDK (a cloud session) cannot prove a change itself, so it always opens a pull request.
-- **Changes that need review go through a pull request**, reviewed by the other code agent (Claude Code or Codex),
-  and are merged once CI is green and the review is done; the owner decides when the two disagree. That is any
-  change to:
+- **Changes that need review go through a pull request**, reviewed by another agent (Claude Code, Codex, or
+  Antigravity), and are merged once CI is green and the review is done; the owner decides when reviewers disagree.
+  That is any change to:
   - the seam between decoders and the rest (`ArwImage`, `LensProfile`, `RawDeveloper`, `LensCorrection`,
     `RawRenderer`, `RawCache`), or what `LinearImage` means;
   - colour, precision, white balance, demosaicing, the look, crop or orientation;
@@ -65,7 +70,10 @@ you start it, and log it there when it is done.
   request, then link the posted review in the chat. No separate publication confirmation is needed unless the
   owner explicitly asks for a private or chat-only review.
 - Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
-  found), checks verified, and any unverified builds or device checks. Identify any fallback reviewer accurately.
+  found), checks verified, and any unverified builds or device checks. Identify the reviewing agent and active
+  model explicitly at the top of the review (for example, `Reviewed by Gemini 3.8 Flash (via Antigravity)`,
+  `Reviewed by Gemini 4 Argon (via Antigravity)`, or `Reviewed by Claude Opus 5.5 (via Antigravity)`), as well as
+  any fallback reviewer.
 - A concise LGTM is enough when no actionable issues are found; keep the inspected commit and material validation
   limits clear.
 - Post a review even when no bugs are found. Use a COMMENT review when reviewing through the PR author's own
