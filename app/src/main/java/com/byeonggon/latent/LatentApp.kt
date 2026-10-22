@@ -70,7 +70,7 @@ class AppContainer(private val context: Context) {
             .build()
     val settings = SettingsRepository(context)
     val storage = LibraryStorage(context)
-    val libraryIndex = LibraryIndex(storage, database, cameraZone = { settings.settings.first().cameraZone() }) { editSaver.saving.value }
+    val libraryIndex = LibraryIndex(storage, database, cameraZone = { settings.settings.first().cameraZone() })
     val exifIndex = ExifIndex(storage, database)
     val trash = Trash(storage, database.mediaDao())
     val phoneLibrary = PhoneLibrary(context, database)

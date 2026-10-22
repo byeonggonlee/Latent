@@ -142,6 +142,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Codex | DNG OpcodeList3 WarpRectilinear implementation and synthetic regressions ready for reviewed PR; retain Sony lens behavior. Independent internal review corrected the SDK integer-centre convention. Claude review and phone/JPEG comparison remain pending. Owner authorized 2026-10-22. | `codex/dng-warp-rectilinear` | `raw/Dng.kt`, DNG warp helper/tests, `raw/SonyArw.kt` (frame field), `raw/LensCorrection.kt`, `raw/RawDeveloper.kt`, `raw/RawRenderer.kt`, `ui/editor/EditorViewModel.kt`, decoder contracts/callers as needed, `docs/DEVICE_CHECKS.md` | 2026-10-22 |
+| Claude Code (computer) | Self-review of the library code pushed straight to `main` before the rules: one lock over library file moves (trash, edits, the folder check, places written in), a copy aside that takes its name only once whole, a failed SAF move that keeps its name, exports written under a hidden name, a backup written over truncated. Waits for Codex's review | `claude/library-file-safety` | `data/LibraryStorage.kt`, `data/GrantedFolder.kt`, `data/LibraryEdits.kt`, `data/LibraryIndex.kt`, `data/Trash.kt`, `location/Geotagger.kt`, `ui/BackupViewModel.kt`, `LatentApp.kt`, their tests | 2026-10-22 |
 
 ## For Codex
 

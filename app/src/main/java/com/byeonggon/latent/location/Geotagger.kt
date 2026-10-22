@@ -10,9 +10,11 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.io.RandomAccessFile
 
 class Geotagger(
     private val locationDao: LocationDao,
@@ -48,6 +50,27 @@ class Geotagger(
         saveAttributes()
     }
 
+    /**
+     * [writeExif] for a photo of the library, which may be the only copy of it: Exif is rewritten by writing the
+     * whole file again, so it is written into a copy beside the photo, which takes the photo's place once whole.
+     * One that another installation made is written to where it is, as only the granted folder reaches it.
+     */
+    private fun writeExifInLibrary(file: File, point: GeoPoint): Boolean {
+        if (!file.canWrite()) return writeExif(file, point)
+        // Hidden, but still named as a photo: shared storage only takes photos and videos in DCIM.
+        val tagging = File(file.parentFile, ".${file.nameWithoutExtension}-tagging.${file.extension}")
+        return try {
+            file.copyTo(tagging, overwrite = true)
+            ExifInterface(tagging).tag(point)
+            RandomAccessFile(tagging, "rw").use { it.fd.sync() }
+            tagging.setLastModified(file.lastModified())
+            tagging.renameTo(file).also { if (!it) tagging.delete() }
+        } catch (e: IOException) {
+            tagging.delete()
+            false
+        }
+    }
+
     /** Writes an XMP sidecar next to a RAW file. An existing sidecar is left untouched. */
     fun writeSidecar(rawFile: File, point: GeoPoint): Boolean {
         val sidecar = File(rawFile.parentFile, "${rawFile.nameWithoutExtension}.xmp")
@@ -67,12 +90,15 @@ class Geotagger(
             ensureActive()
             val point = locate(item.capturedAt - clockOffsetMs, maxGapMs) ?: continue
             val file = File(item.path)
-            // A photo that another app made is not written to; the place is kept in the database only.
+            // A photo that another app made is not written to; the place is kept in the database only. One of the
+            // library's is not written to while it is being edited or moved.
             if (item.origin == MediaOrigin.LIBRARY) {
-                when (item.kind) {
-                    MediaKind.PHOTO -> if (item.isHeif) writeSidecar(file, point) else if (writeExif(file, point)) storage.publish(file)
-                    MediaKind.RAW -> writeSidecar(file, point)
-                    MediaKind.VIDEO -> Unit
+                storage.moving.withLock {
+                    when (item.kind) {
+                        MediaKind.PHOTO -> if (item.isHeif) writeSidecar(file, point) else if (writeExifInLibrary(file, point)) storage.publish(file)
+                        MediaKind.RAW -> writeSidecar(file, point)
+                        MediaKind.VIDEO -> Unit
+                    }
                 }
             }
             mediaDao.setLocation(item.id, point.latitude, point.longitude, point.altitude, GeoSource.TRACK)

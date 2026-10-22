@@ -13,7 +13,11 @@ import androidx.room.Room
 import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,6 +54,11 @@ class LibraryIndexTest {
     fun tearDown() {
         database.close()
         storage.root.deleteRecursively()
+    }
+
+    private companion object {
+        /** Long enough for a check that does not wait to have finished. */
+        const val WAIT_MS = 300L
     }
 
     private suspend fun addToLibrary(name: String, onDisk: Boolean, edited: Boolean): File {
@@ -136,15 +145,42 @@ class LibraryIndexTest {
     }
 
     @Test
-    fun leavesAPhotoAloneWhileItsEditIsBeingSaved() = runBlocking {
-        // Saving moves the photo aside for a moment, to keep its original.
+    fun leavesAPhotoAloneWhileItIsBeingMoved() = runBlocking {
+        // Saving an edit, or putting a photo in the trash, moves it aside for a moment before its entry says where it is.
         val moment = addToLibrary("DSC00004.JPG", onDisk = false, edited = true)
-        val id = database.mediaDao().all().single().id
 
-        LibraryIndex(storage, database) { setOf(id) }.forgetMissingFiles()
+        val check = storage.moving.withLock {
+            launch { index.forgetMissingFiles() }.also {
+                delay(WAIT_MS)
+                assertTrue("The check waits for the move to finish", it.isActive)
+                moment.writeText("edited picture")
+            }
+        }
+        check.join()
 
         assertEquals(listOf("DSC00004.JPG"), database.mediaDao().all().map { it.fileName })
         assertTrue(storage.originalOf(moment).exists())
+    }
+
+    @Test
+    fun takesNoPhotoInTwiceThatIsBeingPutBackFromTheTrash() = runBlocking {
+        val photo = addToLibrary("DSC00005.JPG", onDisk = false, edited = false)
+        val id = database.mediaDao().all().single().id
+        val trashed = File(storage.root, ".trash/$id/${photo.name}").apply { parentFile!!.mkdirs() }
+        database.mediaDao().setPlace(id, trashed.path, 3, photo.path)
+
+        // The photo is back in its place a moment before its entry says so.
+        val adopting = storage.moving.withLock {
+            photo.writeText("photo")
+            async { index.adoptUnknownFiles() }.also {
+                delay(WAIT_MS)
+                assertTrue("Taking files in waits for the photo to be put back", it.isActive)
+                database.mediaDao().setPlace(id, photo.path, null, null)
+            }
+        }
+
+        assertEquals(0, adopting.await())
+        assertEquals(listOf(id), database.mediaDao().all().map { it.id })
     }
 
     @Test

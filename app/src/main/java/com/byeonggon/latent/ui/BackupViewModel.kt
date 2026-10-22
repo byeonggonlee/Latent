@@ -68,7 +68,8 @@ class BackupViewModel(application: Application) : AndroidViewModel(application) 
     fun backUp(uri: Uri) = start(restoring = false) {
         val message = try {
             val counts = withContext(Dispatchers.IO) {
-                val output = resolver.openOutputStream(uri, "w") ?: throw IOException("Cannot open $uri")
+                // Truncated: a file chosen to be written over would otherwise keep the end of the backup before.
+                val output = resolver.openOutputStream(uri, "wt") ?: throw IOException("Cannot open $uri")
                 output.use { container.backupWriter.write(it, progress(restoring = false)) }
             }
             text(R.string.backup_done) + "\n" + describe(counts)
