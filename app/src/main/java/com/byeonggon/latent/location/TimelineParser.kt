@@ -3,8 +3,8 @@ package com.byeonggon.latent.location
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import java.io.Reader
+import java.time.DateTimeException
 import java.time.OffsetDateTime
-import java.time.format.DateTimeParseException
 
 data class TimelinePoint(
     val timestamp: Long,
@@ -24,7 +24,14 @@ object TimelineParser {
     // A visit only has a start and an end; filling it in keeps photos taken mid-visit within matching range.
     private const val VISIT_STEP_MS = 10 * 60_000L
 
-    fun parse(reader: Reader): Sequence<TimelinePoint> = sequence {
+    /**
+     * The longest visit that is filled in: a stay of a week at most, as a Timeline records them. A longer one, or one that
+     * ends before it starts, is a damaged record; filled in, a single one could add millions of points.
+     */
+    internal const val LONGEST_VISIT_MS = 7 * 24 * 60 * 60_000L
+
+    /** Streams the points of the file in [reader]; [onSkippedVisit] is called for each visit too long to be filled in. */
+    fun parse(reader: Reader, onSkippedVisit: () -> Unit = {}): Sequence<TimelinePoint> = sequence {
         val json = JsonReader(reader)
         if (json.peek() != JsonToken.BEGIN_OBJECT) return@sequence
         json.beginObject()
@@ -32,7 +39,7 @@ object TimelineParser {
             when (json.nextName()) {
                 "semanticSegments" -> {
                     json.beginArray()
-                    while (json.hasNext()) readSegment(json)
+                    while (json.hasNext()) readSegment(json, onSkippedVisit)
                     json.endArray()
                 }
                 "rawSignals" -> {
@@ -46,7 +53,7 @@ object TimelineParser {
         json.endObject()
     }
 
-    private suspend fun SequenceScope<TimelinePoint>.readSegment(json: JsonReader) {
+    private suspend fun SequenceScope<TimelinePoint>.readSegment(json: JsonReader, onSkippedVisit: () -> Unit) {
         var start: Long? = null
         var end: Long? = null
         var visit: Pair<Double, Double>? = null
@@ -83,6 +90,10 @@ object TimelineParser {
         val from = start ?: return
         val to = end ?: return
         visit?.let { (latitude, longitude) ->
+            if (to < from || to - from > LONGEST_VISIT_MS) {
+                onSkippedVisit()
+                return@let
+            }
             var time = from
             while (time < to) {
                 yield(TimelinePoint(time, latitude, longitude))
@@ -172,9 +183,12 @@ object TimelineParser {
         return latitude to longitude
     }
 
+    /** A time as milliseconds since 1970, or null when it cannot be read or lies beyond what that can count. */
     private fun parseTime(text: String?): Long? = try {
         text?.let { OffsetDateTime.parse(it).toInstant().toEpochMilli() }
-    } catch (e: DateTimeParseException) {
+    } catch (e: DateTimeException) {
+        null
+    } catch (e: ArithmeticException) {
         null
     }
 

@@ -441,6 +441,10 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">Added %1$d new of %2$d locations (%3$s).</item>
         <item quantity="other">Added %1$d new of %2$d locations (%3$s).</item>
     </plurals>
+    <plurals name="timeline_visits_skipped">
+        <item quantity="one">%d stay was left out: it lasted more than a week, or ended before it began.</item>
+        <item quantity="other">%d stays were left out: they lasted more than a week, or ended before they began.</item>
+    </plurals>
     <plurals name="stars">
         <item quantity="one">%d star</item>
         <item quantity="other">%d stars</item>

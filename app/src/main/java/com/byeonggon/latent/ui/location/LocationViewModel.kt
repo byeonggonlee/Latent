@@ -94,13 +94,15 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     private fun describe(result: TimelineImporter.Result): String {
         val from = result.from
         val to = result.to
+        val skipped = if (result.skippedVisits > 0) plural(R.plurals.timeline_visits_skipped, result.skippedVisits) else null
         if (result.parsed == 0 || from == null || to == null) {
-            return text(R.string.timeline_empty)
+            return listOfNotNull(text(R.string.timeline_empty), skipped).joinToString(" ")
         }
         val zone = ZoneId.systemDefault()
         val format = localFormat("yMMMd")
         val range = format.format(Instant.ofEpochMilli(from).atZone(zone)) + " – " + format.format(Instant.ofEpochMilli(to).atZone(zone))
-        return getApplication<Application>().resources.getQuantityString(R.plurals.timeline_added, result.added, result.added, result.parsed, range)
+        val added = getApplication<Application>().resources.getQuantityString(R.plurals.timeline_added, result.added, result.added, result.parsed, range)
+        return listOfNotNull(added, skipped).joinToString(" ")
     }
 
     private fun text(@StringRes id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
