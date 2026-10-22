@@ -90,6 +90,8 @@ class Geotagger(
             ensureActive()
             val point = locate(item.capturedAt - clockOffsetMs, maxGapMs) ?: continue
             val file = File(item.path)
+            // A file whose own GPS block is damaged keeps it: the track is not written over it, nor stands in for it.
+            if (item.kind != MediaKind.VIDEO && MediaMetadataReader.read(file, item.kind).locationDamaged) continue
             // A photo that another app made is not written to; the place is kept in the database only. One of the
             // library's is not written to while it is being edited or moved.
             if (item.origin == MediaOrigin.LIBRARY) {

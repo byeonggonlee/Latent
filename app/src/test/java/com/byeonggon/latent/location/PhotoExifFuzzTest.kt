@@ -7,6 +7,7 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.fuzz
 import com.byeonggon.latent.ui.viewer.PhotoDetails
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -92,9 +93,31 @@ class PhotoExifFuzzTest {
     }
 
     @Test
-    fun aPlaceOffTheEarthIsNoPlace() {
-        // 200 degrees north, or 1262 east, is nowhere: the photo has no place then.
-        assertNull(MediaMetadataReader.read(photo { setAttribute(ExifInterface.TAG_GPS_LATITUDE, "200/1,0/1,0/1") }, MediaKind.PHOTO).location)
-        assertNull(MediaMetadataReader.read(photo { setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "1262/1,57/1,48/1") }, MediaKind.PHOTO).location)
+    fun aPlaceOffTheEarthIsNoPlaceButLeavesTheBlockMarkedDamaged() {
+        // 200 degrees north, or 1262 east, is nowhere: the photo has no place then, but its GPS block is still its own.
+        for (damaged in listOf(
+            photo { setAttribute(ExifInterface.TAG_GPS_LATITUDE, "200/1,0/1,0/1") },
+            photo { setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "1262/1,57/1,48/1") },
+        )) {
+            val metadata = MediaMetadataReader.read(damaged, MediaKind.PHOTO)
+            assertNull(metadata.location)
+            assertTrue(metadata.locationDamaged)
+        }
+    }
+
+    @Test
+    fun aPhotoWithoutAGpsBlockIsNotDamagedAndOneWithAGoodBlockHasItsPlace() {
+        val bare = MediaMetadataReader.read(
+            photo {
+                for (tag in listOf(ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF, ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF)) setAttribute(tag, null)
+            },
+            MediaKind.PHOTO,
+        )
+        assertNull(bare.location)
+        assertFalse(bare.locationDamaged)
+
+        val good = MediaMetadataReader.read(photo(), MediaKind.PHOTO)
+        assertEquals(37.5665, good.location!!.latitude, 1e-4)
+        assertFalse(good.locationDamaged)
     }
 }

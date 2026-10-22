@@ -134,6 +134,32 @@ class LibraryMovesTest {
     }
 
     @Test
+    fun aPhotoWhoseGpsBlockIsDamagedIsNotGivenAPlaceFromTheTrackNorWrittenOver() = runBlocking {
+        ExifInterface(photo).apply {
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "200/1,0/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "127/1,0/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E")
+            saveAttributes()
+        }
+        val before = photo.readBytes()
+        val stored = item()
+        container.database.locationDao().insertAll(
+            listOf(
+                LocationPointEntity(timestamp = CAPTURED_AT - 60_000, latitude = 37.55, longitude = 126.92, source = LocationSource.APP),
+                LocationPointEntity(timestamp = CAPTURED_AT + 60_000, latitude = 37.55, longitude = 126.92, source = LocationSource.APP),
+            ),
+        )
+
+        assertEquals(0, container.geotagger.tagPending(maxGapMs = 5 * 60_000L))
+
+        assertArrayEquals(before, photo.readBytes())
+        val after = container.database.mediaDao().byId(stored.id)!!
+        assertEquals(null, after.latitude)
+        assertEquals(GeoSource.NONE, after.geoSource)
+    }
+
+    @Test
     fun aDevelopedRawFileComesInWholeWithItsPlaceAndNothingBesideIt() = runBlocking {
         item()
         val raw = File(photo.parentFile, "DSC00002.ARW").apply { writeBytes(SyntheticArw.file(red = 600, green = 900, blue = 700)) }

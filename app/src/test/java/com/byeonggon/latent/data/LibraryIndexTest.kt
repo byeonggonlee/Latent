@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.os.Environment
 import androidx.room.Room
 import com.byeonggon.latent.data.db.AppDatabase
+import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import kotlinx.coroutines.async
@@ -142,6 +143,35 @@ class LibraryIndexTest {
 
         val raw = database.mediaDao().all().single { it.kind == MediaKind.RAW }
         assertEquals(37.55, raw.latitude!!, 1e-4)
+    }
+
+    @Test
+    fun aRawFileWithAGpsBlockOfItsOwnThatIsDamagedIsNotGivenItsCoverJpegsPlace() = runBlocking {
+        val folder = File(storage.root, "2026/2026-10-21").apply { mkdirs() }
+        val cover = File(folder, "PXL_20261021_101500123.RAW-01.COVER.jpg")
+        cover.outputStream().use { Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        ExifInterface(cover).apply {
+            setLatLong(37.55, 126.92)
+            saveAttributes()
+        }
+        // A picture stands in for the raw file: what is read is its Exif, whatever the name says it is.
+        val original = File(folder, "PXL_20261021_101500123.RAW-02.ORIGINAL.dng")
+        original.outputStream().use { Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        ExifInterface(original).apply {
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "200/1,0/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "127/1,0/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E")
+            saveAttributes()
+        }
+
+        assertEquals(2, index.adoptUnknownFiles())
+
+        val items = database.mediaDao().all()
+        assertEquals(37.55, items.single { it.kind == MediaKind.PHOTO }.latitude!!, 1e-4)
+        val raw = items.single { it.kind == MediaKind.RAW }
+        assertEquals(null, raw.latitude)
+        assertEquals(GeoSource.NONE, raw.geoSource)
     }
 
     @Test

@@ -299,6 +299,25 @@ class SyncEngineTest {
     }
 
     @Test
+    fun leavesTheDamagedGpsBlockOfAPhotoAloneWhereATrackCoversIt() = runBlocking {
+        recordTrackAroundCapture()
+        val photo = jpegTakenAt("2026:10:01 12:00:00", "+09:00", gpsLatitude = "200/1,0/1,0/1")
+        val written = File.createTempFile("damaged", ".jpg", context.cacheDir).apply { writeBytes(photo) }
+        val before = ExifInterface(written).getAttribute(ExifInterface.TAG_GPS_LATITUDE)
+        assertEquals("200/1,0/1,0/1", before)
+
+        engine.run(FakeCameraSource(mapOf(remote("DSC00040.JPG", MediaKind.PHOTO, photo) to photo)))
+
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        val item = database.mediaDao().all().single()
+        assertEquals(GeoSource.NONE, item.geoSource)
+        assertEquals(null, item.latitude)
+        // The file is stored as it came: the track is not written over the block it has.
+        assertEquals(before, ExifInterface(File(item.path)).getAttribute(ExifInterface.TAG_GPS_LATITUDE))
+        assertEquals(null, ExifInterface(File(item.path)).latLong?.takeIf { it.first in -90.0..90.0 })
+    }
+
+    @Test
     fun importsOnlyFilesShotWithinTheSelectedDates() = runBlocking {
         val day = 24 * 60 * minute
         val files = mapOf(
@@ -542,7 +561,7 @@ class SyncEngineTest {
         folder: String = "100MSDCF",
     ) = RemoteFile(nextHandle++, name, bytes.size.toLong(), modifiedAt, kind, folder = "$STORAGE:/$folder/")
 
-    private fun jpegTakenAt(dateTime: String, offset: String?): ByteArray {
+    private fun jpegTakenAt(dateTime: String, offset: String?, gpsLatitude: String? = null): ByteArray {
         val file = File.createTempFile("source", ".jpg", context.cacheDir)
         file.outputStream().use {
             Bitmap.createBitmap(64, 48, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it)
@@ -550,6 +569,12 @@ class SyncEngineTest {
         ExifInterface(file).apply {
             setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, dateTime)
             setAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL, offset)
+            if (gpsLatitude != null) {
+                setAttribute(ExifInterface.TAG_GPS_LATITUDE, gpsLatitude)
+                setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+                setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "127/1,0/1,0/1")
+                setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E")
+            }
             saveAttributes()
         }
         return file.readBytes().also { file.delete() }
