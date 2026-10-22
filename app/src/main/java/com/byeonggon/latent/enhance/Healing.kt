@@ -84,12 +84,20 @@ object Healing {
             val right = min(image.width - 1, (centreX + radius).toInt() + 1)
             val top = max(0, (centreY - radius).toInt())
             val bottom = min(image.height - 1, (centreY + radius).toInt() + 1)
+            if (right < left || bottom < top) continue
+            // The patch is copied out first: a source dragged over the spot itself would otherwise be read where this spot
+            // has already been healed, and smeared. Spots before it are part of the picture it copies.
+            val patchWidth = right - left + 1
+            val source = ShortArray(patchWidth * (bottom - top + 1))
+            for (row in top..bottom) for (column in left..right) {
+                val sourceColumn = (column + shiftX).coerceIn(0, image.width - 1)
+                val sourceRow = (row + shiftY).coerceIn(0, image.height - 1)
+                source[(row - top) * patchWidth + column - left] = plane[sourceRow * image.width + sourceColumn]
+            }
             for (row in top..bottom) for (column in left..right) {
                 val distance = sqrt((column + 0.5f - centreX) * (column + 0.5f - centreX) + (row + 0.5f - centreY) * (row + 0.5f - centreY)) / radius
                 if (distance >= 1f) continue
-                val sourceColumn = (column + shiftX).coerceIn(0, image.width - 1)
-                val sourceRow = (row + shiftY).coerceIn(0, image.height - 1)
-                val patch = plane[sourceRow * image.width + sourceColumn] + correction
+                val patch = source[(row - top) * patchWidth + column - left] + correction
                 val fade = ((1f - distance) / FEATHER).coerceAtMost(1f)
                 val weight = fade * fade * (3f - 2f * fade)
                 val at = row * image.width + column
