@@ -316,7 +316,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="add_brush">+ Brush</string>
     <string name="add_linear">+ Linear</string>
     <string name="add_radial">+ Radial</string>
-    <string name="masks_hint">Add a mask to edit only part of the photo. Subject finds the person, animal or thing that stands out, and background everything else, both worked out on the phone. A brush covers where you paint, linear one side such as the sky, radial the area around a person or thing, colour only what is a chosen colour, such as the blue of the sky. Any mask can also be held to one colour.</string>
+    <string name="masks_hint">Add a mask to edit only part of the photo. Subject finds the person, animal or thing that stands out, background everything else, and sky the sky, all worked out on the phone. A brush covers where you paint, linear one side such as the sky, radial the area around a person or thing, colour only what is a chosen colour, such as the blue of the sky. Any mask can also be held to one colour.</string>
     <string name="invert">Invert</string>
     <string name="delete_mask">Delete mask</string>
     <string name="paint">Paint</string>
@@ -530,7 +530,10 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="flag_filter_clear">Show every flag again</string>
     <string name="trash_rejected">Trash rejected photos…</string>
     <string name="trash_rejected_question">Trash the rejected photos?</string>
-    <string name="trash_rejected_detail">They go to the trash, where they stay for 30 days. Photos of other apps are asked about by the system first.</string>
+    <plurals name="trash_rejected_detail">
+        <item quantity="one">They go to the trash, where they stay for %d day. Photos of other apps are asked about by the system first.</item>
+        <item quantity="other">They go to the trash, where they stay for %d days. Photos of other apps are asked about by the system first.</item>
+    </plurals>
     <string name="no_rejected">No photos are rejected.</string>
     <plurals name="flagged_count">
         <item quantity="one">%1$d photo flagged.</item>

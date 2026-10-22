@@ -170,9 +170,10 @@ fun LibraryScreen(
     if (dialogs.about) AboutDialog(onDismiss = { dialogs.about = false })
     if (dialogs.albums) AlbumsDialog(state, viewModel, onDismiss = { dialogs.albums = false })
     if (dialogs.trashingRejected) {
+        val keptDays = LocalContext.current.appContainer.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.trashKeptDays
         ConfirmDeletion(
             stringResource(R.string.trash_rejected_question),
-            stringResource(R.string.trash_rejected_detail),
+            pluralStringResource(R.plurals.trash_rejected_detail, keptDays, keptDays),
             { dialogs.trashingRejected = false },
         ) { viewModel.trashRejected() }
     }

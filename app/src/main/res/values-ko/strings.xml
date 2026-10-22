@@ -291,7 +291,7 @@
     <string name="add_brush">+ 브러시</string>
     <string name="add_linear">+ 선형</string>
     <string name="add_radial">+ 원형</string>
-    <string name="masks_hint">사진의 일부분만 보정하려면 마스크를 추가하세요. 피사체는 눈에 띄는 사람·동물·사물을, 배경은 그 나머지를 휴대전화 안에서 찾아 줍니다. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에, 색상은 하늘의 파랑처럼 고른 색에만 씁니다. 어떤 마스크든 한 가지 색으로 한정할 수 있습니다.</string>
+    <string name="masks_hint">사진의 일부분만 보정하려면 마스크를 추가하세요. 피사체는 눈에 띄는 사람·동물·사물을, 배경은 그 나머지를, 하늘은 하늘을 휴대전화 안에서 찾아 줍니다. 브러시는 칠한 곳에, 선형은 하늘처럼 한쪽 전체에, 원형은 인물이나 사물 주변에, 색상은 하늘의 파랑처럼 고른 색에만 씁니다. 어떤 마스크든 한 가지 색으로 한정할 수 있습니다.</string>
     <string name="invert">반전</string>
     <string name="delete_mask">마스크 삭제</string>
     <string name="paint">칠하기</string>
@@ -496,7 +496,9 @@
     <string name="flag_filter_clear">모든 플래그 다시 보기</string>
     <string name="trash_rejected">제외한 사진 휴지통으로…</string>
     <string name="trash_rejected_question">제외한 사진을 휴지통에 넣을까요?</string>
-    <string name="trash_rejected_detail">휴지통에 30일 동안 보관됩니다. 다른 앱의 사진은 시스템이 먼저 확인합니다.</string>
+    <plurals name="trash_rejected_detail">
+        <item quantity="other">휴지통에 %d일 동안 보관됩니다. 다른 앱의 사진은 시스템이 먼저 확인합니다.</item>
+    </plurals>
     <string name="no_rejected">제외한 사진이 없습니다.</string>
     <plurals name="flagged_count">
         <item quantity="other">사진 %1$d장에 플래그를 표시했습니다.</item>

@@ -291,7 +291,7 @@
     <string name="add_brush">+ ブラシ</string>
     <string name="add_linear">+ 線形</string>
     <string name="add_radial">+ 円形</string>
-    <string name="masks_hint">マスクを追加すると、写真の一部だけを編集できます。被写体は目立つ人・動物・物を、背景はそれ以外をスマートフォン上で検出します。ブラシは塗った部分、線形は空のような片側、円形は人や物の周りに、カラーは空の青のように選んだ色だけに効きます。どのマスクも一つの色に限定できます。</string>
+    <string name="masks_hint">マスクを追加すると、写真の一部だけを編集できます。被写体は目立つ人・動物・物を、背景はそれ以外を、空は空をスマートフォン上で検出します。ブラシは塗った部分、線形は空のような片側、円形は人や物の周りに、カラーは空の青のように選んだ色だけに効きます。どのマスクも一つの色に限定できます。</string>
     <string name="invert">反転</string>
     <string name="delete_mask">マスクを削除</string>
     <string name="paint">塗る</string>
@@ -496,7 +496,9 @@
     <string name="flag_filter_clear">すべてのフラグをもう一度表示</string>
     <string name="trash_rejected">除外した写真をゴミ箱へ…</string>
     <string name="trash_rejected_question">除外した写真をゴミ箱に入れますか？</string>
-    <string name="trash_rejected_detail">ゴミ箱に30日間保管されます。ほかのアプリの写真は、先にシステムが確認します。</string>
+    <plurals name="trash_rejected_detail">
+        <item quantity="other">ゴミ箱に %d 日間保管されます。ほかのアプリの写真は、先にシステムが確認します。</item>
+    </plurals>
     <string name="no_rejected">除外した写真はありません。</string>
     <plurals name="flagged_count">
         <item quantity="other">写真 %1$d 枚にフラグをつけました。</item>
