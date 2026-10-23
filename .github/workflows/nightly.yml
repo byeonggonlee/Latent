@@ -51,7 +51,6 @@ jobs:
     outputs:
       signed: ${{ steps.version.outputs.signed }}
       tag: ${{ steps.version.outputs.tag }}
-      file: ${{ steps.version.outputs.file }}
       day: ${{ steps.version.outputs.day }}
       code: ${{ steps.version.outputs.code }}
     env:
@@ -173,10 +172,17 @@ jobs:
       - name: Publish
         env:
           TAG: ${{ needs.nightly.outputs.tag }}
-          FILE: ${{ needs.nightly.outputs.file }}
           DAY: ${{ needs.nightly.outputs.day }}
           CODE: ${{ needs.nightly.outputs.code }}
         run: |
+          # The APK's name is found in what was downloaded, not passed from the build job as an output: the name holds
+          # "latent", which a secret (the key alias) also holds, and Actions drops a job output that holds a secret.
+          shopt -s nullglob
+          apks=(latent-*.apk)
+          if [ "${#apks[@]}" != 1 ] || [ ! -f "${apks[0]}" ]; then
+            echo "::error::Expected one latent-*.apk in the artifact, found ${#apks[@]}."; exit 1
+          fi
+          FILE="${apks[0]}"
           # The APK the build signed, as it left it.
           sha256sum -c "$FILE.sha256"
           gh release create "$TAG" "$FILE" "$FILE.sha256" \
