@@ -4,7 +4,7 @@ What is open right now, by who has to move. The longer list of features is in [`
 phone can answer is in [`DEVICE_CHECKS.md`](DEVICE_CHECKS.md), how builds go out is in [`RELEASES.md`](RELEASES.md), which
 agent (Claude Code, Codex or Antigravity) is on what in [`HANDOFF.md`](HANDOFF.md), and the owner's decisions on how
 the app is built in [`architecture/decisions.md`](architecture/decisions.md).
-Last updated 2026-10-22.
+Last updated 2026-10-23.
 
 ## Waiting for the owner
 
@@ -46,6 +46,16 @@ Last updated 2026-10-22.
       Korean strings for wording that is off. Source is public; no photos or places are ever sent.
 
 ## Ready to do (this side)
+
+- [ ] **Repeated import from the same folder** (owner report, 2026-10-23): SC-57G on
+      `latent-0.1.0-nightly.20261023-347-arm64-v8a`, summary item 5 failed: "같은 폴더에서 같은 이미지가 계속 당겨짐".
+      Claude Code follow-up: distinguish repeated comparison transfers from actual duplicate imports, reproduce on
+      the reported route, then inspect durable import/identity state. Root cause is not established and no fix is
+      claimed. See [the device report](device-results/2026-10-23-sc-57g.md) and HANDOFF's Claude Code queue.
+- [ ] **Remaining SC-57G summary checks**: items 6 (disconnect/space failure and retry), 24 (LUT/preset import;
+      no input available), and 26–28 (same-phone backup/restore, cross-phone restore, cancellation rollback) are
+      unverified on nightly 347. The other 27 summary items were reported working by the owner; detailed GPU,
+      timing/memory and format-specific checks remain separate. See [the report](device-results/2026-10-23-sc-57g.md).
 
 - [x] **`BackupSizeTest` on CI** (2026-10-21): its next failure was read. The heap's growth by class was about 1.2 MB
       of 10.9 MB; the rest was some 300,000 closed cursors waiting for their finalizers, which the restore made by

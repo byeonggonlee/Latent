@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Record owner-reviewed SC-57G nightly 347 device results (27 working, 1 failed, 5 unverified); documentation only, direct main push explicitly authorized by owner | `codex/device-results-sc57g` | `docs/DEVICE_CHECKS.md`, `docs/device-results/2026-10-23-sc-57g.md`, `docs/TODO.md`, this board | 2026-10-23 |
 | Codex | Owner-requested follow-up to PR #35: review governance changes through PRs, one deep reviewer by default, evidence-based routing, honest effort reporting, and owner-requested Flash candidate validation after PR #36 | `codex/review-governance` | `AGENTS.md`, `docs/architecture/antigravity-review-orchestration.md`, `docs/architecture/flash-review-evaluation.md`, this board | 2026-10-23 |
 | Claude Code (computer) | Fixes the parser fuzzing found that need review: a backup's limits and its places off the Earth (#31), places off the Earth from Exif and a Timeline (#32), stored edits holding NaN or a crop far outside the picture (#33) | [PR #31](https://github.com/byeonggonlee/Latent/pull/31), [PR #32](https://github.com/byeonggonlee/Latent/pull/32), [PR #33](https://github.com/byeonggonlee/Latent/pull/33) | `backup/`, `camera/ImportedFiles.kt`, `location/MediaMetadataReader.kt`, `location/TimelineParser.kt`, `enhance/PhotoEdit.kt`, `Framing.kt`, `ToneCurve.kt`, `BrushRaster.kt`, `docs/BACKUP_FORMAT.md` | 2026-10-22 |
 
@@ -253,6 +252,23 @@ unmutated file does. That run was exploration only; no test was added under `raw
   frame, a choice to make on the owner's files.
 
 ## For Claude Code
+
+### Owner-reported repeated import — SC-57G nightly 347 (2026-10-23)
+
+- **Why**: device-check summary item 5 failed. The owner reports "같은 폴더에서 같은 이미지가 계속 당겨짐"
+  (the same image keeps being fetched from the same folder). Repeated transfers or duplicate library files would
+  undermine import skip behavior; whether new duplicate files were actually created is not yet established.
+- **Evidence**: [owner-reviewed report](device-results/2026-10-23-sc-57g.md), device `SC-57G`, installed
+  `latent-0.1.0-nightly.20261023-347-arm64-v8a`. MTP versus card/drive and logs were not supplied.
+- **Where to investigate**: the reported import route and its identity/comparison/claim persistence, including
+  `camera/SyncEngine.kt`, `camera/ImportedFiles.kt` and card source handling as applicable. These are investigation
+  candidates, not a diagnosed root cause.
+- **Test first / Done when**: distinguish repeated comparison reads from new duplicate imports; reproduce a second
+  import of unchanged files from the same source folder, including after reopening the app. Add a failing regression
+  for the confirmed mechanism, preserve consent and incomplete-transfer behavior, and confirm the fix on the phone.
+- **Risk / not to do**: do not delete the owner's photos, clear import records or skip whole-file verification to
+  suppress the symptom. This entry records a follow-up; the current task authorizes documentation, not a code fix.
+
 
 Confirmed legacy-review findings follow below. Its own next items, so that Codex does not pick them too, in this order (set by the owner
 2026-10-21):
@@ -440,6 +456,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-23 | Codex | Recorded the owner-tested and owner-reviewed SC-57G nightly 347 summary: 27 working, item 5 failed (same image repeatedly fetched from the same folder), 5 unverified. Linked the exact 33-item report, retained detailed test limits, and queued investigation for Claude Code. Owner explicitly authorized direct main publication; documentation only, no fix claimed | [Device report](device-results/2026-10-23-sc-57g.md), `codex/device-results-sc57g` |
 | 2026-10-23 | Claude Code (cloud) | A licence check in CI: the Licences workflow (`scripts/check-licenses.py`) fails when a library of the release build, the vendored code under `third_party/` or a source file is under a copyleft licence (GPL, LGPL, AGPL, MPL, EPL, CDDL, SSPL, EUPL, non-commercial) or one it does not know; `app/license-exceptions.txt` only fills in what a POM leaves out. 189 libraries pass. Codex's review found three fail-open paths (unresolved dependencies, exceptions overriding a declared GPL, unrecognised vendored licence files), fixed in `dcc59fc`; Codex LGTM | [PR #39](https://github.com/byeonggonlee/Latent/pull/39), merged `0ee1315` |
 | 2026-10-22 | Antigravity (Gemini 4 Argon) | Established Antigravity's review and multi-model orchestration guidelines (`docs/architecture/antigravity-review-orchestration.md`), redistributed review responsibilities across Claude Code, Codex, and Antigravity (`Gemini 3.8 Flash` mechanical dispatcher, `Gemini 4 Argon` and `Claude Opus 5.5` deep reviewers) while keeping code authoring strictly with Claude Code and Codex, defined `Claude Sonnet 5.5` authoring and fallback-review rules with minimum `high` (extended thinking) reasoning effort, and incorporated both rounds of Claude Sonnet 5.5's review findings across `AGENTS.md`, `GEMINI.md`, `docs/architecture/decisions.md`, and `docs/HANDOFF.md` | [PR #35](https://github.com/byeonggonlee/Latent/pull/35) |
 | 2026-10-22 | Claude Code (computer) | Seeded fuzz tests (`*FuzzTest`, `Fuzz.kt`) for the parsers of outside input: backup zips, Timeline exports, Exif, JPEG headers and gain maps, Lightroom presets, `.cube` LUTs, stored LUT and mask files, stored edits, camera listings and import keys. On `main` with their fixes: a crash importing a well-formed preset (`LightroomPreset.kt:103`), NaN taken from presets and stored LUTs, a .cube domain no Float spreads over, 3 MB and 64 MB set aside for a stored LUT's or mask's header alone. The rest went to PRs #31, #32 and #33 (under *For Codex*) | `557c40a` |

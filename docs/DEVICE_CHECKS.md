@@ -1,7 +1,7 @@
 # Checks that need a real phone
 
 Everything here passes on the JVM (Robolectric), but only a phone can say how it feels, looks and
-performs. Tick them off as they are tried; add what a try turns up. Last updated 2026-10-22.
+performs. Tick them off as they are tried; add what a try turns up. Last updated 2026-10-23.
 
 The sections run in the order of a pass on the phone after a nightly is installed: install or upgrade, import,
 library, editor (masks, HDR and phone raw files included), backup and restore, location and the map, sharing, then
@@ -18,6 +18,15 @@ A nightly is a release build signed with the release key. The tests that run on 
 (`com.latentimage.latent.debug`), with its own database and its own library folder, `DCIM/Latent Debug`: it installs
 beside the nightly and leaves the nightly's photos and data alone. Those checks are together at the end, under "With
 a build from the computer".
+
+## Owner-reported results
+
+- **2026-10-23, SC-57G**, `latent-0.1.0-nightly.20261023-347-arm64-v8a`: the owner reviewed the
+  [33-item summary](device-results/2026-10-23-sc-57g.md): **27 working, 1 failed, 5 unverified**.
+  Import duplicate prevention/comparison (item 5) failed: the same image keeps being fetched from the same folder.
+  Disconnect/space-failure handling, LUT/preset import, and backup/restore/cancellation remain unverified.
+  This report covers the summary's stated scope; the detailed subcases and instrumented checks below are not all
+  marked complete from it. The failure's cause and independent reproduction are not yet established.
 
 ## 1. Install or upgrade
 
