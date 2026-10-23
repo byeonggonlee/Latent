@@ -112,5 +112,10 @@ Gradle's `connectedAndroidTest` uninstalls it afterwards, taking its database wi
 
 Licensed under the [Apache License 2.0](LICENSE).
 
+What ships has to allow that: CI's *Licences* workflow (`scripts/check-licenses.py`) fails when a library of the
+release build, the vendored code under `third_party/` or a source file is under the GPL, the LGPL, the AGPL or
+another copyleft licence, or under one it does not know. A library whose POM names no licence is listed, with the
+licence read on its project's page, in `app/license-exceptions.txt`.
+
 Sony and ZV-E10 are trademarks of Sony Group Corporation; Google Timeline is a feature of Google
 LLC. This project is not affiliated with or endorsed by either.
