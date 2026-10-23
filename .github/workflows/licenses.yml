@@ -1,0 +1,46 @@
+name: Licences
+
+# Latent is under Apache 2.0 and goes to Play: nothing that ships may be under the GPL or another copyleft licence
+# without the owner's decision. scripts/check-licenses.py reads the licences of the release build's libraries, of the
+# vendored code under third_party/ and of the repository's own sources, and fails on a copyleft or unknown one.
+# A table of every library and its licence is in the run's summary.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: licenses-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # The Android Gradle plugin lists the libraries of a variant only with an SDK it may write into; as in build.yml.
+      - name: Android SDK
+        run: |
+          sudo chown "$USER" "$ANDROID_HOME" "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+          sudo mkdir -p "$ANDROID_HOME/licenses"
+          sudo chown -R "$USER" "$ANDROID_HOME/licenses"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          # The build workflow's cache is the one to keep; this job only reads it.
+          cache-read-only: true
+
+      - name: Licences
+        run: scripts/check-licenses.py
