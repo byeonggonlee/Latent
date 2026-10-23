@@ -27,6 +27,11 @@ a build from the computer".
   Disconnect/space-failure handling, LUT/preset import, and backup/restore/cancellation remain unverified.
   This report covers the summary's stated scope; the detailed subcases and instrumented checks below are not all
   marked complete from it. The failure's cause and independent reproduction are not yet established.
+- **2026-10-23, later the same day**, the owner: item 5 was a version mismatch (the import works on the right build);
+  item 26 (backup, and restoring it on the same phone) and item 28 (cancelling a restore) work; the LUT import with
+  the test files of `latent-lut-preset-test` (a warm, a mono, a 65-point and an identity cube; a 1D, a short and a
+  non-LUT file refused) works. Not said in that message: the Lightroom presets of the same set. Item 27 (restoring on
+  another phone) waits: the owner judges it rare. The detailed subcases below are still not ticked from these.
 
 ## 1. Install or upgrade
 
