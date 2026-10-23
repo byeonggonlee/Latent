@@ -30,7 +30,7 @@ a build from the computer".
 - **2026-10-23, later the same day**, the owner: item 5 was a version mismatch (the import works on the right build);
   item 26 (backup, and restoring it on the same phone) and item 28 (cancelling a restore) work; the LUT import with
   the test files of `latent-lut-preset-test` (a warm, a mono, a 65-point and an identity cube; a 1D, a short and a
-  non-LUT file refused) works. Not said in that message: the Lightroom presets of the same set. Item 27 (restoring on
+  non-LUT file refused) works, and so do the Lightroom presets of the same set. Item 27 (restoring on
   another phone) waits: the owner judges it rare. The detailed subcases below are still not ticked from these.
 
 ## 1. Install or upgrade
