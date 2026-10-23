@@ -72,6 +72,8 @@ TEXTS = [
     (r"GNU LESSER GENERAL PUBLIC LICENSE|GNU LIBRARY GENERAL PUBLIC LICENSE", "LGPL"),
     (r"GNU GENERAL PUBLIC LICENSE", "GPL"),
     (r"Mozilla Public License", "MPL"),
+    (r"Eclipse Public License", "EPL"),
+    (r"COMMON DEVELOPMENT AND DISTRIBUTION LICENSE", "CDDL"),
     (r"Apache License,?\s+Version 2\.0", "Apache-2.0"),
     (r"Permission is hereby granted, free of charge, to any person obtaining a copy", "MIT"),
     (r"Redistribution and use in source and binary forms", "BSD-3-Clause"),
@@ -86,7 +88,8 @@ SOURCE_SUFFIXES = {".kt", ".kts", ".java", ".c", ".cc", ".cpp", ".h", ".hpp", ".
                    ".py", ".sh", ".js", ".gradle", ".pro", ".xml", ".patch"}
 NOT_SCANNED = ("app/src/main/assets/licenses/", "scripts/check-licenses.py")
 
-DEPENDENCY = re.compile(r"^[| +\\-]*--- (?P<coordinate>[^\s]+)(?: -> (?P<resolved>[^\s]+))?(?P<marks>(?: \([a-z*]\))*)$")
+# A node of Gradle's dependency tree, and the marks at its end: "(*)" seen before, "(c)" a constraint, "(n)" not resolved.
+NODE = re.compile(r"^[| ]*[+\\]--- (?P<body>.*?)(?P<marks>(?: \([a-z*]\))*)$")
 
 
 def error(message):
@@ -102,31 +105,37 @@ def classify(text):
 
 
 def modules_of(tree):
-    """The group:name:version of each library in a Gradle dependency tree, with the version Gradle chose."""
-    modules = set()
+    """The group:name:version of each library in a Gradle dependency tree, with the version Gradle chose, and the
+    lines that are not a library Gradle resolved: one it could not resolve is left out of the tree with its own
+    libraries, so a tree with any of them proves nothing about what ships."""
+    modules, unresolved = set(), []
     for line in tree.splitlines():
-        match = DEPENDENCY.match(line.rstrip())
+        match = NODE.match(line.rstrip())
         if not match:
             continue
-        coordinate, resolved, marks = match["coordinate"], match["resolved"], match["marks"]
-        # A constraint is not a library, and "(n)" is one Gradle did not resolve.
-        if "(c)" in marks or "(n)" in marks or coordinate == "project":
+        body, marks = match["body"], match["marks"]
+        if "(c)" in marks or body.startswith("project "):
             continue
+        coordinate, _, resolved = body.partition(" -> ")
         parts = coordinate.split(":")
-        if len(parts) < 2:
+        if "(n)" in marks or "FAILED" in body or len(parts) < 2 or " " in resolved:
+            unresolved.append(line.strip())
             continue
         group, name = parts[0], parts[1]
         if resolved and ":" not in resolved:
             version = resolved
         elif resolved:
             # "a:b:1 -> c:d:2", a library put in another's place.
-            group, name, version = resolved.split(":")[:3]
-        elif len(parts) >= 3:
+            group, name, version = (resolved.split(":") + [""])[:3]
+        elif len(parts) == 3 and "{" not in parts[2]:
             version = parts[2]
         else:
+            version = ""
+        if not version:
+            unresolved.append(line.strip())
             continue
         modules.add((group, name, version))
-    return modules
+    return modules, unresolved
 
 
 _poms = {}
@@ -212,12 +221,15 @@ def read_exceptions():
 
 
 def check_libraries(tree, summary):
-    modules = sorted(modules_of(tree))
+    modules, unresolved = modules_of(tree)
+    modules = sorted(modules)
+    for line in unresolved:
+        error(f"Gradle did not resolve '{line}', so it and the libraries it brings were not checked.")
     if not modules:
         error("No library was found in the release build's dependency list, so none was checked.")
         return False
     exceptions = read_exceptions()
-    ok = True
+    ok = not unresolved
     used_exceptions = set()
     # The POMs are fetched side by side first; a hundred one after the other take a minute.
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -230,13 +242,14 @@ def check_libraries(tree, summary):
             summary.append(f"| `{module}:{version}` | POM not found | | ❌ |")
             ok = False
             continue
-        if module in exceptions:
+        spdx = [classify(n) or classify(u) for n, u in declared]
+        source = "; ".join(n or u for n, u in declared) or "nothing"
+        # An exception stands in for what the POM leaves out or names in a way not known here, never for a licence
+        # it does name: a later version that declares the GPL is refused whatever the exception says.
+        if module in exceptions and (not spdx or None in spdx):
             used_exceptions.add(module)
-            spdx = [exceptions[module]]
-            source = "app/license-exceptions.txt"
-        else:
-            spdx = [classify(n) or classify(u) for n, u in declared]
-            source = "; ".join(n or u for n, u in declared) or "nothing"
+            spdx = [s for s in spdx if s is not None] + [exceptions[module]]
+            source += " (app/license-exceptions.txt)"
         if not spdx or None in spdx:
             error(f"{module}:{version}: its POM declares {source!r}, which is not a licence this check knows. Read the "
                   f"licence on the project's page and, if it is permissive, add '{module} <SPDX-id>' to "
@@ -251,8 +264,11 @@ def check_libraries(tree, summary):
         else:
             verdict = "✅"
         summary.append(f"| `{module}:{version}` | {source} | {', '.join(s or '?' for s in spdx)} | {verdict} |")
-    for module in sorted(set(exceptions) - used_exceptions):
+    present = {f"{g}:{n}" for g, n, _ in modules}
+    for module in sorted(set(exceptions) - present):
         print(f"::warning::app/license-exceptions.txt names {module}, which the release build no longer has.")
+    for module in sorted((set(exceptions) & present) - used_exceptions):
+        print(f"::warning::app/license-exceptions.txt names {module}, whose POM names its licence: the line is not used.")
     print(f"{len(modules)} libraries of the release build checked.")
     return ok
 
@@ -264,22 +280,23 @@ def check_vendored(summary):
     summary.append("\n| Vendored | Licence | |\n|---|---|---|")
     for folder in folders:
         files = [p for p in folder.iterdir() if p.is_file() and re.match(r"(LICEN[CS]E|COPYING)", p.name, re.I)]
-        found = set()
-        for f in files:
-            text = f.read_text(errors="replace")
-            for pattern, spdx in TEXTS:
-                if re.search(pattern, text, re.IGNORECASE):
-                    found.add(spdx)
-                    break
         name = folder.relative_to(ROOT)
+        # Every licence file counts on its own: one not recognised, beside an MIT one, may be what the code is under.
+        found, folder_ok = [], bool(files)
+        for f in sorted(files):
+            text = f.read_text(errors="replace")
+            spdx = next((s for pattern, s in TEXTS if re.search(pattern, text, re.IGNORECASE)), None)
+            found.append(spdx or "?")
+            if spdx is None:
+                error(f"{f.relative_to(ROOT)} is not a licence this check knows; a person has to read it.")
+                folder_ok = False
+            elif spdx not in ALLOWED:
+                error(f"{f.relative_to(ROOT)} is under {spdx}, which Latent may not ship without the owner's decision.")
+                folder_ok = False
         if not files:
             error(f"{name} has no LICENSE file, so its licence is not known.")
-            ok = False
-        elif not found or not found <= ALLOWED:
-            error(f"{name} is under {', '.join(sorted(found)) or 'a licence this check does not know'}, which Latent "
-                  f"may not ship without the owner's decision.")
-            ok = False
-        summary.append(f"| `{name}` | {', '.join(sorted(found)) or '?'} | {'✅' if found and found <= ALLOWED else '❌'} |")
+        ok = ok and folder_ok
+        summary.append(f"| `{name}` | {', '.join(found) or '?'} | {'✅' if folder_ok else '❌'} |")
     return ok
 
 

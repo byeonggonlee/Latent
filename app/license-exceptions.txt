@@ -1,5 +1,6 @@
 # Libraries of the release build whose POM declares no licence, or one scripts/check-licenses.py does not recognise.
 # One per line: group:name and the SPDX identifier of the licence a person read on the project's own page, with
-# where it was read. The licence is still held to the check's permissive list: a line here cannot let a GPL library in.
+# where it was read. It only fills in what the POM leaves out: a licence the POM does name is still the one checked,
+# and the exception is held to the check's permissive list, so a line here cannot let a GPL library in.
 #
 # group:name                       SPDX-id      # where the licence was read
