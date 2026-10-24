@@ -47,15 +47,16 @@ Last updated 2026-10-23.
 
 ## Ready to do (this side)
 
-- [ ] **Repeated import from the same folder** (owner report, 2026-10-23): SC-57G on
-      `latent-0.1.0-nightly.20261023-347-arm64-v8a`, summary item 5 failed: "같은 폴더에서 같은 이미지가 계속 당겨짐".
-      Claude Code follow-up: distinguish repeated comparison transfers from actual duplicate imports, reproduce on
-      the reported route, then inspect durable import/identity state. Root cause is not established and no fix is
-      claimed. See [the device report](device-results/2026-10-23-sc-57g.md) and HANDOFF's Claude Code queue.
-- [ ] **Remaining SC-57G summary checks**: items 6 (disconnect/space failure and retry), 24 (LUT/preset import;
-      no input available), and 26–28 (same-phone backup/restore, cross-phone restore, cancellation rollback) are
-      unverified on nightly 347. The other 27 summary items were reported working by the owner; detailed GPU,
-      timing/memory and format-specific checks remain separate. See [the report](device-results/2026-10-23-sc-57g.md).
+- [x] **Repeated import from the same folder** (owner report, 2026-10-23): summary item 5 of the SC-57G run on nightly
+      347 failed, then turned out to be a mismatch of versions between what was tried and the nightly: on the right
+      build the import works. Not reproduced, no defect found, nothing fixed. See
+      [the device report](device-results/2026-10-23-sc-57g.md).
+- [ ] **Remaining SC-57G summary checks**: item 6 (disconnecting the camera and running out of space during a sync, then
+      carrying on) and item 27 (restoring a backup on another phone, which the owner judges rare and can wait). Items
+      24 (LUTs and Lightroom presets), 26 (backup and same-phone restore) and 28 (cancelling a restore) work, with
+      the other 27 and item 5: 31 of 33. Detailed GPU/CPU numbers, timing and memory, 16 KB pages and the debug
+      instrumentation checks remain separate (DEVICE_CHECKS, section 9). See
+      [the report](device-results/2026-10-23-sc-57g.md).
 
 - [x] **`BackupSizeTest` on CI** (2026-10-21): its next failure was read. The heap's growth by class was about 1.2 MB
       of 10.9 MB; the rest was some 300,000 closed cursors waiting for their finalizers, which the restore made by
