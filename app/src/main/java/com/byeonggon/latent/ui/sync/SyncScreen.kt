@@ -56,10 +56,11 @@ import java.time.ZoneOffset
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.R
+import com.byeonggon.latent.ui.location.LocationCard
 import com.byeonggon.latent.ui.common.localFormat
 
 @Composable
-fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
+fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = viewModel()) {
     val connection by viewModel.connection.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -82,7 +83,7 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(stringResource(R.string.camera_sync), style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.tab_import), style = MaterialTheme.typography.headlineMedium)
         if (!storageGranted) StorageAccessCard()
 
         SectionCard(stringResource(R.string.camera)) {
@@ -163,6 +164,9 @@ fun SyncScreen(viewModel: SyncViewModel = viewModel()) {
                 }
             }
         }
+
+        // Locations are put on photos as they come in: whether the phone is recording is checked here, before a shoot.
+        onOpenLocation?.let { LocationCard(onOpen = it) }
 
         SyncStatus(syncState, onCancel = viewModel::cancel, onCompare = viewModel::compareLookAlikes)
     }

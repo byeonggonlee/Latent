@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import kotlinx.coroutines.runBlocking
@@ -75,12 +76,14 @@ class TouchTargetTest {
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithContentDescription("DSC00001.JPG").fetchSemanticsNodes().isNotEmpty() }
         val found = linkedMapOf<String, List<String>>()
         found["library"] = tooSmall()
-        compose.onNodeWithText("카메라").performClick()
-        found["camera"] = tooSmall()
+        compose.onNodeWithText("가져오기").performClick()
+        found["import"] = tooSmall()
         compose.onNodeWithText("지도").performClick()
         found["map"] = tooSmall()
-        compose.onNodeWithText("위치").performClick()
+        compose.onNodeWithText("가져오기").performClick()
+        compose.onNodeWithText("카메라 시계, 타임라인, 위치 넣기").performScrollTo().performClick()
         found["location"] = tooSmall()
+        compose.onNodeWithContentDescription("닫기").performClick()
         compose.onNodeWithText("보관함").performClick()
         compose.onNodeWithContentDescription("DSC00001.JPG").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("편집").fetchSemanticsNodes().isNotEmpty() }

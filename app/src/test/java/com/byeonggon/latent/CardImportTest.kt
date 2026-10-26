@@ -8,6 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -65,7 +67,8 @@ class CardImportTest {
         compose.setContent { SyncScreen() }
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("폴더: Card").fetchSemanticsNodes().isNotEmpty() }
 
-        compose.onNodeWithText("가져오기").performClick()
+        // The button, not the title of the tab, which reads the same.
+        compose.onNode(hasText("가져오기") and hasClickAction()).performClick()
 
         val started = shadowOf(application).nextStartedService
         assertEquals(tree, started.getParcelableExtra("folder", Uri::class.java))
@@ -93,7 +96,7 @@ class CardImportTest {
             compose.onAllNodesWithText("전에 고른 폴더를 읽을 수 없습니다", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        assertEquals(0, compose.onAllNodesWithText("가져오기").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodes(hasText("가져오기") and hasClickAction()).fetchSemanticsNodes().size)
         compose.onNodeWithText("다른 폴더").performClick()
     }
 }

@@ -15,8 +15,7 @@
     <string name="edit_not_saved">%1$s을(를) 저장하지 못했습니다.</string>
     <string name="edit_not_saved_memory">%1$s을(를) 저장하지 못했습니다. 메모리가 부족합니다.</string>
     <string name="tab_library">보관함</string>
-    <string name="tab_camera">카메라</string>
-    <string name="tab_location">위치</string>
+    <string name="tab_import">가져오기</string>
     <string name="filter_all">전체</string>
     <string name="filter_photos">사진</string>
     <string name="filter_raw">RAW</string>
@@ -131,7 +130,6 @@
     <plurals name="share_photos">
         <item quantity="other">사진 %d장</item>
     </plurals>
-    <string name="camera_sync">카메라 동기화</string>
     <string name="camera">카메라</string>
     <string name="no_camera">연결된 카메라가 없습니다.</string>
     <string name="connect_camera_hint">USB-C 케이블로 카메라를 연결하고, 카메라 MENU → 설정 → USB 연결을 \'MTP\'로 맞춰주세요.</string>
@@ -374,6 +372,8 @@
     <string name="location_from_record_video">위치 기록 · 앱에만 저장</string>
     <string name="location_from_record">위치 기록</string>
     <string name="location">위치</string>
+    <string name="location_more">카메라 시계, 타임라인, 위치 넣기</string>
+    <string name="open">열기</string>
     <string name="recording_on">기록 중</string>
     <string name="recording_off">꺼짐</string>
     <string name="no_location_permission">위치 권한이 없어 기록을 시작할 수 없습니다.</string>

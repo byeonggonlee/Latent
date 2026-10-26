@@ -12,7 +12,7 @@ with the phone's location, and develops them, without a cloud or an account.
 ### What it does
 
 - **Imports from a camera over USB (MTP)**, or from its card in a card reader or the camera connected as a drive
-  (Camera tab, "Card or drive"): only what is new, whichever way it came before, or only the days you pick. Raw and
+  (Import tab, "Card or drive"): only what is new, whichever way it came before, or only the days you pick. Raw and
   JPEG of a shot show as one. A camera file that only looks like a photo already in the library (the same name and
   size, after a reinstall or with photos copied from another phone) is copied over and compared before it is left
   out, so a different photo is never skipped; with more than 20 such files or 2 GB of them, the app asks first

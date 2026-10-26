@@ -15,7 +15,7 @@ adb logcat -c; adb logcat -v time SubjectMask:V GpuTone:V GpuDetail:V Graphics:V
    nightly published by a job of its own). The app opens, the library and albums are as before, nothing was lost;
    the About dialog shows this build's version (`0.1.0-nightly.<date>`). The tab bar has no wide empty band over
    its buttons. *DEVICE_CHECKS 1.*
-2. **Import (1 min, new, if the camera or a card reader is at hand).** Camera tab, *Card or drive*, choose the
+2. **Import (1 min, new, if the camera or a card reader is at hand).** Import tab, *Card or drive*, choose the
    card, *Import*: what is new comes in, what came over USB before does not come again. Or connect the camera over
    USB: the sync starts and brings only what is new. *DEVICE_CHECKS 2.*
 3. **Search (1 min).** The magnifying glass: type letters that match nothing, the sheet stays; correct them, it still

@@ -16,8 +16,7 @@
     <string name="edit_not_saved">Could not save %1$s.</string>
     <string name="edit_not_saved_memory">Could not save %1$s: not enough memory.</string>
     <string name="tab_library">Library</string>
-    <string name="tab_camera">Camera</string>
-    <string name="tab_location">Location</string>
+    <string name="tab_import">Import</string>
     <string name="filter_all">All</string>
     <string name="filter_photos">Photos</string>
     <string name="filter_raw">RAW</string>
@@ -149,7 +148,6 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
         <item quantity="one">%d photo</item>
         <item quantity="other">%d photos</item>
     </plurals>
-    <string name="camera_sync">Camera sync</string>
     <string name="camera">Camera</string>
     <string name="no_camera">No camera is connected.</string>
     <string name="connect_camera_hint">Connect the camera with a USB-C cable, and set MENU → Setup → USB Connection to \'MTP\' on the camera.</string>
@@ -399,6 +397,8 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="location_from_record_video">location record · in the app only</string>
     <string name="location_from_record">location record</string>
     <string name="location">Location</string>
+    <string name="location_more">Camera clock, Timeline and adding locations</string>
+    <string name="open">Open</string>
     <string name="recording_on">Recording</string>
     <string name="recording_off">Off</string>
     <string name="no_location_permission">Recording cannot start without location access.</string>

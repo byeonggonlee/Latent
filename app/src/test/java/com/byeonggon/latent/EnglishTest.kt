@@ -4,8 +4,10 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
@@ -40,11 +42,16 @@ class EnglishTest {
         // The large title and the tab.
         compose.onAllNodesWithText("Library").assertCountEquals(2)
 
-        compose.onNodeWithText("Camera").performClick()
-        compose.onNodeWithText("Camera sync").assertIsDisplayed()
+        compose.onNodeWithText("Import").performClick()
+        // The large title and the tab.
+        compose.onAllNodesWithText("Import").assertCountEquals(2)
         compose.onNodeWithText("No camera is connected.").assertIsDisplayed()
 
-        compose.onNodeWithText("Location").performClick()
-        compose.onNodeWithText("Location recording").assertIsDisplayed()
+        // Location is no tab of its own: it opens from the import tab, and goes back there.
+        compose.onNodeWithText("Camera clock, Timeline and adding locations").performScrollTo().performClick()
+        compose.onNodeWithText("Location").assertIsDisplayed()
+        compose.onNodeWithText("Record every").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithText("No camera is connected.").assertIsDisplayed()
     }
 }

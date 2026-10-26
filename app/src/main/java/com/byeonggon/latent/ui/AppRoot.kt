@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -49,9 +48,8 @@ import androidx.compose.ui.res.stringResource
 
 private enum class Tab(@StringRes val label: Int) {
     LIBRARY(R.string.tab_library),
-    SYNC(R.string.tab_camera),
+    SYNC(R.string.tab_import),
     MAP(R.string.tab_map),
-    LOCATION(R.string.tab_location),
 }
 
 @Composable
@@ -63,6 +61,8 @@ fun AppRoot(startOnSync: Boolean) {
 
     var editing by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    // Recording and placing by location is a screen of its own over the tabs, or over the settings it was opened from.
+    var locationOpen by rememberSaveable { mutableStateOf(false) }
     // The photos being compared, as the ids written out with commas: a saved state holds text more surely than lists.
     var comparing by rememberSaveable { mutableStateOf<String?>(null) }
     val tabPositions = LocalContext.current.appContainer.settings.settings
@@ -101,9 +101,15 @@ fun AppRoot(startOnSync: Boolean) {
         return
     }
 
+    if (locationOpen) {
+        LocationScreen(onBack = { locationOpen = false })
+        return
+    }
+
     if (settingsOpen) {
         SettingsScreen(
             onBack = { settingsOpen = false },
+            onOpenLocation = { locationOpen = true },
             onChoosePhoneFolders = {
                 // The folders are chosen in the library, which shows the question.
                 settingsOpen = false
@@ -118,9 +124,8 @@ fun AppRoot(startOnSync: Boolean) {
     val content: @Composable () -> Unit = {
         when (tab) {
             Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it }, onSettings = { settingsOpen = true }, onCompare = { comparing = it.joinToString(",") })
-            Tab.SYNC -> ReadableWidth { SyncScreen() }
+            Tab.SYNC -> ReadableWidth { SyncScreen(onOpenLocation = { locationOpen = true }) }
             Tab.MAP -> MapScreen(onOpen = { viewerItemId = it })
-            Tab.LOCATION -> ReadableWidth { LocationScreen() }
         }
     }
     // A wide window has height to spare less than width: the tabs go down a side, the left unless asked otherwise;
@@ -177,6 +182,5 @@ private fun TabIcon(tab: Tab) {
         Tab.LIBRARY -> Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null)
         Tab.SYNC -> Icon(painterResource(R.drawable.ic_camera), contentDescription = null)
         Tab.MAP -> Icon(Icons.Default.Place, contentDescription = null)
-        Tab.LOCATION -> Icon(Icons.Default.LocationOn, contentDescription = null)
     }
 }

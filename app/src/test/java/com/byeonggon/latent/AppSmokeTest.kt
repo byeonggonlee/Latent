@@ -1,5 +1,6 @@
 package com.byeonggon.latent
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -50,15 +51,18 @@ class AppSmokeTest {
         }
         compose.onNodeWithText(emptyLibrary, substring = true).assertIsDisplayed()
 
-        compose.onNodeWithText("카메라").performClick()
-        compose.onNodeWithText("카메라 동기화").assertIsDisplayed()
+        compose.onNodeWithText("가져오기").performClick()
+        // The large title and the tab.
+        compose.onAllNodesWithText("가져오기").assertCountEquals(2)
         compose.onNodeWithText("연결된 카메라가 없습니다.").assertIsDisplayed()
         compose.onNodeWithText("기간 선택").performScrollTo().performClick()
         compose.onNodeWithText("적용").assertIsDisplayed()
         compose.onNodeWithText("취소").performClick()
 
-        compose.onNodeWithText("위치").performClick()
-        compose.onNodeWithText("위치 기록").assertIsDisplayed()
+        // Location is no tab of its own: recording is switched in a card on the import tab, which opens the rest.
+        compose.onNodeWithText("위치 기록").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("카메라 시계, 타임라인, 위치 넣기").performScrollTo().performClick()
+        compose.onNodeWithText("위치").assertIsDisplayed()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("저장된 위치 0개", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
@@ -67,7 +71,7 @@ class AppSmokeTest {
     @Test
     fun letsFilesDeletedFromThePhoneBeImportedAgain() {
         val notice = "폰에서 지운 파일 1개"
-        compose.onNodeWithText("카메라").performClick()
+        compose.onNodeWithText("가져오기").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText(notice, substring = true).fetchSemanticsNodes().isNotEmpty()
         }

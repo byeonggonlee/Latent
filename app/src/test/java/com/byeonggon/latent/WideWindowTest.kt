@@ -88,7 +88,7 @@ class WideWindowTest {
 
     @Test
     fun putsTheTabsDownTheSideAndThePanelsBesideThePicture() {
-        compose.onNodeWithText("카메라").assertIsDisplayed()
+        compose.onNodeWithText("가져오기").assertIsDisplayed()
         open("DSC00001.JPG")
 
         // The information stands to the right of the photo, not under it.

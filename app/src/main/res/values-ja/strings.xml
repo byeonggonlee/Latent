@@ -15,8 +15,7 @@
     <string name="edit_not_saved">%1$s を保存できませんでした。</string>
     <string name="edit_not_saved_memory">%1$s を保存できませんでした。メモリが足りません。</string>
     <string name="tab_library">ライブラリ</string>
-    <string name="tab_camera">カメラ</string>
-    <string name="tab_location">位置情報</string>
+    <string name="tab_import">取り込み</string>
     <string name="filter_all">すべて</string>
     <string name="filter_photos">写真</string>
     <string name="filter_raw">RAW</string>
@@ -131,7 +130,6 @@
     <plurals name="share_photos">
         <item quantity="other">写真 %d 枚</item>
     </plurals>
-    <string name="camera_sync">カメラの同期</string>
     <string name="camera">カメラ</string>
     <string name="no_camera">カメラがつながっていません。</string>
     <string name="connect_camera_hint">カメラをUSB-Cケーブルでつなぎ、カメラの MENU → セットアップ → USB接続 を「MTP」に設定してください。</string>
@@ -374,6 +372,8 @@
     <string name="location_from_record_video">位置情報の記録 · アプリ内のみ</string>
     <string name="location_from_record">位置情報の記録</string>
     <string name="location">位置情報</string>
+    <string name="location_more">カメラの時計、タイムライン、位置情報の追加</string>
+    <string name="open">開く</string>
     <string name="recording_on">記録中</string>
     <string name="recording_off">オフ</string>
     <string name="no_location_permission">位置情報へのアクセスがないと、記録を始められません。</string>

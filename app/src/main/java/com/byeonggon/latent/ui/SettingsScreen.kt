@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 /** What is set once and then left alone: where the tabs are, light or dark, the size of the grid, the language, how long the trash keeps photos, the internet for maps, which phone folders to list; and the backup of it all. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenLocation: () -> Unit, onChoosePhoneFolders: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val settings = context.appContainer.settings
@@ -177,6 +177,10 @@ fun SettingsScreen(onBack: () -> Unit, onChoosePhoneFolders: () -> Unit) {
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Heading(R.string.settings_camera)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.location_more), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                TextButton(onClick = onOpenLocation) { Text(stringResource(R.string.open)) }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.camera_zone), style = MaterialTheme.typography.bodyLarge)

@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code | Three tabs (Library, Import, Map); Location becomes a screen opened from the Import tab and Settings, as the owner chose after the PR #40 UX review | `claude/three-tabs` | `ui/AppRoot.kt`, `ui/location/`, `ui/sync/SyncScreen.kt`, `ui/SettingsScreen.kt`, strings, their tests, docs naming the tabs | 2026-10-26 |
 
 ## For Codex
 
