@@ -97,7 +97,7 @@ Rules:
 | `workspaceSurround` | `#0F0F0F` | Behind the photo; truly neutral |
 | `workspaceChrome` | `#1A1A1A` | Toolbars, panels, tool tabs |
 | `onWorkspaceChrome` | `#EDEDED` (14.9:1) | Labels, icons |
-| `onWorkspaceChromeVariant` | `#A6A6A6` (7.2:1) | Values, secondary labels |
+| `onWorkspaceChromeVariant` | `#A6A6A6` (7.1:1) | Values, secondary labels |
 | `workspaceAccent` | `#F2B95C` (9.8:1) | Active tool, slider fill, selected mask |
 | `workspaceOutline` | `#6E6E6E` (3.8:1 on surround) | Panel edges where needed; not for lines drawn on the photo |
 | `photoScrim` | black at **≥ 60 %** | Backing for badges and controls laid over a photo |
@@ -107,11 +107,16 @@ Rules:
   comparison or the histogram (as the UX guide already requires).
 - **Over-photo controls and badges** (thumbnail badges, Viewer controls, video controls, map-pin counts) sit on
   `photoScrim` and use `onPhotoScrim`, **whatever the system theme**. Secondary greys and the accent are **not**
-  used as text on a scrim: `#A6A6A6` falls to 2.4:1 and amber to 3.3:1 over a white sky. A scrim of 50 % is not
+  used as text on a scrim: `#A6A6A6` falls to 2.4:1 and amber to 3.2:1 over a white sky. A scrim of 50 % is not
   enough even for white (4.0:1).
 - **Status over a photo:** a failure is a white error icon in a filled `#B3261E` pill with a 1 dp white edge (6.5:1
   for the icon; the pill stands out from bright photos and its white edge from dark ones). Saving is a white
-  progress ring on `photoScrim`. A selected check is a filled `primary` circle with a white check and a white edge.
+  progress ring on `photoScrim`. A selected check is a filled `primary` circle with an **`onPrimary`** check (white
+  in light, `#432C00` in dark: 6.0:1 and 7.4:1) and a double edge, 1 dp white inside 1 dp black, so the circle
+  stands out from both bright and dark photos.
+- **Filled badges with their own paired colours** (the error pill, the selection check) are the exception to "only
+  `onPhotoScrim` over a photo": their content uses the paired on-colour, and their edge is checked against the
+  photo separately.
 - **Lines drawn on the photo itself** (crop frame, grid, brush and healing cursors, mask edges) do **not** get a
   scrim, which would hide the pixels being judged. They use a **double stroke**: 1 dp white inside 1 dp black, so
   one of the two always contrasts with the picture.
@@ -139,7 +144,11 @@ Rules:
   alpha compositing of the encoded values. For a scrim or a translucent layer over a photo, check the worst case:
   over pure white and over pure black.
 - Check every state that changes colour or opacity: pressed, focused, selected, disabled, dragging, dimmed,
-  loading, error.
+  loading, error. Check a filled element's content against its own fill (the selection check's glyph against
+  `primary`), not only the element against the photo.
+- Contrast arithmetic on flat extremes does not prove that a 1 dp line or a double stroke is visible on a busy,
+  patterned photo; rendered screens are inspected too. Disabled controls are checked for being distinguishable,
+  without using the WCAG exception for inactive controls to excuse a quiet but enabled one.
 - These are sRGB calculations. They are not measurements on an HDR or wide-gamut display, which are checked on a
   device.
 
@@ -190,8 +199,11 @@ Rules:
 - **Cards and sections:** 16 dp inner padding, 12 dp between items inside, 16 dp between cards.
 - **List rows:** at least 56 dp for one line and 72 dp for two, growing with wrapped or scaled text; the whole row
   is the target when it has one action.
-- **Measure the space you actually have:** layout decisions use the width and height left after the navigation rail
-  or bar, system insets, the hinge and the keyboard, not the window class alone.
+- **Measure in two steps.** First, the **window width** (the app's window after system insets, before Latent's own
+  navigation) chooses the navigation: bottom bar below 600 dp, rail from 600 dp, unless the tab-position setting
+  says Bottom. Then the chosen bar or rail is subtracted once, with the hinge and the keyboard, to give the
+  **usable width and height** that every other layout decision uses. Navigation is never chosen from the usable
+  width, so the two steps cannot flip each other.
 - **Library grid:** square **1:1 cells, centre-cropped**, with **2 dp gutters**, edge to edge and unrounded (§6).
   Square cells give an even scan for culling; the uncropped picture is in the Viewer and Compare, and an optional
   "show whole photos" grid mode may come later. Column count comes from the usable width:
@@ -200,9 +212,10 @@ Rules:
 - **Editor, portrait:** photo on top; the action strip (§8.9), tool tabs and the active panel below in the
   reachable area [S2]. The panel defaults to about 40 % of the height; with large text or the keyboard open it
   scrolls inside itself, and can be expanded on purpose, rather than hiding tools.
-- **Editor, wide:** a side panel 280–360 dp wide, at most 40 % of the usable width, on the side of the person's
-  chosen tab position (the right when the tabs are at the bottom). If the photo would be left narrower than 320 dp,
-  the editor uses the portrait arrangement instead.
+- **Editor, wide:** a side panel on the side of the person's chosen tab position (the right when the tabs are at
+  the bottom), as wide as 40 % of the usable width, between 280 and 360 dp. Both limits and a photo at least 320 dp
+  wide must fit, which happens from **700 dp of usable width** (40 % of 700 is 280, leaving 420 for the photo).
+  Below that, the editor uses the portrait arrangement, whatever the orientation.
 - **Large screens and foldables:** two panes only where each keeps a useful width [S4]; nothing interactive or
   critical in a hinge area; respect insets of every kind [A4].
 
@@ -356,7 +369,8 @@ Latent has a few inputs: album names, search, the camera clock offset, numeric s
   - Badges are `labelSmall` (or a 16 dp icon) on `photoScrim` pills with `onPhotoScrim` content, at most 40 % of
     the cell's width each, with 4 dp from the cell's edge, so at least the centre half of the photo stays visible.
 - **Selected:** the image insets by 8 dp inside its unchanged cell, a 3 dp `primary` border hugs the inset image,
-  and the selection check fills (§3.3). Shape, inset and icon together, so selection never relies on colour [A5].
+  and the selection check fills with its `onPrimary` glyph (§3.3). Shape, inset and icon together, so selection
+  never relies on colour [A5].
 - **Status in the Viewer:** the same icons sit in a status slot at the right of the Viewer's top bar. A failed save
   also opens a persistent banner under the top bar with the reason and Retry (UX guide §9); it stays until the
   person acts or the save succeeds.
@@ -383,8 +397,11 @@ Latent has a few inputs: album names, search, the camera clock offset, numeric s
 
 ### 8.10 Photo information and clipping
 
-- **Shooting information** (shutter, aperture, ISO, focal length) reads as one `bodyMedium` line with tabular
-  figures: `1/250 s · f/2.8 · ISO 400 · 35 mm`. Over a photo it is on `photoScrim`.
+- **Shooting information** (shutter, aperture, ISO, focal length) is one `bodyMedium` group with tabular
+  figures: `1/250 s · f/2.8 · ISO 400 · 35 mm`. At default size it fits one line; with large text it wraps between
+  items, never inside one (each value stays with its unit), and every line keeps the same backing (`photoScrim`
+  over a photo). No value is truncated; if the group would take more than three lines, it moves into the details
+  sheet and the photo keeps the space.
 - **Clipping overlay:** optional, toggled from the histogram's triangles; clipped highlights show as `#FF3B30` and
   clipped shadows as `#4A90FF`, at full opacity, only while the toggle is on.
 - **Missing data** is said in words ("No shooting information"), never shown as an empty row or a zero.
@@ -392,11 +409,18 @@ Latent has a few inputs: album names, search, the camera clock offset, numeric s
 ### 8.11 Map
 
 - Third-party map tiles are not restyled for brand consistency.
-- **Photo pins:** a thumbnail with a 2 dp white border and a small shadow. **Clusters:** a neutral dark circle
-  (`#1A1A1A` with a white edge) with a white count. **Selected** pin or cluster: a 3 dp `primary` border, scaled
-  up by 1.15, plus a filled check, so selection is not colour alone.
-- **Recorded track** (when shown): a 3 dp line in `primary` with a 1 dp white casing; the **accuracy circle** of a
-  location is a 20 % `primary` fill with a 1 dp `primary` edge.
+- Map tiles can be bright or dark whatever the app's theme, so **everything Latent draws on the map uses one
+  theme-independent treatment**: the workspace amber `#F2B95C` as the core, cased in `#1A1A1A`. Over a bright tile
+  the dark casing carries the contrast (17:1 against white); over a dark tile the amber core does (11.9:1 against
+  black). The theme's `primary` is not used on the map: in dark it is pale amber, which vanishes on a white road.
+- **Photo pins:** a thumbnail with a 2 dp white border, a 1 dp `#1A1A1A` outer edge and a small shadow.
+  **Clusters:** a `#1A1A1A` circle with a white edge and a white count. **Selected** pin or cluster: a 3 dp amber
+  ring cased in `#1A1A1A`, scaled up by 1.15, plus a filled check badge (§3.3), so selection is not colour alone.
+- **Recorded track** (when shown): a 3 dp amber line with a 1 dp `#1A1A1A` casing on each side. The **accuracy
+  circle** of a location: a 1 dp amber edge cased in `#1A1A1A`, over a 15 % amber fill that is only a hint; the edge
+  carries the meaning.
+- The arithmetic covers white and black tiles; mid-tone and saturated tiles (parks, water, satellite imagery) are
+  checked on a device.
 - **Off, offline or not yet allowed:** a quiet card in place of the map saying which ("Online maps are off") and
   how to turn them on; never an empty grey area that looks like "no photos".
 - **Attribution:** always visible, on a small `photoScrim` pill with `onPhotoScrim` text, kept clear of controls.
@@ -407,8 +431,11 @@ Latent has a few inputs: album names, search, the camera clock offset, numeric s
   paused; a bottom bar with the scrubber, time as `01:24 / 03:10` in tabular figures, and mute.
 - The scrubber is visibly different from an edit slider: a full-width 4 dp track with buffered and played
   segments and no reference tick; its thumb appears on touch. Targets stay 48 dp.
-- Controls hide after 3 seconds of playback and return on a tap; they never hide while paused or while a
-  screen reader is on.
+- **Auto-hide:** during playback, controls hide after 3 seconds without interaction. The timer is suspended while
+  the scrubber is being dragged, while any control has keyboard or accessibility focus, and while a screen reader
+  is on; it restarts when the interaction ends. Controls never hide while paused.
+- **Bringing them back:** a tap, any key, or moving focus reveals them, with focus kept on the control that had it.
+  Keyboard: Space plays or pauses, the left and right arrows seek by 5 seconds, M mutes.
 
 ### 8.13 Notifications and widgets
 
@@ -452,13 +479,13 @@ Latent has a few inputs: album names, search, the camera clock offset, numeric s
 
 ## 11. Adaptive layouts
 
-Window classes give the first guess; the usable size after rail, insets, hinge and keyboard decides (§5).
+The window width chooses the navigation; the usable width after it decides everything else (§5).
 
-| Usable width | Navigation | Library | Editor | Settings / Location |
+| Window width | Navigation | Library | Editor | Settings / Location |
 |---|---|---|---|---|
 | Compact (< 600 dp) | Bottom bar | Columns from §5 (3–4) | Panel below photo | Single column |
-| Medium (600–839 dp) | Rail | Columns from §5 (5–7) | Side panel if the photo keeps ≥ 320 dp, else below | Single column, ≤ 720 dp |
-| Expanded (≥ 840 dp) | Rail | Columns from §5, optional detail pane | Side panel, wider histogram | Two columns for long settings |
+| Medium (600–839 dp) | Rail (or bottom bar if set) | Columns from §5 | Side panel if usable width ≥ 700 dp, else below | Single column, ≤ 720 dp |
+| Expanded (≥ 840 dp) | Rail (or bottom bar if set) | Columns from §5, optional detail pane | Side panel (usable width ≥ 700 dp), wider histogram | Two columns for long settings |
 
 Ranges follow Samsung's large-screen classes [S4] and are review cases, not guarantees. Check split screen,
 DeX/desktop windows, fold/unfold and short landscape windows; nothing is stretched to fill a tablet.
@@ -509,7 +536,9 @@ largest element" is N/A on Settings).
 - [ ] The photo is the largest, most prominent element; the accent stays small.
 - [ ] Controls and badges over a photo use `photoScrim` and `onPhotoScrim`; lines on the photo use the double
       stroke; nothing is a scrim that hides pixels being judged.
-- [ ] Badge precedence holds in a combined case (selected + failed; RAW+JPEG + pick + video) and at 150 %+ text.
+- [ ] Badge precedence holds in a combined case (selected + failed; RAW+JPEG + pick + video) and at 150 %+ text;
+      filled badges use their paired on-colour in both themes.
+- [ ] Anything drawn on the map uses the cased amber treatment and was looked at on a bright and a dark tile.
 
 **Evidence in the PR**
 
