@@ -11,6 +11,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -33,11 +36,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -47,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -55,6 +58,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -72,6 +76,7 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -85,6 +90,8 @@ import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.latent.R
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.ui.common.OverPhoto
+import com.byeonggon.latent.ui.common.tabular
 import com.byeonggon.latent.ui.compare.MOST_COMPARED
 import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.db.FLAG_PICKED
@@ -222,7 +229,11 @@ private fun LibraryContent(
     dialogs: LibraryDialogs,
     viewModel: LibraryViewModel,
 ) {
-    val gridSize = LocalContext.current.appContainer.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.gridSize
+    val container = LocalContext.current.appContainer
+    val gridSize = container.settings.settings.collectAsStateWithLifecycle(AppSettings()).value.gridSize
+    // Which photos' edits are being saved, or could not be: shown on their thumbnails until settled.
+    val saving by container.editSaver.saving.collectAsStateWithLifecycle()
+    val failedSaves by container.editSaver.failed.collectAsStateWithLifecycle()
     Column(Modifier.fillMaxSize()) {
         if (!storageGranted) StorageAccessCard(Modifier.padding(16.dp))
         val batch = state.batch
@@ -288,6 +299,12 @@ private fun LibraryContent(
                                 // A JPEG that stands for its raw file as well says so.
                                 withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners,
                                 selected = item.id in state.selected,
+                                selecting = selecting || state.showingTrash,
+                                status = when (item.id) {
+                                    in failedSaves -> SaveStatus.FAILED
+                                    in saving -> SaveStatus.SAVING
+                                    else -> SaveStatus.NONE
+                                },
                                 // In the trash a photo is only picked, to be put back or deleted.
                                 onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(item.id) },
                                 onHold = { viewModel.toggle(item.id) },
@@ -717,11 +734,21 @@ private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: (
 }
 
 @OptIn(ExperimentalFoundationApi::class)
+/** Whether a photo's edit is being saved, or could not be: shown on its thumbnail before anything else. */
+internal enum class SaveStatus { NONE, SAVING, FAILED }
+
+/**
+ * A photo in the grid, with what is known about it in four fixed corners (UI_GUIDE §8.8): the top left for whether
+ * its edit is saving or failed, else its kind; the top right for selection; the bottom left for the cull's decision;
+ * the bottom right for a video, an edit and a location. A small cell or large text keeps only the first three.
+ */
 @Composable
 private fun MediaCell(
     item: MediaItemEntity,
     withRaw: Boolean,
     selected: Boolean,
+    selecting: Boolean,
+    status: SaveStatus,
     onClick: () -> Unit,
     onHold: () -> Unit,
     menuEnabled: Boolean = false,
@@ -729,10 +756,10 @@ private fun MediaCell(
     onMenuOpened: () -> Unit = {},
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    Box(
+    BoxWithConstraints(
         Modifier
             .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .combinedClickable(onClick = onClick, onLongClick = onHold)
             // After the click handling, so that a right click is taken here before that sees it.
             .pointerInput(menuEnabled) {
@@ -747,9 +774,11 @@ private fun MediaCell(
                         }
                     }
                 }
-            }
-            .then(if (selected) Modifier.border(4.dp, MaterialTheme.colorScheme.primary) else Modifier),
+            },
     ) {
+        // Few corners on a small cell or with large text: status, selection and the decision are never dropped.
+        val roomy = maxWidth >= ROOMY_CELL && LocalDensity.current.fontScale < CROWDED_FONT_SCALE
+        val badgeWidth = maxWidth * 0.4f
         if (menuOpen && menuEnabled) {
             DropdownMenu(expanded = true, onDismissRequest = { menuOpen = false }) {
                 for ((label, action) in menu()) {
@@ -763,92 +792,133 @@ private fun MediaCell(
                 }
             }
         }
+        // A selected photo draws in from its edges, with the accent around it: shape and colour together.
+        val photoModifier = if (selected) {
+            Modifier.fillMaxSize().padding(SELECTED_INSET).border(3.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            Modifier.fillMaxSize()
+        }
         AsyncImage(
             model = rememberThumbnailModel(item),
             contentDescription = item.fileName,
             contentScale = ContentScale.Crop,
             // A rejected photo is dimmed, so that what is left stands out.
-            modifier = Modifier.fillMaxSize().alpha(if (item.flag == FLAG_REJECTED) 0.4f else 1f),
+            modifier = photoModifier.alpha(if (item.flag == FLAG_REJECTED) 0.4f else 1f),
         )
-        if (item.flag == FLAG_PICKED) {
-            Icon(
-                painterResource(R.drawable.ic_flag),
-                contentDescription = stringResource(R.string.flag_picked),
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.TopCenter).padding(4.dp).size(16.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)).padding(1.dp),
-            )
-        } else if (item.flag == FLAG_REJECTED) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = stringResource(R.string.flag_rejected),
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.TopCenter).padding(4.dp).size(16.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(4.dp)).padding(1.dp),
-            )
+
+        // Top left: the save first, else the kind.
+        Box(Modifier.align(Alignment.TopStart).padding(BADGE_MARGIN).widthIn(max = badgeWidth)) {
+            when {
+                status == SaveStatus.FAILED -> FailureBadge()
+                status == SaveStatus.SAVING -> Badge(contentDescription = stringResource(R.string.saving_edit)) {
+                    CircularProgressIndicator(Modifier.size(12.dp), color = OverPhoto.Content, strokeWidth = 2.dp)
+                }
+                roomy && (item.kind == MediaKind.RAW || withRaw) -> Badge { BadgeText(if (withRaw) "RAW+J" else "RAW") }
+            }
         }
-        when (item.kind) {
-            MediaKind.RAW, MediaKind.PHOTO -> if (item.kind == MediaKind.RAW || withRaw) Text(
-                text = if (withRaw) "RAW+J" else "RAW",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(4.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
-            )
-            MediaKind.VIDEO -> Icon(
-                Icons.Default.PlayArrow,
-                contentDescription = stringResource(R.string.video),
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(36.dp)
-                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(18.dp)),
-            )
+
+        // Top right: whether it is selected, while photos are being picked out.
+        if (selecting) {
+            Box(Modifier.align(Alignment.TopEnd).padding(BADGE_MARGIN)) { SelectionMark(selected) }
         }
-        if (selected) {
-            val selectedLabel = stringResource(R.string.item_selected)
-            Text(
-                text = "✓",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
-                    .padding(horizontal = 10.dp, vertical = 2.dp)
-                    .semantics { contentDescription = selectedLabel },
-            )
+
+        // Bottom left: the cull's decision, rejected before picked before stars.
+        Box(Modifier.align(Alignment.BottomStart).padding(BADGE_MARGIN).widthIn(max = badgeWidth)) {
+            when {
+                item.flag == FLAG_REJECTED -> Badge(contentDescription = stringResource(R.string.flag_rejected)) { BadgeIcon(R.drawable.ic_reject) }
+                item.flag == FLAG_PICKED -> Badge(contentDescription = stringResource(R.string.flag_picked)) { BadgeIcon(R.drawable.ic_flag) }
+                item.rating > 0 -> {
+                    val stars = pluralStringResource(R.plurals.stars, item.rating, item.rating)
+                    Badge(contentDescription = stars) { BadgeText("★${item.rating}") }
+                }
+            }
         }
-        if (item.rating > 0) {
-            Text(
-                text = "★".repeat(item.rating),
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
-            )
-        }
-        if (item.edit != null) {
-            Icon(
-                painterResource(R.drawable.ic_edit),
-                contentDescription = stringResource(R.string.edited),
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.BottomStart).padding(4.dp).size(14.dp),
-            )
-        }
-        if (item.geoSource != GeoSource.NONE) {
-            Icon(
-                Icons.Default.LocationOn,
-                contentDescription = stringResource(R.string.has_location),
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(14.dp),
-            )
+
+        // Bottom right: a video, an edit, a location; the first to go when room is short.
+        if (roomy) {
+            val video = item.kind == MediaKind.VIDEO
+            val edited = item.edit != null
+            val located = item.geoSource != GeoSource.NONE
+            if (video || edited || located) {
+                Box(Modifier.align(Alignment.BottomEnd).padding(BADGE_MARGIN).widthIn(max = badgeWidth)) {
+                    Badge {
+                        if (video) BadgeIcon(R.drawable.ic_video, stringResource(R.string.video))
+                        if (edited) BadgeIcon(R.drawable.ic_edit, stringResource(R.string.edited))
+                        if (located) BadgeIcon(R.drawable.ic_location, stringResource(R.string.has_location))
+                    }
+                }
+            }
+        } else if (item.kind == MediaKind.VIDEO) {
+            // Even in a small cell a video says so, where the photo would otherwise look like any other.
+            Box(Modifier.align(Alignment.BottomEnd).padding(BADGE_MARGIN)) {
+                Badge { BadgeIcon(R.drawable.ic_video, stringResource(R.string.video)) }
+            }
         }
     }
 }
+
+/** A badge over a photo: content in white on a backing dark enough to read over any picture. */
+@Composable
+private fun Badge(contentDescription: String? = null, content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier
+            .background(OverPhoto.Scrim, RoundedCornerShape(50))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .then(if (contentDescription != null) Modifier.semantics(mergeDescendants = true) { this.contentDescription = contentDescription } else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides OverPhoto.Content) { content() }
+    }
+}
+
+@Composable
+private fun BadgeText(text: String) {
+    Text(text, style = MaterialTheme.typography.labelSmall.tabular, color = OverPhoto.Content, maxLines = 1)
+}
+
+@Composable
+private fun BadgeIcon(icon: Int, contentDescription: String? = null) {
+    Icon(painterResource(icon), contentDescription = contentDescription, tint = OverPhoto.Content, modifier = Modifier.size(14.dp))
+}
+
+/** An edit that could not be saved: white on red with a white edge, to stand out from bright and dark photos alike. */
+@Composable
+private fun FailureBadge() {
+    Icon(
+        painterResource(R.drawable.ic_error),
+        contentDescription = stringResource(R.string.edit_failed),
+        tint = OverPhoto.Content,
+        modifier = Modifier
+            .size(22.dp)
+            .background(OverPhoto.Failure, CircleShape)
+            .border(1.dp, OverPhoto.Content, CircleShape)
+            .padding(3.dp),
+    )
+}
+
+/** Picked out or not, while photos are being picked: a filled check, or an empty ring to tap. */
+@Composable
+private fun SelectionMark(selected: Boolean) {
+    // A white edge inside a black one, so the mark shows on any photo.
+    val edged = Modifier.size(24.dp).border(2.dp, Color.Black, CircleShape).padding(1.dp).border(1.dp, Color.White, CircleShape)
+    if (selected) {
+        Icon(
+            painterResource(R.drawable.ic_check),
+            contentDescription = stringResource(R.string.item_selected),
+            tint = MaterialTheme.colorScheme.onPrimary,
+            modifier = edged.background(MaterialTheme.colorScheme.primary, CircleShape).padding(3.dp),
+        )
+    } else {
+        val notSelected = stringResource(R.string.not_selected)
+        Box(edged.background(OverPhoto.Scrim, CircleShape).semantics { contentDescription = notSelected })
+    }
+}
+
+private val ROOMY_CELL = 110.dp
+private const val CROWDED_FONT_SCALE = 1.5f
+private val BADGE_MARGIN = 4.dp
+private val SELECTED_INSET = 8.dp
 
 /** Hands several photos to whichever app the user picks. */
 private fun Context.shareAll(files: List<File>) {

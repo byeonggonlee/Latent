@@ -361,11 +361,14 @@ Latent has a few inputs: album names, search, the camera clock offset, numeric s
 | Top-left: **status / kind** | failed save → saving → kind (RAW+JPEG, RAW, HDR) | failed, saving |
 | Top-right: **selection** | selection check (in selection mode) | yes |
 | Bottom-left: **decision** | reject → pick → rating (stars as a count, "★3") | yes |
-| Bottom-right: **media** | video duration | no |
+| Bottom-right: **media** | one pill with the marks that apply: video (with its duration when known), edited, has a location | video only |
 
   - While a status is shown, the kind badge waits; it returns when the status clears.
-  - On cells under 110 dp, or with text at 150 % or more, the kind and duration badges are dropped from the cell;
-    the details and the accessibility label still give them. Status, selection and the decision always stay.
+  - On cells under 110 dp, or with text at 150 % or more, the kind badge and the edited and location marks are
+    dropped from the cell; the details and the accessibility label still give them. Status, selection, the decision
+    and the video mark always stay: a video in a small cell would otherwise look like any photo.
+  - The edited and location marks were already on the thumbnails before this guide; they share the media slot
+    rather than taking a fifth corner.
   - Badges are `labelSmall` (or a 16 dp icon) on `photoScrim` pills with `onPhotoScrim` content, at most 40 % of
     the cell's width each, with 4 dp from the cell's edge, so at least the centre half of the photo stays visible.
 - **Selected:** the image insets by 8 dp inside its unchanged cell, a 3 dp `primary` border hugs the inset image,

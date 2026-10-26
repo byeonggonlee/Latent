@@ -368,6 +368,10 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
     <string name="look_hdr">HDR</string>
     <string name="play">Play</string>
     <string name="saving_edit">Saving the edit</string>
+    <string name="edit_failed">Edit not saved</string>
+    <string name="save_again">Try again</string>
+    <string name="discard_edit">Give up the edit</string>
+    <string name="not_selected">Not selected</string>
     <string name="restore_original_question">Go back to the original?</string>
     <string name="restore_original_detail">The edit saved with this photo will be removed.</string>
     <string name="restore_original">Back to original</string>

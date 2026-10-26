@@ -10,7 +10,9 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import com.byeonggon.latent.R
+import com.byeonggon.latent.ui.common.OverPhoto
 import com.byeonggon.latent.ui.common.PhotoTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -294,6 +297,23 @@ fun ViewerScreen(
                     }
                 },
                 actions = {
+                    // Where the photo's save stands, in the same place for every photo: saving, or not saved.
+                    when {
+                        state.failure != null -> Icon(
+                            painterResource(R.drawable.ic_error),
+                            contentDescription = stringResource(R.string.edit_failed),
+                            tint = OverPhoto.Content,
+                            modifier = Modifier.padding(horizontal = 12.dp).size(24.dp)
+                                .background(OverPhoto.Failure, CircleShape).border(1.dp, OverPhoto.Content, CircleShape).padding(4.dp),
+                        )
+                        state.saving -> {
+                            val saving = stringResource(R.string.saving_edit)
+                            CircularProgressIndicator(
+                                Modifier.padding(horizontal = 14.dp).size(20.dp).semantics { contentDescription = saving },
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
                     val partner = item?.let { partners[it.id] }
                     if (item != null && partner != null) PartnerSwitch(showingRaw = item.kind == MediaKind.RAW, onSwitch = { onItemChange(partner) })
                 },
@@ -360,16 +380,13 @@ fun ViewerScreen(
                     }
                 }
                 if (state.busy) CircularProgressIndicator()
-                if (state.saving) {
-                    Text(
-                        stringResource(R.string.saving_edit),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(12.dp)
-                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                // An edit that could not be saved stays in view, with what can be done about it, until one is chosen.
+                state.failure?.let { failure ->
+                    SaveFailureBanner(
+                        reason = failure.reason,
+                        onRetry = viewModel::retrySave,
+                        onDiscard = viewModel::discardFailedSave,
+                        modifier = Modifier.align(Alignment.TopCenter).padding(12.dp),
                     )
                 }
             }
@@ -756,5 +773,27 @@ private fun Context.launch(intent: Intent) {
         startActivity(intent)
     } catch (e: ActivityNotFoundException) {
         // No app on the device can handle it; nothing useful to do.
+    }
+}
+
+/** An edit of this photo that could not be saved: why, and a choice between trying again and giving it up. */
+@Composable
+private fun SaveFailureBanner(reason: String, onRetry: () -> Unit, onDiscard: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.widthIn(max = 560.dp).fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(painterResource(R.drawable.ic_error), contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(reason, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            }
+            Row(Modifier.align(Alignment.End)) {
+                TextButton(onClick = onDiscard) { Text(stringResource(R.string.discard_edit), color = MaterialTheme.colorScheme.onErrorContainer) }
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.save_again), color = MaterialTheme.colorScheme.onErrorContainer) }
+            }
+        }
     }
 }
