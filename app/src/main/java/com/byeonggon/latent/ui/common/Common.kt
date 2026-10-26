@@ -23,8 +23,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
@@ -34,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
@@ -72,8 +71,12 @@ fun LatentTheme(content: @Composable () -> Unit) {
             }
         }
     }
-    MaterialTheme(colorScheme = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context), content = content)
+    // Latent's own colours, not the wallpaper's: those would tint what sits next to the photos, and differ by phone.
+    MaterialTheme(colorScheme = if (dark) LatentDark else LatentLight, content = content)
 }
+
+/** Figures all of one width, for numbers that change in place (a slider's value, a count): they do not jitter. */
+val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")
 
 /** A request for a library file's picture that loads again once the file has been replaced in place. */
 @Composable
@@ -184,7 +187,8 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionCard(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    // A step above the screen in tone, not a shadow (UI_GUIDE §6, §8.3).
+    Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             content()

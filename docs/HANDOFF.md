@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code | UI guide task 1: Latent's own palette in place of wallpaper colour, neutral workspace, one tab-title style, tabular figures | [PR #43](https://github.com/byeonggonlee/Latent/pull/43) | `ui/common/Palette.kt`, `Common.kt`, `PhotoTheme.kt`, tab titles, slider and import values | 2026-10-26 |
 
 ## For Codex
 

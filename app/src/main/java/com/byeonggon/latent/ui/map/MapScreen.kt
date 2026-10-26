@@ -66,7 +66,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -127,7 +126,7 @@ fun MapScreen(onOpen: (Long) -> Unit, viewModel: MapViewModel = viewModel()) {
 private fun MapsOff(onTurnOn: () -> Unit) {
     var asking by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(stringResource(R.string.tab_map), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 24.dp))
+        Text(stringResource(R.string.tab_map), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 24.dp))
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.map_off_title), style = MaterialTheme.typography.titleMedium)
