@@ -134,6 +134,9 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
             Hint(stringResource(R.string.card_import_hint))
         }
 
+        // Right under where an import is started, not below the settings: its progress, Cancel and result in view.
+        SyncStatus(syncState, onCancel = viewModel::cancel, onCompare = viewModel::compareLookAlikes)
+
         SectionCard(stringResource(R.string.what_to_import)) {
             KindSwitch(stringResource(R.string.kind_photos_jpeg), settings.syncPhotos) { viewModel.setKindEnabled(MediaKind.PHOTO, it) }
             KindSwitch("RAW (ARW)", settings.syncRaw) { viewModel.setKindEnabled(MediaKind.RAW, it) }
@@ -167,8 +170,6 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
 
         // Locations are put on photos as they come in: whether the phone is recording is checked here, before a shoot.
         onOpenLocation?.let { LocationCard(onOpen = it) }
-
-        SyncStatus(syncState, onCancel = viewModel::cancel, onCompare = viewModel::compareLookAlikes)
     }
 
     if (confirmingReimport) {

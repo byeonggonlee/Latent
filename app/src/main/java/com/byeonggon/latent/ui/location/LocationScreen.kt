@@ -73,7 +73,7 @@ fun LocationScreen(onBack: () -> Unit, viewModel: LocationViewModel = viewModel(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.location)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close)) } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
             )
         },
     ) { padding ->

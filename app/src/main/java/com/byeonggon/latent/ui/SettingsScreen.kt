@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +67,8 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLocation: () -> Unit, onChoosePhone
     var about by remember { mutableStateOf(false) }
     var choosingZone by remember { mutableStateOf(false) }
     var rereading by remember { mutableStateOf(false) }
-    var rereadMessage by remember { mutableStateOf<String?>(null) }
+    // Kept while Location, opened from below it, is open: the message points there.
+    var rereadMessage by rememberSaveable { mutableStateOf<String?>(null) }
     if (choosingZone) {
         CameraZoneDialog(
             chosen = current.cameraZoneId,

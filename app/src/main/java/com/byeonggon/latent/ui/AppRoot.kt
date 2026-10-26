@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,6 +64,13 @@ fun AppRoot(startOnSync: Boolean) {
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     // Recording and placing by location is a screen of its own over the tabs, or over the settings it was opened from.
     var locationOpen by rememberSaveable { mutableStateOf(false) }
+    // What the screen under Location had, its scroll position say, kept for the way back; dropped when it is left
+    // another way, so a tab or the settings opened again start at the top as before.
+    val kept = rememberSaveableStateHolder()
+    val closeSettings = {
+        kept.removeState(SETTINGS)
+        settingsOpen = false
+    }
     // The photos being compared, as the ids written out with commas: a saved state holds text more surely than lists.
     var comparing by rememberSaveable { mutableStateOf<String?>(null) }
     val tabPositions = LocalContext.current.appContainer.settings.settings
@@ -107,26 +115,34 @@ fun AppRoot(startOnSync: Boolean) {
     }
 
     if (settingsOpen) {
-        SettingsScreen(
-            onBack = { settingsOpen = false },
-            onOpenLocation = { locationOpen = true },
-            onChoosePhoneFolders = {
-                // The folders are chosen in the library, which shows the question.
-                settingsOpen = false
-                tab = Tab.LIBRARY
-                library.choosePhoneFolders()
-            },
-        )
+        kept.SaveableStateProvider(SETTINGS) {
+            SettingsScreen(
+                onBack = closeSettings,
+                onOpenLocation = { locationOpen = true },
+                onChoosePhoneFolders = {
+                    // The folders are chosen in the library, which shows the question.
+                    closeSettings()
+                    tab = Tab.LIBRARY
+                    library.choosePhoneFolders()
+                },
+            )
+        }
         return
     }
 
     val window = rememberWindowLayout()
     val content: @Composable () -> Unit = {
-        when (tab) {
-            Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it }, onSettings = { settingsOpen = true }, onCompare = { comparing = it.joinToString(",") })
-            Tab.SYNC -> ReadableWidth { SyncScreen(onOpenLocation = { locationOpen = true }) }
-            Tab.MAP -> MapScreen(onOpen = { viewerItemId = it })
+        kept.SaveableStateProvider(tab.name) {
+            when (tab) {
+                Tab.LIBRARY -> LibraryScreen(gridState = libraryGridState, onOpen = { viewerItemId = it }, onSettings = { settingsOpen = true }, onCompare = { comparing = it.joinToString(",") })
+                Tab.SYNC -> ReadableWidth { SyncScreen(onOpenLocation = { locationOpen = true }) }
+                Tab.MAP -> MapScreen(onOpen = { viewerItemId = it })
+            }
         }
+    }
+    val choose = { entry: Tab ->
+        if (entry != tab) kept.removeState(tab.name)
+        tab = entry
     }
     // A wide window has height to spare less than width: the tabs go down a side, the left unless asked otherwise;
     // a narrow one, or the bottom as asked, has them along the bottom.
@@ -140,7 +156,7 @@ fun AppRoot(startOnSync: Boolean) {
                 Tab.entries.forEach { entry ->
                     NavigationRailItem(
                         selected = tab == entry,
-                        onClick = { tab = entry },
+                        onClick = { choose(entry) },
                         icon = { TabIcon(entry) },
                         label = { Text(stringResource(entry.label)) },
                     )
@@ -164,7 +180,7 @@ fun AppRoot(startOnSync: Boolean) {
                 Tab.entries.forEach { entry ->
                     NavigationBarItem(
                         selected = tab == entry,
-                        onClick = { tab = entry },
+                        onClick = { choose(entry) },
                         icon = { TabIcon(entry) },
                         label = { Text(stringResource(entry.label)) },
                     )
@@ -180,7 +196,9 @@ fun AppRoot(startOnSync: Boolean) {
 private fun TabIcon(tab: Tab) {
     when (tab) {
         Tab.LIBRARY -> Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null)
-        Tab.SYNC -> Icon(painterResource(R.drawable.ic_camera), contentDescription = null)
+        Tab.SYNC -> Icon(painterResource(R.drawable.ic_import), contentDescription = null)
         Tab.MAP -> Icon(Icons.Default.Place, contentDescription = null)
     }
 }
+
+private const val SETTINGS = "settings"

@@ -106,7 +106,7 @@
     <string name="stars_or_more">%1$s 以上</string>
     <string name="trash_is_empty">ゴミ箱は空です。</string>
     <string name="library_is_empty">まだ写真がありません。
-カメラタブでカメラをつないで写真を取り込むか、このスマートフォンの写真を表示できます。</string>
+取り込みタブでカメラをつないで写真を取り込むか、このスマートフォンの写真を表示できます。</string>
     <string name="nothing_of_kind">この種類の項目はありません。</string>
     <string name="video">動画</string>
     <string name="item_selected">選択中</string>
@@ -142,7 +142,7 @@
     <string name="card_folder_none">まだフォルダを選んでいません。</string>
     <string name="card_folder">フォルダ: %1$s</string>
     <string name="card_folder_missing">前に選んだフォルダを読めません。カードを入れるか、別のフォルダを選んでください。</string>
-    <string name="import_from_card">取り込む</string>
+    <string name="import_from_card">このフォルダから取り込む</string>
     <string name="choose_card_folder">フォルダを選ぶ</string>
     <string name="choose_another_folder">別のフォルダ</string>
     <string name="card_import_hint">カードリーダーや、ストレージ(マスストレージ)としてつないだカメラから取り込みます。カードそのもの(いちばん上のフォルダ)を一度選んでください。MTPで取り込んだものも含め、取り込み済みのファイルは飛ばし、動画のサムネイルと小さなコピーは取り込みません。</string>
@@ -373,6 +373,7 @@
     <string name="location_from_record">位置情報の記録</string>
     <string name="location">位置情報</string>
     <string name="location_more">カメラの時計、タイムライン、位置情報の追加</string>
+    <string name="back">戻る</string>
     <string name="open">開く</string>
     <string name="recording_on">記録中</string>
     <string name="recording_off">オフ</string>
@@ -537,7 +538,7 @@
     <string name="camera_zone_hint">カメラの時計が合わせてあるタイムゾーンです。写真自体にタイムゾーンの情報がないときに使います。これから取り込む写真に適用され、カメラと端末のタイムゾーンが違う場合(海外など)でも、実際の時刻で位置を探します。</string>
     <string name="camera_zone_reread">ライブラリの写真の時刻を読み直す</string>
     <plurals name="camera_zone_reread_done">
-        <item quantity="other">写真 %d 枚の時刻が変わりました。位置タブの「位置情報のない項目をもう一度照合」で、位置のない写真に位置をつけられます。</item>
+        <item quantity="other">写真 %d 枚の時刻が変わりました。上から開く位置情報の画面の「位置情報のない項目をもう一度照合」で、位置のない写真に位置をつけられます。</item>
     </plurals>
     <string name="all_exif">すべての EXIF 値</string>
     <string name="all_exif_hint">写真の詳細に、ファイルに記録されている値を記録のまま、すべて表示します。オフのときは、カメラ、レンズ、露出だけを表示します。</string>
@@ -691,5 +692,5 @@
     <string name="backup_restore_no_access">バックアップの写真を見つけるには、写真と %1$s フォルダへのアクセスが必要です。先にライブラリで許可してから復元してください。何も取り込まれていません。</string>
     <string name="backup_restore_failed">復元できず、バックアップの内容は何も取り込まれていません: %1$s</string>
     <string name="backup_restore_wait_for_sync">カメラの同期中です。終わってから復元してください。</string>
-    <string name="backup_restore_reimport_hint">写真がこのスマートフォンにないカメラのファイルは、もう一度は取り込まれません。カメラタブの「スマートフォンから削除したファイル」に数えられ、「もう一度取り込めるようにする」でカメラから取り込み直せます。</string>
+    <string name="backup_restore_reimport_hint">写真がこのスマートフォンにないカメラのファイルは、もう一度は取り込まれません。取り込みタブの「スマートフォンから削除したファイル」に数えられ、「もう一度取り込めるようにする」でカメラから取り込み直せます。</string>
 </resources>

@@ -51,7 +51,23 @@ class EnglishTest {
         compose.onNodeWithText("Camera clock, Timeline and adding locations").performScrollTo().performClick()
         compose.onNodeWithText("Location").assertIsDisplayed()
         compose.onNodeWithText("Record every").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        // Back where it was opened from, not at the top of the tab.
+        compose.onNodeWithText("Camera clock, Timeline and adding locations").assertIsDisplayed()
+
+        // The same from the settings, which stay open, and where they were, underneath.
+        compose.onNodeWithText("Library").performClick()
+        compose.onNodeWithContentDescription("Library menu").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithText("Camera clock, Timeline and adding locations").performScrollTo()
+        compose.onNodeWithText("Open").performClick()
+        compose.onNodeWithText("Record every").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Camera clock, Timeline and adding locations").assertIsDisplayed()
+
+        // Leaving a tab another way still starts it at the top again.
         compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithText("Import").performClick()
         compose.onNodeWithText("No camera is connected.").assertIsDisplayed()
     }
 }

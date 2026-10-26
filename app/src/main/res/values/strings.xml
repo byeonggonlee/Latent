@@ -118,7 +118,7 @@
     <string name="stars_or_more">%1$s or more</string>
     <string name="trash_is_empty">The trash is empty.</string>
     <string name="library_is_empty">No photos yet.
-Connect a camera on the Camera tab to bring photos in, or list the photos on this phone.</string>
+Connect a camera on the Import tab to bring photos in, or list the photos on this phone.</string>
     <string name="nothing_of_kind">Nothing of this kind.</string>
     <string name="video">Video</string>
     <string name="item_selected">Selected</string>
@@ -160,7 +160,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="card_folder_none">No folder chosen yet.</string>
     <string name="card_folder">Folder: %1$s</string>
     <string name="card_folder_missing">The folder chosen before cannot be read: put the card in, or choose another.</string>
-    <string name="import_from_card">Import</string>
+    <string name="import_from_card">Import from this folder</string>
     <string name="choose_card_folder">Choose folder</string>
     <string name="choose_another_folder">Choose another</string>
     <string name="card_import_hint">From a card reader, or a camera connected as a storage device (Mass Storage): choose the card itself, its top folder, once. What was imported before, over MTP too, is skipped, and the thumbnails and smaller copies of videos are left out.</string>
@@ -398,6 +398,7 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="location_from_record">location record</string>
     <string name="location">Location</string>
     <string name="location_more">Camera clock, Timeline and adding locations</string>
+    <string name="back">Back</string>
     <string name="open">Open</string>
     <string name="recording_on">Recording</string>
     <string name="recording_off">Off</string>
@@ -574,8 +575,8 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="camera_zone_hint">The time zone the camera\'s clock is set to, for photos that do not say it themselves. Used for photos brought in from now on: they are matched to where you were by the real time, which differs when the camera\'s zone is not the phone\'s, abroad say.</string>
     <string name="camera_zone_reread">Read the times of photos in the library again</string>
     <plurals name="camera_zone_reread_done">
-        <item quantity="one">The time of %d photo changed. \"Match items without a location again\" on the Location tab places the photos that still have none.</item>
-        <item quantity="other">The time of %d photos changed. \"Match items without a location again\" on the Location tab places the photos that still have none.</item>
+        <item quantity="one">The time of %d photo changed. \"Match items without a location again\" in Location, opened above, places the photos that still have none.</item>
+        <item quantity="other">The time of %d photos changed. \"Match items without a location again\" in Location, opened above, places the photos that still have none.</item>
     </plurals>
     <string name="all_exif">Every EXIF value</string>
     <string name="all_exif_hint">The details of a photo list all that its file records, as recorded. Off, they show the camera, the lens and the exposure.</string>
@@ -733,5 +734,5 @@ Connect a camera on the Camera tab to bring photos in, or list the photos on thi
     <string name="backup_restore_no_access">To find the photos of the backup, Latent needs access to your photos and to the %1$s folder. Give it in the library first, then restore. Nothing was taken over.</string>
     <string name="backup_restore_failed">The restore failed, and nothing of the backup was taken over: %1$s</string>
     <string name="backup_restore_wait_for_sync">A camera sync is running. Restore once it has finished.</string>
-    <string name="backup_restore_reimport_hint">Camera files whose photos are not on this phone are not imported again: the Camera tab counts them under \"Files deleted from the phone\", where \"Let them be imported again\" brings them back from the camera.</string>
+    <string name="backup_restore_reimport_hint">Camera files whose photos are not on this phone are not imported again: the Import tab counts them under \"Files deleted from the phone\", where \"Let them be imported again\" brings them back from the camera.</string>
 </resources>

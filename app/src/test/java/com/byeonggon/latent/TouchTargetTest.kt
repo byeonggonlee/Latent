@@ -83,7 +83,7 @@ class TouchTargetTest {
         compose.onNodeWithText("가져오기").performClick()
         compose.onNodeWithText("카메라 시계, 타임라인, 위치 넣기").performScrollTo().performClick()
         found["location"] = tooSmall()
-        compose.onNodeWithContentDescription("닫기").performClick()
+        compose.onNodeWithContentDescription("뒤로").performClick()
         compose.onNodeWithText("보관함").performClick()
         compose.onNodeWithContentDescription("DSC00001.JPG").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("편집").fetchSemanticsNodes().isNotEmpty() }

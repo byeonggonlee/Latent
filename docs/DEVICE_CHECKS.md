@@ -86,7 +86,7 @@ a build from the computer".
 ### From the card (card reader, or the ZV-E10 in Mass Storage mode)
 
 - [ ] **New.** Import tab → "Card or drive" ("카드나 드라이브") → "Choose folder": with a card reader in, the dialog
-      opens on the card; choose the card itself. Its name shows, and "Import" brings in what is new: photos, raw files
+      opens on the card; choose the card itself. Its name shows, and "Import from this folder" brings in what is new: photos, raw files
       and videos (`PRIVATE/M4ROOT/CLIP`), and none of the videos' thumbnails (`THMBNL`) or smaller copies (`SUB`).
 - [ ] **New.** What came over MTP before is skipped, and the other way round: a sync over MTP after importing from
       the card brings nothing twice. A file that only looks the same (name, size, time) is copied over and compared,
