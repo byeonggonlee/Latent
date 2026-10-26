@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | UI guide task 1: Latent's own palette in place of wallpaper colour, neutral workspace, one tab-title style, tabular figures | [PR #43](https://github.com/byeonggonlee/Latent/pull/43) | `ui/common/Palette.kt`, `Common.kt`, `PhotoTheme.kt`, tab titles, slider and import values | 2026-10-26 |
+| Claude Code | UI guide task 2: thumbnail badge slots, selected state, save status and persistent failure with Retry | `claude/thumb-badges` | `ui/library/LibraryScreen.kt`, `ui/viewer/`, `data/EditSaver.kt`, strings, tests | 2026-10-26 |
 
 ## For Codex
 
@@ -466,6 +466,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-26 | Claude Code (computer) | UI guide task 1: Latent's own palette (amber accent, equal-channel greys) in place of wallpaper colour, a neutral photo workspace, over-photo colours, one tab-title style, tabular figures, tonal section cards; PaletteTest checks contrast and neutrality. Reviewed by Codex (LGTM) | [PR #43](https://github.com/byeonggonlee/Latent/pull/43), merged `b9ba48e` |
 | 2026-10-26 | Claude Code (computer) | UI guide (`docs/UI_GUIDE.md`), the visual companion to the UX guide: two surface families (themed app surfaces, an always-dark neutral photo workspace), Latent's own amber palette with equal-channel greys and checked contrast (the owner chose it over wallpaper colour), over-photo and map overlay rules, type and CJK rules, grid, icons, state matrix and forms, sliders with As Shot references, thumbnail badge slots, the editor action strip, map, video and notification patterns, motion, adaptive layout and a review checklist. Reviewed by Codex and Gemini 4 Argon over three rounds; both LGTM at `13b8cb2` | [PR #42](https://github.com/byeonggonlee/Latent/pull/42), merged `1320b39` |
 | 2026-10-26 | Claude Code (computer) | Three tabs, Library · Import · Map, as the owner chose after the UX review of PR #40. Location is a screen of its own, opened from a recording card on the Import tab and from Settings → Camera, and the screen under it keeps its place. Import progress sits under the camera and card. The card button says "Import from this folder", the tab has an import icon, and the messages that named the old tabs are updated in three languages. Reviewed by Gemini 4 Argon and Codex (findings fixed; Codex LGTM) | [PR #41](https://github.com/byeonggonlee/Latent/pull/41), merged `2aac03e` |
 | 2026-10-26 | Codex | Android and Samsung One UI UX guide, with official sources, app-specific workflows, accessibility and usability checks; Claude Opus and Gemini Argon review feedback incorporated. | [PR #40](https://github.com/byeonggonlee/Latent/pull/40), merged `4fd6007` |
