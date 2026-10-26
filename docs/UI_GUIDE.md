@@ -50,9 +50,10 @@ container behind them.
 The app icon already defines Latent's brand: an amber mark (`#E8A23A`) and cream (`#F2EDE4`) on near-black
 (`#17171A`). The UI accent should come from that amber, so the app and its icon read as one product.
 
-**Proposed: replace wallpaper-derived dynamic colour with Latent's own palette.** Dynamic colour tints surfaces and
-accents from the wallpaper; next to photos that tint biases colour judgement and changes the app's identity per
-phone. This is an owner decision because it changes the current look; the palette below assumes it.
+**Decided: Latent's own palette replaces wallpaper-derived dynamic colour** (the owner's decision, 2026-10-26).
+Dynamic colour tints surfaces and accents from the wallpaper; next to photos that tint biases colour judgement and
+changes the app's identity per phone. The palette below is the target; the values themselves remain proposals for
+review, and the switch lands as its own UI change.
 
 ### 3.2 App surface tokens (proposed)
 
@@ -302,8 +303,8 @@ DeX/desktop windows, fold/unfold and short landscape windows; nothing is stretch
 
 Observed on `main` at `6fe7593`, for a designer planning work. Each is a separate, reviewed UI change if pursued.
 
-- Colours come from the wallpaper (dynamic colour); the workspace accent is blue (`#7FA8FF`) while the brand is
-  amber. → §3.
+- Colours come from the wallpaper (dynamic colour), which the owner decided to replace; the workspace accent is
+  blue (`#7FA8FF`) while the brand is amber. → §3.
 - Tab titles use different styles (Library and Map a bold `headlineLarge`, Import `headlineMedium`). → §4, §8.1.
 - Icons mix the custom outline set with filled Material icons (place, location, close, delete). → §7.
 - Exclusive choices such as theme and tab position use filter chips. → §8.3.
