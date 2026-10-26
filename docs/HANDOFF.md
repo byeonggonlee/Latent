@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Owner-requested Latent UX guide based on official Android and Samsung One UI guidance; document proposal for PR review | `codex/ux-guide` | `docs/UX_GUIDE.md`, `README.md`, this board | 2026-10-26 |
+| Codex | Android and Samsung One UI UX guide written; proposal awaiting review in [PR #40](https://github.com/byeonggonlee/Latent/pull/40) | `codex/ux-guide` | `docs/UX_GUIDE.md`, `README.md`, this board | 2026-10-26 |
 
 ## For Codex
 
