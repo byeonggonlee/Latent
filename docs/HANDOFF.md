@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | UI guide: the visual companion to the UX guide, proposal awaiting review | `claude/ui-guide` | `docs/UI_GUIDE.md`, `README.md`, this board | 2026-10-26 |
+| Claude Code | UI guide: the visual companion to the UX guide, proposal awaiting review | [PR #42](https://github.com/byeonggonlee/Latent/pull/42) | `docs/UI_GUIDE.md`, `README.md`, this board | 2026-10-26 |
 
 ## For Codex
 
