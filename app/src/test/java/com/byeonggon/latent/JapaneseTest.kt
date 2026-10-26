@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -42,14 +43,16 @@ class JapaneseTest {
         // The large title and the tab.
         compose.onAllNodesWithText("ライブラリ").assertCountEquals(2)
 
-        compose.onNodeWithText("カメラ").performClick()
-        compose.onNodeWithText("カメラの同期").assertIsDisplayed()
+        compose.onNodeWithText("取り込み").performClick()
+        // The large title and the tab.
+        compose.onAllNodesWithText("取り込み").assertCountEquals(2)
         compose.onNodeWithText("カメラがつながっていません。").assertIsDisplayed()
 
         compose.onNodeWithText("地図").performClick()
         compose.onNodeWithText("写真を地図で見る").assertIsDisplayed()
 
-        compose.onNodeWithText("位置情報").performClick()
+        compose.onNodeWithText("取り込み").performClick()
+        compose.onNodeWithText("カメラの時計、タイムライン、位置情報の追加").performScrollTo().performClick()
         compose.onNodeWithText("位置情報の記録").assertIsDisplayed()
     }
 

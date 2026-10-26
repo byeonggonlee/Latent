@@ -82,7 +82,7 @@ class LocationScreenTest {
     }
 
     private fun show() {
-        compose.setContent { LocationScreen() }
+        compose.setContent { LocationScreen(onBack = {}) }
         compose.waitForIdle()
     }
 

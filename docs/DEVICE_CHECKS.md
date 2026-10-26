@@ -85,8 +85,8 @@ a build from the computer".
 
 ### From the card (card reader, or the ZV-E10 in Mass Storage mode)
 
-- [ ] **New.** Camera tab → "Card or drive" ("카드나 드라이브") → "Choose folder": with a card reader in, the dialog
-      opens on the card; choose the card itself. Its name shows, and "Import" brings in what is new: photos, raw files
+- [ ] **New.** Import tab → "Card or drive" ("카드나 드라이브") → "Choose folder": with a card reader in, the dialog
+      opens on the card; choose the card itself. Its name shows, and "Import from this folder" brings in what is new: photos, raw files
       and videos (`PRIVATE/M4ROOT/CLIP`), and none of the videos' thumbnails (`THMBNL`) or smaller copies (`SUB`).
 - [ ] **New.** What came over MTP before is skipped, and the other way round: a sync over MTP after importing from
       the card brings nothing twice. A file that only looks the same (name, size, time) is copied over and compared,
@@ -94,7 +94,7 @@ a build from the computer".
       them, so note how long it takes; the folders are remembered after it. A photo deleted from the phone has no
       copy to compare with, so the card brings it back. Compare the times in the viewer with the same shots imported
       over MTP (a card's file times may be read in another zone; capture times come from EXIF either way).
-- [ ] **New.** The ZV-E10 set to Mass Storage: the Camera tab says so and points to the card section; the dialog
+- [ ] **New.** The ZV-E10 set to Mass Storage: the Import tab says so and points to the card section; the dialog
       opens on the camera's drive.
 - [ ] **New.** Take the card out: the section says the folder cannot be read and offers another; an import started
       without the card fails with a message, and nothing half-copied is left in the library.
@@ -106,7 +106,7 @@ a build from the computer".
       Korean or Japanese), and the first entry is "Same as the phone". Choose a zone other than the phone's, sync or
       adopt a photo from the camera, and check its time in the viewer and where the Location matching puts it. "Read
       the times of photos in the library again" changes the times of the photos already there; then "Match items
-      without a location again" on the Location tab.
+      without a location again" on the Location screen (Import tab → "Camera clock, Timeline and adding locations").
 - [x] The ZV-E10 writes `OffsetTimeOriginal`, `OffsetTimeDigitized` and `OffsetTime` (+09:00) in its raw files too
       (seen in the details, 2026-10-15), so the zone comes from the file and the camera time zone setting is only for
       files with none.
@@ -364,14 +364,14 @@ needs the app uninstalled or its data cleared. The move across package names is 
       still found (by its name, size and the moment it was taken) and keeps its edit. Since 2026-10-22 a photo of the
       same name and size taken at another time is not taken for it: it is listed as not found instead.
 - [ ] Cancel a restore while the timeline goes in (a long timeline makes this easy): the message says nothing was
-      taken over, and albums, versions and the place count on the Location tab are as before.
+      taken over, and albums, versions and the place count on the Location screen are as before.
 - [ ] Restore the S24's file on the **second phone** (S26). Without copying any photos over, the S24's photos are
       listed as not found and only the rest (filters, LUTs, the timeline, camera imports, settings) comes in. If the S26
       is to have some of the S24's library, copy a day's folder of `DCIM/Latent` (with the same folder under the hidden
       `.originals`) over first: photos found and the names of those not found make sense; raw edits, edited library
       JPEGs ("Back to original" offered, editor opens with the edit's sliders), phone photos' edits, LUTs and subject
       and sky masks render as on the S24 (a missing mask outline would say so in the editor); albums and versions are
-      there; the Location tab's place count equals the S24's.
+      there; the Location screen's place count equals the S24's.
 - [ ] On the S26, photos of `DCIM/Camera` on the S24 are not there: they are listed as not found, the message points to
       "폰에서 지운 파일" under Camera, and nothing fails.
 - [ ] After the restore on the S26, connect the ZV-E10 and sync: nothing that was imported on the S24 is downloaded
@@ -381,7 +381,7 @@ needs the app uninstalled or its data cleared. The move across package names is 
 - [ ] A backup saved to and restored from Google Drive (or another cloud folder in the file dialog): the save works,
       the restore reads it (it is copied into the app first); note how long for a large file, and whether cancelling a
       backup to Drive deletes the unfinished file or says that it could not.
-- [ ] Big timeline: back up and restore with the real one (count on the Location tab, about how many years). Time of
+- [ ] Big timeline: back up and restore with the real one (count on the Location screen, about how many years). Time of
       each, the file's size (the JVM test makes 150,000 places into 1.6 MB), and whether the app stays smooth meanwhile.
 - [ ] Rotate the phone and leave Settings while a restore runs: it carries on, and its progress and message are there
       when Settings is opened again.
@@ -394,7 +394,7 @@ needs the app uninstalled or its data cleared. The move across package names is 
 - [ ] Import the Timeline export again in the new app (the old app's copy is gone): the message gives the places
       added.
 - [ ] **New.** The same import: if the export has stays longer than a week, or ending before they begin, the message
-      says how many were left out; the import does not crash, and the place count on the Location tab is about what it
+      says how many were left out; the import does not crash, and the place count on the Location screen is about what it
       was in the old app.
 - [ ] Record location in the background for hours (a day out): the notification stays, the battery holds, and the
       photos of the day are placed.

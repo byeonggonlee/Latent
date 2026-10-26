@@ -65,7 +65,7 @@ class CardImportTest {
         compose.setContent { SyncScreen() }
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("폴더: Card").fetchSemanticsNodes().isNotEmpty() }
 
-        compose.onNodeWithText("가져오기").performClick()
+        compose.onNodeWithText("이 폴더에서 가져오기").performClick()
 
         val started = shadowOf(application).nextStartedService
         assertEquals(tree, started.getParcelableExtra("folder", Uri::class.java))
@@ -93,7 +93,7 @@ class CardImportTest {
             compose.onAllNodesWithText("전에 고른 폴더를 읽을 수 없습니다", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        assertEquals(0, compose.onAllNodesWithText("가져오기").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithText("이 폴더에서 가져오기").fetchSemanticsNodes().size)
         compose.onNodeWithText("다른 폴더").performClick()
     }
 }

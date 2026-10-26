@@ -46,7 +46,7 @@ Each is small or medium, works offline, and needs no new permission.
 
 - ~~**Import from a card reader**~~ or a camera in Mass Storage mode, for those who cannot or do not use MTP. *Done
   2026-10-22 ([PR #13](https://github.com/byeonggonlee/Latent/pull/13)), to be tried with a card reader:* a folder
-  picked once in the system's dialog ("Card or drive" on the Camera tab), imported as a sync from the camera is (what
+  picked once in the system's dialog ("Card or drive" on the Import tab, then called the Camera tab), imported as a sync from the camera is (what
   was imported is skipped, either way, dates, places). A file that only looks imported is copied over and compared
   first; more than 20 of them, or 2 GB, wait for "Copy over and compare"
   ([PR #26](https://github.com/byeonggonlee/Latent/pull/26)). No new permission.
