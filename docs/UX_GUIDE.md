@@ -14,6 +14,20 @@ marks a correctness, accessibility or safety requirement; **should** marks a pre
 behavior and storage/privacy promises must continue to match [PRIVACY.md](../PRIVACY.md) and
 [BACKUP_FORMAT.md](BACKUP_FORMAT.md).
 
+## Quick review checklist
+
+These are proposed design checks, not evidence that the current app passes them:
+
+- Can a photographer import a batch, pick the best frames, develop a pick and share it without losing context?
+- Is the photo unobstructed, and are repeated actions reachable with one hand and available without gestures?
+- Can the person tell what changed, what is still saving, what failed and how to recover?
+- Are file ownership, destructive scope, metadata-only backup and outgoing location treatment truthful?
+- Explain unexpected, irreversible or privacy-relevant outcomes at the action; teach unfamiliar behavior once;
+  skip extra explanation for routine actions. Keep details available on demand.
+- Prefer Undo for reversible work; require explicit confirmation for permanent loss. Never announce success early.
+- Check 48 dp targets, readable contrast, 200% text, accessible actions and retained state across window changes.
+- Observe someone complete the changed task without help; record hesitation and errors, not only screenshots.
+
 ## 1. Direction and scope
 
 Latent helps a photographer bring files from a camera, select pictures, develop them and place them on a map,
@@ -44,8 +58,10 @@ following photo-specific choices are Latent proposals, not Samsung or Android re
 The following are observations, not an accessibility or usability certification:
 
 - [AppRoot.kt](../app/src/main/java/com/byeonggon/latent/ui/AppRoot.kt) exposes **Library, Camera, Map, Location**.
-  Settings, Viewer, Compare and Editor are separate task screens. Library scroll state is retained while the viewer
-  is open. A USB entry can start on Camera.
+  This describes the inspected main revision, not the navigation target: [PR #41](https://github.com/byeonggonlee/Latent/pull/41)
+  at `86f9acd` implements **Library · Import · Map**, with Location reached from Import and Settings; it is not yet
+  merged at this revision. Settings, Viewer, Compare and Editor are separate task screens. Library scroll state is
+  retained while the viewer is open. A USB entry can start on Camera.
 - [WindowLayout.kt](../app/src/main/java/com/byeonggon/latent/ui/common/WindowLayout.kt) chooses side navigation at
   600 dp width; a side panel needs at least 560 dp and a width/height ratio of at least 0.9. Text-heavy screens have
   a 720 dp maximum reading width. These are existing app choices, not universal platform breakpoints.
@@ -74,10 +90,15 @@ Android recommends familiar navigation for peer destinations and adapting its pl
 
 **Proposed:**
 
-- Retain the four existing peer destinations and their order. Keep **Map** for browsing located photos and
-  **Location** for recording/importing location history; explain the difference in their empty states.
-- Keep Settings as a secondary destination. Editor tool categories are controls within editing, not additional
-  top-level destinations. Do not turn a frequent command such as Import into a destination merely to fill a bar.
+- Target **Library · Import · Map**, as implemented for review in [PR #41](https://github.com/byeonggonlee/Latent/pull/41).
+  The [owner decision recorded on this PR](https://github.com/byeonggonlee/Latent/pull/40#issuecomment-6410875975)
+  supports restructuring: Camera suggests taking a picture, and Map versus Location needs explanation. PR #41's
+  exact arrangement remains under review; this guide does not claim it has shipped.
+- Treat Import as a workspace for bringing photos in from USB cameras or cards/drives and checking pre-shoot
+  location recording. Location is a secondary task screen for recording settings, Timeline import, camera clock
+  adjustment and matching locations again, entered from Import and Settings. Map browses located photos.
+- Keep Settings secondary. Judge labels and grouping by whether people can find their task without an explanation;
+  Editor tool categories are controls within editing, not additional top-level destinations.
 - On compact windows, prefer labelled bottom navigation. On wider windows, prefer a rail while honoring the existing
   position preference. Adapt to the app window, not the device's model name.
 - Returning from Viewer or Editor should restore the relevant library filter, scroll anchor and photo. Deleting the
@@ -99,8 +120,9 @@ uses at least 24 dp side margins [S3]; that is not a universal Android requireme
 
 **Proposed layout defaults:**
 
-- Use 24 dp horizontal padding for text/form groups in Camera, Location and Settings where space permits. A
-  full-bleed photo/map or dense thumbnail grid may use different gutters. Keep interactive overlays inside safe
+- Start text/form groups in Import, Location and Settings at 16 dp horizontal padding in compact windows and
+  24 dp from medium width, subject to useful reading width. These are Latent proposals, not Samsung's margin rule.
+  A full-bleed photo/map or dense thumbnail grid may use different gutters. Keep interactive overlays inside safe
   bounds and document exceptions; do not invent app-level palm-rejection zones that swallow normal input.
 - Use consistent Material spacing, with an 8 dp rhythm for new groups and 4 dp for small internal adjustments.
   These are proposed Latent values. Touch area, large text and available space take priority over visual density.
@@ -109,6 +131,10 @@ uses at least 24 dp side margins [S3]; that is not a universal Android requireme
 - Keep the familiar toolbar for Back and occasional actions. A giant header or a second competing primary button
   is not required for One UI compatibility. Any relocation of the existing Done button needs a separate UI change
   with reachability and accessibility checks.
+- Put frequent Undo, Redo and Before/After within the lower interaction zone or reachable side panel. A canvas
+  press-and-hold can supplement an explicit original-preview action; preserve accessible equivalents. While
+  scrubbing a slider, dim or collapse unrelated tool chrome to expose the photo without moving the active control,
+  hiding its value or making the layout jump. Restore the panel predictably when the gesture ends.
 
 Use the current window dimensions and height constraints [A3]. Samsung's published compact/medium/expanded width
 ranges start at below 600, 600 and 840 dp [S4]; use these as review cases, not proof that every window at a threshold
@@ -130,7 +156,8 @@ alternatives [S5], [S6].
 
 - Use at least **48 × 48 dp effective hit areas**, even for smaller icons. Keep adjacent hit areas distinguishable;
   expanding a target must not cause the wrong neighboring action to fire. Do not judge accessibility from icon size.
-- Use semantic Material type styles and `sp`. Start new body copy at 16 sp where practical; this is a Latent default.
+- Use semantic Material type styles and `sp`. Start prose at 16 sp where practical; this is a Latent default.
+  Dense photo metadata and slider labels may use 14 sp body-medium when legible, with the same scaling checks.
   At 200% text and increased display size, allow wrapping/scrolling instead of shrinking text or clipping decisions.
 - Check **4.5:1 text contrast** and **3:1 essential icon/control contrast** against the actual surface [A5]. Overlays
   on arbitrary photos need a stable backing or scrim. Selection, errors, picks and rejects need a shape, icon or text
@@ -154,12 +181,26 @@ Samsung favors copy that helps a person decide, act or understand status [S7]. U
 and localized plurals, times and sizes. Avoid exposing implementation terms such as coroutine, SAF or inference
 backend in normal UI. Keep technical detail available only where it helps diagnose a problem.
 
+### Disclosure hierarchy
+
+Apply this proposed hierarchy to every instruction below to avoid warning fatigue:
+
+- **At the point of action, every relevant time:** explain an unexpected outcome, permanent loss or privacy
+  consequence. Examples: backup excludes photos, a shared file can retain location, permanent deletion, or an
+  HDR edit changes output capability. Use concise inline scope/status; a modal is only for a necessary decision.
+- **At first use, then on demand:** teach unfamiliar behavior such as timezone matching and Done continuing a
+  save in the background. Keep help discoverable. Current progress, failure and changed scope must still be visible;
+  first-use education does not replace operational status or privacy disclosure.
+- **No extra explanation for routine actions:** opening a photo, switching a filter or repeating a familiar edit
+  needs a clear label and feedback, not a tutorial or confirmation.
+
 **Proposed component choices:**
 
 - Use a bottom sheet for contextual tools, photo details or filters that benefit from seeing the underlying photo.
   Prefer a regular screen for a long settings task. Avoid stacking modal sheets and confirmation dialogs.
 - Use a confirmation dialog for permanent deletion, discarding unsaved work or applying a restore with replacements.
-  Name the affected content and give explicit verbs rather than Yes/No. Routine viewing/filtering needs no prompt.
+  Name the affected content and give explicit verbs rather than Yes/No. Prefer Undo over confirmation for reversible
+  actions such as moving to trash, when recovery is actually supported. Routine viewing/filtering needs no prompt.
 - One UI places choice/confirmation dialogs low on the screen [S8]. Latent currently uses Material `AlertDialog`;
   retain the standard accessible component as the baseline. Bottom placement is an optional ergonomic proposal,
   not an instruction to restyle every dialog or alter system permission dialogs. It must remain usable with the
@@ -182,7 +223,18 @@ Copy examples below are proposals, not shipped translations:
 - Korean example: **“사진 3장을 영구 삭제할까요?”**, **“취소” / “영구 삭제”**. Match the existing translation vocabulary;
   review English, Korean and Japanese together when changing a resource.
 
-## 7. Camera import
+### Perceived performance
+
+Proposed: keep the task responsive while image work catches up. Fill thumbnail slots with stable placeholders;
+show an embedded preview when available, then refine in place without changing the photo's framing or identity.
+Do not block navigation on a full decode; allow leaving or moving to the next photo without a late result replacing
+it. During slider drags, keep the thumb and value continuous, show the latest available preview, and make pending
+rendering understandable without claiming an old frame reflects the latest value. For a noticeable wait (roughly
+a second or more), show what is happening, such as loading detail or generating a mask; avoid flashing spinners
+for work that finishes immediately. Preserve manual tools and a supported cancellation/exit route during mask work.
+These are perceived-performance goals, not measured timing guarantees.
+
+## 7. Import from cameras, cards and drives
 
 Observed entry points and status live in
 [SyncScreen.kt](../app/src/main/java/com/byeonggon/latent/ui/sync/SyncScreen.kt). Proposed flow:
@@ -191,10 +243,15 @@ Observed entry points and status live in
    existing card/drive entry alongside USB guidance. Show source and destination before an unfamiliar operation.
 2. Keep a useful file/count/byte summary during transfer. Let the user request cancellation and explain its boundary.
    Leaving the screen, switching apps and turning the display off must not imply the operation has stopped.
+   Put active progress, cancellation, comparison prompts and results beside the initiating source, or bring that
+   result area into view on explicit start. Do not start invisible work below setup cards. Preserve the user's
+   reading/focus position during routine updates; announce important state changes without repeatedly stealing focus.
 3. Keep the copy-and-compare decision separate from importing known-new files. Name/size resemblance is not proof
    of a duplicate. Explain the transfer cost and that declining leaves the candidate unverified, not imported.
 4. Show imported, failed and not-yet-verified outcomes distinctly. “Nothing new” must not conceal comparison work
-   waiting for consent. Let users find the newly imported photos without searching the whole library.
+   waiting for consent. When files were imported, offer a primary **View N imported photos** action that opens
+   Library filtered or anchored to that committed batch in one tap. Keep the batch identifiable after returning;
+   distinguish newly imported files from candidates still awaiting comparison.
 5. After a disconnect or storage failure, keep the completed count and explain how to retry the remaining work.
    Do not promise byte-level resume or automatic retry unless supported. Never suggest deleting the camera's
    originals to resolve an import failure.
@@ -203,7 +260,29 @@ Observed entry points and status live in
 Already committed files must remain identifiable, and the UI must explain what still needs work. These device
 cases remain unverified in the latest SC-57G summary; this guide does not close them.
 
+### Main journey: import → cull → develop → share
+
+Proposed efficiency goal: rate or pick/reject a frame and advance with one action, without a layout jump. In the
+batch opened from Import, offer reachable full-screen rating/pick/reject controls and an explicit auto-advance
+option. Keep the decision visible, make mistakes easy to undo, and allow staying on a frame; keyboard and
+accessible actions must offer the same workflow. Auto-advance must not unexpectedly move accessibility focus.
+Compare near-duplicates without losing the batch, decisions or zoom context. Filter to picks for development,
+then share from the developed selection with format/location scope visible. Returning from editing or sharing
+should preserve the selection and place in the cull. These are target interactions, not claims that auto-advance
+or batch navigation is already implemented.
+
 ## 8. Library, Viewer, Compare and trash
+
+### First use and an empty library
+
+Proposed: explain Latent's purpose briefly in the initial empty state: bring in photos, choose the best, develop
+and share them. Offer a clear import entry and access to existing phone photos. Request photo access when the
+person chooses that route, explain limited/denied access and let them continue to other useful tasks. Do not require
+location, online maps or a sequence of permission prompts to get started. On the first camera connection, show
+connection/USB permission guidance and a concrete next action. After the first successful import, lead into that
+batch rather than leaving the person in setup. Keep help available without forcing a tutorial on later launches.
+
+### Browsing and recovery
 
 Proposed behavior builds on
 [LibraryScreen.kt](../app/src/main/java/com/byeonggon/latent/ui/library/LibraryScreen.kt),
@@ -234,10 +313,20 @@ with labels and current values. Reveal advanced controls progressively without h
   adjusting, moving the canvas or painting. Do not change that purpose silently mid-gesture.
 - Maintain undo/redo, original comparison, reset and named versions as distinct concepts. Resetting one control,
   one mask and the entire edit must have visibly different scope. An unavailable action should have an explanation
-  where its absence would otherwise look like a fault.
+  where its absence would otherwise look like a fault. Offer a one-handed single-slider reset, such as a
+  double-tap on its label or thumb, alongside an explicit accessible reset/numeric action. Reset to that parameter's
+  actual default, which may not be zero; a slider gesture must never silently reset the group or entire edit.
+- For precise Healing placement and mask strokes, provide an offset loupe or clear offset target so the finger
+  does not conceal the affected pixels. Keep the indicator away from the target and provide step/numeric or other
+  accessible alternatives for meaningful adjustments.
 - Explain what **Done**, **Save a copy as JPEG**, export and restoring the original actually do for that file type
   and ownership. Do not describe Done as a JPEG export for every photo. Show whether work is changed, saving,
   saved or failed; retain recoverable work on failure and do not announce Saved before the data/file result commits.
+  If Done closes the editor, saving/failed status belongs on that photo's Library thumbnail and in Viewer.
+  A failure needs a persistent actionable message with supported Retry/reopen recovery, not only a snackbar.
+  Reopening while saving must show pending work, preserve the last committed result and prevent conflicting saves;
+  viewing/navigation can continue, while a conflicting edit must wait or offer an explicitly supported recovery.
+  Do not silently replace the pending edit or present an unfinished output as saved.
 - Distinguish editing parameters from changing an original file. Preserve the current original-retention contract;
   any future change to it requires a separate reviewed implementation and accurate user-facing explanation.
 - Preview and saved output must agree about orientation, crop and mask placement. A lower-resolution preview is
@@ -259,8 +348,14 @@ permission with honest feature-specific status.
 
 **Latent proposals, constrained by the existing privacy contract:**
 
-- Do not require location recording or online maps to browse/edit photos. Explain camera timezone matching in plain
-  language before applying locations; recorded, imported and photo-embedded locations are distinct sources.
+- Do not require location recording or online maps to browse/edit photos. Separate two user moments:
+  **before shooting**, make recording easy to find and start from Import with visible readiness/last-fix status;
+  **after importing**, expose the count missing location and a route to Timeline import, clock correction and
+  matching again. Recorded, imported and photo-embedded locations are distinct sources.
+- Distinguish **Camera time zone** (Settings → Camera: interpreting EXIF without an offset, especially when traveling)
+  from **Camera clock** (Location: minute correction for camera clock drift). Group or cross-link the controls and
+  explain which problem each solves at the action. Do not teach users to fix a timezone mismatch with +60 minutes
+  of drift correction. Use first-use/on-demand help for the concept and show affected-photo scope before applying.
 - Recording needs an explicit on/off state, a clear stop action and the existing ongoing notification. Explain when
   recording stopped or permission is insufficient. Do not silently resume collection after a restore.
 - Online maps remain an opt-in. Explain that fetching map tiles reveals the viewed map area and IP address to the
@@ -298,6 +393,17 @@ Latent; do not imply background completion or automatic resume after process dea
 
 This is a proposed UX reference, not an automatic refactor list. Use it when changing the relevant screen. Existing
 [AGENTS.md](../AGENTS.md) decides authoring/review responsibilities; this document does not add a new review gate.
+
+**Task-based usability check for a UI PR that changes a journey:**
+
+Ask the owner or a representative photographer to complete the changed task without coaching, using disposable
+photos. Examples: import the new photos from a card and find them; pick the best five of fifty; develop a pick
+and find the saved result; share one photo with the supported location-removal scope understood. If a file cannot
+be safely shared under that scope, the person should recognize the limitation and choose a supported route or stop.
+Record completion, hesitation, wrong turns, errors and recovery, plus the person's own words; timings can help
+compare revisions but are not a new release gate. Today the owner's observations are the available user evidence;
+do not substitute an author's walkthrough, screenshot or emulator run for an unaided usability observation.
+Include the proposed three-tab navigation in these tasks when reviewing PR #41 or its follow-ups.
 
 **First implementation checks to consider after review:**
 
