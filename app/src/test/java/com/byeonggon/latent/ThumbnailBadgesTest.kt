@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
 import com.byeonggon.latent.data.db.FLAG_PICKED
 import com.byeonggon.latent.data.db.FLAG_REJECTED
+import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustments
@@ -52,19 +53,31 @@ class ThumbnailBadgesTest {
             add("REJECTED.JPG", flag = FLAG_REJECTED)
             add("STARRED.JPG", rating = 2)
             add("RAW.ARW", kind = MediaKind.RAW)
+            add("EDITED.JPG", edit = PhotoEdit(Adjustments(exposure = 0.5f)).toJson(), geoSource = GeoSource.TRACK)
         }
     }
 
     @get:Rule(order = 1)
     val compose = createAndroidComposeRule<MainActivity>()
 
-    private fun add(name: String, kind: MediaKind = MediaKind.PHOTO, flag: Int = 0, rating: Int = 0, written: Boolean = true): MediaItemEntity {
+    private fun add(
+        name: String,
+        kind: MediaKind = MediaKind.PHOTO,
+        flag: Int = 0,
+        rating: Int = 0,
+        edit: String? = null,
+        geoSource: GeoSource = GeoSource.NONE,
+        written: Boolean = true,
+    ): MediaItemEntity {
         val file = File(folder, name)
         if (written) {
             val bitmap = Bitmap.createBitmap(32, 24, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF808080.toInt()) }
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         }
-        val item = MediaItemEntity(path = file.absolutePath, fileName = name, kind = kind, sizeBytes = 1, capturedAt = 1, importedAt = 1, flag = flag, rating = rating)
+        val item = MediaItemEntity(
+            path = file.absolutePath, fileName = name, kind = kind, sizeBytes = 1, capturedAt = 1, importedAt = 1,
+            flag = flag, rating = rating, edit = edit, geoSource = geoSource,
+        )
         val id = runBlocking { container.database.mediaDao().insert(item) }
         return item.copy(id = id)
     }
@@ -93,6 +106,8 @@ class ThumbnailBadgesTest {
         compose.onNodeWithContentDescription("Picked").assertIsDisplayed()
         assertEquals(1, compose.onAllNodesWithText("★2").fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodesWithText("★3").fetchSemanticsNodes().size)
+        // An edited photo says so; whether it has a location is left to its details.
+        compose.onNodeWithContentDescription("Edited").assertIsDisplayed()
         // A raw file says what it is, in a cell with room for it: the badge, besides the filter chip of the same name.
         assertEquals(2, compose.onAllNodesWithText("RAW").fetchSemanticsNodes().size)
     }

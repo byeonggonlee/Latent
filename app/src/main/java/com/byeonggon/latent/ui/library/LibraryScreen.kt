@@ -96,7 +96,6 @@ import com.byeonggon.latent.ui.compare.MOST_COMPARED
 import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.db.FLAG_PICKED
 import com.byeonggon.latent.data.db.FLAG_REJECTED
-import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.ui.common.StorageAccessCard
@@ -740,7 +739,7 @@ internal enum class SaveStatus { NONE, SAVING, FAILED }
 /**
  * A photo in the grid, with what is known about it in four fixed corners (UI_GUIDE §8.8): the top left for whether
  * its edit is saving or failed, else its kind; the top right for selection; the bottom left for the cull's decision;
- * the bottom right for a video, an edit and a location. A small cell or large text keeps only the first three.
+ * the bottom right for a video and an edit. A small cell or large text keeps only the first three, and the video.
  */
 @Composable
 private fun MediaCell(
@@ -834,17 +833,16 @@ private fun MediaCell(
             }
         }
 
-        // Bottom right: a video, an edit, a location; the first to go when room is short.
+        // Bottom right: a video and an edit; the edit is the first to go when room is short. Whether a photo has a
+        // location is left to its details.
         if (roomy) {
             val video = item.kind == MediaKind.VIDEO
             val edited = item.edit != null
-            val located = item.geoSource != GeoSource.NONE
-            if (video || edited || located) {
+            if (video || edited) {
                 Box(Modifier.align(Alignment.BottomEnd).padding(BADGE_MARGIN).widthIn(max = badgeWidth)) {
                     Badge {
                         if (video) BadgeIcon(R.drawable.ic_video, stringResource(R.string.video))
                         if (edited) BadgeIcon(R.drawable.ic_edit, stringResource(R.string.edited))
-                        if (located) BadgeIcon(R.drawable.ic_location, stringResource(R.string.has_location))
                     }
                 }
             }

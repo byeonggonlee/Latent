@@ -123,7 +123,6 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
     <string name="video">Video</string>
     <string name="item_selected">Selected</string>
     <string name="edited">Edited</string>
-    <string name="has_location">Has a location</string>
     <plurals name="selected_count">
         <item quantity="one">✕ %d selected</item>
         <item quantity="other">✕ %d selected</item>

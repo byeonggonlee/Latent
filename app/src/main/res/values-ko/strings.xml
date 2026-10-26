@@ -111,7 +111,6 @@
     <string name="video">동영상</string>
     <string name="item_selected">선택됨</string>
     <string name="edited">보정됨</string>
-    <string name="has_location">위치 정보 있음</string>
     <plurals name="selected_count">
         <item quantity="other">✕ %d장 선택</item>
     </plurals>

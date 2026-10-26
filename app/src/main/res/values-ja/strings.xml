@@ -111,7 +111,6 @@
     <string name="video">動画</string>
     <string name="item_selected">選択中</string>
     <string name="edited">編集済み</string>
-    <string name="has_location">位置情報あり</string>
     <plurals name="selected_count">
         <item quantity="other">✕ %d 件選択</item>
     </plurals>
