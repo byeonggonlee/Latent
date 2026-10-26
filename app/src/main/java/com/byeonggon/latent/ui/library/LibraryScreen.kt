@@ -292,20 +292,20 @@ private fun LibraryContent(
                             }
                         }
                         items(day.items, key = { it.id }, contentType = { "media" }) { item ->
+                            // A JPEG that stands for its raw file as well says so, and says how that file's save went too.
+                            val withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners
+                            val partner = state.partners[item.id]?.takeIf { withRaw }
                             // Holding a photo starts picking photos out; from then on a tap picks, too.
                             MediaCell(
                                 item = item,
-                                // A JPEG that stands for its raw file as well says so.
-                                withRaw = state.stacked && item.kind == MediaKind.PHOTO && item.id in state.partners,
+                                withRaw = withRaw,
                                 selected = item.id in state.selected,
                                 selecting = selecting || state.showingTrash,
-                                status = when (item.id) {
-                                    in failedSaves -> SaveStatus.FAILED
-                                    in saving -> SaveStatus.SAVING
-                                    else -> SaveStatus.NONE
-                                },
-                                // In the trash a photo is only picked, to be put back or deleted.
-                                onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(item.id) },
+                                status = saveStatusOf(item.id, partner, saving, failedSaves.keys),
+                                edited = item.edit != null || item.id in state.partnerEdited,
+                                // In the trash a photo is only picked, to be put back or deleted. A pair whose raw file could
+                                // not be saved opens on that file, where the failure can be dealt with.
+                                onClick = { if (selecting || state.showingTrash) viewModel.toggle(item.id) else onOpen(openedFor(item.id, partner, failedSaves.keys)) },
                                 onHold = { viewModel.toggle(item.id) },
                                 // With a mouse, a right click picks the photo and offers what can be done to it, as a file manager does.
                                 menuEnabled = !state.showingTrash,
@@ -737,6 +737,20 @@ private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: (
 internal enum class SaveStatus { NONE, SAVING, FAILED }
 
 /**
+ * Where the save of the photo [id] stands, together with that of its raw [partner] when the two show as one: a
+ * failure of either is a failure of the pair, so a raw file that could not be saved is not hidden behind its JPEG.
+ */
+internal fun saveStatusOf(id: Long, partner: Long?, saving: Set<Long>, failed: Set<Long>): SaveStatus = when {
+    id in failed || (partner != null && partner in failed) -> SaveStatus.FAILED
+    id in saving || (partner != null && partner in saving) -> SaveStatus.SAVING
+    else -> SaveStatus.NONE
+}
+
+/** Which file of a pair a tap opens: the raw [partner] when it is the one that could not be saved, else [id]. */
+internal fun openedFor(id: Long, partner: Long?, failed: Set<Long>): Long =
+    if (partner != null && partner in failed && id !in failed) partner else id
+
+/**
  * A photo in the grid, with what is known about it in four fixed corners (UI_GUIDE §8.8): the top left for whether
  * its edit is saving or failed, else its kind; the top right for selection; the bottom left for the cull's decision;
  * the bottom right for a video and an edit. A small cell or large text keeps only the first three, and the video.
@@ -748,6 +762,7 @@ private fun MediaCell(
     selected: Boolean,
     selecting: Boolean,
     status: SaveStatus,
+    edited: Boolean,
     onClick: () -> Unit,
     onHold: () -> Unit,
     menuEnabled: Boolean = false,
@@ -837,7 +852,6 @@ private fun MediaCell(
         // location is left to its details.
         if (roomy) {
             val video = item.kind == MediaKind.VIDEO
-            val edited = item.edit != null
             if (video || edited) {
                 Box(Modifier.align(Alignment.BottomEnd).padding(BADGE_MARGIN).widthIn(max = badgeWidth)) {
                     Badge {

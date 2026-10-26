@@ -1,7 +1,10 @@
 package com.byeonggon.latent
 
 import android.graphics.Bitmap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -17,6 +20,9 @@ import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustments
 import com.byeonggon.latent.enhance.PhotoEdit
+import com.byeonggon.latent.ui.library.SaveStatus
+import com.byeonggon.latent.ui.library.openedFor
+import com.byeonggon.latent.ui.library.saveStatusOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -146,6 +152,55 @@ class ThumbnailBadgesTest {
         compose.waitUntil(timeoutMillis = 10_000) { lost.id !in container.editSaver.saving.value && lost.id !in container.editSaver.failed.value }
         waitUntilGone("Edit not saved")
         assertEquals(PhotoEdit(Adjustments(exposure = 1f)), PhotoEdit.fromJson(runBlocking { container.database.mediaDao().byId(lost.id)!!.edit }))
+    }
+
+    @Test
+    fun aSaveOvertakenByANewerOneLeavesNoFailureBehind() {
+        waitForDescription("PICKED.JPG")
+        val lost = add("LATER.JPG", written = false)
+        // The first edit cannot be saved (no file yet); a newer one, made once the file is there, can.
+        container.editSaver.save(lost, PhotoEdit(Adjustments(exposure = 1f)))
+        val bitmap = Bitmap.createBitmap(32, 24, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF808080.toInt()) }
+        File(lost.path).outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        container.editSaver.save(lost, PhotoEdit(Adjustments(contrast = 0.5f)))
+
+        compose.waitUntil(timeoutMillis = 10_000) { lost.id !in container.editSaver.saving.value }
+        assertNull(container.editSaver.failed.value[lost.id])
+        assertEquals(PhotoEdit(Adjustments(contrast = 0.5f)), PhotoEdit.fromJson(runBlocking { container.database.mediaDao().byId(lost.id)!!.edit }))
+    }
+
+    @Test
+    fun theEditorReopensAnEditThatCouldNotBeSaved() {
+        waitForDescription("PICKED.JPG")
+        val lost = failToSave()
+        val bitmap = Bitmap.createBitmap(32, 24, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF808080.toInt()) }
+        File(lost.path).outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        waitForDescription("LOST.JPG")
+        compose.onNodeWithContentDescription("LOST.JPG").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("Edit").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Edit").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithContentDescription("Exposure").fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Disabled) == null }
+        }
+
+        // The edit comes back as it was, ready to be saved again, and saving it settles the failure.
+        compose.onNodeWithText("+1.00").assertIsDisplayed()
+        compose.onNodeWithText("Done").assertIsEnabled().performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { lost.id !in container.editSaver.saving.value && lost.id !in container.editSaver.failed.value }
+        assertEquals(PhotoEdit(Adjustments(exposure = 1f)), PhotoEdit.fromJson(runBlocking { container.database.mediaDao().byId(lost.id)!!.edit }))
+    }
+
+    @Test
+    fun aPairShowsAndOpensTheFailureOfItsHiddenRawFile() {
+        val jpeg = 1L
+        val raw = 2L
+        assertEquals(SaveStatus.FAILED, saveStatusOf(jpeg, raw, saving = emptySet(), failed = setOf(raw)))
+        assertEquals(SaveStatus.SAVING, saveStatusOf(jpeg, raw, saving = setOf(raw), failed = emptySet()))
+        assertEquals(SaveStatus.NONE, saveStatusOf(jpeg, null, saving = setOf(raw), failed = setOf(raw)))
+        assertEquals(raw, openedFor(jpeg, raw, failed = setOf(raw)))
+        // The JPEG's own failure is shown where the pair opens anyway.
+        assertEquals(jpeg, openedFor(jpeg, raw, failed = setOf(jpeg, raw)))
+        assertEquals(jpeg, openedFor(jpeg, null, failed = setOf(raw)))
     }
 
     @Test

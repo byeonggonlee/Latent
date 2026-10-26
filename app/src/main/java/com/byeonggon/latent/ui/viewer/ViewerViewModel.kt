@@ -166,6 +166,8 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         val item = state.value.item ?: return
         runTask(failure = R.string.restore_original_failed) {
             edits.remove(item)
+            // An edit that could not be saved is not to be tried again over the original.
+            container.editSaver.discard(item.id)
             text(R.string.restored_original)
         }
     }
@@ -177,6 +179,7 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         runTask(failure = R.string.paste_failed) {
             val own = edits.editOf(item) ?: PhotoEdit()
             edits.apply(item, own.withLookOf(copied))
+            container.editSaver.discard(item.id)
             text(R.string.pasted)
         }
     }

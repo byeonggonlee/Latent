@@ -42,19 +42,38 @@ class EditSaver(
 
     private val turn = Mutex()
 
+    /** For each photo with a save under way, which of its saves is the latest: only that one is made, and says how it went. */
+    private val latest = HashMap<Long, Long>()
+
+    /** Numbers every save, never reused, so that an old save is never taken for a new one. */
+    private var saves = 0L
+
+    private fun isLatest(id: Long, generation: Long) = synchronized(latest) { latest[id] == generation }
+
     fun save(item: MediaItemEntity, edit: PhotoEdit) {
-        // A newer edit of the photo takes the place of one that failed.
+        // A newer edit of the photo takes the place of one that failed, and of one still waiting its turn.
+        val generation = synchronized(latest) { (++saves).also { latest[item.id] = it } }
         _failed.update { it - item.id }
         _saving.update { it + item.id }
         scope.launch {
+            var failure: String? = null
             try {
-                turn.withLock { edits.apply(item, edit) }
+                // A save overtaken while it waited is not made: the newer edit is, and nothing older is written over it.
+                turn.withLock { if (isLatest(item.id, generation)) edits.apply(item, edit) }
             } catch (e: IOException) {
-                failed(item, edit, context.getString(R.string.edit_not_saved, item.fileName))
+                failure = context.getString(R.string.edit_not_saved, item.fileName)
             } catch (e: OutOfMemoryError) {
-                failed(item, edit, context.getString(R.string.edit_not_saved_memory, item.fileName))
+                failure = context.getString(R.string.edit_not_saved_memory, item.fileName)
             } finally {
-                _saving.update { it - item.id }
+                // An earlier save that ends after a later one began says nothing: the photo is still being saved, and a
+                // failure of the edit it no longer has would be a false alarm.
+                synchronized(latest) {
+                    if (latest[item.id] == generation) {
+                        latest.remove(item.id)
+                        failure?.let { failed(item, edit, it) }
+                        _saving.update { it - item.id }
+                    }
+                }
             }
         }
     }
@@ -64,7 +83,11 @@ class EditSaver(
         _failed.value[id]?.let { save(it.item, it.edit) }
     }
 
-    /** Gives up the edit that could not be saved for [id]: the photo stays as it was saved last. */
+    /**
+     * Gives up the edit that could not be saved for [id]: the photo stays as it was saved last. Also called when the
+     * photo's edit is changed another way (restored, pasted over) or the photo is deleted, so that an old failure
+     * does not stay behind, or be tried again over the newer edit.
+     */
     fun discard(id: Long) {
         _failed.update { it - id }
     }
