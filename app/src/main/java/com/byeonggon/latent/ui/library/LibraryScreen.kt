@@ -75,7 +75,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -465,7 +464,7 @@ private fun BatchBar(batch: BatchProgress, onCancel: () -> Unit) {
 @Composable
 private fun LargeTitle(state: LibraryUiState, viewModel: LibraryViewModel, onSettings: () -> Unit, dialogs: LibraryDialogs) {
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 40.dp)) {
-        Text(stringResource(R.string.library), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.library), style = MaterialTheme.typography.headlineMedium)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 summaryOf(state),

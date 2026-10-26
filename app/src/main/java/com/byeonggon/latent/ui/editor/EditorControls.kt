@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.enhance.Adjustment
+import com.byeonggon.latent.ui.common.tabular
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -146,10 +148,12 @@ internal fun SettingSlider(
             Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Text(
                 valueText,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.tabular,
                 textAlign = TextAlign.End,
                 color = if (value == untouched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                // Room kept for the longest value, so its digits and sign can change without the label moving.
                 modifier = Modifier
+                    .widthIn(min = 64.dp)
                     .clip(RoundedCornerShape(6.dp))
                     .let { base ->
                         if (parseEntry == null) {

@@ -24,6 +24,7 @@ import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -50,6 +51,7 @@ import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.ui.common.SectionCard
 import com.byeonggon.latent.ui.common.StorageAccessCard
 import com.byeonggon.latent.ui.common.rememberStorageAccess
+import com.byeonggon.latent.ui.common.tabular
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -250,7 +252,7 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> 
         }
         is SyncState.Transferring -> SectionCard(stringResource(R.string.progress)) {
             val context = LocalContext.current
-            Text("${state.index} / ${state.total} · ${state.fileName}")
+            Text("${state.index} / ${state.total} · ${state.fileName}", style = LocalTextStyle.current.tabular)
             LinearProgressIndicator(
                 progress = {
                     if (state.totalBytes > 0) state.transferredBytes.toFloat() / state.totalBytes else 0f
@@ -260,7 +262,7 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> 
             Text(
                 Formatter.formatShortFileSize(context, state.transferredBytes) + " / " +
                     Formatter.formatShortFileSize(context, state.totalBytes),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.tabular,
             )
             if (state.cancelling) {
                 Hint(stringResource(R.string.stops_after_file))
