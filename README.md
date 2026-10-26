@@ -100,6 +100,8 @@ Gradle's `connectedAndroidTest` uninstalls it afterwards, taking its database wi
 
 - [`docs/UX_GUIDE.md`](docs/UX_GUIDE.md): proposed Latent UX guidance based on Android and Samsung One UI,
   with current behavior, design recommendations and review scenarios distinguished.
+- [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md): proposed visual design for Latent: colour, type, spacing, icons, components
+  and motion, from a designer's view rather than from the current code.
 - [`CHANGELOG.md`](CHANGELOG.md): what each release changed.
 - [`docs/RELEASES.md`](docs/RELEASES.md): the builds, the version numbers, signing, and how a release is made.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): what comes next, and why in that order.
