@@ -29,6 +29,57 @@ class SonyArwTest {
     }
 
     @Test
+    fun readsWhiteBalanceFromEncryptedSr2WhenTheRawIfdHasNone() {
+        val image = SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = null, privateEntries = listOf(
+            SyntheticArw.Entry.signedShorts(0x7313, 3072, 1024, 1024, 2048),
+            SyntheticArw.Entry.signedShorts(0x7800, 1024, 0, 0, 0, 1024, 0, 0, 0, 1024),
+        )))
+        assertArrayEquals(floatArrayOf(3f, 1f, 2f), image.whiteBalance, 0f)
+        assertArrayEquals(floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f), image.colorMatrix, 0f)
+    }
+
+    @Test
+    fun reordersTheOlderGrbgWhiteBalanceBeforeNormalisingIt() {
+        val image = SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = null, privateEntries = listOf(
+            SyntheticArw.Entry.signedShorts(0x7303, 1024, 2560, 1792, 1280),
+        )))
+        assertArrayEquals(floatArrayOf(2.5f, 1f, 1.75f), image.whiteBalance, 0f)
+    }
+
+    @Test
+    fun prefersRawWhiteBalanceThenPrivateRggbThenPrivateGrbg() {
+        val both = listOf(
+            SyntheticArw.Entry.signedShorts(0x7313, 3072, 1024, 1024, 2048),
+            SyntheticArw.Entry.signedShorts(0x7303, 1024, 2560, 1792, 1280),
+        )
+        assertArrayEquals(floatArrayOf(2f, 1f, 1.5f), SonyArw.read(SyntheticArw.file(300, 600, 400, privateEntries = both)).whiteBalance, 0f)
+        assertArrayEquals(floatArrayOf(3f, 1f, 2f), SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = null, privateEntries = both)).whiteBalance, 0f)
+    }
+
+    @Test
+    fun fallsBackFromUnusableRawOrPrivateRggbValues() {
+        for (bad in listOf(intArrayOf(), intArrayOf(1, 2, 3), intArrayOf(2048, 0, 1024, 1536), intArrayOf(-1, 1024, 1024, 1536))) {
+            val image = SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = bad, privateEntries = listOf(
+                SyntheticArw.Entry.signedShorts(0x7313, *bad),
+                SyntheticArw.Entry.signedShorts(0x7303, 1024, 2560, 1792, 1280),
+            )))
+            assertArrayEquals(floatArrayOf(2.5f, 1f, 1.75f), image.whiteBalance, 0f)
+        }
+    }
+
+    @Test
+    fun rejectsMissingOrUnusablePrivateWhiteBalance() {
+        for (tag in listOf(0x7313, 0x7303)) for (values in listOf(intArrayOf(), intArrayOf(2048, 1024, 1024), intArrayOf(2048, 0, 1024, 1536), intArrayOf(2048, 1024, 1024, 0))) {
+            assertThrows(IOException::class.java) {
+                SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = null, privateEntries = listOf(
+                    SyntheticArw.Entry.signedShorts(tag, *values),
+                )))
+            }
+        }
+        assertThrows(IOException::class.java) { SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = null)) }
+    }
+
+    @Test
     fun readsTheLensProfile() {
         val lens = SonyArw.read(SyntheticArw.file(300, 600, 400)).lens!!
 

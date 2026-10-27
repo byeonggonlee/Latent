@@ -83,6 +83,7 @@ object SonyArw {
     private const val TAG_ABERRATION = 0x7035
     private const val TAG_DISTORTION = 0x7037
     private const val TAG_BLACK_LEVEL = 0x7310
+    private const val TAG_WHITE_BALANCE_GRBG = 0x7303
     private const val TAG_WHITE_BALANCE = 0x7313
     private const val TAG_WHITE_LEVEL = 0xC61D
     private const val TAG_CROP_ORIGIN = 0xC61F
@@ -141,9 +142,12 @@ object SonyArw {
         request?.checkSamples(width.toLong() * height)
         val cropOrigin = raw.ints(TAG_CROP_ORIGIN)?.takeIf { it.size == 2 } ?: intArrayOf(0, 0)
         val cropSize = raw.ints(TAG_CROP_SIZE)?.takeIf { it.size == 2 } ?: intArrayOf(width, height)
-        val whiteBalance = raw.ints(TAG_WHITE_BALANCE)?.takeIf { it.size == 4 && it[1] > 0 }
+        val privateDirectory = readPrivateDirectory(data, main)
+        val whiteBalance = whiteBalance(raw.ints(TAG_WHITE_BALANCE))
+            ?: whiteBalance(privateDirectory?.ints(TAG_WHITE_BALANCE))
+            ?: whiteBalance(privateDirectory?.ints(TAG_WHITE_BALANCE_GRBG), red = 1, green = 0, blue = 2)
             ?: throw IOException("Missing white balance")
-        val colorMatrix = readPrivateDirectory(data, main)?.ints(TAG_COLOR_MATRIX)?.takeIf { it.size == 9 }
+        val colorMatrix = privateDirectory?.ints(TAG_COLOR_MATRIX)?.takeIf { it.size == 9 }
             ?: FALLBACK_COLOR_MATRIX
 
         return ArwImage(
@@ -156,17 +160,19 @@ object SonyArw {
             cropHeight = cropSize[1] and 1.inv(),
             blackLevel = raw.int(TAG_BLACK_LEVEL) ?: 512,
             whiteLevel = raw.int(TAG_WHITE_LEVEL) ?: 16383,
-            whiteBalance = floatArrayOf(
-                whiteBalance[0].toFloat() / whiteBalance[1],
-                1f,
-                whiteBalance[3].toFloat() / whiteBalance[1],
-            ),
+            whiteBalance = whiteBalance,
             colorMatrix = FloatArray(9) { colorMatrix[it] / 1024f },
             saturation = SATURATION,
             lens = readLensProfile(raw),
             orientation = main.int(TAG_ORIENTATION)?.takeIf { it in 1..8 } ?: 1,
             sensor = decode(file, stripOffset, width, height, toneCurve(raw.ints(TAG_TONE_CURVE)), request?.checkCancelled ?: {}),
         )
+    }
+
+    /** As-shot levels in RGGB (newer bodies) or GRBG (older SR2), normalised to the first green. */
+    private fun whiteBalance(values: IntArray?, red: Int = 0, green: Int = 1, blue: Int = 3): FloatArray? {
+        if (values == null || values.size != 4 || values.any { it <= 0 }) return null
+        return floatArrayOf(values[red].toFloat() / values[green], 1f, values[blue].toFloat() / values[green])
     }
 
     private fun readLensProfile(raw: TiffDirectory): LensProfile? {

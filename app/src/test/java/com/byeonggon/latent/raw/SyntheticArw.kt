@@ -19,7 +19,11 @@ internal object SyntheticArw {
     val BLUE_ABERRATION = IntArray(11) { -768 + 128 * it }
 
     /** A file whose red, green and blue photosites all hold the given stored (11-bit) values. */
-    fun file(red: Int, green: Int, blue: Int, make: String = "SONY", orientation: Int = 1, whiteBalance: IntArray = WHITE_BALANCE): ByteArray {
+    fun file(
+        red: Int, green: Int, blue: Int,
+        make: String = "SONY", orientation: Int = 1,
+        whiteBalance: IntArray? = WHITE_BALANCE, privateEntries: List<Entry> = emptyList(),
+    ): ByteArray {
         val strip = ByteArrayOutputStream()
         for (row in 0 until HEIGHT) {
             repeat(WIDTH / 32) {
@@ -30,30 +34,47 @@ internal object SyntheticArw {
         }
         val tiff = Tiff()
         val subDirectory = tiff.reserve()
+        val locator = if (privateEntries.isNotEmpty()) tiff.reserve() else null
         tiff.directory(
-            8,
-            Entry.ascii(0x010F, make),
-            Entry.shorts(0x0112, orientation),
-            Entry.longs(0x014A, subDirectory),
-        )
+            8, *listOfNotNull(
+                Entry.ascii(0x010F, make),
+                Entry.shorts(0x0112, orientation),
+                Entry.longs(0x014A, subDirectory),
+                locator?.let { Entry.bytes(0xC634, it and 255, (it ushr 8) and 255, (it ushr 16) and 255, (it ushr 24) and 255) },
+        ).toTypedArray())
         val stripOffset = tiff.reserve()
         tiff.directory(
-            subDirectory,
-            Entry.shorts(0x0100, WIDTH),
-            Entry.shorts(0x0101, HEIGHT),
-            Entry.shorts(0x0103, 32767),
-            Entry.longs(0x0111, stripOffset),
-            Entry.longs(0x0117, WIDTH * HEIGHT),
-            Entry.bytes(0x828E, 0, 1, 1, 2),
-            Entry.shorts(0x7010, 8000, 10400, 12900, 14100),
-            Entry.signedShorts(0x7035, 22, *RED_ABERRATION, *BLUE_ABERRATION),
-            Entry.signedShorts(0x7037, 11, *DISTORTION),
-            Entry.shorts(0x7310, BLACK, BLACK, BLACK, BLACK),
-            Entry.signedShorts(0x7313, *whiteBalance),
-            Entry.shorts(0xC61D, 16383),
-            Entry.longs(0xC61F, CROP_LEFT, CROP_TOP),
-            Entry.longs(0xC620, CROP_WIDTH, CROP_HEIGHT),
-        )
+            subDirectory, *listOfNotNull(
+                Entry.shorts(0x0100, WIDTH),
+                Entry.shorts(0x0101, HEIGHT),
+                Entry.shorts(0x0103, 32767),
+                Entry.longs(0x0111, stripOffset),
+                Entry.longs(0x0117, WIDTH * HEIGHT),
+                Entry.bytes(0x828E, 0, 1, 1, 2),
+                Entry.shorts(0x7010, 8000, 10400, 12900, 14100),
+                Entry.signedShorts(0x7035, 22, *RED_ABERRATION, *BLUE_ABERRATION),
+                Entry.signedShorts(0x7037, 11, *DISTORTION),
+                Entry.shorts(0x7310, BLACK, BLACK, BLACK, BLACK),
+                whiteBalance?.let { Entry.signedShorts(0x7313, *it) },
+                Entry.shorts(0xC61D, 16383),
+                Entry.longs(0xC61F, CROP_LEFT, CROP_TOP),
+                Entry.longs(0xC620, CROP_WIDTH, CROP_HEIGHT),
+        ).toTypedArray())
+        if (locator != null) {
+            val privateOffset = tiff.reserve()
+            val plain = Tiff(base = privateOffset).apply { directory(0, *privateEntries.toTypedArray()) }.bytes()
+            val padded = plain.copyOf((plain.size + 3) / 4 * 4)
+            val data = ByteBuffer.wrap(padded).order(ByteOrder.LITTLE_ENDIAN)
+            val words = IntArray(padded.size / 4) { data.getInt(4 * it) }
+            // XOR scrambling is its own inverse; real camera files independently exercise decryption.
+            SonyArw.unscramble(words, 0x44332211)
+            words.forEachIndexed { index, word -> data.putInt(4 * index, word) }
+            tiff.directory(locator,
+                Entry.longs(0x7200, privateOffset), Entry.longs(0x7201, padded.size),
+                Entry.bytes(0x7221, 0x11, 0x22, 0x33, 0x44),
+            )
+            tiff.write(privateOffset, padded)
+        }
         tiff.write(stripOffset, strip.toByteArray())
         return tiff.bytes()
     }
@@ -86,7 +107,7 @@ internal object SyntheticArw {
     }
 
     /** Lays directories and their values out one after another in a little-endian TIFF. */
-    class Tiff {
+    class Tiff(private val base: Int = 0) {
         private val buffer = ByteBuffer.allocate(1 shl 16).order(ByteOrder.LITTLE_ENDIAN)
         private var end = 4096 // values and later directories go here, clear of the first directory
 
@@ -105,7 +126,7 @@ internal object SyntheticArw {
                 if (entry.data.size <= 4) {
                     entry.data.forEachIndexed { byte, value -> buffer.put(at + 8 + byte, value) }
                 } else {
-                    buffer.putInt(at + 8, end)
+                    buffer.putInt(at + 8, end + base)
                     write(end, entry.data)
                     end += entry.data.size + (entry.data.size and 1)
                 }
