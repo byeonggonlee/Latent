@@ -12,6 +12,7 @@ import com.byeonggon.latent.enhance.Adjustment
 import com.byeonggon.latent.enhance.Adjustments
 import com.byeonggon.latent.enhance.AutoLevel
 import com.byeonggon.latent.enhance.AutoSettings
+import com.byeonggon.latent.enhance.ColourPickPlane
 import com.byeonggon.latent.enhance.ClippingMarks
 import com.byeonggon.latent.enhance.ColorGrading
 import com.byeonggon.latent.enhance.ColorMixer
@@ -43,6 +44,9 @@ import com.byeonggon.latent.enhance.Detection
 import com.byeonggon.latent.enhance.Mask
 import com.byeonggon.latent.enhance.MaskShape
 import com.byeonggon.latent.enhance.MaskStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -86,6 +90,7 @@ data class EditorUiState(
     val item: MediaItemEntity? = null,
     val edit: PhotoEdit = PhotoEdit(),
     val preview: Bitmap? = null,
+    val colourPicker: ColourPickerState? = null,
     val histogram: Histogram? = null,
     /** Size of the whole picture as it is drawn here, upright and before the edit's own framing. */
     val pictureWidth: Int = 0,
@@ -151,6 +156,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val source = MutableStateFlow<Source?>(null)
     private var session: Long? = null
     private var loading: Job? = null
+    private val rendering = Mutex()
+    private var pickerJob: Job? = null
+    private var picker: ColourPickSession? = null
+
+    private class ColourPickSession(val itemId: Long, val source: Source, val edit: PhotoEdit, val localIndex: Int) {
+        var plane: ColourPickPlane? = null
+    }
 
     /** The edit as it was when the editor opened, and whether it is stored with the photo already. */
     private var opened = PhotoEdit()
@@ -197,7 +209,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 .collect { (source, edit, view, centre, draft, clipping) ->
                     if (source == null) return@collect
                     val rendered = try {
-                        withContext(Dispatchers.Default) { source.render(edit, view, centre, draft, clipping) }
+                        withContext(Dispatchers.Default) { rendering.withLock { source.render(edit, view, centre, draft, clipping) } }
                     } catch (e: OutOfMemoryError) {
                         null
                     } catch (e: IOException) {
@@ -261,6 +273,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Ends the editing session and lets go of the picture. */
     fun close() {
+        cancelColourPick()
         loading?.cancel()
         session = null
         source.value = null
@@ -292,6 +305,85 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     fun setFraming(framing: Framing) = change { it.copy(framing = framing) }
 
     fun setLocals(locals: List<LocalEdit>) = change { it.copy(locals = locals) }
+
+    /** Takes a frozen copy of the colours tested by this mask, without changing its hue or the edit's history. */
+    fun beginColourPick(index: Int) {
+        cancelColourPick()
+        val current = ui.value
+        val image = source.value ?: return
+        val item = current.item ?: return
+        if (current.loading || current.saving || index !in current.edit.locals.indices) return
+        commit()
+        val session = ColourPickSession(item.id, image, current.edit, index)
+        picker = session
+        ui.update { it.copy(colourPicker = ColourPickerState()) }
+        pickerJob = viewModelScope.launch {
+            try {
+                val (plane, bitmap) = withContext(Dispatchers.Default) {
+                    rendering.withLock {
+                        ensureActive()
+                        val plane = image.colourInput(session.edit, index)
+                        val bitmap = Bitmap.createBitmap(plane.pixels(), plane.picture.width, plane.picture.height, Bitmap.Config.ARGB_8888)
+                        plane to bitmap
+                    }
+                }
+                if (!isCurrent(session)) return@launch
+                session.plane = plane
+                ui.update { it.copy(colourPicker = ColourPickerState(preparing = false, preview = bitmap)) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                colourPickFailed(session)
+            } catch (e: OutOfMemoryError) {
+                colourPickFailed(session)
+            }
+        }
+    }
+
+    private fun isCurrent(session: ColourPickSession): Boolean = picker === session &&
+        source.value === session.source && ui.value.item?.id == session.itemId && ui.value.edit == session.edit
+
+    private fun colourPickFailed(session: ColourPickSession) {
+        if (!isCurrent(session)) return
+        cancelColourPick()
+        ui.update { it.copy(message = text(R.string.preview_failed)) }
+    }
+
+    fun pickColour(x: Float, y: Float) {
+        val session = picker ?: return
+        val plane = session.plane ?: return
+        if (!isCurrent(session) || !x.isFinite() || !y.isFinite() || x !in 0f..1f || y !in 0f..1f) return
+        val sampled = plane.sample(x, y)
+        ui.update { state ->
+            state.copy(colourPicker = state.colourPicker?.let { current ->
+                current.copy(point = x to y, hue = sampled?.hue ?: current.hue, colour = sampled?.argb ?: current.colour, invalid = sampled == null)
+            })
+        }
+    }
+
+    fun moveColourCursor(across: Float, down: Float) {
+        val current = ui.value.colourPicker ?: return
+        if (current.preparing || !across.isFinite() || !down.isFinite()) return
+        val (x, y) = current.point ?: (0.5f to 0.5f)
+        pickColour((x + across).coerceIn(0f, 1f), (y + down).coerceIn(0f, 1f))
+    }
+
+    fun applyColourPick() {
+        val session = picker ?: return
+        val hue = ui.value.colourPicker?.hue ?: return
+        if (!isCurrent(session)) { cancelColourPick(); return }
+        cancelColourPick()
+        changeOnce { edit ->
+            edit.copy(locals = edit.locals.toMutableList().apply { this[session.localIndex] = this[session.localIndex].copy(hue = hue) })
+        }
+    }
+
+    fun cancelColourPick() {
+        picker = null
+        pickerJob?.cancel()
+        pickerJob = null
+        ui.update { it.copy(colourPicker = null) }
+    }
 
     fun setSpots(spots: List<Spot>) = change { it.copy(spots = spots) }
 
@@ -540,11 +632,17 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun redo() = stepTo(position + 1)
 
-    fun setComparing(comparing: Boolean) = ui.update { it.copy(comparing = comparing) }
+    fun setComparing(comparing: Boolean) {
+        if (comparing) cancelColourPick()
+        ui.update { it.copy(comparing = comparing) }
+    }
 
     fun setClipping(clipping: Boolean) = ui.update { it.copy(clipping = clipping) }
 
-    fun show(view: EditorView) = ui.update { it.copy(view = view) }
+    fun show(view: EditorView) {
+        if (view != EditorView.WHOLE) cancelColourPick()
+        ui.update { it.copy(view = view) }
+    }
 
     /**
      * Moves on from the part shown at full size, as dragging the picture does: [across] and [down]
@@ -559,6 +657,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Hands the edit over to be saved in the background and closes the editor at once. */
     fun save() {
+        cancelColourPick()
         val current = ui.value
         val item = current.item ?: return
         if (current.saving || !current.canSave) return
@@ -597,6 +696,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         val before = ui.value.edit
         val after = transform(before)
         if (after == before) return
+        cancelColourPick()
         // Whatever was undone is gone once something new is done.
         while (history.size > position + 1) history.removeAt(history.lastIndex)
         if (changing && position > 0) {
@@ -613,6 +713,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun stepTo(wanted: Int) {
         if (wanted !in history.indices) return
+        cancelColourPick()
         commit()
         position = wanted
         put(history[wanted])
@@ -655,6 +756,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private suspend fun load(item: MediaItemEntity, lensCorrection: Boolean) {
+        cancelColourPick()
         ui.update { it.copy(loading = true) }
         val loaded = try {
             withContext(Dispatchers.Default) {
@@ -732,12 +834,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         var detailShare = 1f to 1f
             private set
 
-        /**
-         * [draft] allows half the size while a slider moves; only for the picture as it will be, as the
-         * frames drawn over the whole picture in other views go by its size.
-         */
-        fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>, draft: Boolean = false, clipping: Boolean = false): Rendered {
-            if (view == EditorView.DETAIL) return renderDetail(edit, centre, clipping)
+        private fun prepareWhole(edit: PhotoEdit) {
             if (edit.spots != spots) {
                 spots = edit.spots
                 healed = if (spots.isEmpty()) image else image.copy().also { Healing.heal(it, spots) }
@@ -745,6 +842,20 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 // Framed anew below.
                 framing = Framing(left = -1f)
             }
+        }
+
+        fun colourInput(edit: PhotoEdit, index: Int): ColourPickPlane {
+            prepareWhole(edit)
+            return ToneRenderer(edit.copy(framing = Framing()), wholeOverview).colourInput(healed, index)
+        }
+
+        /**
+         * [draft] allows half the size while a slider moves; only for the picture as it will be, as the
+         * frames drawn over the whole picture in other views go by its size.
+         */
+        fun render(edit: PhotoEdit, view: EditorView, centre: Pair<Float, Float>, draft: Boolean = false, clipping: Boolean = false): Rendered {
+            if (view == EditorView.DETAIL) return renderDetail(edit, centre, clipping)
+            prepareWhole(edit)
             if (edit.framing != framing) {
                 framing = edit.framing
                 healed.framedAs(framing).let {
