@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | Emulator findings 2–4: light system-bar icons over the photo workspace, the editor explaining a photo it cannot open, the selection bar's actions under More when they do not fit | `claude/editor-fixes` | `ui/common/`, `ui/editor/`, `ui/library/LibraryScreen.kt`, strings, tests | 2026-10-27 |
 
 ## For Codex
 
@@ -483,6 +482,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-27 | Claude Code (computer) | Emulator findings 2–4: light system-bar icons over the photo workspace in either theme; a photo the editor never read is explained in place of the picture (raw: not developable yet, the viewer keeps the camera's preview) with Close, scrolling at large text, while a failed reread keeps the picture; the selection bar shows what fits and puts the rest under More, its count giving way first. Reviewed by Codex (LGTM at `3d37d5c`) | [PR #48](https://github.com/byeonggonlee/Latent/pull/48), merged `4d76e59` |
 | 2026-10-27 | Codex | Sony ARW as-shot WB fallback from encrypted SR2 RGGB/GRBG, preserving the legacy raw-IFD contract. Five new synthetic tests; public ILCE-7M2 decode/proxy succeeds. Public 7RM2 private pointer is unusable and remains rejected. Full local CI checks pass. Reviewed by Claude Code (LGTM); phone colour judgement pending | [PR #49](https://github.com/byeonggonlee/Latent/pull/49), merged `7d58294`; [follow-up](device-results/2026-10-27-sony-sr2.md) |
 | 2026-10-27 | Codex | Photo colour picker: frozen selected-mask input, crosshair/magnifier, one-step Apply and cancelable draft; fixed swatches stay shown by default with a device-local hide setting. JVM tests, both Lints and instrumentation build pass. Reviewed by Claude Opus 5.5 (LGTM at `ac8a415`), CI green; S24/GPU runtime checks pending | [PR #47](https://github.com/byeonggonlee/Latent/pull/47), merged `142f7f7`; [verification](superpowers/reports/2026-10-27-photo-colour-picker.md) |
 | 2026-10-27 | Codex | Fixed device thumbnail benchmark timing to preserve a null EXIF thumbnail result. Added a generated-JPEG regression; old helper fails and fixed helper passes with a disposable Robolectric runner adaptation. JVM suite (779 tests), both Lints and instrumentation build pass; S24 Ultra disconnected before device rerun. Reviewed by Claude Code (LGTM) | [PR #46](https://github.com/byeonggonlee/Latent/pull/46), merged `70ae843` |
