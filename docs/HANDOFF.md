@@ -155,6 +155,9 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 ### 0. Release 0.1.0 — top priority (set by the owner, 2026-10-27)
 
+**Feature freeze (owner, 2026-10-27):** 0.1.0 is the app as it is on `main` at `312c6a5` (PR #50 included); from here
+only fixes for what the release checks find go in before the tag. New features, Canon raw included, wait for after it.
+
 **Before anything else in this list.** Everything planned for 0.1.0 is on `main`: the `CHANGELOG.md` section is
 written (its date waits for the tag), `v0.1.0-rc.2` built the signed APK and AAB and is on a Play testing track, and
 an emulator run passed most of the smoke test ([report](device-results/2026-10-27-emulator.md)). What is left is
@@ -188,6 +191,10 @@ owner's decision once the report is in.
 **Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. S24 and owner ZV-E10 checks remain pending. PR #50 re-reviewed at `5abec53`: previous P2 resolved, [LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143). Local minified APK/AAB, privacy, APK signature and 16 KiB alignment checks pass; CI/owner-authorized merge still required.
 
 **After 0.1.0:** the UI guide's control and layout tasks handed to Codex earlier wait until the release is out.
+Then Canon raw (owner, 2026-10-27): CR2 first (TIFF with lossless JPEG, so the DNG path's decoder can serve), then
+CR3 (ISO BMFF with Canon's CRX codec, a decoder of its own). Samples from [raw.pixls.us](https://raw.pixls.us/data/Canon/)
+(check each file's licence there; kept out of the repository like the others). Decoders are Codex's area; the seam
+changes go through a reviewed pull request.
 
 ### Earlier items
 

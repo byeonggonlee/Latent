@@ -107,6 +107,7 @@ Last updated 2026-10-23.
 
 ## Later
 
+- **Canon raw, after 0.1.0** (owner, 2026-10-27; Codex): CR2, then CR3. See HANDOFF, *For Codex* §0, "After 0.1.0".
 - **Auto colour, after 0.1.0** (owner, 2026-10-27; Claude Code): the auto adjustment's white balance is gray-world,
   half the way and capped (`AutoSettings.kt`), so a sunset, tungsten room or one-colour scene is read as a cast.
   Try (1) for a raw, starting from the camera's as-shot white balance and letting auto move only a little from it,
