@@ -107,6 +107,11 @@ Last updated 2026-10-23.
 
 ## Later
 
+- **Auto colour, after 0.1.0** (owner, 2026-10-27; Claude Code): the auto adjustment's white balance is gray-world,
+  half the way and capped (`AutoSettings.kt`), so a sunset, tungsten room or one-colour scene is read as a cast.
+  Try (1) for a raw, starting from the camera's as-shot white balance and letting auto move only a little from it,
+  and (2) gray-edge, white-patch or a mix of them in place of gray-world. Compare them on the same photos,
+  including scenes whose colour is meant; a learned model and automatic colour grading are not part of this.
 - Video: LUTs and grading on Media3, 10-bit with them; carrying an Ultra HDR photo's gain map through an edit
   (ROADMAP items 7, 11, 12). HDR in the viewer, and telling that an edit drops the gain map, are done (2026-10-22,
   pull requests #27 and #28).
