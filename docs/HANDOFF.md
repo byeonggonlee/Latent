@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Design photo colour picking with optional colour swatches; implementation awaits owner design approval | `codex/colour-picker-design` | `docs/superpowers/specs/2026-10-27-photo-colour-picker-design.md`, this board | 2026-10-27 |
 
 ## For Codex
 
