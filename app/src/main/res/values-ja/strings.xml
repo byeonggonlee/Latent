@@ -711,4 +711,5 @@
     <string name="colour_pick_up">選択位置を上に移動</string>
     <string name="colour_pick_down">選択位置を下に移動</string>
     <string name="colour_pick_preparing">色の選択を準備中…</string>
+    <string name="colour_pick_keys">方向キーで選択位置を動かせます。Enter または D-pad の中央ボタンで適用・キャンセルに移動します。</string>
 </resources>

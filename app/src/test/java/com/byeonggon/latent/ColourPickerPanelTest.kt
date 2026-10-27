@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.byeonggon.latent.enhance.LocalEdit
 import com.byeonggon.latent.enhance.Mask
@@ -50,6 +52,17 @@ class ColourPickerPanelTest {
         compose.onNodeWithText("Colour options").performScrollTo().performClick()
         compose.onNodeWithText("Show colour swatches").performClick()
         compose.onNodeWithContentDescription("Red").assertExists()
+    }
+
+    @Test fun swatchMenuAnnouncesBothCheckedStatesOnItsSingleClickTarget() {
+        panel()
+        compose.onNodeWithText("Colour options").performScrollTo().performClick()
+        compose.onNodeWithText("Show colour swatches")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On))
+            .performClick()
+        compose.onNodeWithText("Colour options").performClick()
+        compose.onNodeWithText("Show colour swatches")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
     }
 
     @Test fun hidingSwatchesDoesNotEnableAnyColourForAWholePhotoColourMask() {

@@ -242,10 +242,6 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
             when {
                 state.colourPicker != null -> when (event.key) {
                     Key.Escape -> { viewModel.cancelColourPick(); true }
-                    Key.DirectionLeft -> { viewModel.moveColourCursor(-0.01f, 0f); true }
-                    Key.DirectionRight -> { viewModel.moveColourCursor(0.01f, 0f); true }
-                    Key.DirectionUp -> { viewModel.moveColourCursor(0f, -0.01f); true }
-                    Key.DirectionDown -> { viewModel.moveColourCursor(0f, 0.01f); true }
                     else -> event.isCtrlPressed || event.isAltPressed || (plain && EditorTab.entries.any { it.key == event.key })
                 }
                 event.isCtrlPressed && event.key == Key.Z && !event.isShiftPressed -> viewModel.undo().let { true }

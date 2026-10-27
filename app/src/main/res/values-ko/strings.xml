@@ -711,4 +711,5 @@
     <string name="colour_pick_up">선택 지점 위로 이동</string>
     <string name="colour_pick_down">선택 지점 아래로 이동</string>
     <string name="colour_pick_preparing">색상 선택 준비 중…</string>
+    <string name="colour_pick_keys">방향키로 선택 위치를 옮기세요. Enter 또는 D-pad 가운데 버튼을 누르면 적용·취소로 이동합니다.</string>
 </resources>

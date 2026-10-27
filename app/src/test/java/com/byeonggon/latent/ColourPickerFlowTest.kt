@@ -204,6 +204,37 @@ class ColourPickerFlowTest {
         assertFalse(closed)
         assertEquals(before, model.state.value.edit)
     }
+    @Test fun dpadAloneCanSampleReachTheActionsApplyAndCancel() {
+        val model = open()
+        compose.runOnUiThread { compose.activity.setContent { EditorScreen(photoId, onClose = {}, viewModel = model) } }
+        compose.onNodeWithText("Masks").performScrollTo().performClick()
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        val before = model.state.value.edit
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
+        assertNotNull("direction sampled", model.state.value.colourPicker!!.hue)
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.onNodeWithText("Apply colour").assertIsFocused()
+        assertEquals(before, model.state.value.edit) // Moving focus must not also activate Apply on key-up.
+        val point = model.state.value.colourPicker!!.point
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        compose.onNodeWithText("Cancel colour picking").assertIsFocused()
+        assertEquals(point, model.state.value.colourPicker!!.point)
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitUntil { model.state.value.colourPicker == null }
+        assertNotEquals(before, model.state.value.edit)
+        compose.runOnIdle { model.undo() }
+        assertEquals(before, model.state.value.edit)
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.onNodeWithText("Cancel colour picking").assertIsFocused() // No valid sample means Apply is disabled.
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        assertNull(model.state.value.colourPicker)
+        assertEquals(before, model.state.value.edit)
+    }
+
     @Test fun pickingShowsItsInputInsteadOfBeforeAfterComparison() {
         val model = open()
         compose.runOnIdle { model.setComparing(true) }
@@ -238,6 +269,8 @@ class ColourPickerFlowTest {
         compose.onNodeWithText("Masks").performScrollTo().performClick()
         compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
         compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        compose.runOnIdle { model.pickColour(0.25f, 0.5f) }
+        compose.onNodeWithText("Hue: 210°").assertIsDisplayed()
         compose.onNodeWithText("Apply colour").assertIsDisplayed()
         compose.onNodeWithText("Cancel colour picking").assertIsDisplayed()
         assertTrue(compose.onNodeWithText("Cancel colour picking").getBoundsInRoot().run { bottom - top >= 48.dp })

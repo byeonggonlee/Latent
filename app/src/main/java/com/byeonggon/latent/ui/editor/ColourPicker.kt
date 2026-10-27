@@ -12,6 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -84,6 +87,8 @@ internal fun ColourPickerFrame(
     modifier: Modifier = Modifier,
 ) {
     val window = rememberWindowLayout()
+    val applyFocus = remember { FocusRequester() }
+    val cancelFocus = remember { FocusRequester() }
     var dragging by remember { mutableStateOf(false) }
     val value = state.hue?.let { stringResource(R.string.colour_hue_value, it.roundToInt()) }
     val invalid = stringResource(R.string.colour_pick_invalid)
@@ -113,8 +118,14 @@ internal fun ColourPickerFrame(
                             CustomAccessibilityAction(up) { move(0f, -0.01f); true }, CustomAccessibilityAction(down) { move(0f, 0.01f); true },
                         )
                     }
-                    .keys { event ->
+                    .keys(onRelease = { event ->
+                        if (event.key == Key.Enter || event.key == Key.DirectionCenter) {
+                            if (!state.preparing && state.hue != null) applyFocus.requestFocus() else cancelFocus.requestFocus()
+                            true
+                        } else false
+                    }) { event ->
                         when (event.key) {
+                            Key.Enter, Key.DirectionCenter -> true
                             Key.DirectionLeft -> { move(-0.01f, 0f); true }
                             Key.DirectionRight -> { move(0.01f, 0f); true }
                             Key.DirectionUp -> { move(0f, -0.01f); true }
@@ -173,12 +184,13 @@ internal fun ColourPickerFrame(
             Column(Modifier.padding(16.dp)) {
                 Column(Modifier.weight(1f, fill = window.sidePanel).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (state.preparing) preparing else stringResource(R.string.colour_pick_hint), style = MaterialTheme.typography.bodyMedium)
-                    if (value != null) Text(value, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.colour_pick_keys), style = MaterialTheme.typography.bodySmall)
                     if (state.invalid) Text(invalid, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
                 }
+                if (value != null) Text(value, style = MaterialTheme.typography.titleMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Button(onClick = onApply, enabled = !state.preparing && state.hue != null, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_apply)) }
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_cancel)) }
+                    Button(onClick = onApply, enabled = !state.preparing && state.hue != null, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(applyFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_apply)) }
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(cancelFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_cancel)) }
                 }
             }
         }

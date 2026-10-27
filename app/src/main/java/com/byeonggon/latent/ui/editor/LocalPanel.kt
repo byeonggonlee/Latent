@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -289,6 +292,10 @@ internal fun LocalPanel(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.show_colour_swatches)) },
                     trailingIcon = { Checkbox(checked = showColourSwatches, onCheckedChange = null) },
+                    modifier = Modifier.semantics {
+                        role = Role.Checkbox
+                        toggleableState = if (showColourSwatches) ToggleableState.On else ToggleableState.Off
+                    },
                     onClick = { onShowColourSwatches(!showColourSwatches); colourOptions = false },
                 )
             }
