@@ -8,11 +8,13 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
-- [ ] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)): implementation and local
-      checks are complete. Request Claude Code (Opus 5.5), Gemini 4 Argon or Claude Opus 5.5 via Antigravity to review
-      the full colour/rendering, state/cancellation and UI diff before merge. This session has no qualified
-      cross-family reviewer available; its fresh Codex review is supplemental. S24/GPU runtime checks remain in
-      DEVICE_CHECKS.md. See [verification](superpowers/reports/2026-10-27-photo-colour-picker.md).
+- [x] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)):
+      Claude Opus 5.5 (via Claude Code) reviewed the full diff at `ac8a415`, LGTM; CI green. Merged `142f7f7` with
+      the owner's authorization. S24/GPU/TalkBack checks remain in DEVICE_CHECKS.md.
+- [ ] **Photo colour picker UX follow-ups** (PR #47 review, non-blocking P3): clarify the retained previous hue when
+      a new sample is invalid (current behavior follows the approved design); show hardware-key guidance only where
+      useful; reserve the hue line to prevent the image moving after the first sample; preserve mask-panel scroll
+      on returning from picking. These are follow-up suggestions, not conditions on the merged PR.
 
 - [x] **Verified reinstallation imports, transfer cost** (legacy audit LA-01, HANDOFF; decided 2026-10-22): a camera
       file that only looks like one in the library by name and size is compared whole before it is left out, and the
