@@ -1,6 +1,7 @@
 package com.byeonggon.latent
 
 import android.content.ContentUris
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.provider.MediaStore
 import android.util.Log
@@ -13,6 +14,8 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,14 +32,29 @@ class ThumbnailOnDeviceTest {
     private val samples = listOfNotNull(arguments.getString("jpegSample"), arguments.getString("arwSample")).map(::File)
 
     private fun <T> timed(what: String, runs: Int = 3, block: () -> T): T {
-        var result: T? = null
-        val times = List(runs) {
+        val times = mutableListOf<Long>()
+        fun measure(): T {
             val startedAt = System.nanoTime()
-            result = block()
-            (System.nanoTime() - startedAt) / 1_000_000
+            return block().also { times += (System.nanoTime() - startedAt) / 1_000_000 }
         }
+        // Null is a valid result, for example when a JPEG has no embedded EXIF thumbnail.
+        var result = measure()
+        repeat(runs - 1) { result = measure() }
         Log.i(TAG, "on device: $what in ${times.sorted()[runs / 2]} ms (first ${times.first()})")
-        return result!!
+        return result
+    }
+
+    @Test
+    fun timesAJpegWithoutAnEmbeddedThumbnail() {
+        val file = File.createTempFile("no-exif-thumbnail-", ".jpg", context.cacheDir)
+        val bitmap = Bitmap.createBitmap(32, 24, Bitmap.Config.ARGB_8888)
+        try {
+            file.outputStream().use { assertTrue(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)) }
+            assertNull(timed("JPEG without an embedded thumbnail") { ExifInterface(file).thumbnailBitmap })
+        } finally {
+            bitmap.recycle()
+            file.delete()
+        }
     }
 
     @Test
