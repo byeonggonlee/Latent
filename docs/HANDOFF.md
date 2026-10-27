@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Re-review PR #50 at `5abec53`; check release prerequisites that do not need the owner or a phone | `codex/release-010-readiness`, PR #50 | this board, release evidence under `docs/` | 2026-10-27 |
 
 ## For Codex
 
