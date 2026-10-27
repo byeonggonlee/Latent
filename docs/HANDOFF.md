@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | 0.1.0 release validation on the Android 16 emulator (owner authorized substitute for unavailable S24); phone-only checks remain pending | `codex/release-010-emulator` | `docs/device-results/2026-10-27-release-emulator-followup.md`, this board | 2026-10-27 |
 
 ## For Codex
 
