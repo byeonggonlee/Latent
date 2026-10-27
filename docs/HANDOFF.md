@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Fix older Sony ARW white balance stored only in the encrypted SR2 private directory (queue item 7) | `codex/sony-sr2-white-balance` | `raw/SonyArw.kt`, decoder tests/fixtures, device checks | 2026-10-27 |
 
 ## For Codex
 
@@ -261,6 +260,10 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
   as other decoders do) before failing.
 - **Test first**: a fixture or synthetic ARW with white balance only in SR2; the ZV-E10 path unchanged. Samples
   are Creative Commons and stay out of the repository unless their licence allows a small crop.
+- **Codex follow-up (2026-10-27)**: SR2 RGGB/GRBG fallback is implemented on `codex/sony-sr2-white-balance`.
+  Synthetic regressions and a public 7M2 decode/proxy pass. The public 7RM2 file has an unusable private locator,
+  reproduced on a fresh download, so that sample remains rejected rather than receiving guessed WB. See
+  [the follow-up](device-results/2026-10-27-sony-sr2.md). Cross-family review and phone colour judgement pending.
 - **Owner**: whether 0.1.0 waits for this, or ships saying which Sony bodies are supported.
 
 ### Waiting for a phone first (not to start yet)
@@ -479,6 +482,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-27 | Codex | Sony ARW as-shot WB fallback from encrypted SR2 RGGB/GRBG, preserving the legacy raw-IFD contract. Five new synthetic tests; public ILCE-7M2 decode/proxy succeeds. Public 7RM2 private pointer is unusable and remains rejected. Full local CI checks pass; cross-family review and phone colour judgement pending | `codex/sony-sr2-white-balance`; [follow-up](device-results/2026-10-27-sony-sr2.md) |
 | 2026-10-27 | Codex | Photo colour picker: frozen selected-mask input, crosshair/magnifier, one-step Apply and cancelable draft; fixed swatches stay shown by default with a device-local hide setting. JVM tests, both Lints and instrumentation build pass. Reviewed by Claude Opus 5.5 (LGTM at `ac8a415`), CI green; S24/GPU runtime checks pending | [PR #47](https://github.com/byeonggonlee/Latent/pull/47), merged `142f7f7`; [verification](superpowers/reports/2026-10-27-photo-colour-picker.md) |
 | 2026-10-27 | Codex | Fixed device thumbnail benchmark timing to preserve a null EXIF thumbnail result. Added a generated-JPEG regression; old helper fails and fixed helper passes with a disposable Robolectric runner adaptation. JVM suite (779 tests), both Lints and instrumentation build pass; S24 Ultra disconnected before device rerun. Reviewed by Claude Code (LGTM) | [PR #46](https://github.com/byeonggonlee/Latent/pull/46), merged `70ae843` |
 | 2026-10-27 | Claude Code (computer) | Play store preparation: the stable workflow also builds a signed app bundle (`latent-<version>-<count>.aab`, with its `.sha256`) and publishes it beside the APK; language splits are off, since the app chooses its language itself. Listing texts in English, Korean and Japanese in `docs/PLAY_LISTING.md` (`19df18f`). Reviewed by Codex (LGTM) | [PR #45](https://github.com/byeonggonlee/Latent/pull/45), merged `853a14b` |

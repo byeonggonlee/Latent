@@ -143,7 +143,7 @@ object SonyArw {
         val cropOrigin = raw.ints(TAG_CROP_ORIGIN)?.takeIf { it.size == 2 } ?: intArrayOf(0, 0)
         val cropSize = raw.ints(TAG_CROP_SIZE)?.takeIf { it.size == 2 } ?: intArrayOf(width, height)
         val privateDirectory = readPrivateDirectory(data, main)
-        val whiteBalance = whiteBalance(raw.ints(TAG_WHITE_BALANCE))
+        val whiteBalance = whiteBalance(raw.ints(TAG_WHITE_BALANCE), positiveLevels = false)
             ?: whiteBalance(privateDirectory?.ints(TAG_WHITE_BALANCE))
             ?: whiteBalance(privateDirectory?.ints(TAG_WHITE_BALANCE_GRBG), red = 1, green = 0, blue = 2)
             ?: throw IOException("Missing white balance")
@@ -170,8 +170,9 @@ object SonyArw {
     }
 
     /** As-shot levels in RGGB (newer bodies) or GRBG (older SR2), normalised to the first green. */
-    private fun whiteBalance(values: IntArray?, red: Int = 0, green: Int = 1, blue: Int = 3): FloatArray? {
-        if (values == null || values.size != 4 || values.any { it <= 0 }) return null
+    private fun whiteBalance(values: IntArray?, red: Int = 0, green: Int = 1, blue: Int = 3, positiveLevels: Boolean = true): FloatArray? {
+        // Preserve the legacy raw-IFD contract, which permits finite zero/negative red and blue gains.
+        if (values == null || values.size != 4 || values[green] <= 0 || (positiveLevels && values.any { it <= 0 })) return null
         return floatArrayOf(values[red].toFloat() / values[green], 1f, values[blue].toFloat() / values[green])
     }
 

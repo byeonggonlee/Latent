@@ -58,7 +58,7 @@ class SonyArwTest {
 
     @Test
     fun fallsBackFromUnusableRawOrPrivateRggbValues() {
-        for (bad in listOf(intArrayOf(), intArrayOf(1, 2, 3), intArrayOf(2048, 0, 1024, 1536), intArrayOf(-1, 1024, 1024, 1536))) {
+        for (bad in listOf(intArrayOf(), intArrayOf(1, 2, 3), intArrayOf(2048, 0, 1024, 1536))) {
             val image = SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = bad, privateEntries = listOf(
                 SyntheticArw.Entry.signedShorts(0x7313, *bad),
                 SyntheticArw.Entry.signedShorts(0x7303, 1024, 2560, 1792, 1280),
@@ -69,7 +69,7 @@ class SonyArwTest {
 
     @Test
     fun rejectsMissingOrUnusablePrivateWhiteBalance() {
-        for (tag in listOf(0x7313, 0x7303)) for (values in listOf(intArrayOf(), intArrayOf(2048, 1024, 1024), intArrayOf(2048, 0, 1024, 1536), intArrayOf(2048, 1024, 1024, 0))) {
+        for (tag in listOf(0x7313, 0x7303)) for (values in listOf(intArrayOf(), intArrayOf(2048, 1024, 1024), intArrayOf(2048, 0, 1024, 1536), intArrayOf(2048, 1024, 1024, 0), intArrayOf(-1, 1024, 1024, 1536))) {
             assertThrows(IOException::class.java) {
                 SonyArw.read(SyntheticArw.file(300, 600, 400, whiteBalance = null, privateEntries = listOf(
                     SyntheticArw.Entry.signedShorts(tag, *values),
