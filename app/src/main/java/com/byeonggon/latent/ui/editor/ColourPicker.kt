@@ -190,12 +190,16 @@ internal fun ColourPickerFrame(
     val controls: @Composable (Modifier) -> Unit = { controlsModifier ->
         Surface(modifier = controlsModifier, color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.padding(16.dp)) {
-                Column(Modifier.weight(1f, fill = window.sidePanel).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // What was picked scrolls with the hint, so that a long reason at large text never pushes Apply and
+                // Cancel out of reach; it is brought into view whenever it changes.
+                val scroll = rememberScrollState()
+                LaunchedEffect(status) { if (status.isNotEmpty()) { withFrameNanos {}; scroll.animateScrollTo(scroll.maxValue) } }
+                Column(Modifier.weight(1f, fill = window.sidePanel).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (state.preparing) preparing else stringResource(R.string.colour_pick_hint), style = MaterialTheme.typography.bodyMedium)
                     if (hasKeys) Text(stringResource(R.string.colour_pick_keys), style = MaterialTheme.typography.bodySmall)
+                    // Two lines held for what was picked, empty or not, so that the picture above does not move when it comes.
+                    Text(status, style = MaterialTheme.typography.titleSmall, minLines = 2)
                 }
-                // Two lines held for what was picked, empty or not, so that the picture above does not move when it comes.
-                Text(status, style = MaterialTheme.typography.titleSmall, minLines = 2, modifier = Modifier.padding(top = 8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                     Button(onClick = onApply, enabled = !state.preparing && state.hue != null, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(applyFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_apply)) }
                     OutlinedButton(onClick = onCancel, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(cancelFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_cancel)) }

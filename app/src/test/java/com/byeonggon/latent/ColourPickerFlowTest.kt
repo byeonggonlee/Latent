@@ -277,6 +277,28 @@ class ColourPickerFlowTest {
         compose.onNodeWithText("Cancel colour picking").performClick()
         assertNull(model.state.value.colourPicker)
     }
+    @Test
+    @Config(qualifiers = "en-rUS-w320dp-h640dp-port")
+    fun aLongReasonAtLargeTextKeepsApplyAndCancelReachable() {
+        val model = open()
+        compose.runOnUiThread {
+            compose.activity.setContent {
+                CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
+                    EditorScreen(photoId, onClose = {}, viewModel = model)
+                }
+            }
+        }
+        compose.onNodeWithText("Masks").performScrollTo().performClick()
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        compose.runOnIdle { model.pickColour(0.25f, 0.5f) }
+        compose.runOnIdle { model.pickColour(0.75f, 0.5f) }
+        compose.onNodeWithText("Apply keeps 210°", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Apply colour").assertIsDisplayed()
+        compose.onNodeWithText("Cancel colour picking").assertIsDisplayed().performClick()
+        assertNull(model.state.value.colourPicker)
+    }
+
     @Test fun theScreenSaysWhatApplyKeepsHoldsStillAndReturnsToThePanelAsItWas() {
         val model = open()
         compose.runOnUiThread { compose.activity.setContent { EditorScreen(photoId, onClose = {}, viewModel = model) } }
