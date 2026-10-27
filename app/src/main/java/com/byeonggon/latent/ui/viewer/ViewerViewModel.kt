@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.data.SaveFailure
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
@@ -61,6 +62,8 @@ data class ViewerUiState(
     val busy: Boolean = false,
     /** Whether an edit of the photo is still being saved; until it is, the photo shows as it was. */
     val saving: Boolean = false,
+    /** An edit of the photo that could not be saved, shown until it is tried again or given up. */
+    val failure: SaveFailure? = null,
     val message: String? = null,
 )
 
@@ -96,20 +99,20 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     val state: StateFlow<ViewerUiState> = combine(
         item.map { item -> item to (item != null && edits.isEdited(item)) }.flowOn(Dispatchers.IO),
         status,
-        combine(edits.copied, container.editSaver.saving) { copied, saving -> copied to saving },
+        combine(edits.copied, container.editSaver.saving, container.editSaver.failed, ::Triple),
         details,
         allDetails,
-    ) { (item, edited), status, (copied, saving), details, allDetails ->
+    ) { (item, edited), status, (copied, saving, failed), details, allDetails ->
         val beingSaved = item != null && item.id in saving
         // Nothing else is done to a photo while its edit is being saved.
-        status.copy(item = item, edited = edited, canPaste = copied != null, details = details, allDetails = allDetails, saving = beingSaved, busy = status.busy || beingSaved)
+        status.copy(
+            item = item, edited = edited, canPaste = copied != null, details = details, allDetails = allDetails,
+            saving = beingSaved, failure = item?.let { failed[it.id] }, busy = status.busy || beingSaved,
+        )
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ViewerUiState())
 
     init {
-        viewModelScope.launch {
-            container.editSaver.failures.collect { failure -> status.update { it.copy(message = failure) } }
-        }
         viewModelScope.launch {
             item.map { it?.takeIf { item -> item.editsAsSettings && item.kind != MediaKind.VIDEO } }
                 .distinctUntilChanged { old, new -> old?.path == new?.path && old?.edit == new?.edit }
@@ -163,6 +166,8 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         val item = state.value.item ?: return
         runTask(failure = R.string.restore_original_failed) {
             edits.remove(item)
+            // An edit that could not be saved is not to be tried again over the original.
+            container.editSaver.discard(item.id)
             text(R.string.restored_original)
         }
     }
@@ -174,6 +179,7 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
         runTask(failure = R.string.paste_failed) {
             val own = edits.editOf(item) ?: PhotoEdit()
             edits.apply(item, own.withLookOf(copied))
+            container.editSaver.discard(item.id)
             text(R.string.pasted)
         }
     }
@@ -240,6 +246,16 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun consumeMessage() = status.update { it.copy(message = null) }
+
+    /** Saves again the edit of the photo in front that could not be saved. */
+    fun retrySave() {
+        state.value.failure?.let { container.editSaver.retry(it.item.id) }
+    }
+
+    /** Gives up the edit of the photo in front that could not be saved. */
+    fun discardFailedSave() {
+        state.value.failure?.let { container.editSaver.discard(it.item.id) }
+    }
 
     /** Renders [raw], a photo whose corrections are stored as settings, with them; without any, the file itself is what there is to show. */
     private suspend fun showCorrected(raw: MediaItemEntity?) {

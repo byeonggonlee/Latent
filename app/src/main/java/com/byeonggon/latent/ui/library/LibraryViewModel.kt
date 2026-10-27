@@ -108,6 +108,8 @@ data class LibraryUiState(
     val stacked: Boolean = true,
     /** For each photo shot as raw and JPEG at once, the other file of the pair, both ways round. */
     val partners: Map<Long, Long> = emptyMap(),
+    /** The listed JPEGs whose raw file, not listed beside them, has an edit: the pair's thumbnail says it is edited. */
+    val partnerEdited: Set<Long> = emptySet(),
     val days: List<LibraryDay> = emptyList(),
     val libraryIsEmpty: Boolean = false,
     /** The photos picked out to have the same thing done to all of them. */
@@ -201,8 +203,9 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
         val years = items.mapTo(sortedSetOf<Int>(reverseOrder())) { Instant.ofEpochMilli(it.capturedAt).atZone(zone).year }.toList()
+        val partnerEdited = items.filter { it.id in hidden && it.edit != null }.mapNotNullTo(HashSet()) { partners[it.id] }
         LibraryUiState(
-            loading = false, filter, leastRating, stacked, partners, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags,
+            loading = false, filter, leastRating, stacked, partners, partnerEdited, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags,
             query = search, findOptions = FindOptions(years = years),
         )
     }.flowOn(Dispatchers.Default)
@@ -452,12 +455,14 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     fun deleteSelectedForever() = whileBusy(R.string.delete_failed) {
         val chosen = selectedItems()
         trash.deleteForever(chosen)
+        chosen.forEach { container.editSaver.discard(it.id) }
         plural(R.plurals.deleted_count, chosen.size)
     }
 
     fun emptyTrash() = whileBusy(R.string.empty_trash_failed) {
         val all = trash.items.first()
         trash.deleteForever(all)
+        all.forEach { container.editSaver.discard(it.id) }
         plural(R.plurals.deleted_count, all.size)
     }
 
@@ -506,6 +511,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         val copied = edits.copied.value ?: return
         runBatch(R.string.batch_pasting, { it.kind != MediaKind.VIDEO }, done = R.plurals.batch_pasted) { item ->
             edits.apply(item, (edits.editOf(item) ?: PhotoEdit()).withLookOf(copied))
+            container.editSaver.discard(item.id)
         }
     }
 

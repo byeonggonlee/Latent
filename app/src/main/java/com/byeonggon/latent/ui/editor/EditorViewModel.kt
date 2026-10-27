@@ -245,9 +245,17 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             history.clear()
             history += opened
             position = 0
+            // An edit that could not be saved comes back to be worked on, a step after what was saved, so that Done saves
+            // it again and undo goes back to what is in effect.
+            val unsaved = container.editSaver.failed.value[id]?.edit?.takeIf { it != opened }
+            if (unsaved != null) {
+                history += unsaved
+                position = 1
+            }
+            val shown = unsaved ?: opened
             changing = false
-            ui.update { it.copy(item = item, edit = opened).checked() }
-            load(item, opened.lensCorrection)
+            ui.update { it.copy(item = item, edit = shown).checked() }
+            load(item, shown.lensCorrection)
         }
     }
 

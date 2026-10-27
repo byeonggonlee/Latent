@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code | UI guide task 2: thumbnail badge slots, selected state, save status and persistent failure with Retry | `claude/thumb-badges` | `ui/library/LibraryScreen.kt`, `ui/viewer/`, `data/EditSaver.kt`, strings, tests | 2026-10-26 |
+| Claude Code | UI guide task 2: thumbnail badge slots, selected state, save status and persistent failure with Retry | [PR #44](https://github.com/byeonggonlee/Latent/pull/44) | `ui/library/LibraryScreen.kt`, `ui/viewer/`, `data/EditSaver.kt`, strings, tests | 2026-10-26 |
 
 ## For Codex
 

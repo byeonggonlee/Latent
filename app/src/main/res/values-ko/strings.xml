@@ -111,7 +111,6 @@
     <string name="video">동영상</string>
     <string name="item_selected">선택됨</string>
     <string name="edited">보정됨</string>
-    <string name="has_location">위치 정보 있음</string>
     <plurals name="selected_count">
         <item quantity="other">✕ %d장 선택</item>
     </plurals>
@@ -343,6 +342,10 @@
     <string name="look_hdr">HDR</string>
     <string name="play">재생</string>
     <string name="saving_edit">보정 저장 중</string>
+    <string name="edit_failed">보정이 저장되지 않음</string>
+    <string name="save_again">다시 시도</string>
+    <string name="discard_edit">보정 버리기</string>
+    <string name="not_selected">선택 안 됨</string>
     <string name="restore_original_question">원본으로 되돌릴까요?</string>
     <string name="restore_original_detail">이 사진에 저장한 보정 값이 지워집니다.</string>
     <string name="restore_original">원본으로 되돌리기</string>

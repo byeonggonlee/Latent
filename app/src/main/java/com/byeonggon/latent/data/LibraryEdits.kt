@@ -56,6 +56,21 @@ class LibraryEdits(
     /** Tones and colours copied from one photo, to be given to others. */
     val copied = MutableStateFlow<PhotoEdit?>(null)
 
+    /**
+     * Edits not yet in the database that still need their LUTs and masks: those waiting to be saved, and those that
+     * could not be and are kept to be tried again. Set by the app to its [EditSaver]'s.
+     */
+    var pendingEdits: () -> Collection<PhotoEdit> = { emptyList() }
+
+    /**
+     * The edits not yet saved, as the JSON in which they name LUTs and masks by their ids in quotes. Taken before the
+     * database is asked: an edit saved in between is in the database by the time it leaves this list, so a clean-up
+     * finds it in one or the other.
+     */
+    private fun pendingUses(): List<String> = pendingEdits().map { it.toJson() }
+
+    private fun List<String>.use(id: String): Boolean = any { "\"$id\"" in it }
+
     /** The filters that come with the app, followed by those the user saved. */
     val filters: Flow<List<Filter>> = filterDao.observeAll().map { saved ->
         Filters.BUILT_IN + saved.mapNotNull { filter ->
@@ -104,33 +119,37 @@ class LibraryEdits(
     }
 
     /**
-     * Takes [lut] off the list. Its table stays for as long as a photo's edit, a kept version or a filter
-     * uses it, so that photos keep their look; what nothing uses any more is deleted.
+     * Takes [lut] off the list. Its table stays for as long as a photo's edit, a kept version, a filter or an edit
+     * still to be saved uses it, so that photos keep their look; what nothing uses any more is deleted.
      */
     suspend fun deleteLut(lut: LutEntity) {
         lutDao.delete(lut.hash)
+        val pending = pendingUses()
         for (id in LutStore.ids()) {
-            if (lutDao.byHash(id) == null && !isLutInUse(id)) LutStore.delete(id)
+            if (lutDao.byHash(id) == null && !isLutInUse(id, pending)) LutStore.delete(id)
         }
     }
 
     /**
-     * Deletes the outlines of detected masks that no photo's edit and no kept version uses any more. One is
+     * Deletes the outlines of detected masks that no photo's edit, no kept version and no edit still to be saved uses
+     * any more. One is
      * left alone for a day after it was made: until then an editor may still be able to undo back to it,
      * or its edit may be waiting to be saved. Filters never hold masks.
      */
     suspend fun forgetUnusedMasks(now: Long = System.currentTimeMillis()) {
+        val pending = pendingUses()
         for ((id, made) in MaskStore.kept()) {
             if (now - made < UNUSED_MASK_KEPT) continue
             val pattern = "%\"$id\"%"
-            if (mediaDao.countEditsLike(pattern) == 0 && versionDao.countLike(pattern) == 0) MaskStore.delete(id)
+            if (!pending.use(id) && mediaDao.countEditsLike(pattern) == 0 && versionDao.countLike(pattern) == 0) MaskStore.delete(id)
         }
     }
 
-    private suspend fun isLutInUse(id: String): Boolean {
+    private suspend fun isLutInUse(id: String, pending: List<String>): Boolean {
         // Edits are kept as JSON text, where a LUT is named by its id in quotes.
         val pattern = "%\"$id\"%"
-        return mediaDao.countEditsLike(pattern) > 0 || versionDao.countLike(pattern) > 0 || filterDao.countLike(pattern) > 0
+        return pending.use(id) || mediaDao.countEditsLike(pattern) > 0 || versionDao.countLike(pattern) > 0 ||
+            filterDao.countLike(pattern) > 0
     }
 
     /**
@@ -178,11 +197,16 @@ class LibraryEdits(
         // One edit of a photo at a time, from the editor, a batch or the viewer: the second would keep the first's
         // picture as the original.
         storage.moving.withLock {
+            // The photo where it is now, read under the same lock as the trash moves files: an edit saved later (tried
+            // again after a failure) may have been made before the photo went to the trash and came back under another
+            // name, and the file at its old path may since be another photo's.
+            val current = mediaDao.byId(item.id)?.takeIf { it.trashedAt == null }
+                ?: throw IOException("${item.fileName} is no longer in the library")
             if (!edit.changesPicture) {
-                removeEdit(item)
+                removeEdit(current)
                 return
             }
-            val photo = File(item.path)
+            val photo = File(current.path)
             // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
             val original = storage.originalOf(photo)
             if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
@@ -191,8 +215,8 @@ class LibraryEdits(
             withContext(NonCancellable) {
                 PhotoEnhancer.saveEdited(photo, original, edit, storage)
                 storage.publish(photo)
-                mediaDao.setSize(item.id, photo.length())
-                mediaDao.setEdit(item.id, edit.toJson())
+                mediaDao.setSize(current.id, photo.length())
+                mediaDao.setEdit(current.id, edit.toJson())
             }
         }
     }

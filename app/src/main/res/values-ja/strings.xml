@@ -111,7 +111,6 @@
     <string name="video">動画</string>
     <string name="item_selected">選択中</string>
     <string name="edited">編集済み</string>
-    <string name="has_location">位置情報あり</string>
     <plurals name="selected_count">
         <item quantity="other">✕ %d 件選択</item>
     </plurals>
@@ -343,6 +342,10 @@
     <string name="look_hdr">HDR</string>
     <string name="play">再生</string>
     <string name="saving_edit">編集を保存中</string>
+    <string name="edit_failed">編集が保存されていません</string>
+    <string name="save_again">もう一度</string>
+    <string name="discard_edit">編集を破棄</string>
+    <string name="not_selected">未選択</string>
     <string name="restore_original_question">元の状態に戻しますか？</string>
     <string name="restore_original_detail">この写真に保存した編集が取り除かれます。</string>
     <string name="restore_original">元の状態に戻す</string>
