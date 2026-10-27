@@ -8,11 +8,11 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
-- [ ] **Tag `v0.1.0`** after the owner accepts the [S24 release report](device-results/2026-10-27-s24-release.md):
-      14 instrumented tests pass, but sky GPU compilation fails and CPU fallback is used (looked into after 0.1.0);
-      the owner judged the colour on the S24's screen fine (2026-10-27); broader signed-release smoke cases remain
-      outside this run. Claude Code then writes
-      the date into `CHANGELOG.md` and tags, as `RELEASES.md` says. This record does not authorize the tag.
+- [x] **Tag `v0.1.0`** (2026-10-27): the owner accepted the [S24 release report](device-results/2026-10-27-s24-release.md)
+      and judged the colour fine on the phone. The changelog was dated (`61aede2`), `v0.1.0` tagged on it, and the
+      release workflow published [Latent 0.1.0](https://github.com/byeonggonlee/Latent/releases/tag/v0.1.0)
+      (versionCode 432, APK and AAB signed with the release key). Next: the owner names the next version, then
+      `latent.versionBase` is raised and the next changelog section opened (RELEASES.md, step 5).
 
 - [x] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/byeonggonlee/Latent/pull/49)):
       Claude Opus 5.5 (via Claude Code) reviewed `ca35692`, LGTM; the public 7M2 ARW develops on the emulator with
