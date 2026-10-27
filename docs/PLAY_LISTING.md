@@ -15,43 +15,96 @@ Phone screenshots still have to be taken on a phone, with photos the owner is ha
 
 ## Short description (80 characters at most)
 
-English: `Bring in camera photos over USB, edit raw and JPEG, map them. No account.`
-한국어: `카메라 사진을 USB로 가져와 RAW·JPEG를 보정하고 지도에서 봅니다. 계정 없음.`
-日本語: `カメラの写真をUSBで取り込み、RAWとJPEGを現像して地図で見る。アカウント不要。`
+English: `Import camera photos by USB or card, develop RAW and JPEG, map them. No account.`
+한국어: `카메라 사진을 USB나 카드로 가져와 RAW·JPEG를 보정하고 지도에서 봅니다. 계정 없음.`
+日本語: `カメラの写真をUSBやカードから取り込み、RAWとJPEGを現像して地図で見る。アカウント不要。`
 
-## Full description
+## Full description (4000 characters at most)
 
 **English**
 
-Latent brings the photos of your camera onto your phone, places them where they were taken, and develops them.
+Latent brings the photos from your camera onto your phone, places them where they were taken, and develops them.
 
-- Import over USB (MTP), only what is new or only the days you pick. Photos and videos, raw and JPEG together.
-- Location from your phone's own record or a Google Timeline export, written into the photos. Fix a camera clock that is off.
-- Develop Sony ARW raw files with the camera's lens corrections, and edit JPEGs: exposure, tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise reduction, filters, cropping, levelling and perspective, subject and background masks found on the phone, linear, radial and painted masks, and spot healing. Edits stay editable; a JPEG's original is kept.
-- Swipe on a photo to edit it, type exact values, see clipped highlights and shadows.
-- A library by day, with ratings, a trash, sharing, and a map of where you took your photos.
-- List your phone's own photos too, from the folders you choose. They are never changed; edits are kept as settings.
-- Phones, foldables, tablets and laptop windows, with keyboard and mouse.
+• Import over USB (MTP) or from the camera's card: only what is new, or only the days you pick. The raw file and JPEG of a shot show as one.
+• Add the place to each photo from your phone's own location record or a Google Timeline export. Fix a camera clock that is off.
+• Develop raw files: Sony ARW with the camera's lens corrections, and phone DNGs such as a Galaxy's Pro mode and Expert RAW. JPEGs are edited the same way, and their original is kept.
+• Edit with exposure, tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise reduction, cropping, levelling and perspective, spot healing, and masks: linear, radial, brush, colour and tone ranges, and the subject, background and sky, found on the phone.
+• Looks: built-in filters, your own, Lightroom presets (.xmp) and 3D LUTs (.cube).
+• Sort through your shots with stars, pick and reject flags, albums, search by camera, date and place, and a side-by-side compare.
+• See HDR photos in HDR on a phone with an HDR screen.
+• Back up albums, ratings, edits and your location record to one file you keep, for a new phone or a reinstall.
+• See on a map where you took your photos (OpenStreetMap).
+• List your phone's own photos too, from the folders you choose. They are never changed.
+• Phones, foldables, tablets and laptop windows, with keyboard and mouse.
 
-Private by design: no account, no ads, no analytics. Your photos stay on your phone as ordinary files in DCIM/Latent. The internet is used only for the optional map, which is off until you turn it on.
+Private by design: no account, no ads, no analytics. Your photos stay on your phone as ordinary files in DCIM/Latent, and your edits and location record never leave it. The internet is used only for the optional map, which stays off until you turn it on.
 
-Sony and ZV-E10 are trademarks of Sony Group Corporation. Latent is not affiliated with or endorsed by Sony or Google.
+Needs Android 15 or later on a 64-bit ARM phone. Tried with a Sony ZV-E10 and Galaxy phones; other cameras that offer MTP may work.
+
+Sony and ZV-E10 are trademarks of Sony Group Corporation, Galaxy of Samsung Electronics, and Lightroom of Adobe. Latent is not affiliated with or endorsed by Sony, Samsung, Adobe or Google.
 
 **한국어**
 
-Latent는 카메라의 사진을 휴대전화로 가져와 찍은 곳에 놓고, 현상합니다.
+Latent는 카메라의 사진을 휴대전화로 가져와, 찍은 곳에 놓고, 현상합니다.
 
-- USB(MTP)로 가져오기: 새 사진만, 또는 고른 날짜만. 사진·동영상, RAW와 JPEG를 함께.
-- 휴대전화가 기록한 위치나 Google 타임라인 내보내기로 사진에 위치를 넣습니다. 카메라 시계가 틀려도 맞출 수 있습니다.
-- Sony ARW RAW를 카메라의 렌즈 보정과 함께 현상하고 JPEG를 보정합니다: 노출, 톤 곡선, 색상 혼합·등급, 텍스처, 명료도, 안개 제거, 선명도, 노이즈 감소, 필터, 자르기·수평·원근, 휴대전화 안에서 찾는 피사체·배경 마스크, 선형·원형·브러시 마스크, 잡티 제거. 보정은 언제든 다시 열 수 있고, JPEG 원본은 보관됩니다.
-- 사진 위에서 스와이프로 보정하고, 값을 직접 입력하고, 날아간 밝은 곳·어두운 곳을 확인합니다.
-- 날짜별 보관함, 별점, 휴지통, 공유, 사진을 찍은 곳의 지도.
-- 휴대전화 자체의 사진도 고른 폴더에서 함께 볼 수 있습니다. 원본은 절대 바뀌지 않고 보정은 설정으로 저장됩니다.
-- 휴대전화, 폴더블, 태블릿, 노트북 창에서 키보드와 마우스로.
+• USB(MTP)나 카메라의 카드에서 가져오기: 새 사진만, 또는 고른 날짜만. 한 장면의 RAW와 JPEG는 하나로 보입니다.
+• 휴대전화가 기록한 위치나 Google 타임라인 내보내기로 사진마다 찍은 곳을 넣습니다. 카메라 시계가 틀려도 맞출 수 있습니다.
+• RAW 현상: Sony ARW는 카메라의 렌즈 보정과 함께, 휴대전화 DNG(갤럭시의 프로 모드, Expert RAW 등)도 현상합니다. JPEG도 같은 방식으로 보정하고, 원본은 보관합니다.
+• 보정: 노출, 톤 곡선, 색상 혼합·그레이딩, 텍스처, 명료도, 안개 제거, 선명도, 노이즈 감소, 자르기·수평·원근, 잡티 제거, 그리고 마스크(선형, 원형, 브러시, 색상·톤 범위, 휴대전화 안에서 찾는 피사체·배경·하늘).
+• 룩: 기본 필터, 직접 만든 필터, Lightroom 프리셋(.xmp), 3D LUT(.cube).
+• 사진 고르기: 별점, 채택·제외 플래그, 앨범, 카메라·날짜·장소로 찾기, 나란히 비교.
+• HDR 화면이 있는 휴대전화에서는 HDR 사진을 HDR로 봅니다.
+• 앨범, 별점, 보정, 위치 기록을 파일 하나로 백업해 새 휴대전화나 재설치 때 되살립니다.
+• 사진을 찍은 곳을 지도(OpenStreetMap)에서 봅니다.
+• 고른 폴더의 휴대전화 사진도 함께 볼 수 있습니다. 원본은 절대 바뀌지 않습니다.
+• 휴대전화, 폴더블, 태블릿, 노트북 창에서 키보드와 마우스로.
 
-설계부터 사생활 중심: 계정, 광고, 분석이 없습니다. 사진은 DCIM/Latent의 일반 파일로 휴대전화 안에 머뭅니다. 인터넷은 선택 기능인 지도에만 쓰고, 켜기 전에는 쓰지 않습니다.
+설계부터 사생활 중심: 계정, 광고, 분석이 없습니다. 사진은 DCIM/Latent의 일반 파일로 휴대전화 안에 머물고, 보정과 위치 기록도 밖으로 나가지 않습니다. 인터넷은 선택 기능인 지도에만 쓰며, 켜기 전에는 쓰지 않습니다.
 
-Sony와 ZV-E10은 Sony Group Corporation의 상표입니다. Latent는 Sony, Google과 관련이 없으며 보증을 받지 않았습니다.
+Android 15 이상, 64비트 ARM 휴대전화가 필요합니다. Sony ZV-E10과 갤럭시 휴대전화로 시험했으며, MTP를 지원하는 다른 카메라도 동작할 수 있습니다.
+
+Sony와 ZV-E10은 Sony Group Corporation, 갤럭시는 삼성전자, Lightroom은 Adobe의 상표입니다. Latent는 Sony, 삼성, Adobe, Google과 관련이 없으며 보증을 받지 않았습니다.
+
+**日本語**
+
+Latent は、カメラの写真をスマートフォンに取り込み、撮った場所に置き、現像します。
+
+• USB（MTP）やカメラのカードから取り込み：新しい写真だけ、または選んだ日だけ。同じショットの RAW と JPEG はひとつに表示されます。
+• スマートフォンの位置情報の記録や Google タイムラインのエクスポートから、写真ごとに撮影場所を付けます。カメラの時計のずれも直せます。
+• RAW 現像：Sony ARW はカメラのレンズ補正つきで、スマートフォンの DNG（Galaxy のプロモードや Expert RAW など）も現像します。JPEG も同じように編集でき、元の写真は保管されます。
+• 編集：露出、トーンカーブ、カラーミキサーとグレーディング、テクスチャ、明瞭度、かすみの除去、シャープネス、ノイズ低減、切り抜き・水平・遠近、スポット修正、そしてマスク（線形、円形、ブラシ、色域・トーン範囲、スマートフォン上で見つける被写体・背景・空）。
+• ルック：内蔵フィルター、自作フィルター、Lightroom プリセット（.xmp）、3D LUT（.cube）。
+• 写真の選別：星の評価、採用・除外フラグ、アルバム、カメラ・日付・場所での検索、並べて比較。
+• HDR 画面のあるスマートフォンでは、HDR 写真を HDR で表示します。
+• アルバム、評価、編集、位置情報の記録をひとつのファイルにバックアップし、新しいスマートフォンや再インストールで戻せます。
+• 写真を撮った場所を地図（OpenStreetMap）で見られます。
+• 選んだフォルダのスマートフォンの写真も一覧できます。元の写真は決して変更されません。
+• スマートフォン、折りたたみ、タブレット、ノートパソコンのウィンドウで、キーボードとマウスにも対応。
+
+プライバシーを重視した設計：アカウント、広告、分析はありません。写真は DCIM/Latent の普通のファイルとしてスマートフォンに残り、編集や位置情報の記録も外に出ません。インターネットは任意の地図にだけ使い、オンにするまで使いません。
+
+Android 15 以降の 64 ビット ARM スマートフォンが必要です。Sony ZV-E10 と Galaxy のスマートフォンで試しています。MTP に対応した他のカメラでも動く場合があります。
+
+Sony と ZV-E10 は Sony Group Corporation、Galaxy は Samsung Electronics、Lightroom は Adobe の商標です。Latent は Sony、Samsung、Adobe、Google とは関係がなく、承認も受けていません。
+
+## Release notes for the first release (500 characters at most)
+
+English: `The first release of Latent: bring in your camera's photos over USB or from its card, place them on the map, and develop them on your phone.`
+한국어: `Latent의 첫 출시: 카메라 사진을 USB나 카드로 가져와 지도에 놓고 휴대전화에서 현상합니다.`
+日本語: `Latent の最初のリリース：カメラの写真を USB やカードから取り込み、地図に置き、スマートフォンで現像します。`
+
+## Screenshots to take
+
+Play asks for at least two phone screenshots (up to eight), 16:9 or 9:16, and shows the first three most. On the
+release build, in the light theme unless noted, with photos the owner is happy to show:
+
+1. Library: a day of real photos, with stars and a pick or two.
+2. Viewer: one strong photo, its details sheet open.
+3. Editor: a raw photo mid-edit, Light panel, histogram showing.
+4. Editor with a mask: the sky or subject mask over a landscape.
+5. Map: places with photo pins (online maps on; the attribution shows).
+6. Import: a camera connected, or the result of an import.
+7. Optional: a foldable or tablet in a wide window (tablet screenshots are separate in the console).
 
 ## Permissions, and what to say about each
 
@@ -95,7 +148,17 @@ visible) and starting a sync (notification with progress).
 ## Before the first upload
 
 - [x] Create an upload keystore (2026-10-22: the release key, alias `latent`, which is Play's upload key; RELEASES.md, "Signing"). To build on a computer, put `keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) next to `settings.gradle.kts`. It is ignored by git.
-- [ ] `./gradlew bundleRelease` and upload `app/build/outputs/bundle/release/app-release.aab`. Do not use `-PdebugSignedRelease` for Play: Play refuses debug-signed packages.
-- [ ] Raise `versionCode` for every upload.
-- [ ] Take phone screenshots (library, viewer, editor, map, sync) on real photos.
+- [ ] Upload a signed AAB: from the release workflow once it publishes one beside the APK (being added), or built
+      with `./gradlew bundleRelease` and a `keystore.properties`. Do not use `-PdebugSignedRelease` for
+      Play: Play refuses debug-signed packages. Let Play App Signing keep the app signing key; the release key is the
+      upload key.
+- [ ] Every upload needs a higher `versionCode`: the build number in the file name, which only grows.
+- [ ] Check the native libraries keep 16 KB page alignment (Play requires it for apps targeting Android 15 and
+      later). Checked on `v0.1.0-rc.1` on 2026-10-27: all five `.so` files have 16 KB LOAD segments and the APK passes
+      `zipalign -c -P 16`.
+- [ ] Take the phone screenshots above on real photos.
+- [ ] Record the foreground-service video: turning on location recording (notification visible) and an import with
+      its progress notification.
+- [ ] A personal developer account created after 13 November 2023 must run a closed test with at least 12 testers
+      for 14 days in a row before it can apply for production. Set up the closed test track first if that applies.
 - [ ] Run [`docs/DEVICE_CHECKS.md`](DEVICE_CHECKS.md) on the release build.
