@@ -8,7 +8,7 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
-- [ ] **Sony SR2 white balance cross-family review** (2026-10-27, `codex/sony-sr2-white-balance`): fixes the missing
+- [ ] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/byeonggonlee/Latent/pull/49)): fixes the missing
       raw-IFD WB failure with a validated SR2 RGGB/GRBG fallback. The public 7M2 decode/proxy succeeds; the published
       7RM2 sample's private pointer is unusable and remains rejected. Request Claude Code (Opus 5.5), Gemini 4 Argon
       or Claude Opus 5.5 via Antigravity to review colour compatibility and malformed-input handling before merge.
