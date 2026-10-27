@@ -85,6 +85,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -332,6 +333,8 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 val picker = state.colourPicker
                 if (picker != null) {
                     ColourPickerFrame(picker, viewModel::pickColour, viewModel::moveColourCursor, viewModel::applyColourPick, viewModel::cancelColourPick)
+                } else if (state.openFailed) {
+                    OpenFailed(raw = state.item?.kind == MediaKind.RAW, onClose = closeUnlessChanged)
                 } else state.preview?.let { preview ->
                     // The preview lags a moment behind a change of tab; each view is only drawn onto a picture made for it.
                     when {
@@ -1000,3 +1003,22 @@ private const val ZOOM_KEY_STEP = 1.25f
 
 private const val MAX_ANGLE = 30f
 private const val ANGLE_SNAP = 0.3f
+
+/** In place of the picture when it could not be read: why, as far as is known, and the way out. */
+@Composable
+private fun OpenFailed(raw: Boolean, onClose: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.open_failed), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            stringResource(if (raw) R.string.open_failed_raw else R.string.open_failed_other),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        OutlinedButton(onClick = onClose) { Text(stringResource(R.string.close)) }
+    }
+}

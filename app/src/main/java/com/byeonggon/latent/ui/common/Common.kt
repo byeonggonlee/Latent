@@ -24,9 +24,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -61,19 +65,27 @@ fun LatentTheme(content: @Composable () -> Unit) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    // The system bars' icons are dark on a light screen and light on a dark one, whichever the phone is set to.
+    // The system bars' icons are dark on a light screen and light on a dark one, whichever the phone is set to; over
+    // the photo workspace, which is dark in either theme, they are light.
+    val workspaces = remember { mutableIntStateOf(0) }
+    val lightBars = !dark && workspaces.intValue == 0
     val view = LocalView.current
     SideEffect {
         (view.context as? Activity)?.window?.let { window ->
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = !dark
-                isAppearanceLightNavigationBars = !dark
+                isAppearanceLightStatusBars = lightBars
+                isAppearanceLightNavigationBars = lightBars
             }
         }
     }
     // Latent's own colours, not the wallpaper's: those would tint what sits next to the photos, and differ by phone.
-    MaterialTheme(colorScheme = if (dark) LatentDark else LatentLight, content = content)
+    CompositionLocalProvider(LocalWorkspaces provides workspaces) {
+        MaterialTheme(colorScheme = if (dark) LatentDark else LatentLight, content = content)
+    }
 }
+
+/** How many photo workspaces ([PhotoTheme]) are on screen; while one is, the system bars' icons are light. */
+internal val LocalWorkspaces = staticCompositionLocalOf<MutableIntState?> { null }
 
 /** Figures all of one width, for numbers that change in place (a slider's value, a count): they do not jitter. */
 val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")

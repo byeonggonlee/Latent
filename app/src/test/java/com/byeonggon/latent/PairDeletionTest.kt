@@ -104,7 +104,7 @@ class PairDeletionTest {
     fun takesTheRawFileAlongFromASelection() {
         waitForText("RAW+J")
         compose.onNodeWithContentDescription(jpeg.name).performTouchInput { longClick() }
-        compose.onNodeWithText("삭제").performScrollTo().performClick()
+        compose.selectionAction("삭제").performClick()
 
         waitUntilTrashed(0)
         waitUntilTrashed(1)

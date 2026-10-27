@@ -97,11 +97,11 @@ class FlagFlowTest {
     fun flagsTheSelectionLooksAtOnlyThePickedAndTrashesTheRejected() {
         waitForPhotos()
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
-        compose.onNodeWithText("플래그").performClick()
+        compose.selectionAction("플래그").performClick()
         compose.onNodeWithText("채택").performClick()
         waitFor { flagOf(0) == FLAG_PICKED }
         compose.onNodeWithContentDescription("DSC00002.JPG").performTouchInput { longClick() }
-        compose.onNodeWithText("플래그").performClick()
+        compose.selectionAction("플래그").performClick()
         compose.onNodeWithText("제외").performClick()
         waitFor { flagOf(1) == FLAG_REJECTED }
         assertEquals(0, flagOf(2))

@@ -129,6 +129,8 @@ data class EditorUiState(
     val lostOutlines: Set<String> = emptySet(),
     /** The picture is still being read. */
     val loading: Boolean = true,
+    /** The picture could not be read: there is nothing to edit, and the screen says so until it is closed. */
+    val openFailed: Boolean = false,
     val saving: Boolean = false,
     val message: String? = null,
     /** Nothing is left to do here: the edit was saved, or the photo could not be opened at all. */
@@ -798,7 +800,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             null
         }
         if (loaded == null) {
-            ui.update { it.copy(loading = false, message = text(R.string.open_failed)) }
+            ui.update { it.copy(loading = false, openFailed = true) }
         } else {
             source.value = loaded
             // Said once, as the photo opens: what is saved is not what an HDR screen showed of it.

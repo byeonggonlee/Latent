@@ -77,7 +77,7 @@ class AlbumFlowTest {
         // Pick two photos and put them in the album.
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("DSC00002.JPG").performClick()
-        compose.onNodeWithText("앨범에 추가").performScrollTo().performClick()
+        compose.selectionAction("앨범에 추가").performClick()
         compose.onNodeWithText("여행 (0)").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); members(albumId).size == 2 }
         assertEquals(setOf(ids[0], ids[1]), members(albumId).toSet())
@@ -93,7 +93,7 @@ class AlbumFlowTest {
 
         // One of them leaves the album, and so the view of it.
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
-        compose.onNodeWithText("앨범에서 빼기").performScrollTo().performClick()
+        compose.selectionAction("앨범에서 빼기").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); members(albumId) == listOf(ids[1]) }
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); compose.onAllNodesWithContentDescription("DSC00001.JPG").fetchSemanticsNodes().isEmpty() }
 
