@@ -20,20 +20,25 @@ with the phone's location, and develops them, without a cloud or an account.
 - **Geotags** from the phone's own location record or an exported Google Timeline: GPS tags in a JPEG's EXIF, an
   XMP sidecar for a raw file. A Timeline stay longer than a week, or one that ends before it begins, is left out
   and counted in the import's message.
-- **Develops raw files**: Sony ARW with the camera's lens corrections, and the DNGs of phones (such as a Galaxy's
+- **Develops raw files**: Sony ARW with the camera's lens corrections (also from older bodies, such as an ILCE-7M2,
+  that keep their white balance only in Sony's encrypted private data), and the DNGs of phones (such as a Galaxy's
   Pro mode) with their shading corrections, and with colours matched to the light of the shot between the two a
   phone calibrates for (tungsten and daylight, say). A DNG that describes its lens's distortion (DNG's
   WarpRectilinear) gets the lens correction switch a Sony file has. JPEGs are edited the same way; a JPEG's original
   is kept and can be restored.
 - **Edits**: exposure and tone curves, colour mixer and grading, texture, clarity, dehaze, sharpening and noise
   reduction, filters, cropping and perspective with auto level, spot healing, and masks (linear, radial, brush,
-  colour range, tone range, and the subject, the background and the sky, found on the phone). Edits stay editable
-  and can be kept as named versions.
+  colour range, tone range, and the subject, the background and the sky, found on the phone). A colour mask's
+  colour can be picked from the photo itself, with a magnifier; the eight fixed swatches can be hidden. Edits stay
+  editable and can be kept as named versions. Saving happens in the background: an edit that could not be saved
+  stays marked on its thumbnail and in the viewer until it is tried again or given up, and is never lost unseen.
 - **Looks**: 16 built-in filters, your own, Lightroom presets (`.xmp`) and 3D `.cube` LUTs imported (LUTs on
   stills).
 - **Shows HDR photos as HDR** in the viewer, on a phone with an HDR screen: an Ultra HDR JPEG with its gain map, or
   a 10-bit HEIF in HLG or PQ. Editing stays SDR: the editor says so when an Ultra HDR photo opens, and the edit is
   saved without the gain map. The original keeps it.
+- **Three tabs**: Library, Import (camera, card or drive, and the location record) and Map. Thumbnails say in
+  fixed corners what kind of file a photo is, whether it is picked, rejected or rated, and whether it is edited.
 - **Keeps a library** by day, with ratings, pick and reject flags, albums, search by Exif, date and place, a
   compare view, a trash, sharing at a size and JPEG quality (with the place left out if you choose; a HEIF picture
   then goes out as a JPEG made from it), and the phone's own photos listed from the folders you choose, without
@@ -44,6 +49,8 @@ with the phone's location, and develops them, without a cloud or an account.
   another photo that took the same file name a year later.
 - **Shows photos on a map** (OpenStreetMap), once online maps are turned on. Its credit opens OpenStreetMap's
   copyright page.
+- Latent's own colours (an amber accent and neutral greys, the same on every phone) in light and dark, and a dark,
+  neutral workspace around photos in the viewer and the editor whichever theme is chosen.
 - Fits phones, foldables, tablets and laptop windows, with keyboard and mouse. English, Korean and Japanese.
 
 ### Good to know
@@ -54,7 +61,8 @@ with the phone's location, and develops them, without a cloud or an account.
   takes for another app: move across once with a backup and its restore (see
   [`docs/RELEASES.md`](https://github.com/byeonggonlee/Latent/blob/main/docs/RELEASES.md), "Reinstalling a phone").
   The new app takes over the originals the old one kept of the JPEGs it edited.
-- Tried with a Sony ZV-E10 and Galaxy phones on Android 17. Other cameras that offer MTP may work. Raw
+- Tried with a Sony ZV-E10 and Galaxy phones on Android 17, and with public sample files of other cameras on an
+  Android 16 emulator. Other cameras that offer MTP may work. Raw
   development reads Sony ARW, DNG mosaics and linear DNGs (a Galaxy's Pro mode and Expert RAW, and a Pixel's, which
   shows as one with its cover JPEG; not tried with a Pixel yet), uncompressed, in lossless JPEG or in JPEG XL. The
   Galaxy files tried so far carry no distortion correction, so theirs is not corrected.
@@ -70,8 +78,10 @@ with the phone's location, and develops them, without a cloud or an account.
   [`docs/DEVICE_CHECKS.md`](https://github.com/byeonggonlee/Latent/blob/main/docs/DEVICE_CHECKS.md).
 - Uninstalling the app takes its database (edits, albums, ratings) along; photos are ordinary files in
   `DCIM/Latent` and stay. Back up first (Settings, Backup and restore) to bring the rest back.
-- The APK is signed with the project's own key and is installed from the release page, not from a store. A phone
-  updates only to builds signed with the same key.
+- The APK on the release page is signed with the project's own key; the app on Google Play is signed by Google.
+  A phone updates only to builds signed with the same key, so one installed from the release page and one from
+  Play do not replace each other: move across once with a backup and its restore. Raw files of a camera Latent
+  cannot develop yet still show the picture the camera stored in them, and the editor says why it cannot open them.
 
 ### Fixed since the nightlies
 
