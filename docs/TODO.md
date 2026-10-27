@@ -8,13 +8,15 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
-- [ ] **Tag `v0.1.0`** once Codex's S24 release checks are in (`HANDOFF.md`, *For Codex* §0) and nothing in them
-      blocks: Claude Code then writes the date into `CHANGELOG.md` and tags, as `RELEASES.md` says.
+- [ ] **Tag `v0.1.0`** after the owner accepts the [S24 release report](device-results/2026-10-27-s24-release.md):
+      14 instrumented tests pass, but sky GPU compilation fails and CPU fallback is used; direct physical-screen
+      colour acceptance and broader signed-release smoke cases remain outside this run. Claude Code then writes
+      the date into `CHANGELOG.md` and tags, as `RELEASES.md` says. This record does not authorize the tag.
 
 - [x] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/byeonggonlee/Latent/pull/49)):
       Claude Opus 5.5 (via Claude Code) reviewed `ca35692`, LGTM; the public 7M2 ARW develops on the emulator with
-      neutral colour. Merged `7d58294` on the owner's instruction. Phone colour judgement and the ZV-E10 regression
-      check remain in DEVICE_CHECKS.md.
+      neutral colour. Merged `7d58294` on the owner's instruction. The ZV-E10 regression now passes on S24 ([report](device-results/2026-10-27-s24-release.md)); direct physical-screen
+      colour acceptance remains unverified.
 
 - [x] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)):
       Claude Opus 5.5 (via Claude Code) reviewed the full diff at `ac8a415`, LGTM; CI green. Merged `142f7f7` with

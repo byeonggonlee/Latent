@@ -19,6 +19,15 @@ A nightly is a release build signed with the release key. The tests that run on 
 beside the nightly and leaves the nightly's photos and data alone. Those checks are together at the end, under "With
 a build from the computer".
 
+## Codex device results
+
+- **2026-10-27, S24 Ultra (SM-S928N), Android 17/API 37**, Debug main `674ed61`:
+  [release validation report](device-results/2026-10-27-s24-release.md). **14 instrumentation tests passed,
+  no failures/skips**. Tone/detail and picker GPU parity, subject GPU/CPU, ZV-E10 RAW/JPEG editing/export,
+  thumbnails and real-video preparation checked. Sky CPU works; sky GPU compilation fails on unsupported
+  operators, so its GPU parity is unverified. Light-theme bars, picker Cancel/retained hue and selection More
+  checked through on-device UI. This does not complete all detailed boxes below or physical-screen colour acceptance.
+
 ## Owner-reported results
 
 - **2026-10-23, SC-57G**, `latent-0.1.0-nightly.20261023-347-arm64-v8a`: the owner reviewed the

@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | S24 Ultra release validation on current main: GPU/CPU parity, masks, real-photo editing, thumbnails and video; preserve installed data | `codex/s24-release-010` | `docs/device-results/2026-10-27-s24-release.md`, this board | 2026-10-27 |
 | 2026-10-27 | Claude Code (computer) | `EditOnDeviceTest` compares the size of an Exif-rotated JPEG as shown and checks it is stored upright after healing; passes on the emulator with the public OnePlus JPEG and ILCE-7M2 ARW, RAW glow/brush/healing export included. PR #50 merged on the owner's instruction | `c78a449` (PR #50) and this commit |
 
 ## For Codex
@@ -163,6 +162,14 @@ only fixes for what the release checks find go in before the tag. New features, 
 written (its date waits for the tag), `v0.1.0-rc.2` built the signed APK and AAB and is on a Play testing track, and
 an emulator run passed most of the smoke test ([report](device-results/2026-10-27-emulator.md)). What is left is
 what only a phone can say, and the owner finds plugging phones in hard: the S24 Ultra is the release phone.
+
+**S24 run, 2026-10-27:** [Codex release report](device-results/2026-10-27-s24-release.md), main `674ed61`.
+**14 instrumentation tests passed, no failures/skips**: tone/detail GPU parity (including picked colour), subject
+GPU/CPU, sky CPU fallback, owner's ZV-E10 RAW/JPEG editing/export, thumbnails and real-video preparation.
+Light-theme system bars, picker retained hue/Cancel, public ILCE-7M2 editor and selection More checked on-device.
+Sky GPU compilation fails (`BROADCAST_TO` / `GATHER_ND` unsupported); CPU works, GPU parity remains unverified
+and is queued for Claude Code. Direct physical-screen colour acceptance and broader signed-release smoke cases
+remain outside the run. The report does not authorize a tag. The original ordered checklist follows for scope.
 
 1. **Reviews first, when asked.** Open release pull requests from Claude Code (now
    [PR #50](https://github.com/byeonggonlee/Latent/pull/50), colour picker follow-ups) get a review when the owner
@@ -189,7 +196,7 @@ what only a phone can say, and the owner finds plugging phones in hard: the S24 
 entering the phone's PIN. If the phone is locked or missing, say so to the owner and stop there. The tag is the
 owner's decision once the report is in.
 
-**Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. S24 and owner ZV-E10 checks remain pending. PR #50 re-reviewed at `5abec53`: previous P2 resolved, [LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143). Local minified APK/AAB, privacy, APK signature and 16 KiB alignment checks pass; CI/owner-authorized merge still required.
+**Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. Covered S24/ZV-E10 items are superseded by the S24 report above; its explicit limits remain. PR #50 re-reviewed at `5abec53`: previous P2 resolved, [LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143). Local minified APK/AAB, privacy, APK signature and 16 KiB alignment checks pass; PR #50 is now merged as `c78a449`.
 
 **After 0.1.0:** the UI guide's control and layout tasks handed to Codex earlier wait until the release is out.
 Then Canon raw (owner, 2026-10-27): CR2 first (TIFF with lossless JPEG, so the DNG path's decoder can serve), then
@@ -323,6 +330,14 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 ## For Claude Code
 
 ### Release follow-up from Codex — 2026-10-27
+
+- **S24 sky GPU investigation:** main `674ed61`, SM-S928N / Android 17 / Adreno 750. Sky GPU creation fails
+  twice with `LiteRtException: Failed to compile model`; native logs report unsupported `BROADCAST_TO` and
+  `GATHER_ND` (84/514 nodes delegated, three partitions). Subject GPU works. Sky CPU passes, cold 263 ms,
+  warm median 239 ms. Do not describe the passing sky tests as GPU parity. Investigate model/delegate
+  compatibility without weakening numerical tests or removing CPU fallback. [Evidence](device-results/2026-10-27-s24-release.md#subject-and-sky-masks).
+  CPU-only support acceptance for 0.1.0 remains with the owner; no product fix was made in this test task.
+
 
 - **Done 2026-10-27:** PR #50's P2 was fixed at `5abec53`, re-reviewed by Codex (LGTM) and merged `c78a449`. The
   device test's expectation now compares the size as shown and checks that healing leaves a sideways photo stored
@@ -538,6 +553,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-27 | Codex | S24 Ultra release validation on main `674ed61`: 14 instrumentation tests passed without failures/skips; tone/detail and picker GPU parity, subject GPU/CPU, ZV-E10 full editing/export, thumbnails, real-video preparation; Korean light-theme bars, picker and selection menu checked. Sky uses CPU after GPU compile failure; physical-screen colour acceptance and broader signed-release checks remain explicit. Host CI checks pass | [S24 report](device-results/2026-10-27-s24-release.md) |
 | 2026-10-27 | Codex | Re-reviewed PR #50 at `5abec53`, previous P2 resolved, LGTM; 44 focused JVM checks pass. User-independent release checks: main minified APK/AAB, privacy, APK signature, 16 KiB ZIP/ELF alignment and host CI-equivalent checks pass. S24/owner ZV-E10 checks and release decisions remain pending | [Review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143); [evidence](device-results/2026-10-27-release-emulator-followup.md#follow-up-after-the-pr-50-fix-2026-10-27) |
 | 2026-10-27 | Codex | Owner-authorized Android 16 emulator release follow-up: public ILCE-7M2 RAW editing/export, CPU masks, thumbnails, synthetic video preparation and light-theme workspace/selection UI checked; host CI checks pass. ES 3.0 GPU limitation, EXIF-sensitive test expectation and S24/ZV-E10 checks remain explicit. PR #50 reviewed with one P2 | [Report](device-results/2026-10-27-release-emulator-followup.md); [PR #50 review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226) |
 | 2026-10-27 | Claude Code (computer) | Emulator findings 2–4: light system-bar icons over the photo workspace in either theme; a photo the editor never read is explained in place of the picture (raw: not developable yet, the viewer keeps the camera's preview) with Close, scrolling at large text, while a failed reread keeps the picture; the selection bar shows what fits and puts the rest under More, its count giving way first. Reviewed by Codex (LGTM at `3d37d5c`) | [PR #48](https://github.com/byeonggonlee/Latent/pull/48), merged `4d76e59` |
