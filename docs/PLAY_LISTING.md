@@ -15,9 +15,9 @@ Phone screenshots still have to be taken on a phone, with photos the owner is ha
 
 ## Short description (80 characters at most)
 
-English: `Import camera photos by USB or card, develop RAW and JPEG, map them. No account.`
-한국어: `카메라 사진을 USB나 카드로 가져와 RAW·JPEG를 보정하고 지도에서 봅니다. 계정 없음.`
-日本語: `カメラの写真をUSBやカードから取り込み、RAWとJPEGを現像して地図で見る。アカウント不要。`
+English: `From camera (USB) or memory card: develop RAW and JPEG, map them. No account.`
+한국어: `카메라를 USB로 연결하거나 메모리 카드에서 사진을 가져와 RAW·JPEG를 보정하고 지도에서 봅니다. 계정 없음.`
+日本語: `カメラをUSBでつなぐかメモリーカードから写真を取り込み、RAWとJPEGを現像して地図で見る。アカウント不要。`
 
 ## Full description (4000 characters at most)
 
