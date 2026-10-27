@@ -249,6 +249,19 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 - **Done when / Risk**: malformed previews return null so the full JPEG fallback remains usable; positive valid
   fixture tests and required CI pass. Do not change valid preview pixels or invent a phone memory budget.
 
+### 7. Sony ARW: white balance from the SR2 private directory (bug, found on the emulator 2026-10-27)
+
+- **Why**: an ILCE-7M2 or ILCE-7RM2 file (rawsamples.ch) cannot be developed: `Missing white balance`. The viewer
+  shows the embedded preview; the editor opens empty. Older Sony bodies keep their white balance only in the
+  encrypted SR2 private directory. See [the emulator report](device-results/2026-10-27-emulator.md).
+- **Where**: `raw/SonyArw.kt`, `parse`: `raw.ints(TAG_WHITE_BALANCE)` (`0x7313`, raw IFD) or throw.
+  `readPrivateDirectory` already decrypts SR2 for the colour matrix.
+- **Do**: fall back to the white balance in the SR2 private directory (`0x7313` there, or `0x7303` in GRBG order,
+  as other decoders do) before failing.
+- **Test first**: a fixture or synthetic ARW with white balance only in SR2; the ZV-E10 path unchanged. Samples
+  are Creative Commons and stay out of the repository unless their licence allows a small crop.
+- **Owner**: whether 0.1.0 waits for this, or ships saying which Sony bodies are supported.
+
 ### Waiting for a phone first (not to start yet)
 
 - What is left of a `BaselineExposure` that the highlights stopped short, into the tone stage's exposure
