@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | S24 Ultra release validation on current main: GPU/CPU parity, masks, real-photo editing, thumbnails and video; preserve installed data | `codex/s24-release-010` | `docs/device-results/2026-10-27-s24-release.md`, this board | 2026-10-27 |
 | 2026-10-27 | Claude Code (computer) | `EditOnDeviceTest` compares the size of an Exif-rotated JPEG as shown and checks it is stored upright after healing; passes on the emulator with the public OnePlus JPEG and ILCE-7M2 ARW, RAW glow/brush/healing export included. PR #50 merged on the owner's instruction | `c78a449` (PR #50) and this commit |
 
 ## For Codex
