@@ -112,3 +112,38 @@ Still needed on S24: shader/CPU parity including the picker, detail GPU, subject
 owner ZV-E10 decoding/editing, screen colour judgement, thumbnails and real camera video, and the phone UI pass.
 The PR #50 P2 also awaits its author's fix and re-review. No release date, tag, merge or distribution decision
 was made by this validation.
+
+
+## Follow-up after the PR #50 fix (2026-10-27)
+
+Owner asked for re-review and any remaining required work that does not need their intervention.
+
+- Re-reviewed full PR #50 at `5abec53d08ee91fe0426151c85092162bf384b43`, including the change from `2849307`.
+  **The P2 above is resolved; no actionable findings.** [Published LGTM comment](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143).
+  The status now shares the bounded scrolling region with the hint, and both actions stay outside it. The
+  320×640 dp / 200% / English / valid-then-gray regression passes, including clicking Cancel. Screenshot checked.
+  The original 320 dp failing probe, default-font stationary-picture probe and large-font landscape probe all pass.
+  Ran 32 focused tests (15 flow tests, 17 disposable independent probes), then 12 layout/panel/sampling tests:
+  no failures or skips in either batch. These are JVM checks, not actual TalkBack or physical-keyboard validation.
+- Main source `be0ba0a` (the prior report commit; product code unchanged from `d77a7f4`) was built separately
+  from the PR. `assembleRelease bundleRelease -PdebugSignedRelease -PlatentAbis=arm64-v8a
+  :app:processReleaseManifest` passed. APK approximately 38 MiB, AAB approximately 33 MiB; both contain only
+  arm64-v8a native libraries. These are **local debug-key-signed release variants**, not production-key artifacts;
+  no stable/nightly installation was replaced and no artifact was distributed.
+- `scripts/check-privacy.sh` passed: no tracking libraries and the merged release permissions match
+  `app/expected-permissions.txt`. `aapt2 dump badging` confirms package `com.latentimage.latent`, version
+  0.1.0/code 1 for this local build, min SDK 35, target SDK 37.
+- Build Tools 36 `apksigner verify --verbose` passed (APK v2 signature), and `zipalign -c -P 16 4` passed.
+  Independently read ELF64 program headers of all five packaged `.so` files: every PT_LOAD alignment is
+  16,384 bytes. This checks packaged alignment, not execution on a 16 KiB-page phone.
+- Required host checks passed again: 817 JVM tests, 0 failures/errors, 4 skipped; both Lints and instrumentation
+  APK compilation passed. Room schemas unchanged. JDK 25 locally; GitHub CI uses JDK 21.
+- Existing main `be0ba0a` Build and Licences workflows are green. PR #50's licence check is green; at the time of
+  this follow-up its build workflow had passed tests, lint, shader compilation, schemas and privacy and was
+  building the release APK. The PR still needs green CI before an owner-authorized merge.
+
+The earlier P2-open statement is historical evidence for `2849307`, superseded by this re-review at `5abec53`.
+The EXIF-aware device-test expectation remains in Claude Code's queue; no assertion was weakened. No new
+Codex-area code defect or additional owner-independent release blocker was identified. S24 GPU/colour/memory,
+owner ZV-E10, real video and actual accessibility checks remain pending as listed above. Release date, tag and
+phone-dependent decisions were left to the owner; no merge, tagging or publication was performed.

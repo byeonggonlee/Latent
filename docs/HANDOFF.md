@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Re-review PR #50 at `5abec53`; check release prerequisites that do not need the owner or a phone | `codex/release-010-readiness`, PR #50 | this board, release evidence under `docs/` | 2026-10-27 |
 
 ## For Codex
 
@@ -185,7 +184,7 @@ what only a phone can say, and the owner finds plugging phones in hard: the S24 
 entering the phone's PIN. If the phone is locked or missing, say so to the owner and stop there. The tag is the
 owner's decision once the report is in.
 
-**Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. S24 and owner ZV-E10 checks remain pending. PR #50 reviewed at `2849307`, one P2 open.
+**Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. S24 and owner ZV-E10 checks remain pending. PR #50 re-reviewed at `5abec53`: previous P2 resolved, [LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143). Local minified APK/AAB, privacy, APK signature and 16 KiB alignment checks pass; CI/owner-authorized merge still required.
 
 **After 0.1.0:** the UI guide's control and layout tasks handed to Codex earlier wait until the release is out.
 
@@ -316,7 +315,7 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 
 ### Release follow-up from Codex — 2026-10-27
 
-- **PR #50 P2:** at `2849307`, 320×640 dp / 200% font / English, choose a valid blue then an achromatic
+- **PR #50 P2 — resolved at `5abec53`, awaiting merge:** [Codex re-review: LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143), 44 focused JVM checks passed. Original issue at `2849307`: 320×640 dp / 200% font / English, choose a valid blue then an achromatic
   sample: the expanded picker status crowds Cancel out of view. Reserve action space and constrain/scroll the
   status without hiding the reason or kept hue; cover invalid-after-valid at large text.
   [Published review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226).
@@ -535,6 +534,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-27 | Codex | Re-reviewed PR #50 at `5abec53`, previous P2 resolved, LGTM; 44 focused JVM checks pass. User-independent release checks: main minified APK/AAB, privacy, APK signature, 16 KiB ZIP/ELF alignment and host CI-equivalent checks pass. S24/owner ZV-E10 checks and release decisions remain pending | [Review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143); [evidence](device-results/2026-10-27-release-emulator-followup.md#follow-up-after-the-pr-50-fix-2026-10-27) |
 | 2026-10-27 | Codex | Owner-authorized Android 16 emulator release follow-up: public ILCE-7M2 RAW editing/export, CPU masks, thumbnails, synthetic video preparation and light-theme workspace/selection UI checked; host CI checks pass. ES 3.0 GPU limitation, EXIF-sensitive test expectation and S24/ZV-E10 checks remain explicit. PR #50 reviewed with one P2 | [Report](device-results/2026-10-27-release-emulator-followup.md); [PR #50 review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226) |
 | 2026-10-27 | Claude Code (computer) | Emulator findings 2–4: light system-bar icons over the photo workspace in either theme; a photo the editor never read is explained in place of the picture (raw: not developable yet, the viewer keeps the camera's preview) with Close, scrolling at large text, while a failed reread keeps the picture; the selection bar shows what fits and puts the rest under More, its count giving way first. Reviewed by Codex (LGTM at `3d37d5c`) | [PR #48](https://github.com/byeonggonlee/Latent/pull/48), merged `4d76e59` |
 | 2026-10-27 | Codex | Sony ARW as-shot WB fallback from encrypted SR2 RGGB/GRBG, preserving the legacy raw-IFD contract. Five new synthetic tests; public ILCE-7M2 decode/proxy succeeds. Public 7RM2 private pointer is unusable and remains rejected. Full local CI checks pass. Reviewed by Claude Code (LGTM); phone colour judgement pending | [PR #49](https://github.com/byeonggonlee/Latent/pull/49), merged `7d58294`; [follow-up](device-results/2026-10-27-sony-sr2.md) |
