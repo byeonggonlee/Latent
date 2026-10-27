@@ -26,7 +26,8 @@ a build from the computer".
   no failures/skips**. Tone/detail and picker GPU parity, subject GPU/CPU, ZV-E10 RAW/JPEG editing/export,
   thumbnails and real-video preparation checked. Sky CPU works; sky GPU compilation fails on unsupported
   operators, so its GPU parity is unverified. Light-theme bars, picker Cancel/retained hue and selection More
-  checked through on-device UI. This does not complete all detailed boxes below or physical-screen colour acceptance.
+  checked through on-device UI. This does not complete all detailed boxes below. The owner then judged the colour on the S24's screen
+  fine (2026-10-27).
 
 ## Owner-reported results
 

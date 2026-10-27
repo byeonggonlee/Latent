@@ -168,7 +168,7 @@ what only a phone can say, and the owner finds plugging phones in hard: the S24 
 GPU/CPU, sky CPU fallback, owner's ZV-E10 RAW/JPEG editing/export, thumbnails and real-video preparation.
 Light-theme system bars, picker retained hue/Cancel, public ILCE-7M2 editor and selection More checked on-device.
 Sky GPU compilation fails (`BROADCAST_TO` / `GATHER_ND` unsupported); CPU works, GPU parity remains unverified
-and is queued for Claude Code. Direct physical-screen colour acceptance and broader signed-release smoke cases
+and is queued for Claude Code. The owner judged the colour on the phone's screen fine (2026-10-27); broader signed-release smoke cases
 remain outside the run. The report does not authorize a tag. The original ordered checklist follows for scope.
 
 1. **Reviews first, when asked.** Open release pull requests from Claude Code (now
