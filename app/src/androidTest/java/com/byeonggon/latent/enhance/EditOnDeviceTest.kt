@@ -70,6 +70,17 @@ class EditOnDeviceTest {
         return bounds.outWidth to bounds.outHeight
     }
 
+    /**
+     * The size of [file] as it is shown: a photo stored on its side is turned by its Exif. Healing, reframing and
+     * parts on a sideways photo are made on the upright picture, which is then stored upright.
+     */
+    private fun uprightSizeOf(file: File): Pair<Int, Int> {
+        val (width, height) = sizeOf(file)
+        return if (ExifInterface(file).rotationDegrees % 180 == 0) width to height else height to width
+    }
+
+    private fun orientationOf(file: File) = ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
     /** Draws the picture as the editor does while a slider moves, and logs how long one drawing takes. */
     private fun followASlider(name: String, picture: LinearImage, heaviest: PhotoEdit = everything) {
         val overview = picture.downscaled(ToneRenderer.OVERVIEW_EDGE)
@@ -155,18 +166,18 @@ class EditOnDeviceTest {
         val backup = File(folder, "originals/photo.jpg")
         try {
             jpegSample!!.copyTo(photo)
-            val original = sizeOf(photo)
+            val original = uprightSizeOf(photo)
             followASlider("jpeg", timed("jpeg load for editing") { PhotoEnhancer.load(photo, 1600) })
 
             timed("jpeg save with every tool") { PhotoEnhancer.saveEdited(photo, backup, everything) }
-            assertEquals(original, sizeOf(photo))
+            assertEquals(original, uprightSizeOf(photo))
             timed("jpeg region at full size") { PhotoEnhancer.region(backup, 0.5f, 0.5f, 1024) }
 
             val levelled = Framing(angle = 3f, vertical = 0.3f).largestOf(1.5f, original.first.toFloat(), original.second.toFloat())
             timed("jpeg save reframed with every tool") { PhotoEnhancer.saveEdited(photo, backup, everything.copy(framing = levelled)) }
-            val reframed = sizeOf(photo)
+            val reframed = uprightSizeOf(photo)
             assertTrue("reframed to $reframed", reframed.first < original.first && reframed.first > original.first * 0.8)
-            assertEquals(ExifInterface.ORIENTATION_NORMAL, ExifInterface(photo).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0))
+            assertEquals(ExifInterface.ORIENTATION_NORMAL, orientationOf(photo))
             assertEquals("ZV-E10", ExifInterface(photo).getAttribute(ExifInterface.TAG_MODEL))
         } finally {
             folder.deleteRecursively()
@@ -183,10 +194,12 @@ class EditOnDeviceTest {
         val backup = File(folder, "originals/photo.jpg")
         try {
             jpegSample!!.copyTo(photo)
-            val original = sizeOf(photo)
+            val original = uprightSizeOf(photo)
             followASlider("jpeg with glow, brush, healing", timed("jpeg load for editing") { PhotoEnhancer.load(photo, 1600) }, andTheRest)
             timed("jpeg save with glow, brush, healing") { PhotoEnhancer.saveEdited(photo, backup, andTheRest) }
+            // Healing turns a sideways photo upright: the same picture, its pixels stored the way it is shown.
             assertEquals(original, sizeOf(photo))
+            assertEquals(ExifInterface.ORIENTATION_NORMAL, orientationOf(photo))
         } finally {
             folder.deleteRecursively()
         }

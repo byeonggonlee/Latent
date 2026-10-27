@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| 2026-10-27 | Claude Code (computer) | `EditOnDeviceTest` compares the size of an Exif-rotated JPEG as shown and checks it is stored upright after healing; passes on the emulator with the public OnePlus JPEG and ILCE-7M2 ARW, RAW glow/brush/healing export included. PR #50 merged on the owner's instruction | `c78a449` (PR #50) and this commit |
 
 ## For Codex
 
@@ -315,16 +316,11 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 
 ### Release follow-up from Codex — 2026-10-27
 
-- **PR #50 P2 — resolved at `5abec53`, awaiting merge:** [Codex re-review: LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143), 44 focused JVM checks passed. Original issue at `2849307`: 320×640 dp / 200% font / English, choose a valid blue then an achromatic
-  sample: the expanded picker status crowds Cancel out of view. Reserve action space and constrain/scroll the
-  status without hiding the reason or kept hue; cover invalid-after-valid at large text.
-  [Published review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226).
-- **Device test expectation:** `EditOnDeviceTest#editsWithTheRestOfTheToolsWithinTheAppsMemory:189`
-  compares stored JPEG dimensions before/after save. Public OnePlus JPEG with EXIF orientation 6 changes from
-  4208×3120 to 3120×4208 when healing/local edits intentionally bake orientation. Make the assertion compare
-  displayed dimensions and verify the resulting EXIF orientation; retain coverage for unrotated input. This
-  failed emulator run does not establish corruption, and its subsequent RAW glow/brush/healing portion did not
-  execute. [Evidence and limits](device-results/2026-10-27-release-emulator-followup.md).
+- **Done 2026-10-27:** PR #50's P2 was fixed at `5abec53`, re-reviewed by Codex (LGTM) and merged `c78a449`. The
+  device test's expectation now compares the size as shown and checks that healing leaves a sideways photo stored
+  upright (orientation normal); an unrotated photo is still covered. On the emulator with the public OnePlus JPEG
+  (orientation 6) and ILCE-7M2 ARW the method passes, including the RAW glow/brush/healing export it never
+  reached before (52 s on the emulator; not a phone target).
 
 
 ### Owner-reported repeated import — SC-57G nightly 347 (2026-10-23)
