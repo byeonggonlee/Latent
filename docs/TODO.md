@@ -8,12 +8,10 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
-- [ ] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/byeonggonlee/Latent/pull/49)): fixes the missing
-      raw-IFD WB failure with a validated SR2 RGGB/GRBG fallback. The public 7M2 decode/proxy succeeds; the published
-      7RM2 sample's private pointer is unusable and remains rejected. Request Claude Code (Opus 5.5), Gemini 4 Argon
-      or Claude Opus 5.5 via Antigravity to review colour compatibility and malformed-input handling before merge.
-      Whether 0.1.0 waits for wider Sony support remains the owner's choice; see
-      [the follow-up](device-results/2026-10-27-sony-sr2.md).
+- [x] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/byeonggonlee/Latent/pull/49)):
+      Claude Opus 5.5 (via Claude Code) reviewed `ca35692`, LGTM; the public 7M2 ARW develops on the emulator with
+      neutral colour. Merged `7d58294` on the owner's instruction. Phone colour judgement and the ZV-E10 regression
+      check remain in DEVICE_CHECKS.md.
 
 - [x] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)):
       Claude Opus 5.5 (via Claude Code) reviewed the full diff at `ac8a415`, LGTM; CI green. Merged `142f7f7` with
