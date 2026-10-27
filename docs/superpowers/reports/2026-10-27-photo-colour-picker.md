@@ -1,6 +1,6 @@
 # Photo colour picker verification — 2026-10-27
 
-Agent: Codex. Base: `14d3890`. Branch: `codex/colour-picker-design`.
+Agent: Codex. Base: `14d3890`. Branch: `codex/colour-picker-design`. [PR #47](https://github.com/byeonggonlee/Latent/pull/47).
 
 The owner approved the design and implementation. This branch implements photo hue picking and optional fixed
 swatches; it does not change the saved edit format, Room schema or backup format.

@@ -90,7 +90,7 @@ Paths above are relative to `app/src/main/java/com/byeonggon/latent/` unless a f
 - [x] Run/update meaningful GPU parity coverage with earlier local edits and picked hue, preserving existing tolerances. For device tests use serial-specific `adb shell am instrument`, never `connectedAndroidTest` and never uninstall/clear personal app data. If no suitable device is connected, explicitly leave GPU/device interaction checks unverified.
 - [ ] On the S24 Debug app when available, use generated colour patches to check actual selected region, portrait/landscape alignment, magnifier occlusion, one-hand controls, TalkBack/keyboard route, 200% text, preference reopen, one-step Undo and Cancel. Do not claim real-photo quality from patches.
 - [x] Update ROADMAP item 4 and DEVICE_CHECKS with exact built/remaining scope, record evidence/limits, and move the HANDOFF claim to Done when implementation is completed. Stage only task paths and commit with `Agent: Codex`.
-- [ ] Publish the implementation branch/PR and attach it to this task. Request one qualified cross-family review covering the full colour, state, cancellation and UI diff; no self-review satisfies that gate and no merge is implied.
+- [x] Publish the implementation branch/PR and attach it to this task. Request one qualified cross-family review covering the full colour, state, cancellation and UI diff; no self-review satisfies that gate and no merge is implied.
 
 ## Execution
 

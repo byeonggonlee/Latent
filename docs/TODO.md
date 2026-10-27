@@ -8,7 +8,7 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
-- [ ] **Photo colour picker cross-family review** (2026-10-27, `codex/colour-picker-design`): implementation and local
+- [ ] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)): implementation and local
       checks are complete. Request Claude Code (Opus 5.5), Gemini 4 Argon or Claude Opus 5.5 via Antigravity to review
       the full colour/rendering, state/cancellation and UI diff before merge. This session has no qualified
       cross-family reviewer available; its fresh Codex review is supplemental. S24/GPU runtime checks remain in
