@@ -99,6 +99,30 @@ class GpuToneOnDeviceTest {
         assertTrue("$name: $off pixels off by more than one", share < 0.001)
     }
 
+    /** No personal photo required: sample after a prior edit, then use that hue on both renderers. */
+    @Test
+    fun pickedColourAfterEarlierMaskAgreesWithTheProcessor() {
+        assumeTrue(Graphics.available)
+        val width = 640
+        val height = 480 // Above the graphics-processor selection threshold.
+        val pixels = IntArray(width * height) { index ->
+            if (index % width < width / 2) 0xFF477DB5.toInt() else 0xFFB56747.toInt()
+        }
+        val picture = LinearImage.fromArgb(pixels, width, height)
+        val edit = PhotoEdit(locals = listOf(
+            LocalEdit(Mask(MaskShape.EVERYWHERE, 0f, 0f, 1f, 1f), Adjustments(temperature = 0.35f, tint = -0.15f)),
+            LocalEdit(Mask(MaskShape.EVERYWHERE, 0f, 0f, 1f, 1f), Adjustments(exposure = 0.5f, saturation = 0.3f), hue = 0f),
+        ))
+        val overview = picture.downscaled(ToneRenderer.OVERVIEW_EDGE)
+        val plane = ToneRenderer(edit, overview).colourInput(picture, 1)
+        val picked = requireNotNull(plane.sample(0.25f, 0.5f))
+        val selected = edit.locals[1].copy(hue = picked.hue)
+        val input = plane.picture
+        val at = (input.height / 2) * input.width + input.width / 4
+        assertTrue("picked hue selects the sampled patch", selected.colourWeight(input.red[at], input.green[at], input.blue[at]) > 0.9f)
+        compare("picked colour after an earlier mask", picture, edit.copy(locals = listOf(edit.locals[0], selected)))
+    }
+
     @Test
     fun agreesWithTheProcessor() {
         assumeTrue(sample != null && sample.isFile)

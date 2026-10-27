@@ -1,6 +1,6 @@
 # Photo colour picker and optional colour swatches
 
-Status: proposed design, awaiting owner approval. No implementation authorized by this document alone.
+Status: approved by the owner in conversation; implemented on `codex/colour-picker-design`. Qualified cross-family review and device checks remain pending.
 Agent: Codex. Baseline: main `14d3890`.
 
 ## Intent and agreed choices
@@ -13,7 +13,7 @@ This is colour selection, not object segmentation: the same hue elsewhere in the
 
 - Replace the eight swatches with a picker: less panel content, but removes a quick existing input. The owner chose to retain swatches with an optional hide setting.
 - Put the preference in app Settings: centralised, but interrupts editing. The owner chose a contextual panel menu.
-- Sample the final displayed bitmap: cheap, but red overlays, clipping marks, local adjustments and LUTs can change the sampled hue. Implementation proposal: sample the exact input to the selected local mask's colour predicate and display that input while picking. This technical choice has not yet been approved by the owner.
+- Sample the final displayed bitmap: cheap, but red overlays, clipping marks, local adjustments and LUTs can change the sampled hue. Implementation proposal: sample the exact input to the selected local mask's colour predicate and display that input while picking. This technical choice was included in the approved design.
 
 ## Scope and interaction
 
@@ -27,7 +27,7 @@ Picking is an explicit temporary mode:
 4. Apply changes only the selected mask's hue and creates one undoable history step. Keep its spread, adjustments, geometry, detection and brush strokes. Applying an unchanged hue creates no new step. Editor Done still controls the normal eventual background save.
 5. Cancel or Back leaves the original edit/history unchanged. Back exits picking before invoking the editor's existing unsaved-edit navigation. Changing photo/tool/selected mask, source reload or lens correction invalidates the picker session and cancels its draft; results from stale asynchronous work are ignored. Window changes retain the cursor in normalised image coordinates and the uncommitted candidate when the same session survives; process recreation may safely cancel the draft.
 
-These Apply/Cancel and magnifier details are design proposals, not additional owner decisions. A cancelled picker does not undo a mask that Add Colour already created.
+These Apply/Cancel and magnifier details are part of the approved design. A cancelled picker does not undo a mask that Add Colour already created.
 
 ## Colour and coordinate contract
 
