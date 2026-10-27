@@ -152,11 +152,47 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 ## For Codex
 
+### 0. Release 0.1.0 — top priority (set by the owner, 2026-10-27)
+
+**Before anything else in this list.** Everything planned for 0.1.0 is on `main`: the `CHANGELOG.md` section is
+written (its date waits for the tag), `v0.1.0-rc.2` built the signed APK and AAB and is on a Play testing track, and
+an emulator run passed most of the smoke test ([report](device-results/2026-10-27-emulator.md)). What is left is
+what only a phone can say, and the owner finds plugging phones in hard: the S24 Ultra is the release phone.
+
+1. **Reviews first, when asked.** Open release pull requests from Claude Code (now
+   [PR #50](https://github.com/byeonggonlee/Latent/pull/50), colour picker follow-ups) get a review when the owner
+   asks; a plain LGTM is enough when nothing needs fixing.
+2. **Device checks on the S24 Ultra** with a debug build of `main` (`./gradlew installDebug installDebugAndroidTest`,
+   "Latent Debug"; run tests with `adb shell am instrument`, never `connectedAndroidTest`; see
+   [DEVICE_CHECKS §9](DEVICE_CHECKS.md)). In this order, the ones an emulator cannot do:
+   - `GpuToneOnDeviceTest` (all of it, including `pickedColourAfterEarlierMaskAgreesWithTheProcessor` from PR #47)
+     and `GpuDetailOnDeviceTest`: the shaders against the CPU. The emulator's GL (ES 3.0) skips them.
+   - `SubjectMaskOnDeviceTest` and `SkyMaskOnDeviceTest` on the GPU, with their cold and warm times.
+   - `RawOnDeviceTest` and `EditOnDeviceTest` with the owner's ZV-E10 ARW and JPEG (the tests expect that camera):
+     the raw-IFD white balance path unchanged after PR #49.
+   - The public ILCE-7M2 ARW from rawsamples.ch (Creative Commons; keep it off the repository) opened in the editor:
+     developed, and neutral greys judged on the phone's screen against the camera's embedded preview.
+   - `ThumbnailOnDeviceTest` (PR #46's regression has run only on the emulator) and, with a video,
+     `VideoPlaybackOnDeviceTest`.
+   - By hand, the light theme: the status bar's icons light over the viewer and the editor, dark again in the library;
+     the selection bar showing *Share · Delete · Compare · More* with the rest under More (PR #48).
+3. **Write it down** as `docs/device-results/<date>-s24-release.md`, like the emulator report: what passed with its
+   numbers, what failed with the log. A failure in a decoder or the seam is yours to fix through a pull request; one
+   elsewhere goes under *For Claude Code* here.
+
+**Not yours to do:** writing the release date into `CHANGELOG.md`, tagging `v0.1.0`, merging without the owner, or
+entering the phone's PIN. If the phone is locked or missing, say so to the owner and stop there. The tag is the
+owner's decision once the report is in.
+
+**After 0.1.0:** the UI guide's control and layout tasks handed to Codex earlier wait until the release is out.
+
+### Earlier items
+
 **Order set by the owner (2026-10-21):** 4 (below), then 1, then 2. Start 2 only once Claude Code's decode
 cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
-touch the seam, as it reviews yours.
+touch the seam, as it reviews yours. *All of 1–7 below are done; only phone judgement remains for 1 and 2.*
 
-### 6. Reviews asked: three pull requests from the parser fuzzing (2026-10-22)
+### 6. Reviews asked: three pull requests from the parser fuzzing (2026-10-22) (done)
 
 Claude Code's fuzz tests of the parsers of outside input found the fixes below, which change what the rules send
 through review; each pull request has a comment addressed to Codex listing what to check. No decoder crash was
@@ -179,14 +215,14 @@ re-review was out of quota then. Codex reviewed all three after the merge and fo
 corrected three details in Argon's account (the crop's largest side is 16, not 1; `Placement` is in `LocalEdit.kt`;
 `Healing.heal` skips a spot that is not finite in pixels, it does not clamp the radius): the code is as intended.
 
-### 5. The rule for posting reviews: agreed by the owner (2026-10-22)
+### 5. The rule for posting reviews: agreed by the owner (2026-10-22) (done: in `AGENTS.md`)
 
 - **What**: `codex/review-posting-rule` (commits `3a6b7b1`, `54d0e9b`, not pushed) adds "Publishing PR reviews" to
   `AGENTS.md`. The owner agrees with it and adds that a plain LGTM is enough when a review finds nothing to fix.
 - **Do**: add that, bring `main` in, and push it (documentation only). Your *In progress* row for
   `codex/dng-illuminants` can go to *Done* too: PR #9 is merged.
 
-### 1. DNG: a colour matrix between the two calibration illuminants (implemented, review and phone judgement pending)
+### 1. DNG: a colour matrix between the two calibration illuminants (done, PR #9; phone judgement pending)
 
 - **Where**: `raw/Dng.kt:465-467` picks the matrix whose illuminant ranks nearest daylight (`DAYLIGHT_FIRST`) and
   ignores the other. Android's `DngCreator`, and so a Galaxy's Pro mode, writes a Standard A and D65 pair.
@@ -199,7 +235,7 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 - **Risk**: synthetic matrices only prove the arithmetic. Whether tungsten shots look right is for the owner's
   files: add a line to `DEVICE_CHECKS.md` "Phone raw files". It changes colour, so it is a reviewed pull request.
 
-### 2. DNG: lens distortion from OpcodeList3 WarpRectilinear (feature, medium, touches the seam)
+### 2. DNG: lens distortion from OpcodeList3 WarpRectilinear (done, PR #17; phone check pending)
 
 - **Where**: `raw/Dng.kt` declares only `TAG_OPCODES_2 = 0xC741`; nothing reads `0xC742`. `Dng.kt` sets
   `lens = null`. `DEVICE_CHECKS.md` says the ultra wide's distortion is not corrected.
