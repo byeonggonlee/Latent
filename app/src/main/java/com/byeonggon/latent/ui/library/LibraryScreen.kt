@@ -373,8 +373,12 @@ private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel, onC
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = viewModel::clearSelection) { Text(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size), maxLines = 1) }
-            ActionRow(actions, Modifier.weight(1f))
+            // The count, which also ends the selection, gives way before More does: every action stays reachable.
+            ActionRow(
+                actions,
+                Modifier.weight(1f),
+                lead = BarAction(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size), onClick = viewModel::clearSelection),
+            )
         }
         DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
             for (stars in 5 downTo 0) {

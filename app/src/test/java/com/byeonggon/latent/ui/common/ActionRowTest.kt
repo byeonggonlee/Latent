@@ -15,6 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -48,5 +49,17 @@ class ActionRowTest {
 
         few.forEach { compose.onNodeWithText(it.label).assertIsDisplayed() }
         assertEquals(0, compose.onAllNodesWithContentDescription("More").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun aLongLeadAtLargeTextGivesWayToMore() {
+        RuntimeEnvironment.setFontScale(2f)
+        compose.setContent { ActionRow(actions, Modifier.width(240.dp), lead = BarAction("1,000 selected") { clicked += "lead" }) }
+
+        // The count is cut short rather than More pushed out: every action stays reachable.
+        compose.onNodeWithText("1,000 selected").assertIsDisplayed()
+        compose.onNodeWithContentDescription("More").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Share").assertIsDisplayed().performClick()
+        assertEquals(listOf("Share"), clicked)
     }
 }

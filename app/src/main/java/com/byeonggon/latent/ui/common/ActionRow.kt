@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ButtonDefaults
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.R
 
@@ -34,33 +36,42 @@ internal class BarAction(val label: String, val enabled: Boolean = true, val onC
 /**
  * [actions] as text buttons in one row, in their order, as many as fit; the rest go into a More menu at the end,
  * so that none is out of sight off the edge of a narrow screen or behind large text. Only the buttons shown are
- * composed, so that a screen reader finds each action once, where it can be reached.
+ * composed, so that a screen reader finds each action once, where it can be reached. A [lead] (the count of what
+ * is selected, say) comes first and always shows, shortened if need be so that More keeps its room.
  */
 @Composable
-internal fun ActionRow(actions: List<BarAction>, modifier: Modifier = Modifier) {
+internal fun ActionRow(actions: List<BarAction>, modifier: Modifier = Modifier, lead: BarAction? = null) {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
     val density = LocalDensity.current
     val direction = LocalLayoutDirection.current
     BoxWithConstraints(modifier) {
-        val room = constraints.maxWidth
-        val shown = with(density) {
+        val (leadWidth, shown) = with(density) {
             val padding = ButtonDefaults.TextButtonContentPadding.let {
                 it.calculateLeftPadding(direction) + it.calculateRightPadding(direction)
             }.roundToPx()
             val least = ButtonDefaults.MinWidth.roundToPx()
-            val widths = actions.map { maxOf(least, measurer.measure(it.label, style, maxLines = 1).size.width + padding) }
+            fun widthOf(label: String) = maxOf(least, measurer.measure(label, style, maxLines = 1).size.width + padding)
             val gap = GAP.roundToPx()
-            if (widths.sum() + gap * (widths.size - 1).coerceAtLeast(0) <= room) {
+            val more = MORE_WIDTH.roundToPx()
+            val leadWidth = lead?.let { minOf(widthOf(it.label), constraints.maxWidth - more - gap).coerceAtLeast(0) }
+            val room = constraints.maxWidth - (leadWidth?.plus(gap) ?: 0)
+            val widths = actions.map { widthOf(it.label) }
+            leadWidth to if (widths.sum() + gap * (widths.size - 1).coerceAtLeast(0) <= room) {
                 actions.size
             } else {
                 // Room is kept for More, after the last button that fits.
-                var used = MORE_WIDTH.roundToPx()
+                var used = more
                 widths.indexOfFirst { width -> (used + width + gap > room).also { used += width + gap } }
                     .let { if (it < 0) actions.size else it }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(GAP), verticalAlignment = Alignment.CenterVertically) {
+            if (lead != null && leadWidth != null) {
+                TextButton(onClick = lead.onClick, enabled = lead.enabled, modifier = Modifier.widthIn(max = with(density) { leadWidth.toDp() })) {
+                    Text(lead.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
             actions.take(shown).forEach { action ->
                 TextButton(onClick = action.onClick, enabled = action.enabled) { Text(action.label, maxLines = 1) }
             }

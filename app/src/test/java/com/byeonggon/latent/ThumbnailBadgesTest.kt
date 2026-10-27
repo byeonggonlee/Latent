@@ -210,6 +210,8 @@ class ThumbnailBadgesTest {
         waitForDescription("LOST.JPG")
         compose.onNodeWithContentDescription("LOST.JPG").performClick()
 
+        // The viewer opens, and hears of the failure, a moment after the tap.
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("Could not save LOST.JPG.").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Could not save LOST.JPG.").assertIsDisplayed()
         // Trying again with the file still gone fails again, and the failure is still there to act on.
         compose.onNodeWithText("Try again").performClick()

@@ -800,8 +800,11 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             null
         }
         if (loaded == null) {
-            ui.update { it.copy(loading = false, openFailed = true) }
+            // A photo read again (another lens correction) keeps the picture it had; one never read has nothing to show.
+            if (source.value == null) ui.update { it.copy(loading = false, openFailed = true) }
+            else ui.update { it.copy(loading = false, message = text(R.string.open_failed)) }
         } else {
+            ui.update { it.copy(openFailed = false) }
             source.value = loaded
             // Said once, as the photo opens: what is saved is not what an HDR screen showed of it.
             if (loaded.hasGainMap) ui.update { it.copy(message = text(R.string.edit_loses_gain_map)) }
