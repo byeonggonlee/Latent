@@ -1,5 +1,6 @@
 package com.byeonggon.latent.ui.editor
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -92,8 +94,14 @@ internal fun ColourPickerFrame(
     var dragging by remember { mutableStateOf(false) }
     val value = state.hue?.let { stringResource(R.string.colour_hue_value, it.roundToInt()) }
     val invalid = stringResource(R.string.colour_pick_invalid)
+    // A faint sample keeps the colour picked before it, which is what Apply would use: said beside the reason.
+    val kept = state.hue?.takeIf { state.invalid }?.let { stringResource(R.string.colour_pick_kept, it.roundToInt()) }
+    val status = if (state.invalid) listOfNotNull(invalid, kept).joinToString(" ") else value.orEmpty()
+    // Arrow-key guidance only where there are arrow keys: a keyboard or a D-pad.
+    val configuration = LocalConfiguration.current
+    val hasKeys = configuration.keyboard == Configuration.KEYBOARD_QWERTY || configuration.navigation == Configuration.NAVIGATION_DPAD
     val preparing = stringResource(R.string.colour_pick_preparing)
-    val announcement = if (state.preparing) preparing else if (state.invalid) invalid else value.orEmpty()
+    val announcement = if (state.preparing) preparing else status
     var spoken by remember { mutableStateOf(announcement) }
     LaunchedEffect(announcement, dragging) { if (!dragging) spoken = announcement }
     val label = stringResource(R.string.colour_pick_area)
@@ -182,12 +190,16 @@ internal fun ColourPickerFrame(
     val controls: @Composable (Modifier) -> Unit = { controlsModifier ->
         Surface(modifier = controlsModifier, color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.padding(16.dp)) {
-                Column(Modifier.weight(1f, fill = window.sidePanel).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // What was picked scrolls with the hint, so that a long reason at large text never pushes Apply and
+                // Cancel out of reach; it is brought into view whenever it changes.
+                val scroll = rememberScrollState()
+                LaunchedEffect(status) { if (status.isNotEmpty()) { withFrameNanos {}; scroll.animateScrollTo(scroll.maxValue) } }
+                Column(Modifier.weight(1f, fill = window.sidePanel).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (state.preparing) preparing else stringResource(R.string.colour_pick_hint), style = MaterialTheme.typography.bodyMedium)
-                    Text(stringResource(R.string.colour_pick_keys), style = MaterialTheme.typography.bodySmall)
-                    if (state.invalid) Text(invalid, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                    if (hasKeys) Text(stringResource(R.string.colour_pick_keys), style = MaterialTheme.typography.bodySmall)
+                    // Two lines held for what was picked, empty or not, so that the picture above does not move when it comes.
+                    Text(status, style = MaterialTheme.typography.titleSmall, minLines = 2)
                 }
-                if (value != null) Text(value, style = MaterialTheme.typography.titleMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                     Button(onClick = onApply, enabled = !state.preparing && state.hue != null, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(applyFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_apply)) }
                     OutlinedButton(onClick = onCancel, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(cancelFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_cancel)) }

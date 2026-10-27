@@ -705,6 +705,7 @@
     <string name="display_preference_failed">表示設定を保存できませんでした。</string>
     <string name="colour_pick_hint">写真から色を選んでください。選択の基準となる色を表示しています。</string>
     <string name="colour_pick_invalid">この部分は色が薄すぎます。色のはっきりした部分を選んでください。</string>
+    <string name="colour_pick_kept">適用すると %1$d° のままです。</string>
     <string name="colour_pick_apply">色を適用</string>
     <string name="colour_pick_cancel">色の選択をキャンセル</string>
     <string name="colour_pick_area">写真の色選択領域</string>

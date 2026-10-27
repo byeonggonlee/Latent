@@ -747,6 +747,7 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
     <string name="display_preference_failed">Could not save the display preference.</string>
     <string name="colour_pick_hint">Choose a colour from the photo. This view shows the colours used for selection.</string>
     <string name="colour_pick_invalid">This area has too little colour. Choose a more colourful area.</string>
+    <string name="colour_pick_kept">Apply keeps %1$d°.</string>
     <string name="colour_pick_apply">Apply colour</string>
     <string name="colour_pick_cancel">Cancel colour picking</string>
     <string name="colour_pick_area">Photo colour picker</string>
