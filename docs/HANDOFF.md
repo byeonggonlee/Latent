@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.1.0 release validation on the Android 16 emulator (owner authorized substitute for unavailable S24); phone-only checks remain pending | `codex/release-010-emulator` | `docs/device-results/2026-10-27-release-emulator-followup.md`, this board | 2026-10-27 |
 
 ## For Codex
 
@@ -184,6 +183,8 @@ what only a phone can say, and the owner finds plugging phones in hard: the S24 
 **Not yours to do:** writing the release date into `CHANGELOG.md`, tagging `v0.1.0`, merging without the owner, or
 entering the phone's PIN. If the phone is locked or missing, say so to the owner and stop there. The tag is the
 owner's decision once the report is in.
+
+**Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. S24 and owner ZV-E10 checks remain pending. PR #50 reviewed at `2849307`, one P2 open.
 
 **After 0.1.0:** the UI guide's control and layout tasks handed to Codex earlier wait until the release is out.
 
@@ -311,6 +312,20 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
   frame, a choice to make on the owner's files.
 
 ## For Claude Code
+
+### Release follow-up from Codex — 2026-10-27
+
+- **PR #50 P2:** at `2849307`, 320×640 dp / 200% font / English, choose a valid blue then an achromatic
+  sample: the expanded picker status crowds Cancel out of view. Reserve action space and constrain/scroll the
+  status without hiding the reason or kept hue; cover invalid-after-valid at large text.
+  [Published review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226).
+- **Device test expectation:** `EditOnDeviceTest#editsWithTheRestOfTheToolsWithinTheAppsMemory:189`
+  compares stored JPEG dimensions before/after save. Public OnePlus JPEG with EXIF orientation 6 changes from
+  4208×3120 to 3120×4208 when healing/local edits intentionally bake orientation. Make the assertion compare
+  displayed dimensions and verify the resulting EXIF orientation; retain coverage for unrotated input. This
+  failed emulator run does not establish corruption, and its subsequent RAW glow/brush/healing portion did not
+  execute. [Evidence and limits](device-results/2026-10-27-release-emulator-followup.md).
+
 
 ### Owner-reported repeated import — SC-57G nightly 347 (2026-10-23)
 
@@ -519,6 +534,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-27 | Codex | Owner-authorized Android 16 emulator release follow-up: public ILCE-7M2 RAW editing/export, CPU masks, thumbnails, synthetic video preparation and light-theme workspace/selection UI checked; host CI checks pass. ES 3.0 GPU limitation, EXIF-sensitive test expectation and S24/ZV-E10 checks remain explicit. PR #50 reviewed with one P2 | [Report](device-results/2026-10-27-release-emulator-followup.md); [PR #50 review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226) |
 | 2026-10-27 | Claude Code (computer) | Emulator findings 2–4: light system-bar icons over the photo workspace in either theme; a photo the editor never read is explained in place of the picture (raw: not developable yet, the viewer keeps the camera's preview) with Close, scrolling at large text, while a failed reread keeps the picture; the selection bar shows what fits and puts the rest under More, its count giving way first. Reviewed by Codex (LGTM at `3d37d5c`) | [PR #48](https://github.com/byeonggonlee/Latent/pull/48), merged `4d76e59` |
 | 2026-10-27 | Codex | Sony ARW as-shot WB fallback from encrypted SR2 RGGB/GRBG, preserving the legacy raw-IFD contract. Five new synthetic tests; public ILCE-7M2 decode/proxy succeeds. Public 7RM2 private pointer is unusable and remains rejected. Full local CI checks pass. Reviewed by Claude Code (LGTM); phone colour judgement pending | [PR #49](https://github.com/byeonggonlee/Latent/pull/49), merged `7d58294`; [follow-up](device-results/2026-10-27-sony-sr2.md) |
 | 2026-10-27 | Codex | Photo colour picker: frozen selected-mask input, crosshair/magnifier, one-step Apply and cancelable draft; fixed swatches stay shown by default with a device-local hide setting. JVM tests, both Lints and instrumentation build pass. Reviewed by Claude Opus 5.5 (LGTM at `ac8a415`), CI green; S24/GPU runtime checks pending | [PR #47](https://github.com/byeonggonlee/Latent/pull/47), merged `142f7f7`; [verification](superpowers/reports/2026-10-27-photo-colour-picker.md) |
