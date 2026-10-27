@@ -317,6 +317,18 @@ Needs a phone with an HDR screen (S24 Ultra, S26) and an Ultra HDR JPEG from its
       original's gain map, made for other tones). Revert: the original, gain map and all, is back. A crop or
       straightening saves without one too.
 
+### Older Sony ARW white balance
+
+- [ ] Open an original ILCE-7M2/7RM2 ARW whose as-shot white balance is only in encrypted SR2: the editor must show
+      a developed photo, not only the viewer's embedded JPEG. Judge neutral objects and skin against the camera's
+      JPEG. Save/reopen and Cancel as usual; decoding success alone does not prove pleasing or accurate colour.
+- [ ] Recheck the owner's ZV-E10 ARW (raw-IFD white balance) for unchanged neutral colours and the existing crop/lens
+      behavior. Do not infer compatibility with all Sony compression modes from these tests.
+- [ ] GPU/CPU and phone memory checks remain outstanding. On the JVM, the public rawsamples.ch ILCE-7M2 decodes
+      with WB `[2.15625, 1, 1.96875]` and develops a 756×503 proxy. The published 7RM2 sample currently has a private
+      pointer inside its JPEG preview and remains rejected; obtain a structurally valid original before claiming
+      that sample works. See [the decoder follow-up](device-results/2026-10-27-sony-sr2.md).
+
 ### Phone raw files (DNG)
 
 Tried with two Galaxy S26 files (2026-10-20): both modes write *linear* DNGs (three samples a pixel). Pro mode
