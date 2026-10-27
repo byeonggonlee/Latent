@@ -2,6 +2,7 @@ package com.byeonggon.latent.data
 
 import android.graphics.Bitmap
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.enhance.Adjustments
@@ -65,6 +66,11 @@ class SaveFailureRecoveryTest {
         }
     }
 
+    private fun negativeCube() = buildString {
+        append("TITLE \"Negative\"\nLUT_3D_SIZE 5\n")
+        for (b in 0 until 5) for (g in 0 until 5) for (r in 0 until 5) append("${1f - r / 4f} ${1f - g / 4f} ${1f - b / 4f}\n")
+    }
+
     /** Saves [edit] of [item], whose file is not there yet, and waits for the failure to be kept. */
     private fun failToSave(item: MediaItemEntity, edit: PhotoEdit) {
         container.editSaver.save(item, edit)
@@ -116,11 +122,7 @@ class SaveFailureRecoveryTest {
 
     @Test
     fun aLutUsedOnlyByAFailedEditIsKeptUntilTheEditIsGivenUp() {
-        val cube = buildString {
-            append("TITLE \"Negative\"\nLUT_3D_SIZE 5\n")
-            for (b in 0 until 5) for (g in 0 until 5) for (r in 0 until 5) append("${1f - r / 4f} ${1f - g / 4f} ${1f - b / 4f}\n")
-        }
-        val lut = runBlocking { container.libraryEdits.importLut(cube.byteInputStream(), "negative") }
+        val lut = runBlocking { container.libraryEdits.importLut(negativeCube().byteInputStream(), "negative") }
         val photo = add(File(folder, "LUT.JPG"))
         failToSave(photo, PhotoEdit(lut = LutLook(lut.hash)))
 
@@ -132,5 +134,37 @@ class SaveFailureRecoveryTest {
         container.editSaver.discard(photo.id)
         runBlocking { container.libraryEdits.deleteLut(lut) }
         assertTrue(LutStore.load(lut.hash) == null)
+    }
+
+    @Test
+    fun aLutIsKeptWhenItsEditIsSavedWhileTheCleanUpLooks() {
+        val lut = runBlocking { container.libraryEdits.importLut(negativeCube().byteInputStream(), "negative") }
+        val file = File(folder, "LUT.JPG")
+        val photo = add(file)
+        failToSave(photo, PhotoEdit(lut = LutLook(lut.hash)))
+        writePhoto(file, grey = 100)
+
+        // Whichever the clean-up asks first, the photos' edits or those still to be saved, the edit is tried again and
+        // saved right after: it moves from one to the other while the clean-up looks.
+        var savedAgain = false
+        fun saveAgain() {
+            if (savedAgain) return
+            savedAgain = true
+            container.editSaver.retry(photo.id)
+            waitUntil { photo.id !in container.editSaver.saving.value }
+        }
+        val real = mediaDao
+        val dao = object : MediaDao by real {
+            override suspend fun countEditsLike(pattern: String): Int = real.countEditsLike(pattern).also { saveAgain() }
+        }
+        val database = container.database
+        val cleanUp = LibraryEdits(
+            container.storage, dao, database.filterDao(), container.geotagger, container.rawCache, database.lutDao(), database.editVersionDao(),
+        ).apply { pendingEdits = { container.editSaver.pendingEdits().also { saveAgain() } } }
+        runBlocking { cleanUp.deleteLut(lut) }
+
+        assertNull(container.editSaver.failed.value[photo.id])
+        assertEquals(LutLook(lut.hash), PhotoEdit.fromJson(runBlocking { mediaDao.byId(photo.id)!!.edit })?.lut)
+        assertNotNull("The saved edit's LUT must stay", LutStore.load(lut.hash))
     }
 }

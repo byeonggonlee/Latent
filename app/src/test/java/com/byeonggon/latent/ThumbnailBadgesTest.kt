@@ -214,6 +214,8 @@ class ThumbnailBadgesTest {
         // Trying again with the file still gone fails again, and the failure is still there to act on.
         compose.onNodeWithText("Try again").performClick()
         compose.waitUntil(timeoutMillis = 10_000) { lost.id !in container.editSaver.saving.value && lost.id in container.editSaver.failed.value }
+        // The viewer hears of the new failure a moment later than the saver keeps it.
+        compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithText("Could not save LOST.JPG.").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Could not save LOST.JPG.").assertIsDisplayed()
 
         compose.onNodeWithText("Give up the edit").performClick()

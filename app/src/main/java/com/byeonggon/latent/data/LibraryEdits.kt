@@ -62,8 +62,14 @@ class LibraryEdits(
      */
     var pendingEdits: () -> Collection<PhotoEdit> = { emptyList() }
 
-    /** Whether an edit not yet saved names [id], as the stored edits name a LUT or a mask: by its id in quotes. */
-    private fun isPendingUse(id: String): Boolean = pendingEdits().any { "\"$id\"" in it.toJson() }
+    /**
+     * The edits not yet saved, as the JSON in which they name LUTs and masks by their ids in quotes. Taken before the
+     * database is asked: an edit saved in between is in the database by the time it leaves this list, so a clean-up
+     * finds it in one or the other.
+     */
+    private fun pendingUses(): List<String> = pendingEdits().map { it.toJson() }
+
+    private fun List<String>.use(id: String): Boolean = any { "\"$id\"" in it }
 
     /** The filters that come with the app, followed by those the user saved. */
     val filters: Flow<List<Filter>> = filterDao.observeAll().map { saved ->
@@ -118,8 +124,9 @@ class LibraryEdits(
      */
     suspend fun deleteLut(lut: LutEntity) {
         lutDao.delete(lut.hash)
+        val pending = pendingUses()
         for (id in LutStore.ids()) {
-            if (lutDao.byHash(id) == null && !isLutInUse(id)) LutStore.delete(id)
+            if (lutDao.byHash(id) == null && !isLutInUse(id, pending)) LutStore.delete(id)
         }
     }
 
@@ -130,18 +137,19 @@ class LibraryEdits(
      * or its edit may be waiting to be saved. Filters never hold masks.
      */
     suspend fun forgetUnusedMasks(now: Long = System.currentTimeMillis()) {
+        val pending = pendingUses()
         for ((id, made) in MaskStore.kept()) {
             if (now - made < UNUSED_MASK_KEPT) continue
             val pattern = "%\"$id\"%"
-            if (mediaDao.countEditsLike(pattern) == 0 && versionDao.countLike(pattern) == 0 && !isPendingUse(id)) MaskStore.delete(id)
+            if (!pending.use(id) && mediaDao.countEditsLike(pattern) == 0 && versionDao.countLike(pattern) == 0) MaskStore.delete(id)
         }
     }
 
-    private suspend fun isLutInUse(id: String): Boolean {
+    private suspend fun isLutInUse(id: String, pending: List<String>): Boolean {
         // Edits are kept as JSON text, where a LUT is named by its id in quotes.
         val pattern = "%\"$id\"%"
-        return mediaDao.countEditsLike(pattern) > 0 || versionDao.countLike(pattern) > 0 || filterDao.countLike(pattern) > 0 ||
-            isPendingUse(id)
+        return pending.use(id) || mediaDao.countEditsLike(pattern) > 0 || versionDao.countLike(pattern) > 0 ||
+            filterDao.countLike(pattern) > 0
     }
 
     /**

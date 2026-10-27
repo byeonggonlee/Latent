@@ -52,9 +52,12 @@ class EditSaver(
     /** The edit of each photo's latest save still under way. */
     private val underWay = HashMap<Long, PhotoEdit>()
 
-    /** The edits not yet in the database that still need their LUTs and masks: under way, or failed and kept. */
+    /**
+     * The edits not yet in the database that still need their LUTs and masks: under way, or failed and kept. Both are
+     * read under the one lock that moves an edit from one to the other, so one on its way is never missed.
+     */
     fun pendingEdits(): Collection<PhotoEdit> =
-        synchronized(latest) { underWay.values.toList() } + _failed.value.values.map { it.edit }
+        synchronized(latest) { underWay.values.toList() + _failed.value.values.map { it.edit } }
 
     private fun isLatest(id: Long, generation: Long) = synchronized(latest) { latest[id] == generation }
 
@@ -62,9 +65,9 @@ class EditSaver(
         // A newer edit of the photo takes the place of one that failed, and of one still waiting its turn.
         val generation = synchronized(latest) {
             underWay[item.id] = edit
+            _failed.update { it - item.id }
             (++saves).also { latest[item.id] = it }
         }
-        _failed.update { it - item.id }
         _saving.update { it + item.id }
         scope.launch {
             var failure: String? = null
