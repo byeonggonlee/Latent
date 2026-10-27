@@ -84,7 +84,10 @@ class AppContainer(private val context: Context) {
         storage, database.mediaDao(), database.filterDao(), geotagger, rawCache, database.lutDao(), database.editVersionDao(),
         exportOptions = { settings.settings.first().exportOptions() },
     )
-    val editSaver = EditSaver(context, libraryEdits)
+    val editSaver = EditSaver(context, libraryEdits).also { saver ->
+        // A LUT or mask used only by an edit still to be saved, or kept after it failed, is not cleaned away.
+        libraryEdits.pendingEdits = saver::pendingEdits
+    }
 
     /** Subject masks; the model is only made when one is first asked for. */
     val maskDetector = MaskDetector { kind ->

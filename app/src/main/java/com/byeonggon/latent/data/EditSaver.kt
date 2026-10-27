@@ -2,6 +2,7 @@ package com.byeonggon.latent.data
 
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.enhance.PhotoEdit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,11 +49,21 @@ class EditSaver(
     /** Numbers every save, never reused, so that an old save is never taken for a new one. */
     private var saves = 0L
 
+    /** The edit of each photo's latest save still under way. */
+    private val underWay = HashMap<Long, PhotoEdit>()
+
+    /** The edits not yet in the database that still need their LUTs and masks: under way, or failed and kept. */
+    fun pendingEdits(): Collection<PhotoEdit> =
+        synchronized(latest) { underWay.values.toList() } + _failed.value.values.map { it.edit }
+
     private fun isLatest(id: Long, generation: Long) = synchronized(latest) { latest[id] == generation }
 
     fun save(item: MediaItemEntity, edit: PhotoEdit) {
         // A newer edit of the photo takes the place of one that failed, and of one still waiting its turn.
-        val generation = synchronized(latest) { (++saves).also { latest[item.id] = it } }
+        val generation = synchronized(latest) {
+            underWay[item.id] = edit
+            (++saves).also { latest[item.id] = it }
+        }
         _failed.update { it - item.id }
         _saving.update { it + item.id }
         scope.launch {
@@ -64,13 +75,20 @@ class EditSaver(
                 failure = context.getString(R.string.edit_not_saved, item.fileName)
             } catch (e: OutOfMemoryError) {
                 failure = context.getString(R.string.edit_not_saved_memory, item.fileName)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Whatever else went wrong, the edit is kept to be tried again rather than lost without a word.
+                failure = context.getString(R.string.edit_not_saved, item.fileName)
             } finally {
                 // An earlier save that ends after a later one began says nothing: the photo is still being saved, and a
                 // failure of the edit it no longer has would be a false alarm.
                 synchronized(latest) {
                     if (latest[item.id] == generation) {
                         latest.remove(item.id)
+                        // Kept as a failure before it stops being under way, so its LUTs and masks are never unclaimed.
                         failure?.let { failed(item, edit, it) }
+                        underWay.remove(item.id)
                         _saving.update { it - item.id }
                     }
                 }
