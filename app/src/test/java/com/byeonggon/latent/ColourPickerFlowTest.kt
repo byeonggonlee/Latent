@@ -277,6 +277,31 @@ class ColourPickerFlowTest {
         compose.onNodeWithText("Cancel colour picking").performClick()
         assertNull(model.state.value.colourPicker)
     }
+    @Test fun theScreenSaysWhatApplyKeepsHoldsStillAndReturnsToThePanelAsItWas() {
+        val model = open()
+        compose.runOnUiThread { compose.activity.setContent { EditorScreen(photoId, onClose = {}, viewModel = model) } }
+        compose.onNodeWithText("Masks").performScrollTo().performClick()
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        // No keyboard or D-pad here: no arrow-key guidance.
+        assertEquals(0, compose.onAllNodesWithText("Arrow keys", substring = true).fetchSemanticsNodes().size)
+        val canvas = compose.onNodeWithContentDescription("Photo colour picker")
+        val empty = canvas.getBoundsInRoot()
+
+        // The first sample does not move the picture under the finger.
+        compose.runOnIdle { model.pickColour(0.25f, 0.5f) }
+        compose.onNodeWithText("Hue: 210°").assertIsDisplayed()
+        assertEquals(empty, canvas.getBoundsInRoot())
+        // A gray one says why, and which colour Apply still holds.
+        compose.runOnIdle { model.pickColour(0.75f, 0.5f) }
+        compose.onNodeWithText("This area has too little colour. Choose a more colourful area. Apply keeps 210°.").assertIsDisplayed()
+        assertEquals(empty, canvas.getBoundsInRoot())
+
+        // Back in the panel, the picker's button is where it was.
+        compose.onNodeWithText("Cancel colour picking").performClick()
+        compose.onNodeWithText("Pick from photo").assertIsDisplayed()
+    }
+
     @Test fun recreatingTheActivityRetainsTheSamePickerSessionAndNormalisedPoint() {
         val model = open()
         compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("PICK.JPG").fetchSemanticsNodes().isNotEmpty() }

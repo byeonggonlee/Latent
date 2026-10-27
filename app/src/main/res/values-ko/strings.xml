@@ -705,6 +705,7 @@
     <string name="display_preference_failed">표시 설정을 저장하지 못했습니다.</string>
     <string name="colour_pick_hint">사진에서 색을 선택하세요. 선택 기준이 되는 색상을 보여 줍니다.</string>
     <string name="colour_pick_invalid">이 부분은 색이 옅습니다. 색이 더 뚜렷한 부분을 선택하세요.</string>
+    <string name="colour_pick_kept">적용하면 %1$d°가 유지됩니다.</string>
     <string name="colour_pick_apply">색상 적용</string>
     <string name="colour_pick_cancel">색상 선택 취소</string>
     <string name="colour_pick_area">사진 색상 선택 영역</string>

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -209,9 +210,12 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     val window = rememberWindowLayout()
     // Swiping on the picture is for a phone held upright; a mouse and a side panel have no use for it.
     val gestures = gestureMode && !window.sidePanel && tab in SWIPE_TABS
+    // Kept out here, so that the panel is where it was when the colour picker, which takes its place, is done.
+    val panelScroll = rememberScrollState()
     val editorPanel: @Composable (Modifier) -> Unit = { modifier ->
         EditorPanel(
             modifier = modifier,
+            scroll = panelScroll,
             tall = window.sidePanel,
                 state = state,
                 enabled = ready,
@@ -668,6 +672,7 @@ private fun EditorPanel(
     erasing: Boolean,
     onErasing: (Boolean) -> Unit,
     viewModel: EditorViewModel,
+    scroll: ScrollState,
 ) {
     var lightTools by rememberSaveable { mutableStateOf(LightTools.SLIDERS) }
     var colorTools by rememberSaveable { mutableStateOf(ColorTools.SLIDERS) }
@@ -691,7 +696,7 @@ private fun EditorPanel(
             }
             Column(
                 (if (tall) Modifier.weight(1f) else Modifier.height(height))
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scroll)
                     .padding(bottom = 8.dp),
             ) {
                 when (tab) {

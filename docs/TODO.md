@@ -16,7 +16,7 @@ Last updated 2026-10-23.
 - [x] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)):
       Claude Opus 5.5 (via Claude Code) reviewed the full diff at `ac8a415`, LGTM; CI green. Merged `142f7f7` with
       the owner's authorization. S24/GPU/TalkBack checks remain in DEVICE_CHECKS.md.
-- [ ] **Photo colour picker UX follow-ups** (PR #47 review, non-blocking P3): clarify the retained previous hue when
+- [x] **Photo colour picker UX follow-ups** (PR #47 review, non-blocking P3; done on `claude/picker-polish`): clarify the retained previous hue when
       a new sample is invalid (current behavior follows the approved design); show hardware-key guidance only where
       useful; reserve the hue line to prevent the image moving after the first sample; preserve mask-panel scroll
       on returning from picking. These are follow-up suggestions, not conditions on the merged PR.
