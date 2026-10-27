@@ -787,7 +787,7 @@ class EditorFlowTest {
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("DSC00002.ARW").performClick()
         waitForText("✕ 2장 선택")
-        compose.onNodeWithText("보정 값 붙여넣기").performScrollTo().performClick()
+        compose.selectionAction("보정 값 붙여넣기").performClick()
 
         waitForText("2장에 보정 값을 붙여넣었습니다.")
         assertTrue(container.storage.originalOf(photo).exists())
@@ -805,7 +805,7 @@ class EditorFlowTest {
         // Only raw files are developed; the JPEG in the selection is left out.
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("DSC00002.ARW").performClick()
-        compose.onNodeWithText("RAW를 JPEG로").performScrollTo().performClick()
+        compose.selectionAction("RAW를 JPEG로").performClick()
         waitForText("1장을 JPEG로 내보냈습니다.")
         assertEquals(3, runBlocking { mediaDao.all() }.size)
         val developed = runBlocking { mediaDao.all() }.single { it.fileName == "DSC00002_developed.jpg" }

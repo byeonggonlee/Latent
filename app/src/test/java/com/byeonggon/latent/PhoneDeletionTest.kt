@@ -163,7 +163,7 @@ class PhoneDeletionTest {
         waitForPhotos()
         compose.onNodeWithContentDescription(first.name).performTouchInput { longClick() }
         compose.onNodeWithContentDescription(own.name).performClick()
-        compose.onNodeWithText("삭제").performScrollTo().performClick()
+        compose.selectionAction("삭제").performClick()
 
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); shadowOf(compose.activity).lastIntentSenderRequest != null }
         assertEquals(listOf("create_trash_request" to listOf(FakeMediaStore.uriOf(first))), FakeMediaStore.asked)
@@ -182,7 +182,7 @@ class PhoneDeletionTest {
     fun saysNothingIsInTheTrashWhileOnlyTheSystemHasBeenAsked() {
         waitForPhotos()
         compose.onNodeWithContentDescription(first.name).performTouchInput { longClick() }
-        compose.onNodeWithText("삭제").performScrollTo().performClick()
+        compose.selectionAction("삭제").performClick()
 
         compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); shadowOf(compose.activity).lastIntentSenderRequest != null }
         compose.mainClock.advanceTimeBy(1_000)
@@ -195,7 +195,7 @@ class PhoneDeletionTest {
         FakeMediaStore.unknown += second.absolutePath
         waitForPhotos()
         compose.onNodeWithContentDescription(second.name).performTouchInput { longClick() }
-        compose.onNodeWithText("삭제").performScrollTo().performClick()
+        compose.selectionAction("삭제").performClick()
 
         waitForText("휴지통으로 옮기지 못했습니다.")
         assertNull(shadowOf(compose.activity).lastIntentSenderRequest)

@@ -90,6 +90,8 @@ import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
 import com.byeonggon.latent.R
 import com.byeonggon.latent.appContainer
+import com.byeonggon.latent.ui.common.ActionRow
+import com.byeonggon.latent.ui.common.BarAction
 import com.byeonggon.latent.ui.common.OverPhoto
 import com.byeonggon.latent.ui.common.tabular
 import com.byeonggon.latent.ui.compare.MOST_COMPARED
@@ -348,52 +350,58 @@ internal fun monthsAlongTheGrid(days: List<LibraryDay>, leading: Int): MonthsAlo
 @Composable
 private fun SelectionBar(state: LibraryUiState, viewModel: LibraryViewModel, onCompare: (List<Long>) -> Unit) {
     var rating by remember { mutableStateOf(false) }
+    var flagging by remember { mutableStateOf(false) }
     var choosingAlbum by remember { mutableStateOf(false) }
     if (choosingAlbum) AlbumPickDialog(state, viewModel, onDismiss = { choosingAlbum = false })
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = viewModel::clearSelection) { Text(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size)) }
-        // What is done most comes first: the rest is a scroll away on a narrow screen.
-        TextButton(onClick = viewModel::shareSelected) { Text(stringResource(R.string.share)) }
-        TextButton(onClick = viewModel::trashSelected) { Text(stringResource(R.string.delete)) }
+    // What is done most comes first; what does not fit on a narrow screen is under More at the end.
+    val actions = buildList {
+        add(BarAction(stringResource(R.string.share), onClick = viewModel::shareSelected))
+        add(BarAction(stringResource(R.string.delete), onClick = viewModel::trashSelected))
         // Two to four photos can be set side by side to choose between.
-        TextButton(onClick = { onCompare(state.selected.toList()) }, enabled = state.selected.size in 2..MOST_COMPARED) { Text(stringResource(R.string.compare)) }
-        Box {
-            TextButton(onClick = { rating = true }) { Text(stringResource(R.string.rating)) }
-            DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
-                for (stars in 5 downTo 0) {
-                    DropdownMenuItem(
-                        text = { Text(if (stars == 0) stringResource(R.string.rating_clear) else "★".repeat(stars)) },
-                        onClick = {
-                            rating = false
-                            viewModel.rateSelected(stars)
-                        },
-                    )
-                }
+        add(BarAction(stringResource(R.string.compare), enabled = state.selected.size in 2..MOST_COMPARED) { onCompare(state.selected.toList()) })
+        add(BarAction(stringResource(R.string.rating)) { rating = true })
+        add(BarAction(stringResource(R.string.flags)) { flagging = true })
+        add(BarAction(stringResource(R.string.album_add)) { choosingAlbum = true })
+        if (state.album != null) add(BarAction(stringResource(R.string.album_remove), onClick = viewModel::removeSelectedFromAlbum))
+        add(BarAction(stringResource(R.string.paste_edit), enabled = state.canPaste, onClick = viewModel::pasteToSelected))
+        add(BarAction(stringResource(R.string.raw_to_jpeg), onClick = viewModel::exportSelected))
+    }
+    // The rating and flag menus open from the bar, whether their action was in it or under More.
+    Box {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The count, which also ends the selection, gives way before More does: every action stays reachable.
+            ActionRow(
+                actions,
+                Modifier.weight(1f),
+                lead = BarAction(pluralStringResource(R.plurals.selected_count, state.selected.size, state.selected.size), onClick = viewModel::clearSelection),
+            )
+        }
+        DropdownMenu(expanded = rating, onDismissRequest = { rating = false }) {
+            for (stars in 5 downTo 0) {
+                DropdownMenuItem(
+                    text = { Text(if (stars == 0) stringResource(R.string.rating_clear) else "★".repeat(stars)) },
+                    onClick = {
+                        rating = false
+                        viewModel.rateSelected(stars)
+                    },
+                )
             }
         }
-        Box {
-            var flagging by remember { mutableStateOf(false) }
-            TextButton(onClick = { flagging = true }) { Text(stringResource(R.string.flags)) }
-            DropdownMenu(expanded = flagging, onDismissRequest = { flagging = false }) {
-                listOf(R.string.flag_pick to FLAG_PICKED, R.string.flag_reject to FLAG_REJECTED, R.string.flag_clear to 0).forEach { (label, flag) ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(label)) },
-                        onClick = {
-                            flagging = false
-                            viewModel.flagSelected(flag)
-                        },
-                    )
-                }
+        DropdownMenu(expanded = flagging, onDismissRequest = { flagging = false }) {
+            listOf(R.string.flag_pick to FLAG_PICKED, R.string.flag_reject to FLAG_REJECTED, R.string.flag_clear to 0).forEach { (label, flag) ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(label)) },
+                    onClick = {
+                        flagging = false
+                        viewModel.flagSelected(flag)
+                    },
+                )
             }
         }
-        TextButton(onClick = { choosingAlbum = true }) { Text(stringResource(R.string.album_add)) }
-        if (state.album != null) TextButton(onClick = viewModel::removeSelectedFromAlbum) { Text(stringResource(R.string.album_remove)) }
-        TextButton(onClick = viewModel::pasteToSelected, enabled = state.canPaste) { Text(stringResource(R.string.paste_edit)) }
-        TextButton(onClick = viewModel::exportSelected) { Text(stringResource(R.string.raw_to_jpeg)) }
     }
 }
 

@@ -2,14 +2,21 @@ package com.byeonggon.latent.ui.common
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 
 /**
  * The viewer and the editor are dark whatever the system's theme, as photo apps are: bright
  * surroundings make a picture look darker than it is, and coloured ones pull its colours towards theirs.
+ * The system bars over them get light icons, which a light theme's dark ones would otherwise leave unreadable.
  */
 @Composable
 fun PhotoTheme(content: @Composable () -> Unit) {
+    val workspaces = LocalWorkspaces.current
+    DisposableEffect(workspaces) {
+        workspaces?.let { it.intValue++ }
+        onDispose { workspaces?.let { it.intValue-- } }
+    }
     MaterialTheme(colorScheme = WorkspaceColors, typography = MaterialTheme.typography, content = content)
 }
 

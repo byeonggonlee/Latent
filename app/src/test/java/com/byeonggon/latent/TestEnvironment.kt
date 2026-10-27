@@ -1,6 +1,13 @@
 package com.byeonggon.latent
 
 import android.content.Intent
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import android.provider.DocumentsContract
 import androidx.lifecycle.ViewModelProvider
 import com.byeonggon.latent.data.LibraryStorage
@@ -28,4 +35,16 @@ internal fun grantLibraryAccess() {
         tree,
         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
     )
+}
+
+/**
+ * The action [label] of the bar over selected photos: in the bar where it fits, or else under its More menu, which
+ * this opens. In any of the app's languages.
+ */
+internal fun ComposeTestRule.selectionAction(label: String): SemanticsNodeInteraction {
+    if (onAllNodesWithText(label).fetchSemanticsNodes().isEmpty()) {
+        val more = listOf("More", "더 보기", "その他").first { onAllNodesWithContentDescription(it).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithContentDescription(more).performClick()
+    }
+    return onNodeWithText(label)
 }

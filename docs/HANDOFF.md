@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code | Emulator findings 2–4: light system-bar icons over the photo workspace, the editor explaining a photo it cannot open, the selection bar's actions under More when they do not fit | `claude/editor-fixes` | `ui/common/`, `ui/editor/`, `ui/library/LibraryScreen.kt`, strings, tests | 2026-10-27 |
 
 ## For Codex
 
