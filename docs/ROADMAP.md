@@ -13,7 +13,7 @@ the telling half of 11; the card reader import and DNG distortion done).
 | **Cull** | Flags (pick, reject), stars, compare | – | Flags, stars, compare, trash |
 | Global tone and colour | Light, colour mixer, grading, curves, detail, effects | Tune, curves, white balance, details, vignette, grain | All of these, with raw development |
 | Crop and geometry | Crop, upright, perspective | Crop, rotate, perspective | All of these, with auto level |
-| **Local edits** | Masks: **subject, sky, background**, linear, radial, brush, colour range, luminance range, healing | Selective, brush, healing | Subject, background and sky (on the phone), linear, radial, brush, colour range, luminance range, healing. **No tap to select yet** |
+| **Local edits** | Masks: **subject, sky, background**, linear, radial, brush, colour range, luminance range, healing | Selective, brush, healing | Subject, background and sky (on the phone), linear, radial, brush, colour range, luminance range, healing. Photo colour picking implemented; phone judgement pending |
 | **Looks** | Presets (own and imported), profiles, **LUTs** | Looks, HDR, glow, drama | 16 built-in looks, own looks, Lightroom presets and `.cube` LUTs imported (LUTs on stills only) |
 | **Export** | Size, quality, format, metadata, watermark | Save, export, share | Share at a size, JPEG quality, place left out, save a copy. **JPEG only** |
 | **Organise** | Albums, search, keywords, flags | – | Albums, ratings, versions, search by Exif, date, place |
@@ -37,8 +37,11 @@ Each is small or medium, works offline, and needs no new permission.
    network service), a range of dates picked on a calendar, shutter speed and aperture.
 4. ~~**Colour range mask.**~~ *Done 2026-10-15, to be judged on a phone:* "+ Colour" is a mask of the whole picture held to a
    hue (eight swatches, the mixer's) with a range slider; any mask can be held to one colour the same way, like the
-   tone range. Picked from swatches, not yet by tapping the picture. Grays are left alone. CPU and shader versions
-   are written to agree; only a phone can check the shader.
+   tone range. *Updated 2026-10-27:* pick from the photo with a crosshair/magnifier and explicit Apply/Cancel;
+   the temporary preview shows the selected mask's input, including earlier masks, before final colour effects.
+   Eight swatches remain shown by default and can be hidden from the colour panel menu; the preference stays on
+   this device. Grays are left alone. Implementation and local checks are complete; qualified cross-family review,
+   real-photo judgement and CPU/GPU parity on a phone remain pending.
 5. ~~**Import Lightroom presets (`.xmp`).**~~ *Done 2026-10-15 (import only):* the settings that map are taken (exposure to
    dehaze, vibrance, saturation, relative white balance, the eight colour bands, colour grading, point curves,
    vignette, grain, sharpening and noise reduction), the rest is skipped and said so. Not done: sharing one's own

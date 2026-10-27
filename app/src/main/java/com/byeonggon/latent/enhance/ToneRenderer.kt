@@ -88,6 +88,28 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
         ) {
             return
         }
+        renderCpu(source, output, top, frameHeight, left, frameWidth)
+    }
+
+    /** The exact working RGB before [localIndex], with the whole upright picture fitted in the mask view. */
+    internal fun colourInput(source: LinearImage, localIndex: Int): ColourPickPlane {
+        require(localIndex in localEdits.indices)
+        val size = source.width * source.height
+        val picture = ShownPicture(source.width, source.height, FloatArray(size), FloatArray(size), FloatArray(size))
+        renderCpu(source, IntArray(0), 0, source.height, 0, source.width, localIndex, picture)
+        return ColourPickPlane(picture)
+    }
+
+    private fun renderCpu(
+        source: LinearImage,
+        output: IntArray,
+        top: Int,
+        frameHeight: Int,
+        left: Int,
+        frameWidth: Int,
+        beforeLocal: Int = locals.size,
+        sampling: ShownPicture? = null,
+    ) {
         val width = source.width
         // Everything the loop reads, held in locals: it runs for every pixel of the picture.
         val sourceRed = source.red
@@ -95,7 +117,7 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
         val sourceBlue = source.blue
         val everywhere = everywhere
         val locals = locals
-        val placement = if (masks.isEmpty()) null else Placement(edit.framing, frameWidth, frameHeight)
+        val placement = if (masks.isEmpty()) null else Placement(if (sampling == null) edit.framing else Framing(), frameWidth, frameHeight)
         val weights = placement?.let { masks.map { mask -> MaskWeights(mask, it.wholeWidth, it.wholeHeight) } }
         val monochrome = monochrome
         val mixer = mixer
@@ -138,7 +160,7 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
                         val wholeY = placement.yOf(left + x, frameY)
                         // Tone ranges go by the picture as it is shown before any part has settings of its own.
                         val luma = LUMA_RED * rgb[0] + LUMA_GREEN * rgb[1] + LUMA_BLUE * rgb[2]
-                        for (local in locals.indices) {
+                        for (local in 0 until beforeLocal) {
                             val weight = weights[local].at(wholeX, wholeY) * localEdits[local].toneWeight(luma) * localEdits[local].colourWeight(rgb[0], rgb[1], rgb[2])
                             if (weight <= 0f) continue
                             locals[local].shade(redLevel, greenLevel, blueLevel, x, localRows[local], part)
@@ -146,6 +168,14 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
                             rgb[1] += (part[1] - rgb[1]) * weight
                             rgb[2] += (part[2] - rgb[2]) * weight
                         }
+                    }
+
+                    if (sampling != null) {
+                        sampling.red[index] = rgb[0]
+                        sampling.green[index] = rgb[1]
+                        sampling.blue[index] = rgb[2]
+                        index++
+                        continue
                     }
 
                     if (monochrome) {

@@ -8,6 +8,12 @@ Last updated 2026-10-23.
 
 ## Waiting for the owner
 
+- [ ] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)): implementation and local
+      checks are complete. Request Claude Code (Opus 5.5), Gemini 4 Argon or Claude Opus 5.5 via Antigravity to review
+      the full colour/rendering, state/cancellation and UI diff before merge. This session has no qualified
+      cross-family reviewer available; its fresh Codex review is supplemental. S24/GPU runtime checks remain in
+      DEVICE_CHECKS.md. See [verification](superpowers/reports/2026-10-27-photo-colour-picker.md).
+
 - [x] **Verified reinstallation imports, transfer cost** (legacy audit LA-01, HANDOFF; decided 2026-10-22): a camera
       file that only looks like one in the library by name and size is compared whole before it is left out, and the
       person is asked first before the one-time transfer that comparing many of them takes. A file not compared, the

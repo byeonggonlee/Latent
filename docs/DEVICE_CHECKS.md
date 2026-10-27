@@ -209,6 +209,21 @@ a build from the computer".
       graphics processor's shader and the CPU renderer must agree: compare the editor's preview (graphics processor)
       with the saved picture, and watch for a shader that fails to compile on the phone (the editor would still work,
       slowly, on the CPU; look in logcat for GpuTone). Note the time of a full-size save with a colour range.
+- [ ] **New (2026-10-27).** Photo colour picking (Masks → Only this colour → Pick from photo): use generated colour
+      patches and a real photo. Tap/drag the upright whole photo; the crosshair and offset magnifier must match
+      the sampled region in portrait/landscape, EXIF rotation/mirroring, lens correction and with a crop saved.
+      Letterboxing selects nothing. This temporary preview includes global tone/healing/earlier masks but excludes
+      the selected/later masks and final LUT/grading; final effects return on Apply/Cancel.
+- [ ] Picker lifecycle: entering selects nothing; Apply changes hue only and one Undo restores it; Cancel/Back and
+      a same-hue Apply add no history. Gray/black explains an invalid sample, retaining the last valid candidate.
+      Rotate while picking and keep the candidate; navigate away during preparation and reject stale work.
+- [ ] Picker accessibility/one-hand checks: actual TalkBack move actions and keyboard/D-pad move by 1%; hue is not
+      announced for every drag event; Apply/Cancel stay reachable at 200% text in portrait and landscape, and the
+      magnifier does not cover the finger's sampled point. The synthetic Compose captures are not device proof.
+- [ ] Hide Show colour swatches from the colour panel menu; picker, current hue/range and applicable Any colour
+      remain. Reopen editor/app and verify the preference; backup restore does not change this device preference.
+- [ ] Run `GpuToneOnDeviceTest#pickedColourAfterEarlierMaskAgreesWithTheProcessor` on a GPU-capable supported
+      phone (no personal photo needed); existing CPU/GPU tolerances must pass. Compilation alone is not parity proof.
 - [ ] Lightroom presets (editor → Filters → "Import Lightroom presets…"): pick one or several `.xmp` files (a preset
       exported from Lightroom Mobile or Classic, or a photo's sidecar); they show up under the user's own filters under
       their names, with the message of what was not taken over (white balance in kelvin, lens corrections,

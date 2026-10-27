@@ -738,4 +738,20 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
     <string name="backup_restore_failed">The restore failed, and nothing of the backup was taken over: %1$s</string>
     <string name="backup_restore_wait_for_sync">A camera sync is running. Restore once it has finished.</string>
     <string name="backup_restore_reimport_hint">Camera files whose photos are not on this phone are not imported again: the Import tab counts them under \"Files deleted from the phone\", where \"Let them be imported again\" brings them back from the camera.</string>
+    <string name="pick_colour_from_photo">Pick from photo</string>
+    <string name="colour_options">Colour options</string>
+    <string name="show_colour_swatches">Show colour swatches</string>
+    <string name="colour_hue_value">Hue: %1$d°</string>
+    <string name="display_preference_failed">Could not save the display preference.</string>
+    <string name="colour_pick_hint">Choose a colour from the photo. This view shows the colours used for selection.</string>
+    <string name="colour_pick_invalid">This area has too little colour. Choose a more colourful area.</string>
+    <string name="colour_pick_apply">Apply colour</string>
+    <string name="colour_pick_cancel">Cancel colour picking</string>
+    <string name="colour_pick_area">Photo colour picker</string>
+    <string name="colour_pick_left">Move sample left</string>
+    <string name="colour_pick_right">Move sample right</string>
+    <string name="colour_pick_up">Move sample up</string>
+    <string name="colour_pick_down">Move sample down</string>
+    <string name="colour_pick_preparing">Preparing colour selection…</string>
+    <string name="colour_pick_keys">Arrow keys move the sample. Press Enter or the D-pad centre to reach Apply or Cancel.</string>
 </resources>
