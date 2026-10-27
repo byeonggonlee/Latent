@@ -328,7 +328,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         commit()
         val session = ColourPickSession(item.id, image, current.edit, index)
         picker = session
-        ui.update { it.copy(colourPicker = ColourPickerState()) }
+        ui.update { it.copy(colourPicker = ColourPickerState(), comparing = false) }
         pickerJob = viewModelScope.launch {
             try {
                 val (plane, bitmap) = withContext(Dispatchers.Default) {

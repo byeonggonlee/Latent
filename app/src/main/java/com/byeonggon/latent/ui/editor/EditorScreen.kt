@@ -167,7 +167,10 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
         onClose()
     }
     var confirmingDiscard by remember { mutableStateOf(false) }
-    val closeUnlessChanged = { if (state.changed) confirmingDiscard = true else leave() }
+    val closeUnlessChanged = {
+        if (state.colourPicker != null) viewModel.cancelColourPick()
+        else if (state.changed) confirmingDiscard = true else leave()
+    }
     BackHandler(onBack = closeUnlessChanged)
     LaunchedEffect(state.finished) { if (state.finished) leave() }
 
@@ -201,7 +204,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
         }
     }
 
-    val ready = state.preview != null && !state.saving
+    val ready = state.preview != null && !state.saving && state.colourPicker == null
     val window = rememberWindowLayout()
     // Swiping on the picture is for a phone held upright; a mouse and a side panel have no use for it.
     val gestures = gestureMode && !window.sidePanel && tab in SWIPE_TABS
@@ -215,7 +218,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 shape = shape,
                 onShape = { shape = it },
                 selectedLocal = selectedLocal,
-                onSelectLocal = { selectedLocal = it },
+                onSelectLocal = { viewModel.cancelColourPick(); selectedLocal = it },
                 selectedSpot = selectedSpot,
                 onSelectSpot = { selectedSpot = it },
                 spotRadius = spotRadius,
@@ -237,6 +240,14 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
         ) { event ->
             val plain = !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed
             when {
+                state.colourPicker != null -> when (event.key) {
+                    Key.Escape -> { viewModel.cancelColourPick(); true }
+                    Key.DirectionLeft -> { viewModel.moveColourCursor(-0.01f, 0f); true }
+                    Key.DirectionRight -> { viewModel.moveColourCursor(0.01f, 0f); true }
+                    Key.DirectionUp -> { viewModel.moveColourCursor(0f, -0.01f); true }
+                    Key.DirectionDown -> { viewModel.moveColourCursor(0f, 0.01f); true }
+                    else -> event.isCtrlPressed || event.isAltPressed || (plain && EditorTab.entries.any { it.key == event.key })
+                }
                 event.isCtrlPressed && event.key == Key.Z && !event.isShiftPressed -> viewModel.undo().let { true }
                 event.isCtrlPressed && (event.key == Key.Y || (event.key == Key.Z && event.isShiftPressed)) -> viewModel.redo().let { true }
                 event.isCtrlPressed && event.key == Key.S -> viewModel.save().let { true }
@@ -298,7 +309,9 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
             )
         },
         bottomBar = {
-            if (gestures) {
+            if (state.colourPicker != null) {
+                // The picker has its own reachable Apply and Cancel controls.
+            } else if (gestures) {
                 GestureBar(
                     tool = stringResource(tab.label),
                     icon = tab.icon,
@@ -318,9 +331,12 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
     ) { padding ->
         Row(Modifier.fillMaxSize().padding(padding)) {
             // In a wide window the tools stand in a column on the left, as in desktop editors.
-            if (window.sidePanel) ToolRail(tab, onTab = { tab = it })
+            if (window.sidePanel && state.colourPicker == null) ToolRail(tab, onTab = { tab = it })
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                state.preview?.let { preview ->
+                val picker = state.colourPicker
+                if (picker != null) {
+                    ColourPickerFrame(picker, viewModel::pickColour, viewModel::moveColourCursor, viewModel::applyColourPick, viewModel::cancelColourPick)
+                } else state.preview?.let { preview ->
                     // The preview lags a moment behind a change of tab; each view is only drawn onto a picture made for it.
                     when {
                         tab == EditorTab.FRAMING && state.previewView == EditorView.WHOLE -> CropFrame(
@@ -334,7 +350,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                             picture = preview.asImageBitmap(),
                             locals = state.edit.locals,
                             selected = selectedLocal,
-                            onSelect = { selectedLocal = it },
+                            onSelect = { viewModel.cancelColourPick(); selectedLocal = it },
                             onChange = ::setMask,
                             onDone = viewModel::commit,
                             brushRadius = brushRadius,
@@ -379,11 +395,11 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 if (state.edit.changesColors && tab.view == EditorView.PICTURE) {
                     CompareButton(onCompare = viewModel::setComparing, modifier = Modifier.align(Alignment.BottomEnd))
                 }
-                if (state.comparing) Pill(stringResource(R.string.original), Modifier.align(Alignment.TopCenter))
-                if (state.loading || state.saving || state.detecting != null) CircularProgressIndicator()
+                if (state.comparing && state.colourPicker == null) Pill(stringResource(R.string.original), Modifier.align(Alignment.TopCenter))
+                if (state.colourPicker == null && (state.loading || state.saving || state.detecting != null)) CircularProgressIndicator()
             }
             // In a wide window the controls go beside the picture, the full height of the window.
-            if (window.sidePanel) editorPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
+            if (window.sidePanel && state.colourPicker == null) editorPanel(Modifier.width(SIDE_PANEL_WIDTH).fillMaxHeight())
         }
     }
     }

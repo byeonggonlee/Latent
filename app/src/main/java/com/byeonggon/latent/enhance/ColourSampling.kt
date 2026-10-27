@@ -35,16 +35,14 @@ internal class ColourPickPlane(val picture: ShownPicture) {
         val most = maxOf(r, g, b)
         val chroma = most - minOf(r, g, b)
         if (most <= 0f || chroma / most <= LocalEdit.LEAST_VIVID) return null
-        return PickedColour(colourHue(r, g, b), displayPixel(r, g, b))
+        return PickedColour(colourHue(r, g, b, most, chroma), displayPixel(r, g, b))
     }
 
     fun pixels(): IntArray = IntArray(picture.width * picture.height) { displayPixel(picture.red[it], picture.green[it], picture.blue[it]) }
 }
 
 /** The same hue coordinate that a colour-range mask tests; callers exclude achromatic inputs. */
-internal fun colourHue(red: Float, green: Float, blue: Float): Float {
-    val most = maxOf(red, green, blue)
-    val chroma = most - minOf(red, green, blue)
+internal fun colourHue(red: Float, green: Float, blue: Float, most: Float, chroma: Float): Float {
     val sector = when {
         most == red -> (green - blue) / chroma
         most == green -> 2f + (blue - red) / chroma

@@ -146,7 +146,7 @@ data class LocalEdit(
         val most = maxOf(r, g, b)
         val chroma = most - minOf(r, g, b)
         if (most <= 0f || chroma <= 0f) return 0f
-        val degrees = colourHue(r, g, b)
+        val degrees = colourHue(r, g, b, most, chroma)
         val apart = Math.abs(degrees - wanted).let { minOf(it, 360f - it) }
         val near = ((hueSpread + HUE_FADE - apart) / HUE_FADE).coerceIn(0f, 1f)
         // Colours close to gray have no hue worth speaking of.

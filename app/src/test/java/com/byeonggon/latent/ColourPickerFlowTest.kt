@@ -1,6 +1,18 @@
 package com.byeonggon.latent
 
 import android.graphics.Bitmap
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.exifinterface.media.ExifInterface
+import com.byeonggon.latent.enhance.Framing
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.*
+import com.byeonggon.latent.ui.editor.EditorScreen
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
 import com.byeonggon.latent.data.db.MediaItemEntity
@@ -32,11 +44,13 @@ class ColourPickerFlowTest {
     private val container get() = RuntimeEnvironment.getApplication().appContainer
     private var photoId = 0L
     private var otherId = 0L
+    private var previousSettings = com.byeonggon.latent.data.AppSettings()
     @get:Rule(order = 0) val library = object : ExternalResource() {
         override fun before() {
             forgetTheApplicationOfEarlierTests()
             ShadowEnvironment.addExternalDir("shared")
             grantLibraryAccess()
+            previousSettings = runBlocking { container.settings.settings.first() }
             val folder = File(container.storage.root, "2026/2026-10-27").apply { mkdirs() }
             for (name in listOf("PICK.JPG", "OTHER.JPG")) {
                 val file = File(folder, name)
@@ -49,6 +63,7 @@ class ColourPickerFlowTest {
                 if (name == "PICK.JPG") photoId = id else otherId = id
             }
         }
+        override fun after() = runBlocking { container.settings.update { previousSettings } }
     }
     @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
 
@@ -158,5 +173,94 @@ class ColourPickerFlowTest {
         compose.runOnIdle { model.close(); model.open(photoId) }
         compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.preview != null && !model.state.value.loading }
         assertFalse(model.state.value.showColourSwatches)
+    }
+    @Test fun theScreenPicksWithTouchAndAccessibleActionsAndBackCancelsOnlyTheDraft() {
+        val model = open()
+        var closed = false
+        compose.runOnUiThread { compose.activity.setContent { EditorScreen(photoId, onClose = { closed = true }, viewModel = model) } }
+        compose.onNodeWithText("Masks").performScrollTo().performClick()
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        val before = model.state.value.edit
+        compose.onNodeWithText("Apply colour").assertIsNotEnabled()
+        val canvas = compose.onNodeWithContentDescription("Photo colour picker")
+        canvas.performTouchInput { click(Offset(1f, 1f)) }
+        compose.onNodeWithText("Apply colour").assertIsNotEnabled()
+        canvas.performTouchInput { down(Offset(width * 0.25f, height * 0.5f)) }
+        compose.onNodeWithText("Apply colour").assertIsEnabled()
+        canvas.performTouchInput { up() }
+        assertEquals(before, model.state.value.edit)
+        val initial = model.state.value.colourPicker!!.point!!
+        canvas.performTouchInput { swipe(Offset(width * 0.25f, height * 0.5f), Offset(width * 0.35f, height * 0.5f), 300) }
+        val point = model.state.value.colourPicker!!.point!!
+        assertTrue(point.first > initial.first)
+        val action = canvas.fetchSemanticsNode().config[SemanticsActions.CustomActions].single { it.label == "Move sample left" }
+        compose.runOnIdle { assertTrue(action.action()) }
+        assertEquals(point.first - 0.01f, model.state.value.colourPicker!!.point!!.first, 1e-5f)
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        assertEquals(point.first, model.state.value.colourPicker!!.point!!.first, 1e-5f)
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        assertNull(model.state.value.colourPicker)
+        assertFalse(closed)
+        assertEquals(before, model.state.value.edit)
+    }
+    @Test fun pickingShowsItsInputInsteadOfBeforeAfterComparison() {
+        val model = open()
+        compose.runOnIdle { model.setComparing(true) }
+        start(model)
+        assertFalse(model.state.value.comparing)
+    }
+    @Test fun pickingUsesTheUprightWholePhotoDespiteTheEditsFraming() {
+        val file = File(container.storage.root, "2026/2026-10-27/PICK.JPG")
+        ExifInterface(file).apply { setAttribute(ExifInterface.TAG_ORIENTATION, "6"); saveAttributes() }
+        val model = open()
+        compose.runOnIdle { model.setFraming(Framing(quarterTurns = 1, left = 0.2f, angle = 3f)); model.commit() }
+        start(model)
+        assertEquals(64, model.state.value.colourPicker!!.preview!!.width)
+        assertEquals(96, model.state.value.colourPicker!!.preview!!.height)
+        compose.runOnIdle { model.pickColour(0.5f, 0.25f) }
+        assertTrue(model.state.value.colourPicker!!.hue!! in 200f..220f)
+        compose.runOnIdle { model.pickColour(0.5f, 0.75f) }
+        assertTrue(model.state.value.colourPicker!!.invalid)
+    }
+
+    @Test
+    @Config(qualifiers = "en-rUS-w891dp-h411dp-land-420dpi")
+    fun largeTextInTheSidePanelKeepsApplyAndCancelReachable() {
+        val model = open()
+        compose.runOnUiThread {
+            compose.activity.setContent {
+                CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
+                    EditorScreen(photoId, onClose = {}, viewModel = model)
+                }
+            }
+        }
+        compose.onNodeWithText("Masks").performScrollTo().performClick()
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        compose.onNodeWithText("Apply colour").assertIsDisplayed()
+        compose.onNodeWithText("Cancel colour picking").assertIsDisplayed()
+        assertTrue(compose.onNodeWithText("Cancel colour picking").getBoundsInRoot().run { bottom - top >= 48.dp })
+        compose.onNodeWithText("Cancel colour picking").performClick()
+        assertNull(model.state.value.colourPicker)
+    }
+    @Test fun recreatingTheActivityRetainsTheSamePickerSessionAndNormalisedPoint() {
+        val model = open()
+        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("PICK.JPG").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithContentDescription("PICK.JPG").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Edit").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Edit").performClick()
+        compose.onNodeWithText("Masks").performScrollTo().performClick()
+        compose.onNodeWithText("Pick from photo").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.colourPicker?.preparing == false }
+        compose.runOnIdle { model.pickColour(0.25f, 0.5f) }
+        val before = model.state.value.colourPicker!!
+        compose.activityRule.scenario.recreate()
+        compose.waitForIdle()
+        assertSame(model, ViewModelProvider(compose.activity)[EditorViewModel::class.java])
+        assertNotNull(model.state.value.colourPicker)
+        assertEquals(before.point, model.state.value.colourPicker!!.point)
+        assertEquals(before.hue, model.state.value.colourPicker!!.hue)
+        assertSame(before.preview, model.state.value.colourPicker!!.preview)
     }
 }
