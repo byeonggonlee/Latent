@@ -1,7 +1,8 @@
 name: Release
 
 # A stable build: a tag `vX.Y.Z` (or `vX.Y.Z-rc.1`, published as a pre-release) that the owner puts on a commit of
-# `main` builds the signed APK and publishes it as a release, for good. The policy is in docs/RELEASES.md.
+# `main` builds the signed APK, and the signed app bundle (AAB) to upload to Play, and publishes them as a release, for
+# good. The policy is in docs/RELEASES.md.
 # Unlike a nightly, it refuses to run without the signing secrets: a release that no phone could update to is a mistake.
 # The build, with its tests, Gradle plugins and the signing secrets, may only read the repository; the release is made
 # by a job of its own, which may write to it but runs nothing of the build's and never sees the secrets.
@@ -65,6 +66,7 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=$count" >> "$GITHUB_OUTPUT"
           echo "file=latent-$name-$count.apk" >> "$GITHUB_OUTPUT"
+          echo "bundle=latent-$name-$count.aab" >> "$GITHUB_OUTPUT"
           case "$name" in *-*) echo "pre=--prerelease" >> "$GITHUB_OUTPUT" ;; *) echo "pre=" >> "$GITHUB_OUTPUT" ;; esac
 
       - uses: actions/setup-java@v6
@@ -97,7 +99,7 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: Release APK
+      - name: Release APK and app bundle
         env:
           KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
@@ -111,9 +113,17 @@ jobs:
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PASSWORD"
           } > keystore.properties
-          ./gradlew assembleRelease -PlatentVersionCode=${{ steps.tag.outputs.code }} -PlatentVersionName=${{ steps.tag.outputs.name }} --stacktrace
+          # One Gradle run for both, so the APK and the bundle carry the same version code and are built from the same code.
+          ./gradlew assembleRelease bundleRelease -PlatentVersionCode=${{ steps.tag.outputs.code }} -PlatentVersionName=${{ steps.tag.outputs.name }} --stacktrace
           cp app/build/outputs/apk/release/app-release.apk "${{ steps.tag.outputs.file }}"
           sha256sum "${{ steps.tag.outputs.file }}" > "${{ steps.tag.outputs.file }}.sha256"
+          # The bundle is signed with the same key, which is Play's upload key; Play signs what it hands out with its own.
+          cp app/build/outputs/bundle/release/app-release.aab "${{ steps.tag.outputs.bundle }}"
+          # jarsigner exits 0 for an unsigned file as well: what it says is what counts. Its output is kept whole first, as a
+          # grep that stops reading early would end jarsigner with a broken pipe, which the shell's pipefail counts as failing.
+          verified=$(jarsigner -verify "${{ steps.tag.outputs.bundle }}")
+          grep -q "jar verified" <<< "$verified" || { echo "::error::The app bundle is not signed."; exit 1; }
+          sha256sum "${{ steps.tag.outputs.bundle }}" > "${{ steps.tag.outputs.bundle }}.sha256"
 
       # The notes are the version's section of CHANGELOG.md; without one, the commits since the release before it.
       - name: Notes
@@ -133,6 +143,7 @@ jobs:
             echo
             echo "---"
             echo "Version $name (code ${{ steps.tag.outputs.code }}), commit \`$(git rev-parse --short HEAD)\`. Check a download with \`shasum -a 256 -c ${{ steps.tag.outputs.file }}.sha256\`."
+            echo "The \`.aab\` is the same build as an app bundle, signed with the upload key, for Play; phones install the \`.apk\`."
           } >> notes.md
 
       - uses: actions/upload-artifact@v7
@@ -152,6 +163,8 @@ jobs:
           path: |
             ${{ steps.tag.outputs.file }}
             ${{ steps.tag.outputs.file }}.sha256
+            ${{ steps.tag.outputs.bundle }}
+            ${{ steps.tag.outputs.bundle }}.sha256
             notes.md
           retention-days: 7
           if-no-files-found: error
@@ -184,8 +197,14 @@ jobs:
             echo "::error::Expected one latent-*.apk in the artifact, found ${#apks[@]}."; exit 1
           fi
           FILE="${apks[0]}"
-          # The APK the build signed, as it left it.
+          bundles=(latent-*.aab)
+          if [ "${#bundles[@]}" != 1 ] || [ ! -f "${bundles[0]}" ]; then
+            echo "::error::Expected one latent-*.aab in the artifact, found ${#bundles[@]}."; exit 1
+          fi
+          BUNDLE="${bundles[0]}"
+          # The APK and the bundle the build signed, as it left them.
           sha256sum -c "$FILE.sha256"
-          gh release create "$GITHUB_REF_NAME" "$FILE" "$FILE.sha256" $PRE --verify-tag \
+          sha256sum -c "$BUNDLE.sha256"
+          gh release create "$GITHUB_REF_NAME" "$FILE" "$FILE.sha256" "$BUNDLE" "$BUNDLE.sha256" $PRE --verify-tag \
             --title "Latent $NAME" \
             --notes-file notes.md
