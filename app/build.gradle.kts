@@ -72,6 +72,13 @@ android {
         }
     }
 
+    // The app bundle for Play keeps every language in the one download: the language is chosen in the app (Settings →
+    // Language, the phone's per-app list), and a split would leave a phone in Korean without the Japanese strings it
+    // was switched to.
+    bundle {
+        language { enableSplit = false }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

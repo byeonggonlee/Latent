@@ -31,7 +31,7 @@ download link and a file manager:
 |---|---|
 | CI, every push | `latent-0.1.0-ci.8c34842-4321-arm64-v8a.apk` (the commit) |
 | Nightly | `latent-0.1.0-nightly.20261017-4321-arm64-v8a.apk`, with the same name and `.sha256` beside it |
-| Stable | `latent-0.1.0-4321.apk`, with `latent-0.1.0-4321.apk.sha256` beside it (an `.aab` for Play comes with the store, not before 1.0.0) |
+| Stable | `latent-0.1.0-4321.apk` and `latent-0.1.0-4321.aab`, each with its `.sha256` beside it. The `.aab` is the same build as an app bundle, signed with the upload key, for Play; phones install the `.apk` |
 | A build on the owner's computer | Gradle's own `app-release.apk` / `app-debug.apk`, which scripts and docs refer to |
 
 The number at the end is the commit count, so a name sorts in the order of the builds, and the commit it came
@@ -145,5 +145,6 @@ it in `main`, and tag again only if no one has installed it, otherwise issue the
 - Public repositories use standard GitHub-hosted runners for free; do not use "larger runners", which are paid.
 - A run takes about seven minutes. A failing nightly leaves no release behind and is shown red in the Actions
   tab; the day's change gets built the next night, or at once with *Run workflow*.
-- Not yet: an AAB for Play, version numbers shown in the app's About dialog beyond the
-  name, an update check inside the app.
+- The app bundle keeps every language in one download (`bundle { language { enableSplit = false } }`): the
+  language is chosen in the app, and Play's language splits would leave out the strings it is switched to.
+- Not yet: version numbers shown in the app's About dialog beyond the name, an update check inside the app.
