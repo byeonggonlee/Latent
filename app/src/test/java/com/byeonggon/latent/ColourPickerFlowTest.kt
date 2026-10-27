@@ -11,6 +11,7 @@ import com.byeonggon.latent.enhance.Mask
 import com.byeonggon.latent.enhance.MaskShape
 import com.byeonggon.latent.ui.editor.EditorView
 import com.byeonggon.latent.ui.editor.EditorViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
@@ -139,5 +140,23 @@ class ColourPickerFlowTest {
         assertEquals(0.5f, model.state.value.colourPicker!!.point!!.second, 1e-5f)
         compose.runOnIdle { repeat(110) { model.moveColourCursor(-0.01f, 0.01f) } }
         assertEquals(0f to 1f, model.state.value.colourPicker!!.point)
+    }
+    @Test fun swatchVisibilityIsLocalPersistentAndDoesNotChangeTheEdit() {
+        val model = open()
+        val before = model.state.value.edit
+        assertTrue(com.byeonggon.latent.data.AppSettings().showColourSwatches)
+        runBlocking { container.settings.update { it.copy(jpegQuality = 90) } }
+        compose.runOnIdle { model.setShowColourSwatches(false) }
+        compose.waitUntil(10_000) { compose.waitForIdle(); !model.state.value.showColourSwatches }
+        val saved = runBlocking { com.byeonggon.latent.data.SettingsRepository(RuntimeEnvironment.getApplication()).settings.first() }
+        assertFalse(saved.showColourSwatches)
+        assertEquals(90, saved.jpegQuality)
+        assertEquals(before, model.state.value.edit)
+        val restored = com.byeonggon.latent.backup.BackupSettings(theme = com.byeonggon.latent.data.ThemeMode.DARK).applyTo(saved)
+        assertFalse(restored.showColourSwatches)
+        assertFalse(com.byeonggon.latent.backup.BackupSettings.toJson(saved).has("showColourSwatches"))
+        compose.runOnIdle { model.close(); model.open(photoId) }
+        compose.waitUntil(10_000) { compose.waitForIdle(); model.state.value.preview != null && !model.state.value.loading }
+        assertFalse(model.state.value.showColourSwatches)
     }
 }

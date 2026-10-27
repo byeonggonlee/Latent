@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -24,7 +26,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -102,6 +111,7 @@ internal class Detecting(
  * Settings for parts of the picture: the masks to choose from and to add to, and for the [selected]
  * one what it does to the part it covers. The masks themselves are moved on the picture.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun LocalPanel(
     locals: List<LocalEdit>,
@@ -115,6 +125,9 @@ internal fun LocalPanel(
     erasing: Boolean = false,
     onErasing: (Boolean) -> Unit = {},
     detecting: Detecting = Detecting(),
+    showColourSwatches: Boolean = true,
+    onShowColourSwatches: (Boolean) -> Unit = {},
+    onPickColour: () -> Unit = {},
 ) {
     fun replaced(local: LocalEdit) = locals.toMutableList().apply { this[selected] = local }
     val current = locals.getOrNull(selected)
@@ -264,10 +277,28 @@ internal fun LocalPanel(
         style = MaterialTheme.typography.labelLarge,
         modifier = Modifier.padding(start = 16.dp, top = 8.dp),
     )
-    Row(
+    var colourOptions by remember(selected) { mutableStateOf(false) }
+    FlowRow(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedButton(onClick = onPickColour, enabled = enabled) { Text(stringResource(R.string.pick_colour_from_photo)) }
+        Box {
+            TextButton(onClick = { colourOptions = true }, enabled = enabled) { Text(stringResource(R.string.colour_options)) }
+            DropdownMenu(expanded = colourOptions, onDismissRequest = { colourOptions = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.show_colour_swatches)) },
+                    trailingIcon = { Checkbox(checked = showColourSwatches, onCheckedChange = null) },
+                    onClick = { onShowColourSwatches(!showColourSwatches); colourOptions = false },
+                )
+            }
+        }
+    }
+    current.hue?.let { Text(stringResource(R.string.colour_hue_value, it.roundToInt()), modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall) }
+    FlowRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         FilterChip(
             selected = current.hue == null,
@@ -278,25 +309,21 @@ internal fun LocalPanel(
             enabled = enabled && current.mask.shape != MaskShape.EVERYWHERE,
             label = { Text(stringResource(R.string.colour_any)) },
         )
-        MixerBand.entries.forEach { band ->
+        if (showColourSwatches) MixerBand.entries.forEach { band ->
             val name = band.label
-            val chosen = current.hue?.let { kotlin.math.abs(it - band.hue) < 1f } == true
+            val chosen = current.hue?.let { val distance = kotlin.math.abs(it - band.hue); minOf(distance, 360f - distance) < 1f } == true
             Box(
-                Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(Color.hsv(band.hue, 0.75f, 0.9f))
-                    .border(
-                        width = if (chosen) 3.dp else 0.dp,
-                        color = if (chosen) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                        shape = CircleShape,
-                    )
+                Modifier.size(48.dp)
                     .clickable(enabled = enabled, role = Role.RadioButton) {
                         onChange(replaced(current.copy(hue = band.hue)))
                         onDone()
                     }
                     .semantics { contentDescription = name },
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.size(30.dp).clip(CircleShape).background(Color.hsv(band.hue, 0.75f, 0.9f))
+                    .border(if (chosen) 3.dp else 0.dp, if (chosen) MaterialTheme.colorScheme.onSurface else Color.Transparent, CircleShape))
+            }
         }
     }
     if (current.hue != null) {

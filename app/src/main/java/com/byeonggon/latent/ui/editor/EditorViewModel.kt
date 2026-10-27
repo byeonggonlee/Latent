@@ -91,6 +91,7 @@ data class EditorUiState(
     val edit: PhotoEdit = PhotoEdit(),
     val preview: Bitmap? = null,
     val colourPicker: ColourPickerState? = null,
+    val showColourSwatches: Boolean = true,
     val histogram: Histogram? = null,
     /** Size of the whole picture as it is drawn here, upright and before the edit's own framing. */
     val pictureWidth: Int = 0,
@@ -185,6 +186,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val detailCentre = MutableStateFlow(0.5f to 0.5f)
 
     init {
+        viewModelScope.launch { container.settings.settings.collect { settings -> ui.update { it.copy(showColourSwatches = settings.showColourSwatches) } } }
         viewModelScope.launch { edits.copied.collect { copied -> ui.update { it.copy(canPaste = copied != null) } } }
         viewModelScope.launch { edits.filters.collect { filters -> ui.update { it.copy(filters = filters).checked() } } }
         viewModelScope.launch { edits.luts.collect { luts -> ui.update { it.copy(luts = luts) } } }
@@ -279,7 +281,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         source.value = null
         found.clear()
         detailCentre.value = 0.5f to 0.5f
-        ui.update { EditorUiState(canPaste = edits.copied.value != null, filters = it.filters, luts = it.luts, canDetect = it.canDetect) }
+        ui.update { EditorUiState(canPaste = edits.copied.value != null, filters = it.filters, luts = it.luts, canDetect = it.canDetect, showColourSwatches = it.showColourSwatches) }
     }
 
     /** Remembers this photo's tones and colours, to be given to other photos. */
@@ -305,6 +307,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     fun setFraming(framing: Framing) = change { it.copy(framing = framing) }
 
     fun setLocals(locals: List<LocalEdit>) = change { it.copy(locals = locals) }
+
+    fun setShowColourSwatches(show: Boolean) {
+        viewModelScope.launch {
+            try {
+                container.settings.update { it.copy(showColourSwatches = show) }
+            } catch (e: IOException) {
+                ui.update { it.copy(message = text(R.string.display_preference_failed)) }
+            }
+        }
+    }
 
     /** Takes a frozen copy of the colours tested by this mask, without changing its hue or the edit's history. */
     fun beginColourPick(index: Int) {

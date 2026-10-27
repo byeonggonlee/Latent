@@ -746,6 +746,9 @@ private fun EditorPanel(
                     }
                     EditorTab.EFFECTS -> Sliders(tab.controls, edit.adjustments, enabled, viewModel)
                     EditorTab.LOCAL -> LocalPanel(
+                        showColourSwatches = state.showColourSwatches,
+                        onShowColourSwatches = viewModel::setShowColourSwatches,
+                        onPickColour = { viewModel.beginColourPick(selectedLocal) },
                         locals = edit.locals,
                         selected = selectedLocal,
                         enabled = enabled,

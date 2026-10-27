@@ -696,4 +696,19 @@
     <string name="backup_restore_failed">復元できず、バックアップの内容は何も取り込まれていません: %1$s</string>
     <string name="backup_restore_wait_for_sync">カメラの同期中です。終わってから復元してください。</string>
     <string name="backup_restore_reimport_hint">写真がこのスマートフォンにないカメラのファイルは、もう一度は取り込まれません。取り込みタブの「スマートフォンから削除したファイル」に数えられ、「もう一度取り込めるようにする」でカメラから取り込み直せます。</string>
+    <string name="pick_colour_from_photo">写真から色を選択</string>
+    <string name="colour_options">色のオプション</string>
+    <string name="show_colour_swatches">色見本を表示</string>
+    <string name="colour_hue_value">色相: %1$d°</string>
+    <string name="display_preference_failed">表示設定を保存できませんでした。</string>
+    <string name="colour_pick_hint">写真から色を選んでください。選択の基準となる色を表示しています。</string>
+    <string name="colour_pick_invalid">この部分は色が薄すぎます。色のはっきりした部分を選んでください。</string>
+    <string name="colour_pick_apply">色を適用</string>
+    <string name="colour_pick_cancel">色の選択をキャンセル</string>
+    <string name="colour_pick_area">写真の色選択領域</string>
+    <string name="colour_pick_left">選択位置を左に移動</string>
+    <string name="colour_pick_right">選択位置を右に移動</string>
+    <string name="colour_pick_up">選択位置を上に移動</string>
+    <string name="colour_pick_down">選択位置を下に移動</string>
+    <string name="colour_pick_preparing">色の選択を準備中…</string>
 </resources>

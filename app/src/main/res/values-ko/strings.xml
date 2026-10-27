@@ -696,4 +696,19 @@
     <string name="backup_restore_failed">복원하지 못했고 백업의 내용은 하나도 들어오지 않았습니다: %1$s</string>
     <string name="backup_restore_wait_for_sync">카메라 동기화가 진행 중입니다. 끝난 뒤에 복원하세요.</string>
     <string name="backup_restore_reimport_hint">사진이 이 휴대전화에 없는 카메라 파일은 다시 가져오지 않습니다. 가져오기 탭의 \"폰에서 지운 파일\"에 세어지며, \"다시 가져올 수 있게 하기\"로 카메라에서 다시 가져올 수 있습니다.</string>
+    <string name="pick_colour_from_photo">사진에서 색상 선택</string>
+    <string name="colour_options">색상 옵션</string>
+    <string name="show_colour_swatches">색상 견본 표시</string>
+    <string name="colour_hue_value">색상: %1$d°</string>
+    <string name="display_preference_failed">표시 설정을 저장하지 못했습니다.</string>
+    <string name="colour_pick_hint">사진에서 색을 선택하세요. 선택 기준이 되는 색상을 보여 줍니다.</string>
+    <string name="colour_pick_invalid">이 부분은 색이 옅습니다. 색이 더 뚜렷한 부분을 선택하세요.</string>
+    <string name="colour_pick_apply">색상 적용</string>
+    <string name="colour_pick_cancel">색상 선택 취소</string>
+    <string name="colour_pick_area">사진 색상 선택 영역</string>
+    <string name="colour_pick_left">선택 지점 왼쪽으로 이동</string>
+    <string name="colour_pick_right">선택 지점 오른쪽으로 이동</string>
+    <string name="colour_pick_up">선택 지점 위로 이동</string>
+    <string name="colour_pick_down">선택 지점 아래로 이동</string>
+    <string name="colour_pick_preparing">색상 선택 준비 중…</string>
 </resources>
