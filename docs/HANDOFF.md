@@ -149,22 +149,36 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| 2026-10-27 | Claude Code (computer) | `EditOnDeviceTest` compares the size of an Exif-rotated JPEG as shown and checks it is stored upright after healing; passes on the emulator with the public OnePlus JPEG and ILCE-7M2 ARW, RAW glow/brush/healing export included. PR #50 merged on the owner's instruction | `c78a449` (PR #50) and this commit |
+| Claude Code (computer) | 0.2.0 items 3–7, the small UI ones, one at a time, each straight to `main`: sliders, the LUT note, choices, outline icons, empty states | `claude/ui-polish-020` | `ui/editor/` sliders and filter panel, `ui/settings/`, the library's chips, icons across `ui/` | 2026-10-28 |
 
 ## For Codex
 
-### 0. 0.2.0: your part (set by the owner, 2026-10-28)
+### 0. 0.2.0: your part (set by the owner, 2026-10-28; widened the same day)
 
-The plan and its table are in [`ROADMAP.md`, "0.2.0"](ROADMAP.md). Codex is short of tokens, so its part is small:
+The plan and its table are in [`ROADMAP.md`, "0.2.0"](ROADMAP.md). Codex's tokens were reset, so the owner gave it
+more than first planned. Claim each item in *In progress* before starting it. Each is a pull request reviewed by
+Claude Code: items 2, 9 and 10 are in Claude Code's area, which this hands to Codex for these items only. In order:
 
 1. **Canon CR2** (item 12, medium): TIFF with lossless JPEG, so the decoder DNG uses can serve. Samples from
    [raw.pixls.us](https://raw.pixls.us/data/Canon/), CC0 files only (each file's licence is in the site's table),
-   kept out of the repository. A pull request reviewed by Claude Code. CR3 waits for 0.3.0.
-2. **Reviews, when the owner asks**, of the three Claude Code pull requests on the mandatory-review list: auto colour
-   (item 1), the sky model again (item 2) and the trash after a reinstall (item 10). The small UI changes are not
+   kept out of the repository. CR3 waits for 0.3.0.
+2. **Phone-made DNGs** (item 15, small): DNGs from Open Camera and MotionCam open as the phone took them
+   (orientation, white balance, crop, opcode lists). Files from the owner's phones (ask under *Waiting for the
+   owner* in `TODO.md`) or public samples, kept out of the repository; a fix comes with a synthetic fixture.
+3. **The trash after a reinstall** (item 10, small to medium): files left in `DCIM/Latent/.trash` by an uninstall
+   or a cleared database are shown in the trash again, to be restored or emptied. It can lose photos, so nothing is
+   deleted that the owner did not empty, the trash's layout and the restore path stay as they are, and both restore
+   and empty are tested, on the emulator included.
+4. **Sky mask on the GPU** (item 2, small to medium): convert `efficientvit_seg_b1_ade20k_sky.tflite` again
+   without `BROADCAST_TO` and `GATHER_ND`, which LiteRT's GPU delegate refuses (S24 report). The mask stays within
+   the current numerical tests, the CPU fallback stays, and the conversion steps and licence are written down in
+   `AI_MASKS.md`. Only a phone shows the GPU delegate taking it: the S24, or the owner's report.
+5. **Share at a typed long side** (item 9, small): beside the fixed sizes in the share and export sheet, a long
+   side typed in pixels, never larger than the photo.
+6. **Review, when the owner asks,** Claude Code's auto colour (item 1). Claude Code's small UI changes are not
    reviewed.
-3. **Shared items, only with tokens to spare:** items 6 (outline icons), 9 (a typed long side) and 14 (sync
-   interrupted on a phone). Claim one in *In progress* first; Claude Code takes them otherwise.
+
+Item 14 (sync interrupted on a phone) stays shared with the owner.
 
 **No longer yours:** the UI guide's tasks 4–7 from before 0.1.0 are items 5–7 of the plan, and Claude Code does them.
 
@@ -302,11 +316,11 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 
 ### 0.2.0: Claude Code's part (set by the owner, 2026-10-28)
 
-The plan is in [`ROADMAP.md`, "0.2.0"](ROADMAP.md). Claude Code takes items 1–5, 7, 8, 10, 11 and 13, and the shared
-items 6, 9 and 14 unless Codex has claimed one in *In progress*. Small UI changes go straight to `main` with their
-tests; items 1, 2 and 10 go through pull requests for Codex's review, and only when they are ready, so that Codex's
-tokens go to one review at a time. Suggested order: the small UI items (3–7) first, then 1, 8–11 and 2. Claude Code
-reviews Codex's CR2 (item 12).
+The plan is in [`ROADMAP.md`, "0.2.0"](ROADMAP.md). Claude Code takes items 1, 3–8, 11 and 13, and item 14 with the
+owner; items 2, 9 and 10 went to Codex when its tokens were reset (owner, 2026-10-28). Small UI changes go straight
+to `main` with their tests; auto colour (item 1) goes through a pull request for Codex's review. Suggested order: the
+small UI items (3–7) first, then 8, 11 and 1. Claude Code reviews each of Codex's pull requests (items 2, 9, 10, 12
+and 15).
 
 ### Release follow-up from Codex — 2026-10-27
 
@@ -532,6 +546,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-27 | Claude Code (computer) | `EditOnDeviceTest` compares the size of an Exif-rotated JPEG as shown and checks it is stored upright after healing; passes on the emulator with the public OnePlus JPEG and ILCE-7M2 ARW, RAW glow/brush/healing export included. PR #50 merged on the owner's instruction | `c78a449` (PR #50) and `8379c66` |
 | 2026-10-27 | Claude Code (computer) | Released 0.1.0 on the owner's instruction: changelog dated, `v0.1.0` tagged on `61aede2` after main's CI passed; the release workflow built and published the signed APK and AAB (versionCode 432). The feature freeze ends with it | [Latent 0.1.0](https://github.com/byeonggonlee/Latent/releases/tag/v0.1.0) |
 | 2026-10-27 | Codex | S24 Ultra release validation on main `674ed61`: 14 instrumentation tests passed without failures/skips; tone/detail and picker GPU parity, subject GPU/CPU, ZV-E10 full editing/export, thumbnails, real-video preparation; Korean light-theme bars, picker and selection menu checked. Sky uses CPU after GPU compile failure; physical-screen colour acceptance and broader signed-release checks remain explicit. Host CI checks pass | [S24 report](device-results/2026-10-27-s24-release.md) |
 | 2026-10-27 | Codex | Re-reviewed PR #50 at `5abec53`, previous P2 resolved, LGTM; 44 focused JVM checks pass. User-independent release checks: main minified APK/AAB, privacy, APK signature, 16 KiB ZIP/ELF alignment and host CI-equivalent checks pass. S24/owner ZV-E10 checks and release decisions remain pending | [Review](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143); [evidence](device-results/2026-10-27-release-emulator-followup.md#follow-up-after-the-pr-50-fix-2026-10-27) |
