@@ -6,22 +6,25 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,7 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,25 +106,18 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLocation: () -> Unit, onChoosePhone
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close)) } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.close)) } },
             )
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Heading(R.string.settings_screen)
-            Text(stringResource(R.string.tab_position), style = MaterialTheme.typography.bodyLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TabPosition.entries.forEach { position ->
-                    FilterChip(
-                        selected = current.tabPosition == position,
-                        onClick = { scope.launch { settings.update { it.copy(tabPosition = position) } } },
-                        label = { Text(stringResource(position.label)) },
-                    )
-                }
+            Choice(R.string.tab_position, TabPosition.entries, current.tabPosition, { stringResource(it.label) }, top = 0.dp) { position ->
+                scope.launch { settings.update { it.copy(tabPosition = position) } }
             }
             Hint(R.string.tab_position_hint)
-            Choice(R.string.theme, ThemeMode.entries, current.theme, { it.label }) { mode -> scope.launch { settings.update { it.copy(theme = mode) } } }
-            Choice(R.string.grid_size, GridSize.entries, current.gridSize, { it.label }) { size -> scope.launch { settings.update { it.copy(gridSize = size) } } }
+            Choice(R.string.theme, ThemeMode.entries, current.theme, { stringResource(it.label) }) { mode -> scope.launch { settings.update { it.copy(theme = mode) } } }
+            Choice(R.string.grid_size, GridSize.entries, current.gridSize, { stringResource(it.label) }) { size -> scope.launch { settings.update { it.copy(gridSize = size) } } }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Text(stringResource(R.string.language), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = {
@@ -144,29 +143,15 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLocation: () -> Unit, onChoosePhone
                 }
                 Switch(checked = current.allExif, onCheckedChange = { on -> scope.launch { settings.update { it.copy(allExif = on) } } })
             }
-            Text(stringResource(R.string.trash_kept), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TRASH_DAYS.forEach { days ->
-                    FilterChip(
-                        selected = current.trashKeptDays == days,
-                        onClick = { scope.launch { settings.update { it.copy(trashKeptDays = days) } } },
-                        label = { Text(pluralStringResource(R.plurals.days_count, days, days)) },
-                    )
-                }
+            Choice(R.string.trash_kept, TRASH_DAYS, current.trashKeptDays, { pluralStringResource(R.plurals.days_count, it, it) }) { days ->
+                scope.launch { settings.update { it.copy(trashKeptDays = days) } }
             }
             Hint(R.string.trash_kept_hint)
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Heading(R.string.settings_sharing)
-            Text(stringResource(R.string.jpeg_quality), style = MaterialTheme.typography.bodyLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QUALITIES.forEach { (quality, label) ->
-                    FilterChip(
-                        selected = current.jpegQuality == quality,
-                        onClick = { scope.launch { settings.update { it.copy(jpegQuality = quality) } } },
-                        label = { Text(stringResource(label)) },
-                    )
-                }
+            Choice(R.string.jpeg_quality, QUALITIES.map { it.first }, current.jpegQuality, { quality -> stringResource(QUALITIES.first { it.first == quality }.second) }, top = 0.dp) { quality ->
+                scope.launch { settings.update { it.copy(jpegQuality = quality) } }
             }
             Hint(R.string.jpeg_quality_hint)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
@@ -249,13 +234,25 @@ private val GridSize.label: Int
         GridSize.LARGE -> R.string.grid_large
     }
 
-/** A setting with a few named values, one of them chosen. */
+/**
+ * A setting with a few named values, one of them chosen: a segmented button across the width (UI guide §8.3).
+ * A name too long for its segment wraps instead of pushing the others off the screen, and the other segments
+ * grow with it, so that the row keeps one height.
+ */
 @Composable
-private fun <T> Choice(title: Int, options: List<T>, selected: T, label: (T) -> Int, onSelect: (T) -> Unit) {
-    Text(stringResource(title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { option ->
-            FilterChip(selected = option == selected, onClick = { onSelect(option) }, label = { Text(stringResource(label(option))) })
+private fun <T> Choice(title: Int, options: List<T>, selected: T, label: @Composable (T) -> String, top: Dp = 8.dp, onSelect: (T) -> Unit) {
+    Text(stringResource(title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = top))
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                modifier = Modifier.fillMaxHeight(),
+                // The filled segment says which is chosen; a tick would take room the longer names need.
+                icon = {},
+                label = { Text(label(option), textAlign = TextAlign.Center) },
+            )
         }
     }
 }

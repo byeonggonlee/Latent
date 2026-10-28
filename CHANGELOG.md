@@ -17,6 +17,9 @@ Smaller improvements after the first release: editing, consistency of the interf
   amber and from green to magenta.
 - The note that LUTs made for Log video expect Log footage is shown under a chosen Log LUT only, not under the
   looks for everyone who has not imported a LUT.
+- Settings with a few exclusive values (tab position, theme, grid size, how long the trash keeps photos, JPEG
+  quality) are segmented buttons, and the library's kind filters look like the app's other filter chips instead of
+  turning black when chosen.
 
 ## [0.1.0] - 2026-10-27
 

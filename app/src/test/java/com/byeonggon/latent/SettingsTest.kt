@@ -8,6 +8,8 @@ import com.byeonggon.latent.data.db.MediaKind
 import java.io.File
 import java.time.OffsetDateTime
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -108,6 +110,20 @@ class SettingsTest {
         }
         // The trash holds photos for a month until told otherwise.
         assertEquals(30, AppSettings().trashKeptDays)
+    }
+
+    @Test
+    fun offersEachChoiceAsOneRowOfSegmentsWithOneChosen() {
+        openSettings()
+        // Tab position's four segments share a line, and only the chosen one reads as selected.
+        val tops = listOf("자동", "왼쪽", "오른쪽", "아래").map { compose.onNodeWithText(it).getBoundsInRoot().top }
+        assertEquals(1, tops.distinct().size)
+        compose.onNodeWithText("자동").assertIsSelected()
+        compose.onNodeWithText("왼쪽").assertIsNotSelected()
+        compose.onNodeWithText("밝게").performScrollTo().performClick()
+        compose.waitUntil(timeoutMillis = 10_000) { compose.waitForIdle(); runBlocking { container.settings.settings.first() }.theme == ThemeMode.LIGHT }
+        compose.onNodeWithText("밝게").assertIsSelected()
+        compose.onNodeWithText("휴대전화 설정").assertIsNotSelected()
     }
 
     @Test

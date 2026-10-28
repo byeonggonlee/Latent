@@ -43,7 +43,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -531,17 +530,11 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LibraryFilter.entries.forEach { filter ->
+            // The same selected style as the app's other filter chips (UI guide §8.3).
             FilterChip(
                 selected = filter == state.filter,
                 onClick = { viewModel.setFilter(filter) },
                 label = { Text(stringResource(filter.label)) },
-                shape = RoundedCornerShape(50),
-                border = null,
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    selectedContainerColor = MaterialTheme.colorScheme.onSurface,
-                    selectedLabelColor = MaterialTheme.colorScheme.surface,
-                ),
             )
         }
         if (state.flagFilter != FlagFilter.ALL) {
@@ -550,7 +543,6 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 onClick = { viewModel.setFlagFilter(FlagFilter.ALL) },
                 label = { Text(stringResource(state.flagFilter.label)) },
                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.flag_filter_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
             )
         }
         // The album the library is narrowed to shows too, and can be left.
@@ -560,7 +552,6 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 onClick = { viewModel.showAlbum(null) },
                 label = { Text(shown.album.name) },
                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.album_filter_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
             )
         }
         // A search shows as one chip, and is taken off with it; the magnifying glass changes it.
@@ -570,7 +561,6 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 onClick = { viewModel.clearQuery() },
                 label = { Text(pluralStringResource(R.plurals.find_conditions, state.query.count, state.query.count)) },
                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.find_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
             )
         }
         // Narrowing by stars is chosen from the menu; here it shows, and can be taken off.
@@ -580,7 +570,6 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 onClick = { viewModel.setLeastRating(0) },
                 label = { Text(stringResource(R.string.rating_at_least, state.leastRating)) },
                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.rating_filter_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
             )
         }
     }
