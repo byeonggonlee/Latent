@@ -4,6 +4,10 @@ What changed in each stable release. The newest is first; a nightly's notes are 
 it (see [`docs/RELEASES.md`](docs/RELEASES.md)). The release workflow publishes the section of the tagged version
 as the release notes, so a section is written before the tag is.
 
+## [0.2.0] - unreleased
+
+Smaller improvements after the first release: editing, consistency of the interface, and small additions.
+
 ## [0.1.0] - 2026-10-27
 
 The first release. Latent is an Android app that brings photos in from a camera over USB, places them on the map
