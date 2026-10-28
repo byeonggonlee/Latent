@@ -202,7 +202,7 @@ internal fun ColourPickerFrame(
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                     Button(onClick = onApply, enabled = !state.preparing && state.hue != null, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(applyFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_apply)) }
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(cancelFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_cancel)) }
+                    FilledTonalButton(onClick = onCancel, modifier = Modifier.focusProperties { canFocus = true }.focusRequester(cancelFocus).heightIn(min = 48.dp)) { Text(stringResource(R.string.colour_pick_cancel)) }
                 }
             }
         }

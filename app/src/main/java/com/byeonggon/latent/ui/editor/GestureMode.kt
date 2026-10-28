@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -242,12 +239,12 @@ internal fun GestureBar(
 ) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().navigationBarsPadding().height(64.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onPrevious) { Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.gesture_previous_tool)) }
+            IconButton(onClick = onPrevious) { Icon(painterResource(R.drawable.ic_chevron_left), contentDescription = stringResource(R.string.gesture_previous_tool)) }
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(tool, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp))
             }
-            IconButton(onClick = onNext) { Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.gesture_next_tool)) }
+            IconButton(onClick = onNext) { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = stringResource(R.string.gesture_next_tool)) }
             IconButton(onClick = onSliders) { Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.gesture_show_sliders)) }
         }
     }

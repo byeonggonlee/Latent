@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -197,7 +195,7 @@ private fun TabIcon(tab: Tab) {
     when (tab) {
         Tab.LIBRARY -> Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null)
         Tab.SYNC -> Icon(painterResource(R.drawable.ic_import), contentDescription = null)
-        Tab.MAP -> Icon(Icons.Default.Place, contentDescription = null)
+        Tab.MAP -> Icon(painterResource(R.drawable.ic_place), contentDescription = null)
     }
 }
 

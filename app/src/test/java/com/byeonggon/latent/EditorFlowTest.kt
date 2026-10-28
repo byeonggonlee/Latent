@@ -583,6 +583,28 @@ class EditorFlowTest {
     }
 
     @Test
+    fun saysWhatALogLutExpectsOnlyByThatLut() {
+        val hint = "Log 영상용 LUT(S-Log3 → Rec.709 등)는 Log로 찍은 화면을 전제로 하므로 일반 사진에서는 색이 어긋나 보입니다."
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("필터").performClick()
+        compose.onAllNodesWithText(hint).assertCountEquals(0)
+        compose.onNodeWithText("완료").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("닫기").performClick()
+
+        val log = "TITLE \"SLog3 to 709\"\nLUT_3D_SIZE 2\n" + buildString {
+            for (b in 0..1) for (g in 0..1) for (r in 0..1) append("$r $g $b\n")
+        }
+        runBlocking { container.libraryEdits.importLut(log.byteInputStream(), "log") }
+        openEditorFromViewer()
+        compose.onNodeWithText("필터").performClick()
+        compose.onAllNodesWithText(hint).assertCountEquals(0)
+        compose.onNodeWithText("SLog3 to 709").performScrollTo().performClick()
+        compose.onNodeWithText(hint).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("LUT 없음").performScrollTo().performClick()
+        compose.onAllNodesWithText(hint).assertCountEquals(0)
+    }
+
+    @Test
     fun editsAPartOfThePictureUnderAMask() {
         openEditor("DSC00001.JPG")
         compose.onNodeWithText("부분").performScrollTo().performClick()

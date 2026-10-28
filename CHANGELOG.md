@@ -8,6 +8,12 @@ as the release notes, so a section is written before the tag is.
 
 Smaller improvements after the first release: editing, consistency of the interface, and small additions.
 
+### Added
+
+- **Canon CR2 imports** from cameras and cards, with embedded previews where available. Raw development is
+  experimental and limited to the EOS 7D's full-resolution 14-bit RAW files. Other Canon bodies and reduced-size
+  sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
+
 ### Changed
 
 - **Editor sliders** read their state at a glance: a changed one has its name in full contrast with a dot after
@@ -15,12 +21,17 @@ Smaller improvements after the first release: editing, consistency of the interf
   a LUT's or a filter's amount, the brush and spot sizes and a colour's spread fill from the left rather than from
   their default. Temperature and tint start from **As Shot**, named at their centre, on tracks that run from blue to
   amber and from green to magenta.
-
-### Added
-
-- **Canon CR2 imports** from cameras and cards, with embedded previews where available. Raw development is
-  experimental and limited to the EOS 7D's full-resolution 14-bit RAW files. Other Canon bodies and reduced-size
-  sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
+- The note that LUTs made for Log video expect Log footage is shown under a chosen Log LUT only, not under the
+  looks for everyone who has not imported a LUT.
+- Settings with a few exclusive values (tab position, theme, grid size, how long the trash keeps photos, JPEG
+  quality) are segmented buttons, and the library's kind filters look like the app's other filter chips instead of
+  turning black when chosen.
+- **One icon family:** close, more, back, delete, play, the map pin, the arrows and zoom in, and undo, redo, auto
+  and the library tab, were filled Material symbols; they are drawn as outlines like the app's other icons. A
+  reject button shows the same crossed circle as a rejected photo's badge.
+- **Empty screens** show an icon, a sentence and one way on: a library narrowed to nothing offers *Show everything*,
+  which takes off the kind, flag, stars and album at once. The map's card says that online maps are off. Secondary
+  buttons are tonal rather than outlined, beside one filled button for the main action.
 
 ## [0.1.0] - 2026-10-27
 

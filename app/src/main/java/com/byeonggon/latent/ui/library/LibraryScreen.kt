@@ -34,16 +34,12 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +47,6 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -80,7 +75,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -111,6 +105,7 @@ import java.util.Locale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.ui.common.localFormat
+import com.byeonggon.latent.ui.common.EmptyState
 
 
 /**
@@ -259,7 +254,19 @@ private fun LibraryContent(
                 LargeTitle(state, viewModel, onSettings, dialogs)
                 KindFilters(state, viewModel)
             }
-            EmptyLibrary(noItemsAtAll = state.libraryIsEmpty, trash = state.showingTrash, onPhonePhotos = viewModel::choosePhoneFolders, searching = state.query.isActive, onClearSearch = viewModel::clearQuery)
+            EmptyLibrary(
+                noItemsAtAll = state.libraryIsEmpty,
+                trash = state.showingTrash,
+                onPhonePhotos = viewModel::choosePhoneFolders,
+                searching = state.query.isActive,
+                onClearSearch = viewModel::clearQuery,
+                onShowEverything = {
+                    viewModel.setFilter(LibraryFilter.ALL)
+                    viewModel.setFlagFilter(FlagFilter.ALL)
+                    viewModel.setLeastRating(0)
+                    viewModel.showAlbum(null)
+                },
+            )
         } else {
             Box(Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
@@ -531,17 +538,11 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LibraryFilter.entries.forEach { filter ->
+            // The same selected style as the app's other filter chips (UI guide §8.3).
             FilterChip(
                 selected = filter == state.filter,
                 onClick = { viewModel.setFilter(filter) },
                 label = { Text(stringResource(filter.label)) },
-                shape = RoundedCornerShape(50),
-                border = null,
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    selectedContainerColor = MaterialTheme.colorScheme.onSurface,
-                    selectedLabelColor = MaterialTheme.colorScheme.surface,
-                ),
             )
         }
         if (state.flagFilter != FlagFilter.ALL) {
@@ -549,8 +550,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.setFlagFilter(FlagFilter.ALL) },
                 label = { Text(stringResource(state.flagFilter.label)) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.flag_filter_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.flag_filter_clear), modifier = Modifier.size(16.dp)) },
             )
         }
         // The album the library is narrowed to shows too, and can be left.
@@ -559,8 +559,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.showAlbum(null) },
                 label = { Text(shown.album.name) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.album_filter_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.album_filter_clear), modifier = Modifier.size(16.dp)) },
             )
         }
         // A search shows as one chip, and is taken off with it; the magnifying glass changes it.
@@ -569,8 +568,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.clearQuery() },
                 label = { Text(pluralStringResource(R.plurals.find_conditions, state.query.count, state.query.count)) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.find_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.find_clear), modifier = Modifier.size(16.dp)) },
             )
         }
         // Narrowing by stars is chosen from the menu; here it shows, and can be taken off.
@@ -579,8 +577,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.setLeastRating(0) },
                 label = { Text(stringResource(R.string.rating_at_least, state.leastRating)) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.rating_filter_clear), modifier = Modifier.size(16.dp)) },
-                shape = RoundedCornerShape(50),
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.rating_filter_clear), modifier = Modifier.size(16.dp)) },
             )
         }
     }
@@ -594,7 +591,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
     Row(verticalAlignment = Alignment.CenterVertically) {
     IconButton(onClick = { dialogs.finding = true }) { Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.find)) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
+        IconButton(onClick = { open = true }) { Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.filter_by_rating)) },
@@ -711,32 +708,22 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
 private fun dayTitle(date: LocalDate): String =
     date.format(localFormat(if (date.year == LocalDate.now().year) "MMMMdEEEE" else "yMMMMdEEEE"))
 
+/** The library or the trash with nothing to show, and the one way on from there: the trash needs none. */
 @Composable
-private fun EmptyLibrary(noItemsAtAll: Boolean, trash: Boolean, onPhonePhotos: () -> Unit, searching: Boolean = false, onClearSearch: () -> Unit = {}) {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(
-                text = if (trash) {
-                    stringResource(R.string.trash_is_empty)
-                } else if (noItemsAtAll) {
-                    stringResource(R.string.library_is_empty)
-                } else if (searching) {
-                    stringResource(R.string.find_nothing)
-                } else {
-                    stringResource(R.string.nothing_of_kind)
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            // The phone's own photos can fill an empty library without a camera.
-            if (noItemsAtAll && !trash) {
-                OutlinedButton(onClick = onPhonePhotos) { Text(stringResource(R.string.phone_folders)) }
-            }
-            if (searching && !noItemsAtAll && !trash) {
-                OutlinedButton(onClick = onClearSearch) { Text(stringResource(R.string.find_clear)) }
-            }
-        }
+private fun EmptyLibrary(
+    noItemsAtAll: Boolean,
+    trash: Boolean,
+    onPhonePhotos: () -> Unit,
+    searching: Boolean,
+    onClearSearch: () -> Unit,
+    onShowEverything: () -> Unit,
+) {
+    when {
+        trash -> EmptyState(R.drawable.ic_delete, stringResource(R.string.trash_is_empty))
+        // The phone's own photos can fill an empty library without a camera.
+        noItemsAtAll -> EmptyState(R.drawable.ic_photo_library, stringResource(R.string.library_is_empty), action = stringResource(R.string.phone_folders), onAction = onPhonePhotos)
+        searching -> EmptyState(R.drawable.ic_search, stringResource(R.string.find_nothing), action = stringResource(R.string.find_clear), onAction = onClearSearch)
+        else -> EmptyState(R.drawable.ic_photo_library, stringResource(R.string.nothing_of_kind), action = stringResource(R.string.show_everything), onAction = onShowEverything)
     }
 }
 

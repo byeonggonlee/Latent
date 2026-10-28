@@ -33,9 +33,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,7 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -267,7 +264,7 @@ fun EditorScreen(itemId: Long, onClose: () -> Unit, viewModel: EditorViewModel =
                 windowInsets = SafeInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = closeUnlessChanged) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close)) }
+                    IconButton(onClick = closeUnlessChanged) { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.close)) }
                 },
                 actions = {
                     IconButton(onClick = viewModel::undo, enabled = ready && state.canUndo) {
@@ -450,7 +447,7 @@ private fun MoreMenu(
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }, enabled = enabled) {
-            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
+            Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.more))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             if (histogram != null) {
@@ -730,7 +727,7 @@ private fun EditorPanel(
                     EditorTab.LIGHT -> {
                         ToolRow {
                             Choices(LightTools.entries, lightTools, { stringResource(it.label) }, { lightTools = it })
-                            OutlinedButton(onClick = viewModel::autoAdjust, enabled = enabled) {
+                            FilledTonalButton(onClick = viewModel::autoAdjust, enabled = enabled) {
                                 Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
                                 Text(stringResource(R.string.auto), modifier = Modifier.padding(start = 6.dp))
                             }
@@ -922,14 +919,14 @@ private fun FramingControls(
 
     // Turning, flipping and the lens first: in a short panel they are what is seen without scrolling.
     ToolRow {
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 onFraming(framing.turnedClockwise())
                 onDone()
             },
             enabled = enabled,
         ) { Text(stringResource(R.string.rotate_90)) }
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 onFraming(framing.mirrored())
                 onDone()
@@ -960,7 +957,7 @@ private fun FramingControls(
         }
     }
     ToolRow {
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 onLevel { angle ->
                     reframed(framing.copy(angle = angle))
@@ -1033,6 +1030,6 @@ private fun OpenFailed(raw: Boolean, onClose: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        OutlinedButton(onClick = onClose) { Text(stringResource(R.string.close)) }
+        FilledTonalButton(onClick = onClose) { Text(stringResource(R.string.close)) }
     }
 }
