@@ -24,7 +24,7 @@ internal object CanonCr2 {
         request.checkSamples(metadata.width.toLong() * metadata.height)
         val sensor = CanonCr2Sensor.decode(file, metadata, request.checkCancelled)
         val image = ArwImage(metadata.width, metadata.height, metadata.crop[0], metadata.crop[1], metadata.crop[2], metadata.crop[3],
-            2048, 16383, metadata.whiteBalance, EOS_7D_MATRIX, 1f, null, metadata.orientation, sensor, cfaPattern=CfaPattern.GBRG)
+            2048, metadata.whiteLevel, metadata.whiteBalance, EOS_7D_MATRIX, 1f, null, metadata.orientation, sensor, cfaPattern=CfaPattern.GBRG)
         return DecodedFrame(image, RawFormat.CANON_CR2, 14, emptySet())
     }
 }

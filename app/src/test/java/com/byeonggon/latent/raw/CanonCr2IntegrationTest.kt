@@ -1,5 +1,7 @@
 package com.byeonggon.latent.raw
 
+import com.byeonggon.latent.enhance.LinearImage
+
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.raw.api.DecodeFailure
 import com.byeonggon.latent.raw.api.DecodeFailureReason
@@ -15,9 +17,11 @@ import java.nio.ByteOrder
 
 class CanonCr2IntegrationTest {
     @get:Rule val temp = TemporaryFolder()
-    private fun validFile(): ByteArray {
+    private fun validFile(clippedAt: Int? = null, whiteLevel: Int = 12279): ByteArray {
         val file=CanonCr2MetadataTest().fixture()
+        ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN).putShort(1100 + 2 * 0x2d0, whiteLevel.toShort())
         val flat = IntArray(96) { i ->
+            if (clippedAt != null) return@IntArray clippedAt
             val inSlice = i % 32
             if (inSlice / 4 % 2 == 0) { if (inSlice % 2 == 0) 4000 else 3000 }
             else { if (inSlice % 2 == 0) 5000 else 4000 }
@@ -45,6 +49,31 @@ class CanonCr2IntegrationTest {
         val preview=RawDeveloper.developPreview(frame.legacyImage)
         assertTrue(preview.red.first() > preview.green.first())
         assertTrue(preview.blue.first() < preview.green.first())
+    }
+
+    @Test fun usesTheShotsWhiteLevelInsteadOfTheBitDepthMaximum() {
+        for (white in intArrayOf(11222, 12279)) {
+            val file = temp.newFile("white-$white.CR2").apply { writeBytes(validFile(whiteLevel = white)) }
+            val image = DecoderDispatch.decode(DecodeRequest(file)).legacyImage
+            assertEquals(white, image.whiteLevel)
+        }
+    }
+
+    @Test fun fullySaturatedPhotositesDevelopNeutralInsteadOfMagenta() {
+        val file = temp.newFile("clipped.CR2").apply { writeBytes(validFile(clippedAt = 12648, whiteLevel = 11222)) }
+        val image = DecoderDispatch.decode(DecodeRequest(file)).legacyImage
+        for (developed in listOf(RawDeveloper.developPreview(image), RawDeveloper.develop(image))) {
+            for (channel in listOf(developed.red, developed.green, developed.blue)) {
+                assertTrue("Every clipped channel must be white", channel.all { it.toInt() == LinearImage.MAX_LEVEL })
+            }
+        }
+    }
+
+    @Test fun rejectsMissingOrInvalidWhiteLevelsInsteadOfFallingBackTo16383() {
+        for (white in intArrayOf(0, 2048, 2049, 2063, 16384, 65535)) {
+            val file = temp.newFile("invalid-white-$white.CR2").apply { writeBytes(validFile(whiteLevel = white)) }
+            assertThrows(DecodeFailure::class.java) { DecoderDispatch.decode(DecodeRequest(file)) }
+        }
     }
 
     @Test fun anUncalibratedCanonModelIsRejectedAsUnsupported() {

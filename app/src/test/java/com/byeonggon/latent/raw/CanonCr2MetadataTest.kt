@@ -25,6 +25,7 @@ class CanonCr2MetadataTest {
         val sensor = intArrayOf(34,12,8,1,1,0,0,11,7,0,0,0,0,0,0,0,0)
         sensor.forEachIndexed { i,v -> b.putShort(1024 + i*2,v.toShort()) }
         b.putShort(1100,7)
+        b.putShort(1100 + 2 * 0x2d0, 12279)
         intArrayOf(2048,1024,1024,1536).forEachIndexed { i,v -> b.putShort(1100+2*(63+i),v.toShort()) }
         dir(4000,listOf(intArrayOf(0x103,3,1,6),intArrayOf(0x111,4,1,6000),intArrayOf(0x117,4,1,20),intArrayOf(0xc640,3,3,4100)))
         intArrayOf(2,4,4).forEachIndexed { i,v -> b.putShort(4100+2*i,v.toShort()) }
@@ -38,6 +39,7 @@ class CanonCr2MetadataTest {
         assertArrayEquals(intArrayOf(0,0,12,8),m.crop)
         assertArrayEquals(floatArrayOf(2f,1f,1.5f),m.whiteBalance,0.0001f)
         assertArrayEquals(intArrayOf(2,4,4),m.slices)
+        assertEquals(12279, m.whiteLevel)
         assertEquals(6000,m.offset); assertEquals(20,m.length)
     }
 

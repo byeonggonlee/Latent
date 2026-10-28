@@ -7,7 +7,7 @@ import java.io.IOException
 
 class CanonCr2SensorTest {
     private fun metadata(width: Int = 8, height: Int = 2) = CanonCr2Metadata.Metadata(
-        "Canon EOS 7D", width, height, 1, intArrayOf(0,0,width,height), floatArrayOf(2f,1f,1.5f),
+        "Canon EOS 7D", width, height, 1, intArrayOf(0,0,width,height), floatArrayOf(2f,1f,1.5f), 12279,
         intArrayOf(1,4,4), 0, 0,
     )
 

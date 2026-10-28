@@ -16,6 +16,12 @@ Smaller improvements after the first release: editing, consistency of the interf
   their default. Temperature and tint start from **As Shot**, named at their centre, on tracks that run from blue to
   amber and from green to magenta.
 
+### Added
+
+- **Canon CR2 imports** from cameras and cards, with embedded previews where available. Raw development is
+  experimental and limited to the EOS 7D's full-resolution 14-bit RAW files. Other Canon bodies and reduced-size
+  sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
+
 ## [0.1.0] - 2026-10-27
 
 The first release. Latent is an Android app that brings photos in from a camera over USB, places them on the map

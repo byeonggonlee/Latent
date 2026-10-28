@@ -4,7 +4,7 @@ import java.io.IOException
 
 /** CR2 structure and camera settings; unfamiliar layouts are refused instead of guessed. */
 internal object CanonCr2Metadata {
-    data class Metadata(val model: String, val width: Int, val height: Int, val orientation: Int, val crop: IntArray, val whiteBalance: FloatArray, val slices: IntArray, val offset: Int, val length: Int)
+    data class Metadata(val model: String, val width: Int, val height: Int, val orientation: Int, val crop: IntArray, val whiteBalance: FloatArray, val whiteLevel: Int, val slices: IntArray, val offset: Int, val length: Int)
 
     fun read(bytes: ByteArray): Metadata = try {
         if (bytes.size < 16 || bytes[8] != 'C'.code.toByte() || bytes[9] != 'R'.code.toByte() ||
@@ -24,6 +24,11 @@ internal object CanonCr2Metadata {
             left.toLong() + cropWidth > width || top.toLong() + cropHeight > height) throw IOException("Invalid sensor crop")
         val colour = maker.ints(0x4001)?.takeIf { it.size == 1337 && it[0] == 7 }
             ?: throw IOException("Unsupported Canon colour metadata")
+        // ColorData version 7, unsigned SHORT index 720 (ExifTool's SpecularWhiteLevel).
+        // Use the shot's declared level conservatively, not the 14-bit encoding limit or the
+        // image's brightest photosite (which need not have saturated). See the CR2 report.
+        val whiteLevel = colour[0x2d0]
+        if (whiteLevel !in 2064..16383) throw IOException("Invalid Canon white level")
         val wb = colour.copyOfRange(63, 67)
         if (wb.any { it <= 0 } || wb[1] != wb[2]) throw IOException("Unsupported as-shot white balance")
         val raw = TiffDirectory.read(data, data.getInt(12))
@@ -34,7 +39,7 @@ internal object CanonCr2Metadata {
         val slices = raw.ints(0xc640) ?: throw IOException("Missing raw slice layout")
         Metadata(model, width, height, main.int(0x112)?.takeIf { it in 1..8 } ?: 1,
             intArrayOf(left, top, cropWidth.toInt(), cropHeight.toInt()),
-            floatArrayOf(wb[0].toFloat() / wb[1], 1f, wb[3].toFloat() / wb[1]), slices, offset, length)
+            floatArrayOf(wb[0].toFloat() / wb[1], 1f, wb[3].toFloat() / wb[1]), whiteLevel, slices, offset, length)
     } catch (e: IndexOutOfBoundsException) {
         throw IOException("Damaged Canon raw metadata", e)
     }

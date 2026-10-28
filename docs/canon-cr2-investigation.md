@@ -20,3 +20,36 @@ On the scene sample, the app's rendered image looks noticeably yellower than its
 ## Checks so far
 
 Synthetic tests cover slice reordering, MakerNote bounds and white balance, lossless-JPEG geometry, dispatch and the four Bayer phases. On an API 36 emulator, the sample decoded, generated a thumbnail, loaded its embedded preview, and exported at full resolution; the measured full-resolution export was about 9.8 seconds in that run. This is not a physical-device performance result. The sample test is optional and requires `CANON_7D_SAMPLE` to point to file 131; the image must remain outside the repository.
+
+## Review follow-up: highlight white level
+
+Claude Opus 5.5's review of `30cbeb3` found that the fixed 16383 white level made fully saturated highlights
+magenta. The scene has a plateau at 12648–12651; a fully clipped 2 × 2 block developed as
+(16383, 7463, 16383). New synthetic and external-sample regressions reproduced this before the change.
+
+The decoder now uses the shot's `SpecularWhiteLevel`, unsigned SHORT index 720 (`0x2d0`) of ColorData version 7,
+as documented in [ExifTool's Canon ColorData4 tags](https://exiftool.org/TagNames/Canon.html#ColorData4).
+It rejects a missing/zero level, one less than 16 counts above the fixed 2048 black level, or a value above the
+14-bit encoding range, instead of silently reverting to 16383. It does not estimate white from a scene's maximum
+or guess an ISO table. The regression checks the resulting `ArwImage` level and neutral highlights through both
+preview and full demosaicing; the external scene test covers the 100 known fully clipped 2 × 2 blocks instead of
+filtering highlights out. A separate optional `CANON_7D_CHART_SAMPLE` test uses file 1183 to ensure that an
+unclipped scene retains its metadata white level rather than being stretched to the brightest photosite.
+
+This is a **conservative metadata cutoff, not a measurement of the true sensor saturation point**. In the
+ISO 1250 sample it is 11222, below the observed plateau at 12651; this may discard about 0.21 stops of top-end
+headroom after black subtraction. In the ISO 100 chart it is 12279, above every photosite in the active image, which
+therefore cannot validate that ISO's saturation point. The relation between Canon's field and true saturation
+still needs measurements at more ISOs. The independent reviewer must re-check this tradeoff; the draft and its
+colour-validation gate remain in place. The provisional colour matrix was not changed by this fix.
+
+The 0.2.0 changelog now distinguishes CR2 import/preview support from the limited EOS 7D raw development.
+The review's optional suggestion to avoid holding two mosaics during slice reordering remains deferred.
+
+Follow-up validation (2026-10-28): with both sample environment variables set,
+`testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest assembleDebug` passed: 842 JVM tests,
+0 failures/errors, 4 unrelated sample-dependent skips; the CR2 sample tests all ran. Lint reported 0 errors and
+14 warnings. `git diff --exit-code -- app/schemas` and `git diff --check` passed. The corrected build also passed
+all three CR2 instrumentation tests on the API 36 ARM64 emulator: thumbnail, embedded preview and a
+5184 × 3456 export (about 7.6 seconds; 576 MiB heap cap in this run). The S24 Ultra was not connected, so this is
+not a real-phone colour or memory/performance result.
