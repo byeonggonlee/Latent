@@ -195,6 +195,17 @@ class EditorFlowTest {
     }
 
     @Test
+    fun temperatureAndTintReadAsShotAtTheirCentre() {
+        openEditor("DSC00001.JPG")
+        compose.onNodeWithText("색상").performClick()
+        compose.onAllNodesWithText("촬영 시 설정").assertCountEquals(2)
+
+        slide("색온도", to = 0.3f)
+        compose.onNodeWithText("+30").assertIsDisplayed()
+        compose.onAllNodesWithText("촬영 시 설정").assertCountEquals(1)
+    }
+
+    @Test
     fun keepsTheEditWhenPuttingTheOriginalBackIsCancelled() {
         openEditor("DSC00001.JPG")
         slide("노출", to = 1f)

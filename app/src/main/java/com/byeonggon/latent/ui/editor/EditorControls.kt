@@ -65,6 +65,8 @@ internal enum class Control(
     val stepsPerUnit: Int = 100,
     /** Starts at zero instead of reaching as far below it as above. */
     val addsOnly: Boolean = false,
+    /** The colours the track runs through, for a scale that is a colour. */
+    val track: List<Color>? = null,
 ) {
     EXPOSURE(R.string.control_exposure, Adjustment.EXPOSURE, limit = 3f, stepsPerUnit = 20),
     CONTRAST(R.string.control_contrast, Adjustment.CONTRAST),
@@ -72,8 +74,8 @@ internal enum class Control(
     SHADOWS(R.string.control_shadows, Adjustment.SHADOWS),
     WHITES(R.string.control_whites, Adjustment.WHITES),
     BLACKS(R.string.control_blacks, Adjustment.BLACKS),
-    TEMPERATURE(R.string.control_temperature, Adjustment.TEMPERATURE),
-    TINT(R.string.control_tint, Adjustment.TINT),
+    TEMPERATURE(R.string.control_temperature, Adjustment.TEMPERATURE, track = listOf(Color(0xFF5B9BFF), Color(0xFFFFB04A))),
+    TINT(R.string.control_tint, Adjustment.TINT, track = listOf(Color(0xFF5FC86A), Color(0xFFD45FD0))),
     VIBRANCE(R.string.control_vibrance, Adjustment.VIBRANCE),
     SATURATION(R.string.control_saturation, Adjustment.SATURATION),
     TEXTURE(R.string.control_texture, Adjustment.TEXTURE),
@@ -107,10 +109,18 @@ internal fun signed(value: Float): String = String.format(Locale.US, "%+d", valu
 
 private const val SNAP_TO_ZERO = 0.03f
 
+/** The track of a hue: round the colour wheel from red back to red. */
+internal val HUE_TRACK = List(13) { Color.hsv(it * 30f % 360f, 0.85f, 0.95f) }
+
 /**
  * A slider under its name and value. Tapping the value puts it back to [untouched], or, where
- * [parseEntry] says how to read a typed number, opens a box to type one in and a double tap puts it back.
- * [onDone] is called when the slider is let go of. [hues] gives the track the colours of the rainbow.
+ * [parseEntry] says how to read a typed number, opens a box to type one in ([typedText] is how the value
+ * reads there) and a double tap puts it back. [onDone] is called when the slider is let go of.
+ *
+ * The track is filled from [reference] to the thumb: [untouched] for a setting that goes either way from it, the
+ * start of [range] for one that only grows from nothing, however far it starts. A setting away from [untouched]
+ * has its name at full contrast and a dot after it, unless it is a tool's own ([edits] false), such as a brush's
+ * size, which is no part of the photo's edit. [colours] paints the track for a scale that is a colour.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -123,14 +133,17 @@ internal fun SettingSlider(
     onChange: (Float) -> Unit,
     onDone: () -> Unit,
     untouched: Float = 0f,
-    hues: Boolean = false,
+    reference: Float = untouched,
+    edits: Boolean = true,
+    colours: List<Color>? = null,
+    typedText: String = valueText,
     parseEntry: ((String) -> Float?)? = null,
 ) {
     var typing by remember { mutableStateOf(false) }
     if (typing && parseEntry != null) {
         ValueEntryDialog(
             label = label,
-            initial = valueText.removePrefix("+").removeSuffix("°"),
+            initial = typedText.removePrefix("+").removeSuffix("°"),
             parse = parseEntry,
             onEntered = { entered ->
                 onChange(entered)
@@ -144,13 +157,19 @@ internal fun SettingSlider(
         )
     }
     Column(Modifier.padding(horizontal = 20.dp, vertical = 2.dp)) {
+        val changed = edits && value != untouched
+        val text = if (changed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            // The dot comes after the name, so that the name stays where it is when the setting changes.
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.bodyMedium, color = text, modifier = Modifier.weight(1f, fill = false))
+                if (changed) Box(Modifier.padding(start = 6.dp).size(6.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+            }
             Text(
                 valueText,
                 style = MaterialTheme.typography.bodyMedium.tabular,
                 textAlign = TextAlign.End,
-                color = if (value == untouched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                color = text,
                 // Room kept for the longest value, so its digits and sign can change without the label moving.
                 modifier = Modifier
                     .widthIn(min = 64.dp)
@@ -187,43 +206,48 @@ internal fun SettingSlider(
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().height(32.dp).semantics { contentDescription = label },
             thumb = {
+                // White with a dark edge, so that it shows on any track, the colour ones included.
                 Box(
                     Modifier
-                        .size(18.dp)
+                        .size(20.dp)
                         .shadow(2.dp, CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                        .padding(1.dp)
                         .background(if (enabled) Color.White else MaterialTheme.colorScheme.outline, CircleShape),
                 )
             },
             track = { state ->
                 val span = range.endInclusive - range.start
                 SettingTrack(
-                    from = (untouched - range.start) / span,
+                    from = (reference - range.start) / span,
                     to = (state.value - range.start) / span,
                     enabled = enabled,
-                    hues = hues,
+                    colours = colours,
                 )
             },
         )
     }
 }
 
-/** A track that is filled between where a setting changes nothing and where the slider stands, both from 0 to 1. */
+/**
+ * A track filled between the setting's reference and where the slider stands, both from 0 to 1, or painted with
+ * [colours] when the scale is a colour.
+ */
 @Composable
-private fun SettingTrack(from: Float, to: Float, enabled: Boolean, hues: Boolean) {
+private fun SettingTrack(from: Float, to: Float, enabled: Boolean, colours: List<Color>?) {
     val rest = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 0.35f else 0.2f)
     val filled = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.4f)
     Canvas(Modifier.fillMaxWidth().height(12.dp)) {
         val middle = size.height / 2
-        val line = 2.dp.toPx()
-        if (hues) {
-            val rainbow = Brush.horizontalGradient(List(13) { Color.hsv(it * 30f % 360f, 0.85f, 0.95f) })
-            drawLine(rainbow, Offset(0f, middle), Offset(size.width, middle), strokeWidth = line * 2, cap = StrokeCap.Round, alpha = if (enabled) 1f else 0.4f)
-            return@Canvas
+        val line = 4.dp.toPx()
+        if (colours != null) {
+            drawLine(Brush.horizontalGradient(colours), Offset(0f, middle), Offset(size.width, middle), strokeWidth = line, cap = StrokeCap.Round, alpha = if (enabled) 1f else 0.4f)
+        } else {
+            drawLine(rest, Offset(0f, middle), Offset(size.width, middle), strokeWidth = line, cap = StrokeCap.Round)
+            drawLine(filled, Offset(size.width * from, middle), Offset(size.width * to, middle), strokeWidth = line)
         }
-        drawLine(rest, Offset(0f, middle), Offset(size.width, middle), strokeWidth = line, cap = StrokeCap.Round)
-        // A mark where the setting changes nothing, unless that is where the track starts.
+        // A mark at the reference, unless that is where the track starts.
         if (from > 0f) drawLine(rest, Offset(size.width * from, 0f), Offset(size.width * from, size.height), strokeWidth = 1.dp.toPx())
-        drawLine(filled, Offset(size.width * from, middle), Offset(size.width * to, middle), strokeWidth = line)
     }
 }
 

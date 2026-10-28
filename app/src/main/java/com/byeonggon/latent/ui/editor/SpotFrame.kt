@@ -158,6 +158,8 @@ internal fun SpotPanel(
         onChange = { onRadius((it * 1000).roundToInt() / 1000f) },
         onDone = {},
         untouched = DEFAULT_SPOT_RADIUS,
+        reference = SMALLEST_SPOT,
+        edits = false,
     )
     Row(modifier = Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         TextButton(

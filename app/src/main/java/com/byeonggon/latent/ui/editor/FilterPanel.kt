@@ -121,6 +121,7 @@ internal fun FilterPanel(
             onChange = { onAmount((it * 20).roundToInt() / 20f) },
             onDone = onDone,
             untouched = 1f,
+            reference = 0f,
         )
     }
 
@@ -166,6 +167,7 @@ internal fun FilterPanel(
             onChange = { onLutIntensity((it * 100).roundToInt() / 100f) },
             onDone = onDone,
             untouched = 1f,
+            reference = 0f,
         )
     }
     // Said before the first LUT is imported, and again when the one chosen seems to be for Log video.

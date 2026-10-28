@@ -241,6 +241,8 @@ internal fun LocalPanel(
             onChange = { onBrushRadius((it * 1000).roundToInt() / 1000f) },
             onDone = {},
             untouched = DEFAULT_BRUSH_RADIUS,
+            reference = 0.005f,
+            edits = false,
         )
     }
     if (current.mask.shape != MaskShape.LINEAR) {
@@ -253,6 +255,7 @@ internal fun LocalPanel(
             onChange = { onChange(replaced(current.copy(mask = current.mask.copy(feather = (it * 100).roundToInt() / 100f)))) },
             onDone = onDone,
             untouched = DEFAULT_FEATHER,
+            reference = 0f,
         )
     }
     // The tones within the mask that the edit applies to: dragging these in keeps it off the darkest or brightest parts.
@@ -343,6 +346,7 @@ internal fun LocalPanel(
             onChange = { onChange(replaced(current.copy(hueSpread = it.roundToInt().toFloat()))) },
             onDone = onDone,
             untouched = LocalEdit.DEFAULT_HUE_SPREAD,
+            reference = 5f,
         )
     }
     LOCAL_CONTROLS.forEach { control ->
@@ -355,6 +359,7 @@ internal fun LocalPanel(
             enabled = enabled,
             onChange = { position -> onChange(replaced(current.copy(adjustments = control.setting.set(current.adjustments, control.valueAt(position))))) },
             onDone = onDone,
+            colours = control.track,
         )
     }
 }

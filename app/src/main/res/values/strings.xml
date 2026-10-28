@@ -231,6 +231,7 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
     <string name="control_blacks">Blacks</string>
     <string name="control_temperature">Temperature</string>
     <string name="control_tint">Tint</string>
+    <string name="as_shot">As Shot</string>
     <string name="control_vibrance">Vibrance</string>
     <string name="control_saturation">Saturation</string>
     <string name="control_texture">Texture</string>

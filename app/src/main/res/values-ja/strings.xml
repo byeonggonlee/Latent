@@ -206,6 +206,7 @@
     <string name="control_blacks">黒レベル</string>
     <string name="control_temperature">色温度</string>
     <string name="control_tint">色かぶり補正</string>
+    <string name="as_shot">撮影時の設定</string>
     <string name="control_vibrance">自然な彩度</string>
     <string name="control_saturation">彩度</string>
     <string name="control_texture">テクスチャ</string>

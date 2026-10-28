@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 items 3–7, the small UI ones, one at a time, each straight to `main`: sliders, the LUT note, choices, outline icons, empty states | `claude/ui-polish-020` | `ui/editor/` sliders and filter panel, `ui/settings/`, the library's chips, icons across `ui/` | 2026-10-28 |
+| Claude Code (computer) | 0.2.0 items 4–7, the small UI ones, one at a time, each straight to `main`: the LUT note, choices, outline icons, empty states (item 3, sliders, is done) | `claude/ui-polish-020` | `ui/editor/` filter panel, `ui/settings/`, the library's chips, icons across `ui/` | 2026-10-28 |
 
 ## For Codex
 
@@ -546,6 +546,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-28 | Claude Code (computer) | 0.2.0 item 3, sliders (UI guide §8.6): the fill runs from a reference, the left end for a setting that only grows (*Feather*, LUT and filter amounts, brush and spot sizes, colour spread), so none fills from its default; a changed setting's name at full contrast with an accent dot (not for a tool's own size); a 20 dp white thumb with a dark edge and a 4 dp track; temperature and tint read As Shot at their centre, on blue–amber and green–magenta tracks, and type in from 0. Checked on the Android 16 emulator with a raw; Kelvin beside the offset is not shown yet | this commit |
 | 2026-10-27 | Claude Code (computer) | `EditOnDeviceTest` compares the size of an Exif-rotated JPEG as shown and checks it is stored upright after healing; passes on the emulator with the public OnePlus JPEG and ILCE-7M2 ARW, RAW glow/brush/healing export included. PR #50 merged on the owner's instruction | `c78a449` (PR #50) and `8379c66` |
 | 2026-10-27 | Claude Code (computer) | Released 0.1.0 on the owner's instruction: changelog dated, `v0.1.0` tagged on `61aede2` after main's CI passed; the release workflow built and published the signed APK and AAB (versionCode 432). The feature freeze ends with it | [Latent 0.1.0](https://github.com/byeonggonlee/Latent/releases/tag/v0.1.0) |
 | 2026-10-27 | Codex | S24 Ultra release validation on main `674ed61`: 14 instrumentation tests passed without failures/skips; tone/detail and picker GPU parity, subject GPU/CPU, ZV-E10 full editing/export, thumbnails, real-video preparation; Korean light-theme bars, picker and selection menu checked. Sky uses CPU after GPU compile failure; physical-screen colour acceptance and broader signed-release checks remain explicit. Host CI checks pass | [S24 report](device-results/2026-10-27-s24-release.md) |

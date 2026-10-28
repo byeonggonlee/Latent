@@ -8,6 +8,14 @@ as the release notes, so a section is written before the tag is.
 
 Smaller improvements after the first release: editing, consistency of the interface, and small additions.
 
+### Changed
+
+- **Editor sliders** read their state at a glance: a changed one has its name in full contrast with a dot after
+  it, the thumb is white with a dark edge, and the track is filled from where the setting starts, so *Feather*,
+  a LUT's or a filter's amount, the brush and spot sizes and a colour's spread fill from the left rather than from
+  their default. Temperature and tint start from **As Shot**, named at their centre, on tracks that run from blue to
+  amber and from green to magenta.
+
 ## [0.1.0] - 2026-10-27
 
 The first release. Latent is an Android app that brings photos in from a camera over USB, places them on the map

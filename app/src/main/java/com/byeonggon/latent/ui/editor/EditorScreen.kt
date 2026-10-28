@@ -879,10 +879,14 @@ private fun Sliders(controls: List<Control>, adjustments: Adjustments, enabled: 
             label = stringResource(control.label),
             value = value,
             range = control.range,
-            valueText = control.describe(value),
+            // Temperature and tint move the light from the camera's own white balance, so their centre is As Shot,
+            // never a neutral white.
+            valueText = if (value == 0f && control in AS_SHOT) stringResource(R.string.as_shot) else control.describe(value),
             enabled = enabled,
             onChange = { position -> viewModel.adjust { control.setting.set(it, control.valueAt(position)) } },
             onDone = viewModel::commit,
+            colours = control.track,
+            typedText = control.describe(value),
             // Exposure is typed in stops, the others as the percentage the slider shows.
             parseEntry = { text -> readEntry(text, if (control == Control.EXPOSURE) 1f else 0.01f, control.range) },
         )
@@ -1008,6 +1012,9 @@ private const val GRAB_THRESHOLD = 4f
 private const val ZOOM_KEY_STEP = 1.25f
 
 private const val MAX_ANGLE = 30f
+
+/** The sliders that start from the camera's white balance. */
+private val AS_SHOT = setOf(Control.TEMPERATURE, Control.TINT)
 private const val ANGLE_SNAP = 0.3f
 
 /** In place of the picture when it could not be read: why, as far as is known, and the way out. */

@@ -206,6 +206,7 @@
     <string name="control_blacks">검정 계열</string>
     <string name="control_temperature">색온도</string>
     <string name="control_tint">색조</string>
+    <string name="as_shot">촬영 시 설정</string>
     <string name="control_vibrance">생동감</string>
     <string name="control_saturation">채도</string>
     <string name="control_texture">텍스처</string>

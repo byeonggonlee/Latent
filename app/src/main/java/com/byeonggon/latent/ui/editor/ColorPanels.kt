@@ -141,7 +141,7 @@ internal fun GradingPanel(grading: ColorGrading, enabled: Boolean, onChange: (Co
             enabled = enabled,
             onChange = { onChange(range.set(grading, tint.copy(hue = it.roundToInt().toFloat()))) },
             onDone = onDone,
-            hues = true,
+            colours = HUE_TRACK,
         )
         SettingSlider(
             label = stringResource(R.string.grading_amount),
