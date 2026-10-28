@@ -169,15 +169,15 @@ internal fun FilterPanel(
             untouched = 1f,
             reference = 0f,
         )
-    }
-    // Said before the first LUT is imported, and again when the one chosen seems to be for Log video.
-    if (state.luts.isEmpty() || state.luts.any { it.hash == lut?.id && CubeLut.isForLogFootage(it.name) }) {
-        Text(
-            stringResource(R.string.lut_log_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-        )
+        // Said by the LUT it is about, when the one chosen seems to be for Log video, and not under the looks.
+        if (state.luts.any { it.hash == lut.id && CubeLut.isForLogFootage(it.name) }) {
+            Text(
+                stringResource(R.string.lut_log_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+        }
     }
     FlowRow(Modifier.padding(horizontal = 8.dp)) {
         TextButton(

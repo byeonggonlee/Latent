@@ -15,6 +15,8 @@ Smaller improvements after the first release: editing, consistency of the interf
   a LUT's or a filter's amount, the brush and spot sizes and a colour's spread fill from the left rather than from
   their default. Temperature and tint start from **As Shot**, named at their centre, on tracks that run from blue to
   amber and from green to magenta.
+- The note that LUTs made for Log video expect Log footage is shown under a chosen Log LUT only, not under the
+  looks for everyone who has not imported a LUT.
 
 ## [0.1.0] - 2026-10-27
 
