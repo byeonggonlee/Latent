@@ -49,7 +49,7 @@ class JapaneseTest {
         compose.onNodeWithText("カメラがつながっていません。").assertIsDisplayed()
 
         compose.onNodeWithText("地図").performClick()
-        compose.onNodeWithText("写真を地図で見る").assertIsDisplayed()
+        compose.onNodeWithText("オンライン地図はオフです").assertIsDisplayed()
 
         compose.onNodeWithText("取り込み").performClick()
         compose.onNodeWithText("カメラの時計、タイムライン、位置情報の追加").performScrollTo().performClick()

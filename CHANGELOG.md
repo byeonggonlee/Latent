@@ -23,6 +23,9 @@ Smaller improvements after the first release: editing, consistency of the interf
 - **One icon family:** close, more, back, delete, play, the map pin, the arrows and zoom in, and undo, redo, auto
   and the library tab, were filled Material symbols; they are drawn as outlines like the app's other icons. A
   reject button shows the same crossed circle as a rejected photo's badge.
+- **Empty screens** show an icon, a sentence and one way on: a library narrowed to nothing offers *Show everything*,
+  which takes off the kind, flag, stars and album at once. The map's card says that online maps are off. Secondary
+  buttons are tonal rather than outlined, beside one filled button for the main action.
 
 ## [0.1.0] - 2026-10-27
 

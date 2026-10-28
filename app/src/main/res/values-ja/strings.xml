@@ -109,7 +109,8 @@
     <string name="trash_is_empty">ゴミ箱は空です。</string>
     <string name="library_is_empty">まだ写真がありません。
 取り込みタブでカメラをつないで写真を取り込むか、このスマートフォンの写真を表示できます。</string>
-    <string name="nothing_of_kind">この種類の項目はありません。</string>
+    <string name="nothing_of_kind">ライブラリの絞り込みに合う項目はありません。</string>
+    <string name="show_everything">すべて表示</string>
     <string name="video">動画</string>
     <string name="item_selected">選択中</string>
     <string name="edited">編集済み</string>
@@ -434,7 +435,7 @@
         <item quantity="other">星 %d 個</item>
     </plurals>
     <string name="tab_map">地図</string>
-    <string name="map_off_title">写真を地図で見る</string>
+    <string name="map_off_title">オンライン地図はオフです</string>
     <string name="map_off_text">Latent は、許可しないかぎりインターネットを使いません。写真を撮った場所を地図に表示するには、OpenStreetMap から地図の画像をダウンロードする必要があります。地図サーバーには、見ている地域とIPアドレスが伝わりますが、写真やファイル名、写真の場所の一覧は送られません。</string>
     <string name="map_turn_on">オンライン地図をオンにする</string>
     <string name="map_turn_off">オンライン地図をオフにする</string>

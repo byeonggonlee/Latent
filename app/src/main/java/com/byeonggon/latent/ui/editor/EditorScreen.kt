@@ -45,7 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -727,7 +727,7 @@ private fun EditorPanel(
                     EditorTab.LIGHT -> {
                         ToolRow {
                             Choices(LightTools.entries, lightTools, { stringResource(it.label) }, { lightTools = it })
-                            OutlinedButton(onClick = viewModel::autoAdjust, enabled = enabled) {
+                            FilledTonalButton(onClick = viewModel::autoAdjust, enabled = enabled) {
                                 Icon(painterResource(R.drawable.ic_auto_fix), contentDescription = null, modifier = Modifier.size(18.dp))
                                 Text(stringResource(R.string.auto), modifier = Modifier.padding(start = 6.dp))
                             }
@@ -919,14 +919,14 @@ private fun FramingControls(
 
     // Turning, flipping and the lens first: in a short panel they are what is seen without scrolling.
     ToolRow {
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 onFraming(framing.turnedClockwise())
                 onDone()
             },
             enabled = enabled,
         ) { Text(stringResource(R.string.rotate_90)) }
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 onFraming(framing.mirrored())
                 onDone()
@@ -957,7 +957,7 @@ private fun FramingControls(
         }
     }
     ToolRow {
-        OutlinedButton(
+        FilledTonalButton(
             onClick = {
                 onLevel { angle ->
                     reframed(framing.copy(angle = angle))
@@ -1030,6 +1030,6 @@ private fun OpenFailed(raw: Boolean, onClose: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        OutlinedButton(onClick = onClose) { Text(stringResource(R.string.close)) }
+        FilledTonalButton(onClick = onClose) { Text(stringResource(R.string.close)) }
     }
 }

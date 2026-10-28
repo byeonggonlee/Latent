@@ -26,7 +26,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -129,7 +129,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
                         Text(stringResource(R.string.import_from_card))
                     }
                 }
-                OutlinedButton(onClick = { pickCardFolder.launch(cardStart(context)) }, enabled = !syncState.isRunning) {
+                FilledTonalButton(onClick = { pickCardFolder.launch(cardStart(context)) }, enabled = !syncState.isRunning) {
                     Text(stringResource(if (folder == null) R.string.choose_card_folder else R.string.choose_another_folder))
                 }
             }
@@ -154,7 +154,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
                         Text(stringResource(R.string.all_dates_again))
                     }
                 }
-                OutlinedButton(onClick = { pickingDates = true }, enabled = !syncState.isRunning) {
+                FilledTonalButton(onClick = { pickingDates = true }, enabled = !syncState.isRunning) {
                     Text(stringResource(R.string.pick_dates))
                 }
             }
@@ -164,7 +164,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
         if (deletedFromPhone > 0) {
             SectionCard(stringResource(R.string.deleted_from_phone)) {
                 Text(pluralStringResource(R.plurals.deleted_from_phone_detail, deletedFromPhone, deletedFromPhone))
-                OutlinedButton(onClick = { confirmingReimport = true }, enabled = !syncState.isRunning) {
+                FilledTonalButton(onClick = { confirmingReimport = true }, enabled = !syncState.isRunning) {
                     Text(stringResource(R.string.allow_reimport))
                 }
             }
@@ -248,7 +248,7 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> 
         is SyncState.Scanning -> SectionCard(stringResource(R.string.progress)) {
             Text(pluralStringResource(R.plurals.reading_camera, state.found, state.found))
             LinearProgressIndicator(Modifier.fillMaxWidth())
-            OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+            FilledTonalButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
         }
         is SyncState.Transferring -> SectionCard(stringResource(R.string.progress)) {
             val context = LocalContext.current
@@ -267,7 +267,7 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> 
             if (state.cancelling) {
                 Hint(stringResource(R.string.stops_after_file))
             } else {
-                OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+                FilledTonalButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
             }
         }
         is SyncState.Finished -> SectionCard(stringResource(if (state.cancelled || state.outOfSpace) R.string.sync_stopped else R.string.sync_done)) {

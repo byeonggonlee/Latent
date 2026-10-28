@@ -84,6 +84,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import androidx.compose.material3.CardDefaults
 
 private const val MIN_ZOOM = 1.5f
 private const val MAX_ZOOM = 19f
@@ -125,8 +126,10 @@ private fun MapsOff(onTurnOn: () -> Unit) {
     var asking by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.tab_map), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 24.dp))
-        Card(Modifier.fillMaxWidth()) {
+        // A quiet card in the map's place, saying that online maps are off and how to turn them on (UI_GUIDE §8.11).
+        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(painterResource(R.drawable.ic_place), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
                 Text(stringResource(R.string.map_off_title), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.map_off_text), style = MaterialTheme.typography.bodyMedium)
                 Button(onClick = { asking = true }) { Text(stringResource(R.string.map_turn_on)) }

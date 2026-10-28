@@ -121,7 +121,8 @@
     <string name="trash_is_empty">The trash is empty.</string>
     <string name="library_is_empty">No photos yet.
 Connect a camera on the Import tab to bring photos in, or list the photos on this phone.</string>
-    <string name="nothing_of_kind">Nothing of this kind.</string>
+    <string name="nothing_of_kind">Nothing here matches what the library is narrowed to.</string>
+    <string name="show_everything">Show everything</string>
     <string name="video">Video</string>
     <string name="item_selected">Selected</string>
     <string name="edited">Edited</string>
@@ -465,7 +466,7 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
         <item quantity="other">%d stars</item>
     </plurals>
     <string name="tab_map">Map</string>
-    <string name="map_off_title">Your photos on a map</string>
+    <string name="map_off_title">Online maps are off</string>
     <string name="map_off_text">Latent does not use the internet unless you let it. To show where your photos were taken on a map, it has to download map pictures from OpenStreetMap. The map server learns which areas you look at, and your IP address; it is never sent your photos, their names or their places as a list.</string>
     <string name="map_turn_on">Turn on online maps</string>
     <string name="map_turn_off">Turn off online maps</string>

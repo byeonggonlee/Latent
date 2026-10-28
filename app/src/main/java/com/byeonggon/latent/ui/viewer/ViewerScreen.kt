@@ -59,7 +59,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -569,7 +569,7 @@ private fun Details(
         Stars(item.rating, onRate, Modifier.offset(x = (-10).dp))
         Flags(item.flag, onFlag = onFlag)
         if (state.edited && item.kind != MediaKind.VIDEO) {
-            OutlinedButton(onClick = onRestore, enabled = !state.busy) { Text(stringResource(R.string.restore_original)) }
+            FilledTonalButton(onClick = onRestore, enabled = !state.busy) { Text(stringResource(R.string.restore_original)) }
         }
         AllExif(state.allDetails)
     }

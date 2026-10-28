@@ -26,7 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
@@ -144,7 +144,7 @@ internal fun LocalPanel(
             FilterChip(selected = index == selected, onClick = { onSelect(index) }, enabled = enabled, label = { Text(nameOf(local, index)) })
         }
         for ((shape, label) in listOf(MaskShape.BRUSH to R.string.add_brush, MaskShape.LINEAR to R.string.add_linear, MaskShape.RADIAL to R.string.add_radial, MaskShape.EVERYWHERE to R.string.add_colour)) {
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = {
                     onChange(locals + LocalEdit(newMask(shape), hue = FIRST_HUE.takeIf { shape == MaskShape.EVERYWHERE }))
                     onDone()
@@ -154,7 +154,7 @@ internal fun LocalPanel(
             ) { Text(stringResource(label)) }
         }
         for ((kind, inverted, label) in DETECTED_MASKS.filter { it.first in detecting.available }) {
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = { detecting.onAdd(kind, inverted) },
                 enabled = enabled && detecting.busy == null && locals.size < MOST_MASKS,
             ) { Text(stringResource(label)) }
@@ -288,7 +288,7 @@ internal fun LocalPanel(
         modifier = Modifier.padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedButton(onClick = onPickColour, enabled = enabled) { Text(stringResource(R.string.pick_colour_from_photo)) }
+        FilledTonalButton(onClick = onPickColour, enabled = enabled) { Text(stringResource(R.string.pick_colour_from_photo)) }
         Box {
             TextButton(onClick = { colourOptions = true }, enabled = enabled) { Text(stringResource(R.string.colour_options)) }
             DropdownMenu(expanded = colourOptions, onDismissRequest = { colourOptions = false }) {

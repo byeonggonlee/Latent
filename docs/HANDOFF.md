@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 item 7, empty states, the map's off card and button hierarchy, straight to `main` (items 3–6 are done) | `claude/ui-polish-020` | screens across `ui/` | 2026-10-28 |
 
 ## For Codex
 
@@ -546,6 +545,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-28 | Claude Code (computer) | 0.2.0 item 7: a shared `EmptyState` (48 dp outline icon, one sentence, at most one filled button) for the library, the trash, a search and a library narrowed to nothing, whose *Show everything* clears kind, flag, stars and album; the map's off card says "Online maps are off" with the pin icon on `surfaceContainer`; every secondary `OutlinedButton` is a `FilledTonalButton` (UI guide §8.2). Checked on the Android 16 emulator. 0.2.0's small UI items 3–7 are done | this commit |
 | 2026-10-28 | Claude Code (computer) | 0.2.0 items 4–6: the Log LUT note only under a chosen Log LUT; settings' exclusive choices (tab position, theme, grid size, trash days, JPEG quality) as segmented buttons of one height, the library's kind chips in the default filter-chip style; the last filled Material icons (close, more, back, delete, play, map pin, arrows, zoom in) and the filled undo, redo, auto and library-tab drawables redrawn as 1.7 dp outlines, reject shown as the badge's crossed circle, the unused Material icons library dropped, `IconFamilyTest` added. Checked on the Android 16 emulator in Korean and English | `c281ea3`, `7e81b2a`, `36579f2` |
 | 2026-10-28 | Claude Code (computer) | Reviewed Codex's draft PR #51 (EOS 7D CR2) at `30cbeb3`: one P1, the white level fixed at 16383 while the ISO 1250 CC0 sample clips at 12648–12651, so blown highlights develop magenta (measured (1.0, 0.46, 1.0) linear, neutral at the observed clip point); bounds, slices, the Bayer seam, black level and cancellation checked; 145 raw tests pass with the sample | [Review](https://github.com/byeonggonlee/Latent/pull/51#pullrequestreview-5681951645) |
 | 2026-10-28 | Claude Code (computer) | 0.2.0 item 3, sliders (UI guide §8.6): the fill runs from a reference, the left end for a setting that only grows (*Feather*, LUT and filter amounts, brush and spot sizes, colour spread), so none fills from its default; a changed setting's name at full contrast with an accent dot (not for a tool's own size); a 20 dp white thumb with a dark edge and a 4 dp track; temperature and tint read As Shot at their centre, on blue–amber and green–magenta tracks, and type in from 0. Checked on the Android 16 emulator with a raw; Kelvin beside the offset is not shown yet | this commit |

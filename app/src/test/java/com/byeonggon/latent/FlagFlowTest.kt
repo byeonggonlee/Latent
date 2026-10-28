@@ -94,6 +94,20 @@ class FlagFlowTest {
     }
 
     @Test
+    fun aLibraryNarrowedToNothingSaysSoAndShowsEverythingAgain() {
+        waitForPhotos()
+        val model = ViewModelProvider(compose.activity)[LibraryViewModel::class.java]
+        compose.onNodeWithText("동영상").performClick()
+        compose.runOnUiThread { model.setFlagFilter(FlagFilter.PICKED) }
+        waitFor { compose.onAllNodesWithText("보관함을 좁힌 조건에 맞는 항목이 없습니다.").fetchSemanticsNodes().isNotEmpty() }
+
+        // One button undoes every narrowing at once, the kind and the flag alike.
+        compose.onNodeWithText("모두 보기").performClick()
+        waitFor { compose.onAllNodesWithContentDescription("DSC00003.JPG").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithContentDescription("DSC00001.JPG").assertIsDisplayed()
+    }
+
+    @Test
     fun flagsTheSelectionLooksAtOnlyThePickedAndTrashesTheRejected() {
         waitForPhotos()
         compose.onNodeWithContentDescription("DSC00001.JPG").performTouchInput { longClick() }

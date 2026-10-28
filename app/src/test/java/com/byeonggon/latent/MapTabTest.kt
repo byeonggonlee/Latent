@@ -48,7 +48,7 @@ class MapTabTest {
     @Test
     fun explainsAsksAndStaysOffUntilTheAnswerIsYes() {
         compose.onNodeWithText("지도").performClick()
-        compose.onNodeWithText("사진을 지도에서 보기").assertIsDisplayed()
+        compose.onNodeWithText("온라인 지도가 꺼져 있습니다").assertIsDisplayed()
         assertEquals(false, runBlocking { container.settings.settings.first().onlineMaps })
 
         compose.onNodeWithText("온라인 지도 켜기").performClick()
@@ -56,7 +56,7 @@ class MapTabTest {
         // Saying no leaves everything as it was.
         compose.onNodeWithText("취소").performClick()
         compose.onAllNodesWithText("지도를 위해 인터넷을 사용할까요?").assertCountEquals(0)
-        compose.onNodeWithText("사진을 지도에서 보기").assertIsDisplayed()
+        compose.onNodeWithText("온라인 지도가 꺼져 있습니다").assertIsDisplayed()
         assertEquals(false, runBlocking { container.settings.settings.first().onlineMaps })
     }
 }

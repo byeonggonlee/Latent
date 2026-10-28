@@ -21,7 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -55,6 +55,14 @@ import com.byeonggon.latent.data.db.MediaOrigin
 import java.io.File
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.R
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun LatentTheme(content: @Composable () -> Unit) {
@@ -162,7 +170,7 @@ fun StorageAccessCard(modifier: Modifier = Modifier) {
                 )
                 if (refused) {
                     Text(stringResource(R.string.storage_refused), style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = {
                             context.startActivity(
                                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri()),
@@ -230,5 +238,20 @@ fun Context.openInBrowser(address: String) {
         startActivity(Intent(Intent.ACTION_VIEW, address.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     } catch (e: ActivityNotFoundException) {
         // No browser on the phone; nothing useful to do.
+    }
+}
+
+/**
+ * What a screen says when it has nothing to show (UI_GUIDE §8.14): one outline icon, one sentence on what is missing
+ * and why, and at most one button, for the next step.
+ */
+@Composable
+fun EmptyState(@DrawableRes icon: Int, text: String, modifier: Modifier = Modifier, action: String? = null, onAction: () -> Unit = {}) {
+    Box(modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
+            Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            if (action != null) Button(onClick = onAction) { Text(action) }
+        }
     }
 }
