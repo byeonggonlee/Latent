@@ -744,7 +744,11 @@ private fun Context.share(file: File, kind: MediaKind) {
     val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
     val type = when (kind) {
         MediaKind.PHOTO -> "image/jpeg"
-        MediaKind.RAW -> if (file.extension.equals("dng", ignoreCase = true)) "image/x-adobe-dng" else "image/x-sony-arw"
+        MediaKind.RAW -> when (file.extension.lowercase()) {
+            "dng" -> "image/x-adobe-dng"
+            "cr2" -> "image/x-canon-cr2"
+            else -> "image/x-sony-arw"
+        }
         MediaKind.VIDEO -> "video/*"
     }
     val send = Intent(Intent.ACTION_SEND)

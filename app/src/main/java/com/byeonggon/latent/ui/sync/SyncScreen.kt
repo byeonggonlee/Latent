@@ -141,7 +141,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
 
         SectionCard(stringResource(R.string.what_to_import)) {
             KindSwitch(stringResource(R.string.kind_photos_jpeg), settings.syncPhotos) { viewModel.setKindEnabled(MediaKind.PHOTO, it) }
-            KindSwitch("RAW (ARW)", settings.syncRaw) { viewModel.setKindEnabled(MediaKind.RAW, it) }
+            KindSwitch("RAW", settings.syncRaw) { viewModel.setKindEnabled(MediaKind.RAW, it) }
             KindSwitch(stringResource(R.string.kind_videos), settings.syncVideos) { viewModel.setKindEnabled(MediaKind.VIDEO, it) }
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

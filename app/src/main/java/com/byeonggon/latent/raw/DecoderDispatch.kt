@@ -24,6 +24,7 @@ internal object DecoderDispatch {
             val main = TiffDirectory.read(data, offset)
             val frame = when {
                 0xC612 in main -> Dng.decode(bytes, request)
+                bytes.size >= 12 && bytes[8] == 67.toByte() && bytes[9] == 82.toByte() -> CanonCr2.decode(bytes, request)
                 main.text(0x010F)?.startsWith("SONY") == true -> SonyArw.decode(bytes, request)
                 else -> throw DecodeFailure(DecodeFailureReason.UNSUPPORTED, "Unsupported TIFF raw format")
             }

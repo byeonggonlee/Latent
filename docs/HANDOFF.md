@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 Canon CR2 decoding, synthetic regressions and CC0 sample verification | `codex/canon-cr2` | decoder and associated tests, integration seam, this board | 2026-10-28 |
+| Codex | 0.2.0 Canon CR2 decoding: EOS 7D full-resolution prototype; colour accuracy and other cameras remain open ([investigation](canon-cr2-investigation.md)) | `codex/canon-cr2` | decoder and associated tests, integration seam, this board | 2026-10-28 |
 | Claude Code (computer) | 0.2.0 items 4–7, the small UI ones, one at a time, each straight to `main`: the LUT note, choices, outline icons, empty states (item 3, sliders, is done) | `claude/ui-polish-020` | `ui/editor/` filter panel, `ui/settings/`, the library's chips, icons across `ui/` | 2026-10-28 |
 
 ## For Codex
