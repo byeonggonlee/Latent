@@ -1,6 +1,6 @@
 # Canon CR2 investigation (work in progress)
 
-This is an EOS 7D full-resolution CR2 prototype, not general Canon CR2 support. Other camera models, CR3, and reduced-resolution sRAW/mRAW must not be presented as supported. The branch still needs colour validation, wider camera coverage, a qualified cross-family review, and real-phone testing before it can be considered complete.
+This is an EOS 7D full-resolution CR2 prototype, not general Canon CR2 support. Other camera models, CR3, and reduced-resolution sRAW/mRAW must not be presented as supported. The independent comparisons below find no additional decoder colour bias on these two files under matched controls. They do not establish absolute accuracy of the provisional matrix. Re-review of that evidence, camera-coverage scope and real-phone checks remain pending.
 
 ## External samples and reproducibility
 
@@ -13,7 +13,7 @@ Both contain a 5360 × 3516 14-bit sensor mosaic, a 5184 × 3456 crop and a loss
 
 The provisional 7D matrix was independently fitted using 20 colour-chart patches in file 1183. Per patch, black was removed, as-shot white balance applied and RGB was normalized by its sum; camera JPEG patch values were transformed from sRGB to linear light and normalized likewise. A constrained least-squares fit maintained row sums of one. The chart's relative linear chromaticity RMS was approximately 0.031 (identity: 0.113); on the separate scene, approximately 0.056 (identity: 0.118). This is not a perceptual colour accuracy score or proof of calibration across illuminants.
 
-## Open colour issue
+## Initial JPEG comparison (historical observation, not a calibration reference)
 
 On the scene sample, the app's rendered image looks noticeably yellower than its embedded camera JPEG. At a common 864 × 576 resolution, mean sRGB values were approximately (0.618, 0.392, 0.081) for the app and (0.594, 0.308, 0.103) for the JPEG. Camera JPEG rendering includes its own tone and colour processing, so this comparison alone does not identify whether white balance, the provisional matrix, the app's rendering, or another factor causes the difference. As a further independent rendering, macOS `sips` converted the same CR2 to PNG, with mean sRGB approximately (0.555, 0.332, 0.129). On 99,078 scene pixels selected using the JPEG, the relative linear chromaticity RMS was 0.0585 between the app and JPEG, 0.0357 between the app and macOS, and 0.0352 between macOS and JPEG. These rendering differences do not identify a ground truth or establish the cause. The chromaticity test passing does not settle it. Investigate using known neutral and colour references under multiple illuminants, and validate on a phone; do not treat the current matrix as production-ready merely because the sample test passes.
 
@@ -53,3 +53,120 @@ Follow-up validation (2026-10-28): with both sample environment variables set,
 all three CR2 instrumentation tests on the API 36 ARM64 emulator: thumbnail, embedded preview and a
 5184 × 3456 export (about 7.6 seconds; 576 MiB heap cap in this run). The S24 Ultra was not connected, so this is
 not a real-phone colour or memory/performance result.
+
+## Colour investigation: independent comparisons (2026-10-28)
+
+No production colour coefficients or WB gains were changed in this investigation. The testable conclusion is
+that the current decoder reproduces independent decoding and linear development under the same controls; it
+does not introduce an extra yellow cast in those comparisons. The provisional matrix's absolute colour accuracy
+and Canon's JPEG rendering are separate questions. This proposes closing the *decoder arithmetic* question for
+the two measured files, subject to independent re-review; it does not claim colour calibration across cameras,
+ISOs or illuminants, or authorize a merge.
+
+### Sensor and white balance
+
+rawpy 0.27.1 / LibRaw 0.22.1 decoded both CR2s independently. Every one of the 18,845,760 photosites in each
+full sensor mosaic matched Latent's lossless-JPEG and slice decoding exactly (0 differing samples, maximum
+absolute difference 0). The independently read as-shot gains matched too:
+
+- Scene: R/G = 2166/1024, B/G = 1524/1024.
+- Chart: R/G = 2427/1024, B/G = 1339/1024.
+
+Adobe DNG Converter 18.7 (2743), downloaded through
+[Adobe's official DNG page](https://helpx.adobe.com/camera-raw/desktop/dng-and-file-formats/digital-negative.html),
+converted both files with `-u -p0`. Inverting the DNGs' `AsShotNeutral` gave the same WB gains within 0.00002.
+These two independent readers do not support the hypothesis that ColorData-v7 indices 63–66 were the wrong WB
+fields. LibRaw/rawpy were used only as external validation tools; no library, source or calibration data from
+them was added to the app or its dependencies.
+
+### Grey patches
+
+The chart is an Amateur Photographer printed target, not an identified ColorChecker with supplied reference
+reflectances. We sampled 50 × 50 preview cells inside five grey patches, centred at (350, 930), (590, 930),
+(830, 930), (1070, 930), (1310, 930) in the 1920 × 1280 embedded-JPEG view. A preview cell corresponds to a 2 × 2
+sensor block; the crop begins at (168, 56). The lettering on the white and black patches was excluded.
+
+With black = 2048, the first bright patch's median camera RGB was (1199, 2996, 2487). Its empirically neutral
+R/G and B/G gains would be approximately (2.499, 1.205), not the shot's (2.370, 1.308). With as-shot WB, that
+patch is blue-leaning, and its camera JPEG is also blue-leaning (mean sRGB about 0.747, 0.767, 0.834). The other
+patches need different blue gains to become neutral (about 1.174, 1.184, 1.236 and 1.427 respectively). This
+uncalibrated target does not justify imposing a single WB adjustment to force all five patches neutral.
+
+In ColorData, the chart's As Shot and Auto entries agree exactly (2427, 1024, 1024, 1339); Measured is nearly
+the same (2425, 1024, 1023, 1338); the associated temperature is 6245 K. A JPEG-selected set of near-neutral
+pixels alone is insufficient to identify a sensor WB defect: Canon has already rendered those JPEG pixels.
+
+### Adobe DNG comparison
+
+`CanonCr2ReferenceTest` first checks that the DNG has the same as-shot WB and that the decoded sensor values
+agree after the DNG's documented black/white normalization. It then renders the CR2 with the DNG's WB,
+colour matrix, white level and crop so differences in those controls cannot be mistaken for a decoder defect.
+The DNG path moves the crop down one photosite to begin on red; the controlled CR2 comparison uses that same
+crop and RGGB phase. The production CR2 crop and reviewed conservative white cutoff are unchanged.
+
+- Scene: sensor-normalization difference at most 1 count; linear RGB difference at most 5/16383, mean 0.911 count.
+- Chart: sensor-normalization difference 0; linear RGB difference at most 6/16383, mean 0.956 count.
+
+The small output differences come from quantization before WB in the DNG path and after WB in the CR2 path.
+The tests allow at most 16 counts and a mean of 2 counts, and inspect all pixels, including neutrals and clipped
+highlights. Adobe's DNG white levels are 12600 for the scene and 13600 for the chart; these are reference controls,
+not replacements for the separately reviewed CR2 cutoff in this change.
+
+The converted DNGs also provide authoritative matrix provenance for any later calibration work:
+ColorMatrix1 (Standard A) is `[1.162, -0.6349, 0.0005; -0.2558, 1.0146, 0.2813; 0.0024, 0.0858, 0.6926]`;
+ColorMatrix2 (D65) is `[0.6843, -0.0996, -0.0856; -0.3876, 1.1761, 0.2396; -0.0593, 0.1772, 0.6198]`.
+The DNGs contain ForwardMatrix and per-shot CameraCalibration entries as well, so simply copying one
+XYZ-to-camera matrix is not a reproduction of Adobe's complete rendering. None of these values was silently
+substituted into the production decoder during diagnosis.
+
+Generated DNG SHA-256 values (these files remain outside Git):
+
+- Scene: `10649836e60b61d25f9ac1fbeab700ad5f2a336ad96efa83e24adba96aef0b9f`.
+- Chart: `1c486c6ee9678265eff23adf69eebc14a35c95ffc5b6b7f6a15031facc293d00`.
+
+### Independent linear development
+
+`scripts/make_cr2_reference.py` uses LibRaw's half-size camera-RGB development with the file's independently
+read as-shot WB, the same black/white controls, no automatic brightness, and linear gamma. It then applies the
+explicitly supplied matrix using NumPy. It never uses Latent to produce the reference. The binary reference
+includes the source photo hash and all controls; the Kotlin test checks these before comparing every RGB value.
+LibRaw's `user_sat` override is a black-subtracted range: supplying the absolute white level here would introduce
+an unrelated brightness scale. Both samples were measured with the corrected, matched range.
+
+With Latent's current provisional matrix and the production CR2 cutoff:
+
+- Scene: maximum difference **3/16383**, mean **0.805** count.
+- Chart: maximum difference **3/16383**, mean **0.768** count.
+
+The test bounds are 8 counts (<0.05% full scale) and mean 2. No pixels are excluded by hue, neutrality, brightness
+or saturation. These results exclude a material extra cast introduced by the tested decoding/development
+arithmetic under these controls. They do **not** validate the supplied matrix against calibrated physical
+colours, or explain every difference from the camera's JPEG look.
+
+### Reproduce the external checks
+
+Use a temporary Python environment with `rawpy==0.27.1` and NumPy; these are developer tools, not Gradle or app
+dependencies. Use Adobe DNG Converter's documented CLI with `-u -p0 -d <output-directory> <source-CR2s>`.
+For each CR2, generate the independent linear reference with the matrix currently in `CanonCr2.kt`:
+
+```sh
+python scripts/make_cr2_reference.py /tmp/scene.cr2 /tmp/scene.rgb --white-level 11222 \
+  --matrix 1.84922 -0.70786 -0.14136 -0.27746 2.09015 -0.81270 -0.08440 -0.38730 1.47170
+```
+
+Repeat for the chart with `--white-level 12279`. Set `CANON_7D_SAMPLE`, `CANON_7D_CHART_SAMPLE`,
+`CANON_7D_DNG`, `CANON_7D_CHART_DNG`, `CANON_7D_LIBRAW_RGB` and `CANON_7D_CHART_LIBRAW_RGB` to the two CR2s,
+their Adobe DNG conversions and the generated references. Then run:
+
+```sh
+./gradlew testDebugUnitTest --tests 'com.byeonggon.latent.raw.CanonCr2ReferenceTest'
+```
+
+Without the external files, these four tests are skipped explicitly, like the existing camera-sample tests.
+The original JPEG chromaticity check remains a limited historical guard; it is not the colour acceptance oracle.
+
+Final investigation validation: with all six external-reference variables set,
+`testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest` passed after merging `main` at `1e65ac6`:
+851 JVM cases, 0 failures/errors, 4 unrelated external-fixture skips. All four new reference cases ran. The
+Python generator ran successfully for both samples; schema and whitespace diffs are clean. Physical-device
+checks were not repeated for these test/documentation additions, and absolute colour accuracy was not measured.
