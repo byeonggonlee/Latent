@@ -153,62 +153,33 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 ## For Codex
 
-### 0. Release 0.1.0 — top priority (set by the owner, 2026-10-27)
+### 0. 0.2.0: your part (set by the owner, 2026-10-28)
 
-**Feature freeze (owner, 2026-10-27):** 0.1.0 is the app as it is on `main` at `312c6a5` (PR #50 included); from here
-only fixes for what the release checks find go in before the tag. New features, Canon raw included, wait for after it.
+The plan and its table are in [`ROADMAP.md`, "0.2.0"](ROADMAP.md). Codex is short of tokens, so its part is small:
 
-**Before anything else in this list.** Everything planned for 0.1.0 is on `main`: the `CHANGELOG.md` section is
-written (its date waits for the tag), `v0.1.0-rc.2` built the signed APK and AAB and is on a Play testing track, and
-an emulator run passed most of the smoke test ([report](device-results/2026-10-27-emulator.md)). What is left is
-what only a phone can say, and the owner finds plugging phones in hard: the S24 Ultra is the release phone.
+1. **Canon CR2** (item 12, medium): TIFF with lossless JPEG, so the decoder DNG uses can serve. Samples from
+   [raw.pixls.us](https://raw.pixls.us/data/Canon/), CC0 files only (each file's licence is in the site's table),
+   kept out of the repository. A pull request reviewed by Claude Code. CR3 waits for 0.3.0.
+2. **Reviews, when the owner asks**, of the three Claude Code pull requests on the mandatory-review list: auto colour
+   (item 1), the sky model again (item 2) and the trash after a reinstall (item 10). The small UI changes are not
+   reviewed.
+3. **Shared items, only with tokens to spare:** items 6 (outline icons), 9 (a typed long side) and 14 (sync
+   interrupted on a phone). Claim one in *In progress* first; Claude Code takes them otherwise.
 
-**S24 run, 2026-10-27:** [Codex release report](device-results/2026-10-27-s24-release.md), main `674ed61`.
-**14 instrumentation tests passed, no failures/skips**: tone/detail GPU parity (including picked colour), subject
-GPU/CPU, sky CPU fallback, owner's ZV-E10 RAW/JPEG editing/export, thumbnails and real-video preparation.
-Light-theme system bars, picker retained hue/Cancel, public ILCE-7M2 editor and selection More checked on-device.
-Sky GPU compilation fails (`BROADCAST_TO` / `GATHER_ND` unsupported); CPU works, GPU parity remains unverified
-and is queued for Claude Code. The owner judged the colour on the phone's screen fine (2026-10-27); broader signed-release smoke cases
-remain outside the run. The report does not authorize a tag. The original ordered checklist follows for scope.
-
-1. **Reviews first, when asked.** Open release pull requests from Claude Code (now
-   [PR #50](https://github.com/byeonggonlee/Latent/pull/50), colour picker follow-ups) get a review when the owner
-   asks; a plain LGTM is enough when nothing needs fixing.
-2. **Device checks on the S24 Ultra** with a debug build of `main` (`./gradlew installDebug installDebugAndroidTest`,
-   "Latent Debug"; run tests with `adb shell am instrument`, never `connectedAndroidTest`; see
-   [DEVICE_CHECKS §9](DEVICE_CHECKS.md)). In this order, the ones an emulator cannot do:
-   - `GpuToneOnDeviceTest` (all of it, including `pickedColourAfterEarlierMaskAgreesWithTheProcessor` from PR #47)
-     and `GpuDetailOnDeviceTest`: the shaders against the CPU. The emulator's GL (ES 3.0) skips them.
-   - `SubjectMaskOnDeviceTest` and `SkyMaskOnDeviceTest` on the GPU, with their cold and warm times.
-   - `RawOnDeviceTest` and `EditOnDeviceTest` with the owner's ZV-E10 ARW and JPEG (the tests expect that camera):
-     the raw-IFD white balance path unchanged after PR #49.
-   - The public ILCE-7M2 ARW from rawsamples.ch (Creative Commons; keep it off the repository) opened in the editor:
-     developed, and neutral greys judged on the phone's screen against the camera's embedded preview.
-   - `ThumbnailOnDeviceTest` (PR #46's regression has run only on the emulator) and, with a video,
-     `VideoPlaybackOnDeviceTest`.
-   - By hand, the light theme: the status bar's icons light over the viewer and the editor, dark again in the library;
-     the selection bar showing *Share · Delete · Compare · More* with the rest under More (PR #48).
-3. **Write it down** as `docs/device-results/<date>-s24-release.md`, like the emulator report: what passed with its
-   numbers, what failed with the log. A failure in a decoder or the seam is yours to fix through a pull request; one
-   elsewhere goes under *For Claude Code* here.
-
-**Not yours to do:** writing the release date into `CHANGELOG.md`, tagging `v0.1.0`, merging without the owner, or
-entering the phone's PIN. If the phone is locked or missing, say so to the owner and stop there. The tag is the
-owner's decision once the report is in.
-
-**Emulator follow-up (2026-10-27, owner authorized):** [Codex report](device-results/2026-10-27-release-emulator-followup.md). Public ILCE-7M2 RAW export, CPU masks, thumbnails, synthetic video preparation and default-font workspace/selection UI checked. GPU checks could not run on ES 3.0; an EXIF-aware test expectation needs follow-up below. Covered S24/ZV-E10 items are superseded by the S24 report above; its explicit limits remain. PR #50 re-reviewed at `5abec53`: previous P2 resolved, [LGTM](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143). Local minified APK/AAB, privacy, APK signature and 16 KiB alignment checks pass; PR #50 is now merged as `c78a449`.
-
-**After 0.1.0:** the UI guide's control and layout tasks handed to Codex earlier wait until the release is out.
-Then Canon raw (owner, 2026-10-27): CR2 first (TIFF with lossless JPEG, so the DNG path's decoder can serve), then
-CR3 (ISO BMFF with Canon's CRX codec, a decoder of its own). Samples from [raw.pixls.us](https://raw.pixls.us/data/Canon/)
-(check each file's licence there; kept out of the repository like the others). Decoders are Codex's area; the seam
-changes go through a reviewed pull request.
+**No longer yours:** the UI guide's tasks 4–7 from before 0.1.0 are items 5–7 of the plan, and Claude Code does them.
 
 ### Earlier items
 
 **Order set by the owner (2026-10-21):** 4 (below), then 1, then 2. Start 2 only once Claude Code's decode
 cancellation pull request is on `main`: both change `raw/RawRenderer.kt`. Review Claude Code's pull requests that
 touch the seam, as it reviews yours. *All of 1–7 below are done; only phone judgement remains for 1 and 2.*
+
+### Release 0.1.0 (done: released 2026-10-27)
+
+The S24 Ultra checks ([report](device-results/2026-10-27-s24-release.md)) passed 14 instrumentation tests; the sky
+model runs on the CPU there (item 2 of the 0.2.0 plan). The emulator follow-up is in
+[its report](device-results/2026-10-27-release-emulator-followup.md). `v0.1.0` was tagged on `61aede2` and published as
+[Latent 0.1.0](https://github.com/byeonggonlee/Latent/releases/tag/v0.1.0).
 
 ### 6. Reviews asked: three pull requests from the parser fuzzing (2026-10-22) (done)
 
@@ -328,6 +299,14 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
   frame, a choice to make on the owner's files.
 
 ## For Claude Code
+
+### 0.2.0: Claude Code's part (set by the owner, 2026-10-28)
+
+The plan is in [`ROADMAP.md`, "0.2.0"](ROADMAP.md). Claude Code takes items 1–5, 7, 8, 10, 11 and 13, and the shared
+items 6, 9 and 14 unless Codex has claimed one in *In progress*. Small UI changes go straight to `main` with their
+tests; items 1, 2 and 10 go through pull requests for Codex's review, and only when they are ready, so that Codex's
+tokens go to one review at a time. Suggested order: the small UI items (3–7) first, then 1, 8–11 and 2. Claude Code
+reviews Codex's CR2 (item 12).
 
 ### Release follow-up from Codex — 2026-10-27
 

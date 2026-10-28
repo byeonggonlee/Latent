@@ -2,8 +2,37 @@
 
 What to build next, ranked by how often the feature is used in everyday photo editing, how much of it
 the app already has, and what it costs. Goal of the app: between Snapseed and Lightroom Mobile, plus
-camera sync, all on the phone. Last revised 2026-10-22 (items 1 to 5, 8 and 10 done, 7 for stills, 6 up to the sky,
+camera sync, all on the phone. Last revised 2026-10-28 (the 0.2.0 plan); before that 2026-10-22 (items 1 to 5, 8 and 10 done, 7 for stills, 6 up to the sky,
 the telling half of 11; the card reader import and DNG distortion done).
+
+## 0.2.0 (planned 2026-10-28)
+
+0.1.0 was released on 2026-10-27. 0.2.0 polishes what using it shows, in small steps: editing, a consistent
+interface and small additions, no large feature (owner, 2026-10-28). Codex has fewer tokens than Claude Code, so it
+takes its own area and the reviews; the rest is Claude Code's. **Shared** items go to whichever agent is free first,
+claimed in `HANDOFF.md` before starting. Small UI changes outside the mandatory-review list need no review; the
+three that do are batched for Codex.
+
+| # | What | Who | Size | Review |
+|---|---|---|---|---|
+| 1 | Auto colour: for a raw, start from the camera's as-shot white balance and move only a little from it; try gray-edge and white-patch against gray-world on the same photos, scenes with a meant colour (a sunset, a tungsten room) included; no learned model or automatic grading | Claude Code | M | Codex (colour) |
+| 2 | Sky mask on the GPU: convert the model again without `BROADCAST_TO` and `GATHER_ND`, which LiteRT's GPU delegate refuses (S24 report); CPU fallback and the numerical tests stay | Claude Code | S–M | Codex (model asset) |
+| 3 | Sliders (UI guide task 3, §8.6): the fill runs from the reference (*Feather* at 0 fills from the middle today), "As Shot" at the centre of temperature and tint, a dot on a changed slider | Claude Code | S | – |
+| 4 | Filter panel: the Log LUT note only by the LUT row, not under every look | Claude Code | S | – |
+| 5 | Choices (UI guide task 4, §8.3): segmented buttons for theme and tab position; one selected style for filter chips (the library's kind chips are black today) | Claude Code | S | – |
+| 6 | One icon family (§7): the eight filled Material icons (close, more, delete, place, play, arrows, add) replaced by outline ones | Shared | S | – |
+| 7 | Empty states, the map's off card and button hierarchy (§8.2, §8.11, §8.14) checked screen by screen | Claude Code | S | – |
+| 8 | Find by a range of dates. Shutter speed and aperture need new columns in the Exif index (a Room migration, so a review) and wait | Claude Code | S | – |
+| 9 | Share at a long side typed in, beside the fixed sizes | Shared | S | – |
+| 10 | The trash after a reinstall: files left in `DCIM/Latent/.trash` shown again, so they can be restored or emptied | Claude Code | S–M | Codex (data) |
+| 11 | After an import, "N photos without a place" with a way to the Location screen (UX guide §10) | Claude Code | S | – |
+| 12 | Canon CR2 (TIFF with lossless JPEG, as DNG's decoder reads); CR3 waits for 0.3.0 | Codex | M | Claude Code |
+| 13 | Store: English screenshots, the new short descriptions, the closed test | Claude Code, owner | S | – |
+| 14 | Phone checks left from SC-57G: the camera unplugged and the storage full during a sync, then carrying on | Shared, owner | S | – |
+
+Not in 0.2.0: backups made by themselves, carrying an Ultra HDR gain map through an edit, tap to select, video trim
+and LUTs, CR3, searching by shutter speed and aperture. The UI guide's tasks 4–7, handed to Codex before 0.1.0, are
+items 5–7 here and come back to Claude Code; Codex does not do them.
 
 ## Where the app stands, by stage of a typical edit
 

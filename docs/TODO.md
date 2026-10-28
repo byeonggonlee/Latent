@@ -66,6 +66,8 @@ Last updated 2026-10-23.
 
 ## Ready to do (this side)
 
+- [ ] **0.2.0** (planned 2026-10-28): the items, who takes which and their reviews are in `ROADMAP.md`, "0.2.0";
+      the two queues in `HANDOFF.md`.
 - [x] **Repeated import from the same folder** (owner report, 2026-10-23): summary item 5 of the SC-57G run on nightly
       347 failed, then turned out to be a mismatch of versions between what was tried and the nightly: on the right
       build the import works. Not reproduced, no defect found, nothing fixed. See
@@ -110,12 +112,8 @@ Last updated 2026-10-23.
 
 ## Later
 
-- **Canon raw, after 0.1.0** (owner, 2026-10-27; Codex): CR2, then CR3. See HANDOFF, *For Codex* §0, "After 0.1.0".
-- **Auto colour, after 0.1.0** (owner, 2026-10-27; Claude Code): the auto adjustment's white balance is gray-world,
-  half the way and capped (`AutoSettings.kt`), so a sunset, tungsten room or one-colour scene is read as a cast.
-  Try (1) for a raw, starting from the camera's as-shot white balance and letting auto move only a little from it,
-  and (2) gray-edge, white-patch or a mix of them in place of gray-world. Compare them on the same photos,
-  including scenes whose colour is meant; a learned model and automatic colour grading are not part of this.
+- **Canon CR3** (owner, 2026-10-27; Codex): after 0.2.0. CR2 is item 12 of the 0.2.0 plan (`ROADMAP.md`).
+- **Auto colour**: item 1 of the 0.2.0 plan (`ROADMAP.md`), where the approach is written down.
 - Video: LUTs and grading on Media3, 10-bit with them; carrying an Ultra HDR photo's gain map through an edit
   (ROADMAP items 7, 11, 12). HDR in the viewer, and telling that an edit drops the gain map, are done (2026-10-22,
   pull requests #27 and #28).
