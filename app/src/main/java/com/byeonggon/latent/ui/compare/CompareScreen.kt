@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,7 +98,7 @@ fun CompareScreen(ids: List<Long>, partners: Map<Long, Long>, onClose: () -> Uni
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.compare)) },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close)) } },
+                navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.close)) } },
             )
         },
     ) { padding ->
@@ -151,7 +148,7 @@ private fun Verdict(item: MediaItemEntity, onFlag: (Int) -> Unit, onRate: (Int) 
                 modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { onFlag(FLAG_PICKED) }.padding(7.dp).size(20.dp),
             )
             Icon(
-                Icons.Default.Close,
+                painterResource(R.drawable.ic_reject),
                 contentDescription = stringResource(R.string.flag_reject),
                 tint = if (item.flag == FLAG_REJECTED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { onFlag(FLAG_REJECTED) }.padding(7.dp).size(20.dp),

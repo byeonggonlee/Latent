@@ -22,9 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -63,6 +60,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -102,7 +100,7 @@ fun MapScreen(onOpen: (Long) -> Unit, viewModel: MapViewModel = viewModel()) {
         PhotoMap(state.points, viewModel.tiles, viewModel, onOpen)
         var menu by remember { mutableStateOf(false) }
         Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-            FilledTonalIconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.map_menu)) }
+            FilledTonalIconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.map_menu)) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.map_turn_off)) },
@@ -294,7 +292,7 @@ internal fun PhotoMap(points: List<MapPoint>, tiles: MapTiles, viewModel: MapVie
 
         Column(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalIconButton(onClick = { zoomBy(1f, Offset(size.width / 2f, size.height / 2f)) }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.map_zoom_in))
+                Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.map_zoom_in))
             }
             val zoomOut = stringResource(R.string.map_zoom_out)
             FilledTonalIconButton(

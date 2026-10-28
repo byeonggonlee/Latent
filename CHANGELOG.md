@@ -20,6 +20,9 @@ Smaller improvements after the first release: editing, consistency of the interf
 - Settings with a few exclusive values (tab position, theme, grid size, how long the trash keeps photos, JPEG
   quality) are segmented buttons, and the library's kind filters look like the app's other filter chips instead of
   turning black when chosen.
+- **One icon family:** close, more, back, delete, play, the map pin, the arrows and zoom in, and undo, redo, auto
+  and the library tab, were filled Material symbols; they are drawn as outlines like the app's other icons. A
+  reject button shows the same crossed circle as a rejected photo's badge.
 
 ## [0.1.0] - 2026-10-27
 

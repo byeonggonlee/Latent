@@ -34,9 +34,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -542,7 +539,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.setFlagFilter(FlagFilter.ALL) },
                 label = { Text(stringResource(state.flagFilter.label)) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.flag_filter_clear), modifier = Modifier.size(16.dp)) },
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.flag_filter_clear), modifier = Modifier.size(16.dp)) },
             )
         }
         // The album the library is narrowed to shows too, and can be left.
@@ -551,7 +548,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.showAlbum(null) },
                 label = { Text(shown.album.name) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.album_filter_clear), modifier = Modifier.size(16.dp)) },
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.album_filter_clear), modifier = Modifier.size(16.dp)) },
             )
         }
         // A search shows as one chip, and is taken off with it; the magnifying glass changes it.
@@ -560,7 +557,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.clearQuery() },
                 label = { Text(pluralStringResource(R.plurals.find_conditions, state.query.count, state.query.count)) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.find_clear), modifier = Modifier.size(16.dp)) },
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.find_clear), modifier = Modifier.size(16.dp)) },
             )
         }
         // Narrowing by stars is chosen from the menu; here it shows, and can be taken off.
@@ -569,7 +566,7 @@ private fun KindFilters(state: LibraryUiState, viewModel: LibraryViewModel) {
                 selected = true,
                 onClick = { viewModel.setLeastRating(0) },
                 label = { Text(stringResource(R.string.rating_at_least, state.leastRating)) },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.rating_filter_clear), modifier = Modifier.size(16.dp)) },
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.rating_filter_clear), modifier = Modifier.size(16.dp)) },
             )
         }
     }
@@ -583,7 +580,7 @@ private fun LibraryMenu(state: LibraryUiState, viewModel: LibraryViewModel, onSe
     Row(verticalAlignment = Alignment.CenterVertically) {
     IconButton(onClick = { dialogs.finding = true }) { Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.find)) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.library_menu)) }
+        IconButton(onClick = { open = true }) { Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.library_menu)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.filter_by_rating)) },
