@@ -67,7 +67,8 @@ object Dng {
     private const val TAG_BASELINE_EXPOSURE = 0xC62A
     private const val TAG_ACTIVE_AREA = 0xC68D
     private const val TAG_OPCODES_2 = 0xC741
-    private const val TAG_OPCODES_3 = 0xC742
+    // DNG 1.7.1, p.58: tag 51022; OpcodeList3 is not consecutive with OpcodeList1/2.
+    private const val TAG_OPCODES_3 = 0xC74E
 
     private const val PHOTOMETRIC_CFA = 32803
     private const val PHOTOMETRIC_LINEAR_RAW = 34892

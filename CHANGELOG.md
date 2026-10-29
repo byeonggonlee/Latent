@@ -8,6 +8,11 @@ as the release notes, so a section is written before the tag is.
 
 Smaller improvements after the first release: editing, consistency of the interface, and small additions.
 
+### Fixed
+
+- DNG lens correction now reads the standard OpcodeList3 tag. Previously the reader and its synthetic fixtures
+  used the same wrong tag, so real files carrying supported distortion metadata did not offer lens correction.
+
 ### Changed
 
 - **Editor sliders** read their state at a glance: a changed one has its name in full contrast with a dot after

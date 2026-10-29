@@ -128,7 +128,7 @@ internal object SyntheticDng {
             Entry.longs(0xC68D, *ACTIVE),
             gainMap?.let { Entry(0xC741, 7, it.bytes().size, it.bytes()) },
             opcodes2?.let { Entry(0xC741, 7, it.size, it) },
-            opcodes3?.let { Entry(0xC742, 7, it.size, it) },
+            opcodes3?.let { Entry(0xC74E, 7, it.size, it) },
         )
         val colorEntries = listOfNotNull(
             Entry.ascii(0x010F, "samsung"),
@@ -214,7 +214,7 @@ internal object SyntheticDng {
                 Entry.shorts(0xC65A, 21),
                 Entry.longs(0xC68D, *ACTIVE),
             ).plus(listOfNotNull(baselineExposure?.let { signedRationals(0xC62A, it) },
-                opcodes3?.let { Entry(0xC742, 7, it.size, it) })).sortedBy { it.tag }.toTypedArray(),
+                opcodes3?.let { Entry(0xC74E, 7, it.size, it) })).sortedBy { it.tag }.toTypedArray(),
         )
         tiff.write(dataAt, data)
         return tiff.bytes()

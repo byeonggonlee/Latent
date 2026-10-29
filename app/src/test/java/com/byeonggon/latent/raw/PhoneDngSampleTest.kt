@@ -59,6 +59,12 @@ class PhoneDngSampleTest {
         assertTrue("Missing $file", file.isFile)
         val bytes = file.readBytes()
         assertEquals(sha256, MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) })
+        val (data, first) = TiffDirectory.open(bytes)
+        val raw = TiffDirectory.read(data, first)
+        // These Open Camera files explicitly store an empty standard OpcodeList3; MotionCam omits it.
+        if (gainMaps) assertArrayEquals(byteArrayOf(0, 0, 0, 0), raw.bytes(51022))
+        else assertFalse(51022 in raw)
+        assertFalse(0xC742 in raw)
         val frame = Dng.decode(bytes)
         val image = frame.legacyImage
         assertEquals(width to height, image.width to image.height)

@@ -3,6 +3,7 @@ package com.byeonggon.latent.raw
 import com.byeonggon.latent.enhance.LinearImage
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -34,6 +35,22 @@ class DngWarpTest {
     }
 
     private fun read(bytes: ByteArray) = Dng.read(SyntheticDng.file(100, 100, 100, opcodes3 = bytes))
+
+    @Test fun readsTheStandardOpcodeList3TagInMosaicAndLinearFiles() {
+        val opcodes = list(body(doubleArrayOf(0.9, 0.0, 0.0, 0.0, 0.0, 0.0)))
+        val files = SyntheticDng.Layout.entries.map { layout ->
+            SyntheticDng.file(100, 100, 100, layout = layout, opcodes3 = opcodes)
+        } + SyntheticDng.linear(100, 100, 100, opcodes3 = opcodes)
+        for (file in files) {
+            val (data, first) = TiffDirectory.open(file)
+            val main = TiffDirectory.read(data, first)
+            val raw = main.ints(0x014A)?.firstOrNull()?.let { TiffDirectory.read(data, it) } ?: main
+            // DNG 1.7.1, p.58: OpcodeList3 is decimal tag 51022, not the tag following OpcodeList2.
+            assertArrayEquals(opcodes, raw.bytes(51022))
+            assertFalse(0xC742 in raw)
+            assertNotNull(Dng.read(file).dngWarp)
+        }
+    }
 
     @Test fun identityDoesNotResampleOrChangeTheSensor() {
         val plain = Dng.read(SyntheticDng.file(100, 100, 100))

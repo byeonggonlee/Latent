@@ -98,7 +98,8 @@ Each is small or medium, works offline, and needs no new permission.
   lens correction chip hidden for files without a lens profile, and a Pixel's `.RAW-02.ORIGINAL.dng` shown as one
   with its `.RAW-01.COVER.jpg`. Since done (2026-10-22): the lens's distortion from OpcodeList3 (WarpRectilinear,
   [PR #17](https://github.com/byeonggonlee/Latent/pull/17)), with the lens correction chip for the files that carry
-  it; no Galaxy file tried so far does. Next: what is left of a `BaselineExposure` that highlights stopped short in
+  it. PR #52 corrects the OpcodeList3 tag to `0xC74E`; the earlier claim that the tried Galaxy files have none needs
+  rechecking at that standard tag. Next: what is left of a `BaselineExposure` that highlights stopped short in
   the tone stage's exposure (with care not to add to the automatic correction twice), only if a phone's file comes
   out darker than its JPEG. Galaxy Log video belongs with item 12.
 

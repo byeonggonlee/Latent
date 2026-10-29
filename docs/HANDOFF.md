@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 item 15: Open Camera / MotionCam public-sample compatibility checks complete; no production fix. Six new JVM cases, four emulator thumbnail/preview/export cases pass. Existing red-aligned crop remains (MotionCam loses two rows); physical-phone colour and OpcodeList3 coverage remain explicit limits. Awaiting Claude Code review | [PR #52](https://github.com/byeonggonlee/Latent/pull/52), `codex/phone-dng` | decoder test fixture, JVM/Android tests, phone-DNG report and checklist | 2026-10-29 |
+| Codex | 0.2.0 item 15: Open Camera / MotionCam compatibility; Claude reviewed `c99588e` and found P2 wrong OpcodeList3 tag. Reader and fixtures now use standard `0xC74E`; standard-tag regression added (13 failures before fix, all 135 raw tests pass after). Open Camera has empty OpcodeList3, MotionCam none; private Galaxy tag check remains unverified. Existing red-aligned crop stays. Awaiting follow-up review | [PR #52](https://github.com/byeonggonlee/Latent/pull/52), `codex/phone-dng` | `raw/Dng.kt`, decoder tests, phone-DNG report/checklist, changelog and prior tag claims | 2026-10-29 |
 | Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
 
 ## For Codex
@@ -245,8 +245,10 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 
 ### 2. DNG: lens distortion from OpcodeList3 WarpRectilinear (done, PR #17; phone check pending)
 
-- **Where**: `raw/Dng.kt` declares only `TAG_OPCODES_2 = 0xC741`; nothing reads `0xC742`. `Dng.kt` sets
-  `lens = null`. `DEVICE_CHECKS.md` says the ultra wide's distortion is not corrected.
+- **Where (original queue, corrected 2026-10-29):** `raw/Dng.kt` originally declared only
+  `TAG_OPCODES_2 = 0xC741` and set `lens = null`. OpcodeList3 is standard tag 51022 (`0xC74E`), not `0xC742`
+  as this queue and PR #17's reader/fixtures originally said. PR #52 corrects that tag; real-phone geometry checks
+  still belong in `DEVICE_CHECKS.md`.
 - **Do**: read opcode 1 (planes, then `kr0..kr3`, `kt0`, `kt1` per plane, then the centre `cx`, `cy`), apply it after
   demosaic where `RawRenderer.straighten` applies Sony's `LensProfile` today, with the centre and the tangential
   terms, and zoom so the corners land on real pixels as `LensCorrection` does. That changes the seam
@@ -321,16 +323,24 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
 
 ### Review phone DNG compatibility coverage — PR #52 (2026-10-29)
 
-- **Scope:** tests and documentation only; Open Camera Pixel 2 XL / Honor 6A plus MotionCam Tools Pixel 10 Pro
-  10-bit / 12-bit DCG frames. No production source or colour-pipeline redesign, no PR #51 dependency.
+- **Scope:** Open Camera Pixel 2 XL / Honor 6A plus MotionCam Tools Pixel 10 Pro 10-bit / 12-bit DCG frames.
+  Claude's review at `c99588e` found pre-existing P2: OpcodeList3 read/written at `0xC742` rather than standard
+  `0xC74E`. This follow-up fixes the production constant and both fixture entries, and adds standard-tag coverage.
+  No colour-pipeline redesign or PR #51 dependency.
 - **Check:** the four interleaved GainMaps and non-unit green neutral in `PhoneDngTest`, all eight EXIF corner
   permutations at full/preview size, independent sparse probes and hashes in `PhoneDngSampleTest`, and the
-  thumbnail/preview/export test's cleanup. The synthetic fixture now accepts an explicit OpcodeList2.
-- **Evidence:** 831 JVM cases, no failures/errors, four unrelated skips; both Lints and Android test/debug builds
-  pass. All four emulator cases pass. [Report](device-results/2026-10-29-phone-dng.md) has provenance and commands.
+  thumbnail/preview/export test's cleanup. The synthetic fixture accepts an explicit OpcodeList2. The standard-tag
+  test covers Android/Adobe mosaic layouts and linear DNG; public samples independently pin empty vs missing
+  OpcodeList3. Thirteen warp-related tests fail with the standard fixtures before the reader fix, then all 135 raw
+  cases pass (two unrelated external-sample skips).
+- **Evidence after the tag fix:** 832 JVM cases, no failures/errors, four unrelated skips; both Lints and Android
+  test/debug builds pass. All four emulator cases pass again (40.127 s).
+  [Report](device-results/2026-10-29-phone-dng.md) has provenance, red/green results and commands.
 - **Limits:** the existing red-aligned/even crop is recorded, including MotionCam's two omitted rows; exact crop
-  preservation is not claimed. All real samples are orientation 1 and lack OpcodeList3. No S24 colour/peak-memory
-  acceptance, independent full-frame colour oracle, new camera-look decision or merge authorization is implied.
+  preservation is not claimed. All real samples are orientation 1; Open Camera has an empty OpcodeList3, MotionCam
+  none. Previously tested private Galaxy inputs are unavailable, so their OpcodeList3 state needs rechecking at
+  `0xC74E`. No S24 colour/peak-memory acceptance, independent full-frame colour oracle, new camera-look decision or
+  merge authorization is implied.
 
 ### 0.2.0: Claude Code's part (set by the owner, 2026-10-28)
 
