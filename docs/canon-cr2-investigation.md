@@ -238,3 +238,52 @@ With all six Canon reference variables and `PHONE_DNG_SAMPLE_DIR` set, the combi
 862 JVM cases, zero failures/errors and four unrelated fixture skips. All six Canon reference, eight Canon
 integration and four public phone-DNG cases ran. Both Lints reported zero errors and 11 warnings; schema and
 whitespace checks passed.
+
+## Brightness: the camera JPEG's midtones (2026-10-30)
+
+On the owner's colour check, Claude Code exported both samples on the API 36 emulator through
+`RawRenderer.export` with no edit. The 7D opened about 0.7 stop brighter and flatter than its camera JPEG. Against
+the camera JPEG, over every pixel that neither image clips, the mean lightness difference was 13.7 L* on the scene
+and 9.4 on the chart. The chart's five grey patches measured L* 83.6, 77.8, 69.5, 56.8 and 38.8; the camera JPEG
+has 78.5, 72.1, 63.0, 46.1 and 27.6.
+
+`CameraCurve` is fitted to a ZV-E10's JPEGs and applies to every raw file. The 7D's JPEGs hold midtones lower. On
+the ISO 1250 scene, the conservative white cutoff above adds about 0.2 stop.
+
+The colour itself was not the problem. With the exposure lowered by 0.7 stop, the chart's colour-only ΔE00 against
+the camera JPEG (L* matched) was 3.6. Apple's raw engine (`sips`, sRGB) gives 4.0 on the same patches. Both differ
+from the camera in the same places: the azure patch, the dark greys, the orange and the blue.
+
+**Change.** `ArwImage.toneExponent`, applied in `RawDeveloper` after the colour matrix, raises each pixel's
+brightness to a power. The brightness is Rec. 709 luminance in linear sRGB, and all three channels are scaled by
+`Y^(p-1)` through a 16,384-entry table. Black, white and each pixel's channel ratios are kept. The 7D uses
+`p = 1.24`; every other format keeps 1, which skips the step and leaves development bit-identical.
+
+**Fit.** The fit used the LibRaw linear references through `CameraCurve`, compared with the camera JPEGs on every
+seventh unclipped pixel. These were the candidates (mean |ΔL*|, scene / chart):
+
+| Candidate | Scene | Chart | Note |
+|---|---|---|---|
+| Exposure alone, −0.8 stop | 2.7 | 3.9 | A clipped white no longer reaches white |
+| A scale that keeps white | 2.6 | 3.8 | |
+| A refitted three-parameter curve | 2.4 | 3.2 | |
+| Luminance power | 2.8 | 3.0 | One parameter, residuals even across tones |
+
+The luminance power leaves the scene +0 to +4 L* brighter than its JPEG and the chart −1 to −5 darker. Two shots
+cannot support more than one parameter, and the camera adapts its rendering to each scene. The scene's
+conservative white cutoff accounts for part of the remaining 5 L* between the two shots.
+
+**Checked**
+
+- The emulator exports of the change measure 2.75 L* (scene) and 2.86 (chart).
+- The chart's ΔE00 against the camera JPEG falls from 9.43 to 5.70 (colour only, from 5.86 to 4.23).
+- The LibRaw comparison above develops the decoded image with `toneExponent` 1, since its oracle is linear light. It
+  still differs by at most 3 counts.
+- `RawDeveloperTest` checks the step: grey goes to `MAX·(v/MAX)^1.24`, the colour ratios hold, black and white stay,
+  and an exponent of 1 changes nothing. It fails when the step is skipped.
+
+**Limits**
+
+- Two shots from one body, in the camera's default picture style as far as the files show.
+- Other ISOs, picture styles and Auto Lighting Optimizer settings are untested.
+- The physical-screen judgement on the S24 is still the owner's.

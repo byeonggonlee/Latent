@@ -41,6 +41,7 @@ class CanonCr2IntegrationTest {
         assertEquals(PixelLayout.GBRG_AT_CROP,frame.layout)
         assertEquals(6,frame.orientation)
         assertArrayEquals(floatArrayOf(2f,1f,1.5f),frame.legacyImage.whiteBalance,0.0001f)
+        assertEquals(1.24f,frame.legacyImage.toneExponent,0f)
         val expected = ShortArray(96) { i ->
             if (i / 12 % 2 == 0) { if (i % 2 == 0) 4000 else 3000 }
             else { if (i % 2 == 0) 5000 else 4000 }

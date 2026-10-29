@@ -11,7 +11,8 @@ Smaller improvements after the first release: editing, consistency of the interf
 ### Added
 
 - **Canon CR2 imports** from cameras and cards, with embedded previews where available. Raw development is
-  experimental and limited to the EOS 7D's full-resolution 14-bit RAW files. Other Canon bodies and reduced-size
+  experimental and limited to the EOS 7D's full-resolution 14-bit RAW files, which open about as bright as the
+  camera's own JPEGs. Other Canon bodies and reduced-size
   sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
 
 ### Changed
