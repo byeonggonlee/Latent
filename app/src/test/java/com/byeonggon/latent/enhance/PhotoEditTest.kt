@@ -94,6 +94,20 @@ class PhotoEditTest {
     }
 
     @Test
+    fun comparesStoredEditsByAllTheySay() {
+        assertTrue(PhotoEdit.sameStored(null, null))
+        assertFalse(PhotoEdit.sameStored(null, "{}"))
+        assertTrue(PhotoEdit.sameStored("""{"exposure":0.5}""", """{"renderVersion":1,"exposure":0.50}"""))
+        assertFalse(PhotoEdit.sameStored("""{"exposure":0.5}""", """{"exposure":0.5,"renderVersion":2}"""))
+        assertFalse(PhotoEdit.sameStored("""{"exposure":0.5,"later":1}""", """{"exposure":0.5}"""))
+        // An untouched edit has no number to add.
+        assertFalse(PhotoEdit.sameStored("{}", """{"renderVersion":1}"""))
+        // What cannot be read is the same only as the same text.
+        assertTrue(PhotoEdit.sameStored("not an edit", "not an edit"))
+        assertFalse(PhotoEdit.sameStored("not an edit", "{}"))
+    }
+
+    @Test
     fun theRenderingStaysWithThePhoto() {
         val begun = PhotoEdit(Adjustments(exposure = 1f), renderVersion = 7)
 

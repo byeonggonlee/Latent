@@ -129,6 +129,23 @@ class MediaMatcherTest {
 
         assertFalse(replacesOwn(raw, restoredOnto(raw, record, hasOriginal = false)))
         assertTrue(replacesOwn(raw, restoredOnto(raw, record.copy(edit = """{"exposure":0.6}"""), hasOriginal = false)))
+        // Only the missing number counts as the current one: another number is another rendering.
+        assertTrue(replacesOwn(raw.copy(edit = """{"exposure":0.5,"renderVersion":7}"""), restoredOnto(raw, record, hasOriginal = false)))
+    }
+
+    @Test
+    fun aRestoreThatDropsWhatALaterAppWroteTakesTheEditAway() {
+        // What a restore writes is the backup's text, read back from the file as it is; a key this app does not
+        // know is lost with it, so it counts.
+        val raw = onPhone("$library/x/DSC00001.ARW", kind = MediaKind.RAW)
+            .copy(edit = """{"exposure":0.5,"renderVersion":7,"futureSetting":0.8}""")
+        val written = record("x/DSC00001.ARW", "DSC00001.ARW", kind = MediaKind.RAW).copy(edit = """{"exposure":0.5,"renderVersion":7}""")
+        val record = MediaRecord.fromJson(written.toJson())!!
+
+        assertTrue(replacesOwn(raw, restoredOnto(raw, record, hasOriginal = false)))
+        assertTrue(replacesOwn(raw, restoredOnto(raw, record.copy(edit = """{"exposure":0.5,"renderVersion":7,"futureSetting":0.9}"""), hasOriginal = false)))
+        // Written apart, the same: other key order, other number spelling.
+        assertFalse(replacesOwn(raw, restoredOnto(raw, record.copy(edit = """{"futureSetting":0.80,"renderVersion":7,"exposure":0.5}"""), hasOriginal = false)))
     }
 
     @Test

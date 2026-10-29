@@ -337,6 +337,28 @@ data class PhotoEdit(
             }
         }
 
+        /**
+         * Whether two stored edits say the same, every key compared, those this app does not know included: what is
+         * restored is the stored text, not what this app reads of it. An edit written without a render version, by
+         * 0.1.0, says the same as one written with the current version. Anything that cannot be read is the same only
+         * as the same text.
+         */
+        fun sameStored(a: String?, b: String?): Boolean {
+            if (a == b) return true
+            if (a == null || b == null) return false
+            return try {
+                withRenderVersion(JsonParser.parseString(a)) == withRenderVersion(JsonParser.parseString(b))
+            } catch (e: RuntimeException) {
+                // Gson reports malformed text with assorted unchecked exceptions.
+                false
+            }
+        }
+
+        private fun withRenderVersion(stored: JsonElement): JsonElement {
+            if (!stored.isJsonObject || stored.asJsonObject.size() == 0 || stored.asJsonObject.has(RENDER)) return stored
+            return stored.asJsonObject.deepCopy().apply { addProperty(RENDER, RENDER_VERSION) }
+        }
+
         /** Like [fromJson], but throws on values of the wrong kind. */
         fun fromJsonObject(stored: JsonObject): PhotoEdit {
             fun number(name: String, otherwise: Float = 0f) = stored.get(name)?.finite ?: otherwise
