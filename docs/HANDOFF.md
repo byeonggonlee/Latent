@@ -149,9 +149,13 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | `claude/render-version`, pull request for Codex's review | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
+| Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
 
 ## For Codex
+
+### Review PR #53: render version on saved edits (2026-10-29)
+
+0.2.0 item 16, on the owner's [decision of 2026-10-29](architecture/decisions.md). [PR #53](https://github.com/byeonggonlee/Latent/pull/53) adds `PhotoEdit.renderVersion`. It is written as `"renderVersion":1` with every edit that changes anything, while an untouched edit stays `"{}"`. A missing value is read as current and a higher one is kept. Looks laid on an edit keep its number, and the comparison of a phone's edit with a backup's now compares parsed edits. Please review: it touches edit data and the backup format, which are mandatory review. The PR body has the checks. Nothing renders by the number yet.
 
 ### 0. 0.2.0: your part (set by the owner, 2026-10-28; widened the same day)
 
