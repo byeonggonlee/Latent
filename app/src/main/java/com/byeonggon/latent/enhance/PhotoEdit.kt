@@ -134,20 +134,28 @@ data class PhotoEdit(
     val spots: List<Spot> = emptyList(),
     /** A LUT laid over the colours, after the mixer and the grading. */
     val lut: LutLook? = null,
+    /**
+     * How the app developed and rendered photos when this edit was begun (docs/architecture/decisions.md,
+     * 2026-10-29). A later change to how a saved edit renders raises [RENDER_VERSION] and keeps drawing edits of an
+     * older number the old way. It stays with the photo: a look laid on the edit keeps it, and starting again from
+     * the original takes the current one. An edit read without it was saved by 0.1.0 and takes the current one.
+     */
+    val renderVersion: Int = RENDER_VERSION,
 ) {
     /** Whether the picture's tones and colours come out any different from the original's. */
     val changesColors: Boolean
-        get() = copy(lensCorrection = true, framing = Framing(), lut = lut?.takeIf { it.intensity > 0f }) != PhotoEdit()
+        get() = copy(lensCorrection = true, framing = Framing(), lut = lut?.takeIf { it.intensity > 0f }, renderVersion = RENDER_VERSION) != PhotoEdit()
 
     /** Whether the picture comes out any different from the original at all. */
     val changesPicture: Boolean get() = changesColors || framing != Framing()
 
     /**
      * This edit with the tones and colours of [other], its look. What belongs to this photo alone stays
-     * its own: framing, lens correction, the settings for parts of the picture and the blemishes taken out.
+     * its own: framing, lens correction, the settings for parts of the picture, the blemishes taken out and the
+     * rendering it was begun with.
      */
     fun withLookOf(other: PhotoEdit): PhotoEdit =
-        other.copy(lensCorrection = lensCorrection, framing = framing, locals = locals, spots = spots)
+        other.copy(lensCorrection = lensCorrection, framing = framing, locals = locals, spots = spots, renderVersion = renderVersion)
 
     /**
      * The look of this edit at a strength of [amount]: nothing of it at 0, all of it at 1, and beyond
@@ -258,9 +266,19 @@ data class PhotoEdit(
             addProperty(LUT, it.id)
             if (it.intensity != 1f) addProperty(LUT_INTENSITY, it.intensity)
         }
+        // Said of every edit that changes anything, the current version included; an untouched one stays "{}".
+        if (size() > 0) addProperty(RENDER, renderVersion)
     }
 
     companion object {
+        /**
+         * The rendering this version of the app gives an edit: 1 since 0.2.0. Nothing draws by it yet. Raising it means
+         * the renderers keep the old path for edits of a lower number, and what builds an edit from scratch for a photo
+         * (the editor's filter previews and its view of the original) takes that photo's number.
+         */
+        const val RENDER_VERSION = 1
+
+        private const val RENDER = "renderVersion"
         private const val AUTO_ENHANCE = "autoEnhance"
         private const val LENS_CORRECTION = "lensCorrection"
         private const val MONOCHROME = "monochrome"
@@ -386,6 +404,8 @@ data class PhotoEdit(
                     Spot(values[0], values[1], values[2], values[3], values[4])
                 } ?: emptyList(),
                 lut = stored.get(LUT)?.asString?.let { LutLook(it, (stored.get(LUT_INTENSITY)?.finite ?: 1f).coerceIn(0f, 1f)) },
+                // A number from a later app is kept, so that it still knows the edit when the backup goes back to it.
+                renderVersion = stored.get(RENDER)?.asInt?.takeIf { it > 0 } ?: RENDER_VERSION,
             )
         }
 

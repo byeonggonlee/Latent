@@ -127,6 +127,12 @@ the storage volume (`/storage/emulated/0/`, another user's `/storage/emulated/10
 An edit names the files it needs by id: `"lut": "<id>"` for a LUT, `"raster": "<id>"` in a detected mask. Those files
 come along under the same ids, so the edit still finds them after a restore.
 
+Since 0.2.0 an edit that changes anything also says `"renderVersion": 1`: which version of the app's rendering it was
+begun with ([decision of 2026-10-29](architecture/decisions.md)). A later app that renders differently keeps drawing
+an edit of a lower number the old way; an edit without one was saved by 0.1.0 and takes the current rendering. The
+format's version is unchanged: an app reading an edit leaves keys it does not know alone, so 0.1.0 restores these
+edits as before, and a restore counts an edit saved again only to add the number as the same edit.
+
 ### albums.jsonl and album_items.jsonl
 
 `{"id": 7, "name": "Christmas", "createdAt": ...}` and `{"album": 7, "media": 1, "addedAt": ...}`, `album` and

@@ -118,8 +118,12 @@ internal fun restoredOnto(target: MediaItemEntity, record: MediaRecord, hasOrigi
 internal fun replacesOwn(target: MediaItemEntity, restored: MediaItemEntity): Boolean =
     (target.rating != 0 && restored.rating != target.rating) ||
         (target.flag != 0 && restored.flag != target.flag) ||
-        (target.edit != null && target.edit != UNKNOWN_EDIT && restored.edit != target.edit) ||
+        (target.edit != null && target.edit != UNKNOWN_EDIT && !sameEdit(restored.edit, target.edit)) ||
         (target.geoSource != GeoSource.NONE && (apart(restored.latitude, target.latitude) || apart(restored.longitude, target.longitude)))
+
+// The same edit can be written apart: 0.1.0 wrote it without the render version that 0.2.0 adds when it saves one again.
+private fun sameEdit(a: String?, b: String?): Boolean =
+    a == b || (a != null && b != null && PhotoEdit.fromJson(a)?.let { it == PhotoEdit.fromJson(b) } == true)
 
 // A place written into a file's Exif and read back is rounded; a metre or so is the same place.
 private fun apart(a: Double?, b: Double?): Boolean = a == null || b == null || abs(a - b) > 1e-5
