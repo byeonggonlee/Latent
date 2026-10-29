@@ -31,6 +31,7 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 13 | Store: English screenshots, the new short descriptions, the closed test | Claude Code, owner | S | – |
 | 14 | Phone checks left from SC-57G: the camera unplugged and the storage full during a sync, then carrying on | Shared, owner | S | – |
 | 15 | Phone-made DNGs: Open Camera's and MotionCam's open as the phone took them (orientation, white balance, crop, opcode lists); Latent takes no photos itself, so these apps are how a phone without a raw mode of its own shoots one | Codex | S | Claude Code |
+| 16 | Render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
 Not in 0.2.0: backups made by themselves, carrying an Ultra HDR gain map through an edit, tap to select, video trim
 and LUTs, CR3, searching by shutter speed and aperture. The UI guide's tasks 4–7, handed to Codex before 0.1.0, are
