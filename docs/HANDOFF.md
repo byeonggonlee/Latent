@@ -150,9 +150,13 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
-| Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request shrinks to a dispatch note of about three lines, or nothing when the owner has named the reviewer | `claude/flash-triage` | `architecture/antigravity-review-orchestration.md`, `architecture/flash-review-evaluation.md`, `architecture/decisions.md`, this board | 2026-10-29 |
+| Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request shrinks to a dispatch note of about three lines, or nothing when the owner has named the reviewer | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), `claude/flash-triage` | `architecture/antigravity-review-orchestration.md`, `architecture/flash-review-evaluation.md`, `architecture/decisions.md`, this board | 2026-10-29 |
 
 ## For Codex
+
+### Review PR #54: Gemini 3.8 Flash's part on a pull request (2026-10-29)
+
+At the owner's word, [PR #54](https://github.com/byeonggonlee/Latent/pull/54) cuts Flash's output on a pull request to a dispatch note of about three lines: the commit, whether mandatory review applies and under what, and who reviews it. It adds one line for each failed surface check, posts nothing when the owner has named the reviewer, and makes no finding search unless the owner asks. It is review governance, so it is mandatory review under `main`'s current rules. Please review it as the cross-family reviewer. The evidence from PRs #52 and #53 is in `flash-review-evaluation.md`; check it against the posted reviews.
 
 ### Review PR #53: render version on saved edits (2026-10-29)
 
