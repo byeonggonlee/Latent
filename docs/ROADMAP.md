@@ -35,8 +35,9 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 
 Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it, then 8, 11 and 1. Item 12
 ([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) has Gemini 4 Argon and Claude review of Adobe's
-two-illuminant profile. The owner authorized merging Codex's work on 2026-10-29; S24 visual colour acceptance
-remains unverified. Development is limited to EOS 7D full-resolution 14-bit RAW; other bodies, sRAW/mRAW and CR3
+two-illuminant profile. The owner authorized merging Codex's work on 2026-10-29; the subsequent Claude claim `927bcf3`
+records a brightness/tone fix required before #51 merges (`claude/canon-tone`). That change and its review remain
+pending; S24 visual colour acceptance remains unverified. Development is limited to EOS 7D full-resolution 14-bit RAW; other bodies, sRAW/mRAW and CR3
 are not supported for development. Item 15 is merged in [PR #52](https://github.com/byeonggonlee/Latent/pull/52):
 four public phone samples and emulator exports pass; a real nonempty distortion opcode and S24 colour/performance
 checks remain outstanding.
