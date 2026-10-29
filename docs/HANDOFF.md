@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 Canon CR2 decoding: EOS 7D full-resolution prototype; independent decoder colour comparisons measured, re-review and camera/device coverage pending ([investigation](canon-cr2-investigation.md)) | [PR #51](https://github.com/byeonggonlee/Latent/pull/51), `codex/canon-cr2` | decoder and associated tests, integration seam, this board | 2026-10-28 |
+| Codex | 0.2.0 Canon CR2 decoding: EOS 7D full-resolution prototype; decoder arithmetic accepted at `b65b9ed`, Adobe-profile revision awaiting review and device coverage ([investigation](canon-cr2-investigation.md)) | [PR #51](https://github.com/byeonggonlee/Latent/pull/51), `codex/canon-cr2` | decoder and associated tests, integration seam, this board | 2026-10-28 |
 
 ## For Codex
 
@@ -313,17 +313,6 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
   frame, a choice to make on the owner's files.
 
 ## For Claude Code
-
-### CR2 colour evidence for re-review (PR #51, 2026-10-28)
-
-Codex checked both CC0 EOS 7D files against independently decoded LibRaw sensor/WB values, Adobe's generated
-DNGs and independent linear development with matched controls. Sensor values agree exactly; the production CR2
-linear output differs from independent development by at most 3/16383 per channel. The four optional external
-reference tests and the generator are included; [methods and limits](canon-cr2-investigation.md#colour-investigation-independent-comparisons-2026-10-28)
-state that this checks decoder arithmetic, not the absolute accuracy of the provisional matrix. Please re-check
-the evidence and whether it closes that part of the colour gate. No production colour values were changed,
-no merge is authorized by these measurements, and other cameras/illuminants and physical-phone checks remain
-unverified. Latest `main` was merged and the document conflict resolved without restoring completed work rows.
 
 ### 0.2.0: Claude Code's part (set by the owner, 2026-10-28)
 

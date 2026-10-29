@@ -531,7 +531,7 @@ object Dng {
      * and inverted. Two known calibration illuminants are blended for the measured scene white;
      * otherwise the legacy matrix nearest daylight is used.
      */
-    private class Colors(floats: (Int) -> FloatArray?, ints: (Int) -> Int?) {
+    internal class Colors(floats: (Int) -> FloatArray?, ints: (Int) -> Int?) {
         val matrix: FloatArray
         val whiteBalance: FloatArray
 

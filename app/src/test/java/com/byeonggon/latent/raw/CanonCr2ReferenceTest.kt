@@ -15,13 +15,36 @@ import kotlin.math.roundToInt
 
 /** Optional external files: the CC0 CR2s and their uncompressed Adobe DNG conversions stay out of Git. */
 class CanonCr2ReferenceTest {
-    @Test fun sceneAgreesWithTheIndependentDngConversion() = compare("CANON_7D_SAMPLE", "CANON_7D_DNG")
+    @Test fun sceneSensorAndWhiteBalanceAgreeWithAdobeDng() = compareDngSensorAndSharedDevelopment("CANON_7D_SAMPLE", "CANON_7D_DNG")
 
-    @Test fun chartAgreesWithTheIndependentDngConversion() = compare("CANON_7D_CHART_SAMPLE", "CANON_7D_CHART_DNG")
+    @Test fun chartSensorAndWhiteBalanceAgreeWithAdobeDng() = compareDngSensorAndSharedDevelopment("CANON_7D_CHART_SAMPLE", "CANON_7D_CHART_DNG")
 
     @Test fun sceneAgreesWithIndependentLinearDevelopment() = compareIndependent("CANON_7D_SAMPLE", "CANON_7D_LIBRAW_RGB")
 
     @Test fun chartAgreesWithIndependentLinearDevelopment() = compareIndependent("CANON_7D_CHART_SAMPLE", "CANON_7D_CHART_LIBRAW_RGB")
+
+    @Test fun sceneUsesTheAdobeDngProfileWithIdentityCameraCalibration() = compareProfile("CANON_7D_SAMPLE", "CANON_7D_DNG")
+
+    @Test fun chartUsesTheAdobeDngProfileWithIdentityCameraCalibration() = compareProfile("CANON_7D_CHART_SAMPLE", "CANON_7D_CHART_DNG")
+
+    private fun compareProfile(cr2Variable: String, dngVariable: String) {
+        val cr2Path = System.getenv(cr2Variable)
+        val dngPath = System.getenv(dngVariable)
+        assumeTrue("Set $cr2Variable and $dngVariable to the external reference pair",
+            !cr2Path.isNullOrBlank() && !dngPath.isNullOrBlank())
+        val image = DecoderDispatch.decode(DecodeRequest(File(cr2Path!!))).legacyImage
+        val (data, first) = TiffDirectory.open(File(dngPath!!).readBytes())
+        val main = TiffDirectory.read(data, first)
+        // Production CR2 does not have Adobe's per-unit calibration. Match the available profile
+        // inputs explicitly, rather than silently overriding the CR2 matrix in the comparison.
+        val expected = Dng.Colors(
+            { tag -> if (tag == 0xc623 || tag == 0xc624) null else main.floats(tag) },
+            main::int,
+        )
+        assertArrayEquals(expected.whiteBalance, image.whiteBalance, 0.00002f)
+        assertArrayEquals(expected.matrix, image.colorMatrix, 0.0001f)
+        println("$cr2Variable production Adobe matrix=${image.colorMatrix.contentToString()}")
+    }
 
     private fun compareIndependent(cr2Variable: String, referenceVariable: String) {
         val cr2Path = System.getenv(cr2Variable)
@@ -62,7 +85,7 @@ class CanonCr2ReferenceTest {
         assertTrue("Independent mean linear RGB difference $meanDifference", meanDifference <= 2)
     }
 
-    private fun compare(cr2Variable: String, dngVariable: String) {
+    private fun compareDngSensorAndSharedDevelopment(cr2Variable: String, dngVariable: String) {
         val cr2Path = System.getenv(cr2Variable)
         val dngPath = System.getenv(dngVariable)
         assumeTrue("Set $cr2Variable and $dngVariable to the external reference pair",
@@ -78,6 +101,7 @@ class CanonCr2ReferenceTest {
         assertTrue("Reference must have a uniform black level", blackLevels.all { it == blackLevels[0] })
         val black = blackLevels[0].roundToInt()
         val white = raw.int(0xc61d)!!
+        assertEquals("Adobe independently declares the same black level", cr2.blackLevel, black)
         assertEquals(cr2.width, dng.width)
         assertEquals(cr2.height, dng.height)
         assertArrayEquals(cr2.whiteBalance, dng.whiteBalance, 0.00002f)
@@ -96,6 +120,8 @@ class CanonCr2ReferenceTest {
         val controlled = ArwImage(cr2.width, cr2.height, dng.cropLeft, dng.cropTop, dng.cropWidth, dng.cropHeight,
             black, white, dng.whiteBalance, dng.colorMatrix, 1f, null, cr2.orientation, cr2.sensor,
             cfaPattern = CfaPattern.RGGB)
+        // Both images use Latent here: independent evidence is the DNG sensor/WB/black metadata.
+        // LibRaw, tested above, supplies the independent development oracle.
         val ours = RawDeveloper.developPreview(controlled)
         val reference = RawDeveloper.developPreview(dng)
         var largestDifference = 0
@@ -109,7 +135,7 @@ class CanonCr2ReferenceTest {
         val meanDifference = totalDifference.toDouble() / (ours.width * ours.height * 3)
         println("$cr2Variable: WB=${dng.whiteBalance.contentToString()}, matrix=${dng.colorMatrix.contentToString()}, " +
             "black=$black, white=$white, crop=${dng.cropLeft},${dng.cropTop}; " +
-            "sensor max difference=$largestSensorDifference, linear RGB max=$largestDifference, mean=$meanDifference")
+            "sensor max difference=$largestSensorDifference, shared RawDeveloper RGB max=$largestDifference, mean=$meanDifference")
         // Quantization occurs before WB in DNG and after WB in CR2; allow its small, bounded effect.
         assertTrue("Linear RGB differs by $largestDifference counts", largestDifference <= 16)
         assertTrue("Mean linear RGB difference $meanDifference", meanDifference <= 2)

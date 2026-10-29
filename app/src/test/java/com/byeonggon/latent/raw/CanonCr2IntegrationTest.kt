@@ -51,6 +51,32 @@ class CanonCr2IntegrationTest {
         assertTrue(preview.blue.first() < preview.green.first())
     }
 
+    private fun calibration(red: Int, blue: Int): FloatArray {
+        val bytes = validFile()
+        val data = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+        data.putShort(1100 + 2 * 63, red.toShort())
+        data.putShort(1100 + 2 * 66, blue.toShort())
+        val file = temp.newFile().apply { writeBytes(bytes) }
+        val image = DecoderDispatch.decode(DecodeRequest(file)).legacyImage
+        assertArrayEquals(floatArrayOf(red / 1024f, 1f, blue / 1024f), image.whiteBalance, 0.000001f)
+        return image.colorMatrix
+    }
+
+    @Test fun clampsWarmerWhiteBalanceToTheAdobeStandardACalibration() {
+        // Independent NumPy calculation: invert row-normalized (Adobe ColorMatrix1 * sRGB-to-XYZ).
+        // Gains are slightly warmer than Standard A, so interpolation must clamp at that endpoint.
+        val expected = floatArrayOf(1.3483000f, 0.3803899f, -0.7286898f,
+            -0.2262151f, 1.7218883f, -0.4956733f, -0.0169115f, -0.3936337f, 1.4105452f)
+        assertArrayEquals(expected, calibration(1300, 2600), 0.003f)
+    }
+
+    @Test fun clampsCoolerWhiteBalanceToTheAdobeD65Calibration() {
+        // Same independent calculation with ColorMatrix2 and D65; gains are slightly cooler than D65.
+        val expected = floatArrayOf(1.9203930f, -1.0413070f, 0.1209140f,
+            -0.2469543f, 1.7593473f, -0.5123931f, -0.0069546f, -0.4895519f, 1.4965065f)
+        assertArrayEquals(expected, calibration(2420, 1360), 0.003f)
+    }
+
     @Test fun usesTheShotsWhiteLevelInsteadOfTheBitDepthMaximum() {
         for (white in intArrayOf(11222, 12279)) {
             val file = temp.newFile("white-$white.CR2").apply { writeBytes(validFile(whiteLevel = white)) }
