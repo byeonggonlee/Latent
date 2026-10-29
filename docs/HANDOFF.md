@@ -149,20 +149,19 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 item 15: Open Camera / MotionCam compatibility; Claude reviewed `c99588e` and found P2 wrong OpcodeList3 tag. Reader and fixtures now use standard `0xC74E`; standard-tag regression added (13 failures before fix, all 135 raw tests pass after). Open Camera has empty OpcodeList3, MotionCam none; private Galaxy tag check remains unverified. Existing red-aligned crop stays. Awaiting follow-up review | [PR #52](https://github.com/byeonggonlee/Latent/pull/52), `codex/phone-dng` | `raw/Dng.kt`, decoder tests, phone-DNG report/checklist, changelog and prior tag claims | 2026-10-29 |
+| Codex | 0.2.0 Canon CR2: EOS 7D full-resolution 14-bit development; Gemini 4 Argon and Claude LGTM at `94c0c15`; integrating current main for owner-authorized merge. S24 visual colour acceptance remains unverified ([investigation](canon-cr2-investigation.md)) | [PR #51](https://github.com/byeonggonlee/Latent/pull/51), `codex/canon-cr2` | decoder and associated tests, integration seam, this board | 2026-10-28 |
 | Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
 | Claude Code (computer) | PR #51's EOS 7D opens about 0.7 stop brighter and flatter than the camera's JPEG (the tone curve is the ZV-E10's); at the owner's word, fixed before #51 merges: a per-camera tone exponent on developed brightness, fitted to the two CC0 samples | `claude/canon-tone`, stacked on `codex/canon-cr2` | `ArwImage` (`raw/SonyArw.kt`), `raw/RawDeveloper.kt`, one line of `raw/CanonCr2.kt`, their tests, this board | 2026-10-29 |
 | Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request shrinks to a dispatch note of about three lines, or nothing when the owner has named the reviewer | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), `claude/flash-triage` | `architecture/antigravity-review-orchestration.md`, `architecture/flash-review-evaluation.md`, `architecture/decisions.md`, this board | 2026-10-29 |
 
 ## For Codex
 
-### Review PR #54: Gemini 3.8 Flash's part on a pull request (2026-10-29)
+### Completed reviews (2026-10-29)
 
-At the owner's word, [PR #54](https://github.com/byeonggonlee/Latent/pull/54) cuts Flash's output on a pull request to a dispatch note of about three lines: the commit, whether mandatory review applies and under what, and who reviews it. It adds one line for each failed surface check, posts nothing when the owner has named the reviewer, and makes no finding search unless the owner asks. It is review governance, so it is mandatory review under `main`'s current rules. Please review it as the cross-family reviewer. The evidence from PRs #52 and #53 is in `flash-review-evaluation.md`; check it against the posted reviews.
+- [PR #54](https://github.com/byeonggonlee/Latent/pull/54#pullrequestreview-5699700702): LGTM at `5ab45e2`, full governance diff under main's existing rules; evidence checked against posted reviews and sample metadata.
+- [PR #53](https://github.com/byeonggonlee/Latent/pull/53#pullrequestreview-5694069737): LGTM at `61ec0a6`; unknown-field restore-warning P2 resolved.
 
-### Review PR #53: render version on saved edits (2026-10-29)
-
-0.2.0 item 16, on the owner's [decision of 2026-10-29](architecture/decisions.md). [PR #53](https://github.com/byeonggonlee/Latent/pull/53) adds `PhotoEdit.renderVersion`. It is written as `"renderVersion":1` with every edit that changes anything, while an untouched edit stays `"{}"`. A missing value is read as current and a higher one is kept. Looks laid on an edit keep its number, and the comparison of a phone's edit with a backup's now compares parsed edits. Please review: it touches edit data and the backup format, which are mandatory review. The PR body has the checks. Nothing renders by the number yet.
+Both are review conclusions; neither PR was merged by Codex.
 
 ### 0. 0.2.0: your part (set by the owner, 2026-10-28; widened the same day)
 
@@ -326,27 +325,6 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
   frame, a choice to make on the owner's files.
 
 ## For Claude Code
-
-### Review phone DNG compatibility coverage — PR #52 (2026-10-29)
-
-- **Scope:** Open Camera Pixel 2 XL / Honor 6A plus MotionCam Tools Pixel 10 Pro 10-bit / 12-bit DCG frames.
-  Claude's review at `c99588e` found pre-existing P2: OpcodeList3 read/written at `0xC742` rather than standard
-  `0xC74E`. This follow-up fixes the production constant and both fixture entries, and adds standard-tag coverage.
-  No colour-pipeline redesign or PR #51 dependency.
-- **Check:** the four interleaved GainMaps and non-unit green neutral in `PhoneDngTest`, all eight EXIF corner
-  permutations at full/preview size, independent sparse probes and hashes in `PhoneDngSampleTest`, and the
-  thumbnail/preview/export test's cleanup. The synthetic fixture accepts an explicit OpcodeList2. The standard-tag
-  test covers Android/Adobe mosaic layouts and linear DNG; public samples independently pin empty vs missing
-  OpcodeList3. Thirteen warp-related tests fail with the standard fixtures before the reader fix, then all 135 raw
-  cases pass (two unrelated external-sample skips).
-- **Evidence after the tag fix:** 832 JVM cases, no failures/errors, four unrelated skips; both Lints and Android
-  test/debug builds pass. All four emulator cases pass again (40.127 s).
-  [Report](device-results/2026-10-29-phone-dng.md) has provenance, red/green results and commands.
-- **Limits:** the existing red-aligned/even crop is recorded, including MotionCam's two omitted rows; exact crop
-  preservation is not claimed. All real samples are orientation 1; Open Camera has an empty OpcodeList3, MotionCam
-  none. Previously tested private Galaxy inputs are unavailable, so their OpcodeList3 state needs rechecking at
-  `0xC74E`. No S24 colour/peak-memory acceptance, independent full-frame colour oracle, new camera-look decision or
-  merge authorization is implied.
 
 ### 0.2.0: Claude Code's part (set by the owner, 2026-10-28)
 
@@ -580,6 +558,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-29 | Codex | Open Camera / MotionCam DNG compatibility and standard OpcodeList3 tag fix; Claude Opus 5.5 re-review LGTM at `12a8f58`, CI green; 832 JVM cases, zero failures, four unrelated skips, four emulator cases pass. Real nonempty warp and S24 visual checks remain unverified | [PR #52](https://github.com/byeonggonlee/Latent/pull/52), merged `597247c` |
 | 2026-10-29 | Claude Code (computer) | Reviewed Codex's PR #52 (Open Camera and MotionCam DNGs) at `c99588e`: the new coverage is sound, 134 raw tests pass with the four public samples; one pre-existing P2 found, `Dng.kt` reads OpcodeList3 from `0xC742` instead of `0xC74E`, so PR #17's WarpRectilinear never reaches a real DNG (both Open Camera files carry their OpcodeList3 at `0xC74E`); with the constant and `SyntheticDng` changed, all 134 pass. Re-reviewed at `12a8f58`: fixed as suggested, LGTM; 135 raw tests pass with the samples, 13 fail with the old tag; noted for the owner that real WarpRectilinear now applies by default and has not yet been checked against a camera JPEG | [Review](https://github.com/byeonggonlee/Latent/pull/52#pullrequestreview-5693927974), [re-review](https://github.com/byeonggonlee/Latent/pull/52#pullrequestreview-5694042832) |
 | 2026-10-28 | Claude Code (computer) | 0.2.0 item 7: a shared `EmptyState` (48 dp outline icon, one sentence, at most one filled button) for the library, the trash, a search and a library narrowed to nothing, whose *Show everything* clears kind, flag, stars and album; the map's off card says "Online maps are off" with the pin icon on `surfaceContainer`; every secondary `OutlinedButton` is a `FilledTonalButton` (UI guide §8.2). Checked on the Android 16 emulator. 0.2.0's small UI items 3–7 are done | this commit |
 | 2026-10-28 | Claude Code (computer) | 0.2.0 items 4–6: the Log LUT note only under a chosen Log LUT; settings' exclusive choices (tab position, theme, grid size, trash days, JPEG quality) as segmented buttons of one height, the library's kind chips in the default filter-chip style; the last filled Material icons (close, more, back, delete, play, map pin, arrows, zoom in) and the filled undo, redo, auto and library-tab drawables redrawn as 1.7 dp outlines, reject shown as the badge's crossed circle, the unused Material icons library dropped, `IconFamilyTest` added. Checked on the Android 16 emulator in Korean and English | `c281ea3`, `7e81b2a`, `36579f2` |

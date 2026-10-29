@@ -34,8 +34,12 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 16 | Render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
 Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it, then 8, 11 and 1. Item 12
-([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) is reviewed with Adobe's two-illuminant profile and is
-merged on the owner's word after they have looked at a 7D photo on the S24.
+([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) has Gemini 4 Argon and Claude review of Adobe's
+two-illuminant profile. The owner authorized merging Codex's work on 2026-10-29; S24 visual colour acceptance
+remains unverified. Development is limited to EOS 7D full-resolution 14-bit RAW; other bodies, sRAW/mRAW and CR3
+are not supported for development. Item 15 is merged in [PR #52](https://github.com/byeonggonlee/Latent/pull/52):
+four public phone samples and emulator exports pass; a real nonempty distortion opcode and S24 colour/performance
+checks remain outstanding.
 
 Not in 0.2.0: the colour-pipeline stages (item 13 below), backups made by themselves, carrying an Ultra HDR gain map through an edit, tap to select, video trim
 and LUTs, CR3, searching by shutter speed and aperture. The UI guide's tasks 4–7, handed to Codex before 0.1.0, are
