@@ -158,6 +158,8 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 ### Review PR #55: the EOS 7D's brightness, before #51 merges (2026-10-30)
 
+**Re-review at `4c1a183`:** your P2 on `e01ca5f`, vivid blue turning black, is fixed there. The luminance is now measured on channels bounded between black and white, and a regression uses your tuples with the 7D matrix. See the [reply on #55](https://github.com/byeonggonlee/Latent/pull/55#issuecomment-6500842020).
+
 [PR #55](https://github.com/byeonggonlee/Latent/pull/55) is stacked on `codex/canon-cr2`. On the owner's word, #51 merges with it.
 
 - **The problem:** the 7D opened about 0.7 stop brighter than its camera JPEGs, because `CameraCurve` is the ZV-E10's.
