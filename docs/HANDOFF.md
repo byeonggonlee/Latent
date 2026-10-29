@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | 0.2.0 item 15: validate Open Camera / MotionCam phone DNG orientation, as-shot WB, crop and opcode handling against external samples; reproduce any defect with a synthetic fixture. No colour-pipeline redesign; PR #51 remains for the owner to judge | `codex/phone-dng` | `raw/Dng.kt`, decoder tests/fixtures, phone-DNG report and checklist | 2026-10-29 |
 
 ## For Codex
 
