@@ -352,6 +352,13 @@ Host check (2026-10-22): owner-supplied 4080×2298 lossless-JPEG and 5712×4284 
 produced upright previews. Both lack OpcodeList3; this does not verify lens geometry against a camera JPEG. Private
 samples stay outside Git.
 
+Public-sample check (2026-10-29, [PR #52](https://github.com/byeonggonlee/Latent/pull/52)): Open Camera Pixel 2 XL
+and Honor 6A DNGs, plus MotionCam Tools Pixel 10 Pro 10-bit / 12-bit DCG exports, pass host metadata/sensor probes
+and four API 36 ARM64 emulator tests (thumbnail, preview and full JPEG export). The existing red-aligned crop policy
+remains, including two omitted MotionCam rows. Real samples all have orientation 1 and no OpcodeList3; all eight
+orientations are covered synthetically. No physical-phone colour or memory acceptance is implied.
+[Sources, hashes, crop details and limits](device-results/2026-10-29-phone-dng.md).
+
 - [ ] Pro mode on the S24 and the S26 with RAW (or RAW and JPEG) on: the `.dng` appears in "Photos on this phone"
       (`DCIM/Camera/`), with a thumbnail, and opens in the viewer and the editor. If it says it cannot be opened, keep
       the file for a test (`adb pull`) and note why from logcat (`adb logcat -s RawDevelop`, "Cannot develop …").

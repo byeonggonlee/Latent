@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 item 15: validate Open Camera / MotionCam phone DNG orientation, as-shot WB, crop and opcode handling against external samples; reproduce any defect with a synthetic fixture. No colour-pipeline redesign; PR #51 remains for the owner to judge | `codex/phone-dng` | `raw/Dng.kt`, decoder tests/fixtures, phone-DNG report and checklist | 2026-10-29 |
+| Codex | 0.2.0 item 15: Open Camera / MotionCam public-sample compatibility checks complete; no production fix. Six new JVM cases, four emulator thumbnail/preview/export cases pass. Existing red-aligned crop remains (MotionCam loses two rows); physical-phone colour and OpcodeList3 coverage remain explicit limits. Awaiting Claude Code review | [PR #52](https://github.com/byeonggonlee/Latent/pull/52), `codex/phone-dng` | decoder test fixture, JVM/Android tests, phone-DNG report and checklist | 2026-10-29 |
 
 ## For Codex
 
@@ -313,6 +313,19 @@ corrected three details in Argon's account (the crop's largest side is 16, not 1
   frame, a choice to make on the owner's files.
 
 ## For Claude Code
+
+### Review phone DNG compatibility coverage — PR #52 (2026-10-29)
+
+- **Scope:** tests and documentation only; Open Camera Pixel 2 XL / Honor 6A plus MotionCam Tools Pixel 10 Pro
+  10-bit / 12-bit DCG frames. No production source or colour-pipeline redesign, no PR #51 dependency.
+- **Check:** the four interleaved GainMaps and non-unit green neutral in `PhoneDngTest`, all eight EXIF corner
+  permutations at full/preview size, independent sparse probes and hashes in `PhoneDngSampleTest`, and the
+  thumbnail/preview/export test's cleanup. The synthetic fixture now accepts an explicit OpcodeList2.
+- **Evidence:** 831 JVM cases, no failures/errors, four unrelated skips; both Lints and Android test/debug builds
+  pass. All four emulator cases pass. [Report](device-results/2026-10-29-phone-dng.md) has provenance and commands.
+- **Limits:** the existing red-aligned/even crop is recorded, including MotionCam's two omitted rows; exact crop
+  preservation is not claimed. All real samples are orientation 1 and lack OpcodeList3. No S24 colour/peak-memory
+  acceptance, independent full-frame colour oracle, new camera-look decision or merge authorization is implied.
 
 ### 0.2.0: Claude Code's part (set by the owner, 2026-10-28)
 

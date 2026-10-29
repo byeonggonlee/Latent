@@ -48,6 +48,7 @@ internal object SyntheticDng {
         blacks: IntArray = intArrayOf(BLACK),
         linearization: IntArray? = null,
         gainMap: GainMap? = null,
+        opcodes2: ByteArray? = null,
         opcodes3: ByteArray? = null,
         photometric: Int = 32803,
         compression: Int? = null,
@@ -72,7 +73,7 @@ internal object SyntheticDng {
             }
         },
         pattern = pattern, layout = layout, storage = storage, blacks = blacks, linearization = linearization,
-        gainMap = gainMap, opcodes3 = opcodes3, photometric = photometric, compression = compression, orientation = orientation, profile = profile, defaultScale = defaultScale,
+        gainMap = gainMap, opcodes2 = opcodes2, opcodes3 = opcodes3, photometric = photometric, compression = compression, orientation = orientation, profile = profile, defaultScale = defaultScale,
     )
 
     fun file(
@@ -83,6 +84,7 @@ internal object SyntheticDng {
         blacks: IntArray = intArrayOf(BLACK),
         linearization: IntArray? = null,
         gainMap: GainMap? = null,
+        opcodes2: ByteArray? = null,
         opcodes3: ByteArray? = null,
         photometric: Int = 32803,
         compression: Int? = null,
@@ -90,6 +92,7 @@ internal object SyntheticDng {
         profile: ColorProfile = ColorProfile(),
         defaultScale: FloatArray? = null,
     ): ByteArray {
+        require(gainMap == null || opcodes2 == null)
         val values = Array(HEIGHT) { y -> IntArray(WIDTH) { x -> samples(x, y) } }
         val data = when (storage) {
             Storage.WORDS -> ByteBuffer.allocate(WIDTH * HEIGHT * 2).order(ByteOrder.LITTLE_ENDIAN).apply {
@@ -124,6 +127,7 @@ internal object SyntheticDng {
             Entry.longs(0xC620, 26, 18),
             Entry.longs(0xC68D, *ACTIVE),
             gainMap?.let { Entry(0xC741, 7, it.bytes().size, it.bytes()) },
+            opcodes2?.let { Entry(0xC741, 7, it.size, it) },
             opcodes3?.let { Entry(0xC742, 7, it.size, it) },
         )
         val colorEntries = listOfNotNull(
