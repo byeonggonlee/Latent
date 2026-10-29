@@ -150,6 +150,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
+| Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request shrinks to a dispatch note of about three lines, or nothing when the owner has named the reviewer | `claude/flash-triage` | `architecture/antigravity-review-orchestration.md`, `architecture/flash-review-evaluation.md`, `architecture/decisions.md`, this board | 2026-10-29 |
 
 ## For Codex
 
