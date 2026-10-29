@@ -349,8 +349,19 @@ heap instead of more than 1.2 GB), in about 1.3 s to read on a computer. Its sam
 sample reaches white: it then looks as bright as the phone's JPEG. Pro mode's is 0.
 
 Host check (2026-10-22): owner-supplied 4080×2298 lossless-JPEG and 5712×4284 JPEG-XL linear DNGs decoded and
-produced upright previews. Both lack OpcodeList3; this does not verify lens geometry against a camera JPEG. Private
-samples stay outside Git.
+produced upright previews. **Correction, 2026-10-29:** the reader then used the wrong tag, `0xC742`, so the earlier
+claim that both lack OpcodeList3 is unverified here. Recheck the standard tag 51022 (`0xC74E`) when those files are
+available again; they are not in this validation environment. These runs do not verify lens geometry against a
+camera JPEG. Private samples stay outside Git.
+
+Public-sample check (2026-10-29, [PR #52](https://github.com/byeonggonlee/Latent/pull/52)): Open Camera Pixel 2 XL
+and Honor 6A DNGs, plus MotionCam Tools Pixel 10 Pro 10-bit / 12-bit DCG exports, pass host metadata/sensor probes
+and four API 36 ARM64 emulator tests (thumbnail, preview and full JPEG export). The existing red-aligned crop policy
+remains, including two omitted MotionCam rows. Real samples all have orientation 1; Open Camera writes an empty
+OpcodeList3 at standard tag `0xC74E`, while MotionCam omits it. All eight orientations are covered synthetically.
+Claude's review found that the reader and fixtures used the wrong OpcodeList3 tag; PR #52 corrects both and adds
+a standard-tag regression. No physical-phone colour or memory acceptance is implied.
+[Sources, hashes, crop details and limits](device-results/2026-10-29-phone-dng.md).
 
 - [ ] Pro mode on the S24 and the S26 with RAW (or RAW and JPEG) on: the `.dng` appears in "Photos on this phone"
       (`DCIM/Camera/`), with a thumbnail, and opens in the viewer and the editor. If it says it cannot be opened, keep
