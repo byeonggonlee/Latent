@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | `claude/render-version`, pull request for Codex's review | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
 
 ## For Codex
 
