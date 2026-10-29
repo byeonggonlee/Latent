@@ -255,9 +255,15 @@ the camera JPEG (L* matched) was 3.6. Apple's raw engine (`sips`, sRGB) gives 4.
 from the camera in the same places: the azure patch, the dark greys, the orange and the blue.
 
 **Change.** `ArwImage.toneExponent`, applied in `RawDeveloper` after the colour matrix, raises each pixel's
-brightness to a power. The brightness is Rec. 709 luminance in linear sRGB, and all three channels are scaled by
-`Y^(p-1)` through a 16,384-entry table. Black, white and each pixel's channel ratios are kept. The 7D uses
-`p = 1.24`; every other format keeps 1, which skips the step and leaves development bit-identical.
+brightness to a power. The brightness is the Rec. 709 luminance of the colour as the stage would store it, each
+channel between black and white. All three channels, so bounded, are scaled by `Y^(p-1)` through a 16,384-entry
+table. Black, white and each pixel's channel ratios are kept. The 7D uses `p = 1.24`; every other format keeps 1,
+which skips the step and leaves development bit-identical.
+
+Codex's review of the first version found that it measured the luminance before that bounding. A vivid blue gives
+red and green below black through the 7D's matrix, so its luminance came out below zero and the pixel black: camera
+RGB (1000, 2000, 12000) developed to (0, 0, 16383) without the step and (0, 0, 0) with it. Bounding first gives
+(0, 0, 8719). The LibRaw references the fit used are bounded the same way, so the fit is unchanged.
 
 **Fit.** The fit used the LibRaw linear references through `CameraCurve`, compared with the camera JPEGs on every
 seventh unclipped pixel. These were the candidates (mean |ΔL*|, scene / chart):
@@ -275,12 +281,15 @@ conservative white cutoff accounts for part of the remaining 5 L* between the tw
 
 **Checked**
 
-- The emulator exports of the change measure 2.75 L* (scene) and 2.86 (chart).
-- The chart's ΔE00 against the camera JPEG falls from 9.43 to 5.70 (colour only, from 5.86 to 4.23).
+- The emulator exports of the change measure 2.75 L* (scene) and 2.85 (chart).
+- The chart's ΔE00 against the camera JPEG falls from 9.43 to 5.69 (colour only, from 5.86 to 4.23).
 - The LibRaw comparison above develops the decoded image with `toneExponent` 1, since its oracle is linear light. It
   still differs by at most 3 counts.
 - `RawDeveloperTest` checks the step: grey goes to `MAX·(v/MAX)^1.24`, the colour ratios hold, black and white stay,
   and an exponent of 1 changes nothing. It fails when the step is skipped.
+- With the 7D's scene matrix, Codex's two blue colours and a grey each develop to their bounded colour times the
+  factor of its luminance, in preview and full development. That test fails when the luminance is measured before
+  bounding.
 
 **Limits**
 

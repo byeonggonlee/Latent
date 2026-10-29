@@ -283,6 +283,11 @@ object RawDeveloper {
             var green = matrix[3] * r + matrix[4] * g + matrix[5] * b
             var blue = matrix[6] * r + matrix[7] * g + matrix[8] * b
             toneFactor?.let { factors ->
+                // Measured on the colour as it would be stored: a channel below black, which a vivid blue gives
+                // red and green, would otherwise cancel the light of the others and turn the pixel black.
+                red = red.coerceIn(0f, range.toFloat())
+                green = green.coerceIn(0f, range.toFloat())
+                blue = blue.coerceIn(0f, range.toFloat())
                 val factor = factors[level(LUMA_RED * red + LUMA_GREEN * green + LUMA_BLUE * blue).toInt()]
                 red *= factor
                 green *= factor
