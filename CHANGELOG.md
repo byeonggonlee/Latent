@@ -33,6 +33,11 @@ Smaller improvements after the first release: editing, consistency of the interf
   which takes off the kind, flag, stars and album at once. The map's card says that online maps are off. Secondary
   buttons are tonal rather than outlined, beside one filled button for the main action.
 
+### Fixed
+
+- DNG lens correction now reads the standard OpcodeList3 tag. Previously the reader and its synthetic fixtures
+  used the same wrong tag, so real files carrying supported distortion metadata did not offer lens correction.
+
 ## [0.1.0] - 2026-10-27
 
 The first release. Latent is an Android app that brings photos in from a camera over USB, places them on the map

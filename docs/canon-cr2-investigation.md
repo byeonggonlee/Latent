@@ -220,3 +220,21 @@ Validation of this profile revision (2026-10-29): with all six external-referenc
 ran. Schema and whitespace checks passed. The new build also passed all three API 36 ARM64 emulator tests:
 thumbnail, embedded preview and full-resolution export. No S24 Ultra run or physical-screen colour judgement
 was performed. Fresh cross-family review of this production colour change remains required.
+
+### Integration for the owner-authorized merge — 2026-10-29
+
+Gemini 4 Argon and Claude reviewed the Adobe-profile revision at `94c0c15` with LGTM. The owner then asked Codex
+to merge its work. Integrating main after PR #52 changes only the standard OpcodeList3 tag in production code
+relative to that reviewed revision; the Canon decoder, profile, CFA contract and development arithmetic are
+unchanged. The changelog and HANDOFF conflicts were resolved by preserving both tasks and the other agents' rows.
+Physical S24 colour judgement remains unverified; merge authorization is not evidence of a visual check.
+
+The combined debug build passed all seven API 36 ARM64 emulator cases (Canon thumbnail, embedded preview and
+full-resolution export, plus four Open Camera/MotionCam exports) in 10.761 seconds. This run reused public
+fixtures already in app cache and did not uninstall or clear the app.
+
+With all six Canon reference variables and `PHONE_DNG_SAMPLE_DIR` set, the combined
+`testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest assembleDebug --offline` run passed:
+862 JVM cases, zero failures/errors and four unrelated fixture skips. All six Canon reference, eight Canon
+integration and four public phone-DNG cases ran. Both Lints reported zero errors and 11 warnings; schema and
+whitespace checks passed.

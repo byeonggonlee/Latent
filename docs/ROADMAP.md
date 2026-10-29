@@ -2,7 +2,7 @@
 
 What to build next, ranked by how often the feature is used in everyday photo editing, how much of it
 the app already has, and what it costs. Goal of the app: between Snapseed and Lightroom Mobile, plus
-camera sync, all on the phone. Last revised 2026-10-28 (the 0.2.0 plan); before that 2026-10-22 (items 1 to 5, 8 and 10 done, 7 for stills, 6 up to the sky,
+camera sync, all on the phone. Last revised 2026-10-29 (render version for 0.2.0, the colour pipeline in stages); before that 2026-10-28 (the 0.2.0 plan); before that 2026-10-22 (items 1 to 5, 8 and 10 done, 7 for stills, 6 up to the sky,
 the telling half of 11; the card reader import and DNG distortion done).
 
 ## 0.2.0 (planned 2026-10-28)
@@ -31,8 +31,17 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 13 | Store: English screenshots, the new short descriptions, the closed test | Claude Code, owner | S | – |
 | 14 | Phone checks left from SC-57G: the camera unplugged and the storage full during a sync, then carrying on | Shared, owner | S | – |
 | 15 | Phone-made DNGs: Open Camera's and MotionCam's open as the phone took them (orientation, white balance, crop, opcode lists); Latent takes no photos itself, so these apps are how a phone without a raw mode of its own shoots one | Codex | S | Claude Code |
+| 16 | Render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
-Not in 0.2.0: backups made by themselves, carrying an Ultra HDR gain map through an edit, tap to select, video trim
+Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it, then 8, 11 and 1. Item 12
+([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) has Gemini 4 Argon and Claude review of Adobe's
+two-illuminant profile. The owner authorized merging Codex's work on 2026-10-29; S24 visual colour acceptance
+remains unverified. Development is limited to EOS 7D full-resolution 14-bit RAW; other bodies, sRAW/mRAW and CR3
+are not supported for development. Item 15 is merged in [PR #52](https://github.com/byeonggonlee/Latent/pull/52):
+four public phone samples and emulator exports pass; a real nonempty distortion opcode and S24 colour/performance
+checks remain outstanding.
+
+Not in 0.2.0: the colour-pipeline stages (item 13 below), backups made by themselves, carrying an Ultra HDR gain map through an edit, tap to select, video trim
 and LUTs, CR3, searching by shutter speed and aperture. The UI guide's tasks 4–7, handed to Codex before 0.1.0, are
 items 5–7 here and come back to Claude Code; Codex does not do them.
 
@@ -93,7 +102,8 @@ Each is small or medium, works offline, and needs no new permission.
   lens correction chip hidden for files without a lens profile, and a Pixel's `.RAW-02.ORIGINAL.dng` shown as one
   with its `.RAW-01.COVER.jpg`. Since done (2026-10-22): the lens's distortion from OpcodeList3 (WarpRectilinear,
   [PR #17](https://github.com/byeonggonlee/Latent/pull/17)), with the lens correction chip for the files that carry
-  it; no Galaxy file tried so far does. Next: what is left of a `BaselineExposure` that highlights stopped short in
+  it. PR #52 corrects the OpcodeList3 tag to `0xC74E`; the earlier claim that the tried Galaxy files have none needs
+  rechecking at that standard tag. Next: what is left of a `BaselineExposure` that highlights stopped short in
   the tone stage's exposure (with care not to add to the automatic correction twice), only if a phone's file comes
   out darker than its JPEG. Galaxy Log video belongs with item 12.
 
@@ -154,6 +164,24 @@ Each is small or medium, works offline, and needs no new permission.
 12. **10-bit video with LUTs and grading** (Log, HLG) on Media3 (ExoPlayer, Transformer and its OpenGL effects),
     together with the video stage of item 7 (the parser, `LutStore` and the lookup can be taken over as they are). Large; the one place where 10-bit has real demand, since the ZV-E10
     shoots stills in 8-bit JPEG and raw only.
+13. **Colour pipeline in stages** (owner, 2026-10-29, after the discussion on
+    [PR #51](https://github.com/byeonggonlee/Latent/pull/51#issuecomment-6489430172)). The target stays the camera's
+    look ([decision of 2026-10-21](architecture/decisions.md)); nothing here changes it by itself.
+    - *Stage 1, in 0.3.0 (Codex, reviewed by Claude Code):* a typed colour profile that does not depend on the file
+      format (two illuminants and their matrices, the shot's neutral, ForwardMatrix and per-unit calibration where a
+      file has them, and where the numbers came from) replaces the DNG tag callbacks that CR2 borrows today. It
+      changes no pixel: every sample (Sony ARW, phone DNG, Adobe DNG, CR2) develops to the same levels, bit for bit.
+    - *Stage 2, only when the owner reopens the 2026-10-21 decision* (for example once there is a colour chart to
+      shoot under two lights): a colorimetric base (camera → XYZ with a defined adaptation, ForwardMatrix where
+      present) with the camera's look as a stage of its own on top, on by default. It makes the most difference
+      indoors: the current camera-space adaptation is the same as Bradford's in daylight and about ΔE00 4.3 from it
+      under tungsten. The editor's white balance for a raw moves into that stage, so a corrected white balance
+      blends the profile again. It comes as render version 2, so edits saved before keep their look
+      ([decision of 2026-10-29](architecture/decisions.md)). Checked against the DNG specification's equations and
+      the DNG SDK's colour calculation; physical accuracy only with a characterised chart, and only for the owner's
+      cameras (a 7D CR2 stays "as Adobe's profile").
+    - *Stage 3, later:* headroom past white and out of gamut instead of clipping in `LinearImage`, after its memory
+      and GPU cost has been measured on a phone.
 
 ## Later, or only if asked
 

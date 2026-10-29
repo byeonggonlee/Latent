@@ -5,6 +5,33 @@ what was decided, why, what it means for a change, and what would open it again.
 owner decides again; then the old text stays, marked as replaced. Proposals that wait for a decision live in the
 assessments in this folder (for example [`codex-assessment.md`](codex-assessment.md)) and in `docs/TODO.md`.
 
+## 2026-10-29 · Edits keep their look from 0.2.0 on
+
+**Decided.** Edits saved with 0.2.0 or later keep the look they were saved with when development changes later.
+Edits saved with 0.1.0 do not: until 0.2.0 is released, development may change freely, and a photo edited under 0.1.0
+then shows as 0.2.0 renders it. This answers question 3 of the owner's decisions in
+[PR #51's discussion summary](https://github.com/byeonggonlee/Latent/pull/51#issuecomment-6489430172).
+
+**Why.** 0.1.0 has been out for two days. Holding back 0.2.0's colour work for its few edits (the CR2 profile, auto
+colour, the colour-pipeline stages discussed on PR #51) is not worth the code it would take. From 0.2.0 on, the
+owner's library and anyone else's carry edits that should look tomorrow as they did when they were saved.
+
+**What it means for a change:**
+
+- From 0.2.0, every saved edit records the render version it was made with: 1 for 0.2.0. An edit without one was
+  saved by 0.1.0 and takes the current rendering.
+- A change that alters how an existing edit renders raises the render version: the colour matrix or profile, white
+  balance, the curve, saturation, demosaicing, clipping, or what an adjustment does. Edits with an older version keep
+  rendering through the old path; new edits use the new one. Offering to bring an old edit up to date, as Lightroom's
+  process versions do, is a later choice.
+- A plain bug, where the old output was wrong (a crash, a wrong Bayer phase, magenta highlights), is fixed for every
+  edit and said in the changelog. Whether a change is a bug fix or a new look is the reviewer's question, and the
+  owner's when they disagree.
+- A decoder for files Latent could not develop before needs no new version, since no saved edit renders differently.
+- Changes that land before 0.2.0 is released need no version.
+
+**Opens again** when keeping old paths costs more than it is worth, judged by the owner.
+
 ## 2026-10-22 · Antigravity reviews and orchestrates models; Claude Code and Codex write the code
 
 **Decided.** Code authoring stays strictly with **Claude Code** (editor, renderers and shaders, library, backup, sync,

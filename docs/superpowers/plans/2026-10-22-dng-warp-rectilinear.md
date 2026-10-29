@@ -24,3 +24,10 @@ Execution evidence: the initial seven tests ran against a minimal contract and f
 Claude CLI review was blocked by automatic approval review because it would send private repository diff/new files to an external service; no review payload was sent. The PR must retain Claude review as pending until the owner authorizes that transfer or reviews through their own Claude workflow. The owner supplied two private linear DNGs (4080×2298 lossless JPEG, 5712×4284 JPEG XL) and a camera JPEG. Downloaded locally with size/SHA-256 verification; both decoded and produced upright previews successfully. Neither DNG has OpcodeList3, so these prove codec/render compatibility, not warp-to-camera-JPEG matching or phone behavior. Photos and output artifacts remain outside Git.
 
 Final local integration: main at b9072f5 was merged; `testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest --offline` passed with the private DNG sample directory enabled: 603 tests, 0 failures/errors, 3 unrelated fixture-dependent skips. Lint has 0 errors and 6 existing warnings; schema diff and whitespace check pass. The 18 new warp tests pass. Required Claude review and on-device warp/JPEG/memory checks remain pending.
+
+**Correction, 2026-10-29 (PR #52):** the reader and synthetic fixture used `0xC742` for OpcodeList3; the standard
+tag is 51022 (`0xC74E`). Thus the earlier private-Galaxy claim above, “Neither DNG has OpcodeList3,” is not verified
+at the correct tag. The two inputs (`20261022_103021.dng` and `20261022_103110.dng`) are not available in the current
+validation environment and must be rechecked when available. Their successful decode/preview runs remain evidence
+for codec compatibility, not for lens geometry or absence of distortion metadata. PR #52 fixes the production tag,
+updates both synthetic layouts, and pins the standard tag independently in a regression.
