@@ -1,6 +1,23 @@
-# Canon CR2 investigation (work in progress)
+# Canon CR2 investigation and validation
 
-This is an EOS 7D full-resolution CR2 prototype, not general Canon CR2 support. Other camera models, CR3, and reduced-resolution sRAW/mRAW must not be presented as supported. Claude Opus 5.5 accepted the decoder-arithmetic evidence at `b65b9ed`. The current revision replaces the JPEG-fitted matrix with Adobe's Standard A/D65 profile through the existing DNG interpolation code. That production colour change requires a fresh review; camera/device coverage remains limited. The dated investigation below preserves the earlier measurements; the [2026-10-29 follow-up](#review-follow-up-adobe-two-illuminant-profile-2026-10-29) describes the current profile.
+## Current status — merged 2026-10-30
+
+[PR #51](https://github.com/byeonggonlee/Latent/pull/51) is merged into main at `f24232e`, including the
+Adobe Standard A/D65 profile and [PR #55](https://github.com/byeonggonlee/Latent/pull/55)'s bounded-luminance tone
+correction. Gemini 4 Argon reviewed the decoder/profile at `94c0c15`; Codex re-reviewed the complete tone delta
+at `4c1a183` with LGTM after the blue-to-black P2 fix. Integrated head `54dd6a7` has an identical tree to that
+reviewed head, and its build/licence checks pass.
+
+Full local checks at the reviewed tone head passed: 865 JVM cases, zero failures/errors, four unrelated fixture
+skips, both Lints and Android test/debug builds; all seven Canon/phone-DNG API 36 emulator cases passed. The
+owner subsequently compared both sample photos with their camera JPEGs on the S24 and judged them acceptable
+on 2026-10-30 (HANDOFF record `374305d`). This is the owner's visual acceptance of those two samples, not a
+claim of calibrated colour accuracy, broad camera support or measured phone performance.
+
+Development remains experimental and limited to EOS 7D full-resolution 14-bit CR2. Other models, sRAW/mRAW and
+CR3 are not supported for development. Broader ISO, illuminant, picture-style and performance coverage remains
+open. The dated investigation below preserves the evidence and limits as they stood at each stage; earlier
+awaiting-review, integration and S24-status statements are superseded by this current status.
 
 ## External samples and reproducibility
 
@@ -295,4 +312,4 @@ conservative white cutoff accounts for part of the remaining 5 L* between the tw
 
 - Two shots from one body, in the camera's default picture style as far as the files show.
 - Other ISOs, picture styles and Auto Lighting Optimizer settings are untested.
-- The physical-screen judgement on the S24 is still the owner's.
+- The owner judged both samples beside their camera JPEGs on the S24 acceptable on 2026-10-30 (record `374305d`); this does not extend coverage beyond those two samples.
