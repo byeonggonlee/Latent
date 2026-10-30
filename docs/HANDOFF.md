@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | 0.2.0 item 11: after an import, how many files came in without a place, with a way to the Location screen | `claude/unplaced` (straight to `main`, no review) | `camera/SyncEngine.kt` (the import's result), `ui/sync/SyncScreen.kt`, strings, their tests, this board | 2026-10-30 |
 
 ## For Codex
 
