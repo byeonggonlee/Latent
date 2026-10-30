@@ -5,6 +5,33 @@ what was decided, why, what it means for a change, and what would open it again.
 owner decides again; then the old text stays, marked as replaced. Proposals that wait for a decision live in the
 assessments in this folder (for example [`codex-assessment.md`](codex-assessment.md)) and in `docs/TODO.md`.
 
+## 2026-10-29 · Gemini 3.8 Flash's part on a pull request is the dispatch
+
+**Decided.** On a pull request, Gemini 3.8 Flash posts a dispatch note of about three lines: the commit it read,
+whether the change needs mandatory review and under which categories, and who reviews it. It does not summarise the
+change or list candidate findings, and looks for bugs only when the owner asks. When the owner has already named a
+PR's reviewer, Flash posts nothing on it. This narrows its part in the
+[entry of 2026-10-22](#2026-10-22--antigravity-reviews-and-orchestrates-models-claude-code-and-codex-write-the-code);
+the rest of that entry stands. The rules are in
+[`antigravity-review-orchestration.md`](antigravity-review-orchestration.md) §3.1.
+
+**Why.** On PRs #52 and #53 Flash's triage found none of the defects the deep reviewers found, repeated one PR's
+wrong claim about its own samples, and raised one false candidate. Its dispatch was right on both. The rest cost the
+owner's reading and Antigravity's tokens, and a long "passed" triage can read as clearance. The evidence is in
+[`flash-review-evaluation.md`](flash-review-evaluation.md).
+
+**What it means for a change:**
+
+- The deep reviewer does not wait for a Flash pass, and there are no Flash candidates to validate unless the owner
+  asked for a search.
+- Classification stays one-way: Flash escalates and never downgrades, and its note never satisfies a mandatory
+  review.
+- A surface check that fails (a missing trailer, a failing CI check, a missing translation) still gets one line in
+  the note.
+
+**Opens again** when the owner wants Flash's finding search back on pull requests, for example after a benchmark of
+the kind [`flash-review-evaluation.md`](flash-review-evaluation.md) suggests.
+
 ## 2026-10-29 · Edits keep their look from 0.2.0 on
 
 **Decided.** Edits saved with 0.2.0 or later keep the look they were saved with when development changes later.

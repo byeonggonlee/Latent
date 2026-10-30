@@ -1,6 +1,7 @@
 # Antigravity Review and Model Orchestration Guidelines
 
-Established on 2026-10-22 by the owner's decision in [`decisions.md`](decisions.md). This document defines the
+Established on 2026-10-22 by the owner's decision in [`decisions.md`](decisions.md), and changed by the owner on
+2026-10-29 (Gemini 3.8 Flash's part on a pull request, §3.1). This document defines the
 operating rules, responsibility boundaries, model-tier assignments, and review/handoff protocols for **Antigravity**
 and the models running inside it (**Gemini 3.8 Flash**, **Gemini 4 Argon**, and **Claude Opus 5.5**).
 
@@ -99,9 +100,21 @@ that high-reasoning token budgets are spent where bugs cost user data:
     does not judge whether a mandatory-review change is safe, and may only escalate—never downgrade—a review.**
   - **Surface and contract checks**: Checking caller/callee alignment (`ArwImage` callers), commit trailers,
     `docs/DEVICE_CHECKS.md` entries, and resource translation completeness (`values/`, `values-ko/`, `values-ja/`).
-- **Optional first-pass finding search**: Flash may flag suspected bugs while checking the surface contracts, but
-  this is not a required extra pass on every PR. Its findings are **candidates**, not confirmed defects or merge
-  clearance. Label unverified candidates explicitly; do not present them as required fixes or a safety verdict.
+    Only a check that fails is reported.
+- **The dispatch note on a pull request**: Flash's output on a PR is a note of about three lines, posted under
+  Step 3's rules for the header and the `--comment` event:
+  ```markdown
+  Reviewed by **Gemini 3.8 Flash** (via Antigravity, mechanical triage & contract check) — inspected commit `<short-sha>`. It clears nothing.
+  Mandatory review: yes — <the AGENTS.md categories matched> | no.
+  Reviewer: <the deep reviewer under §3.4>; fallback: <the next one under §3.4>.
+  ```
+  A surface check that fails adds one line each, stated as a fact (a missing trailer, a failing CI check, a missing
+  translation). The note does not summarise the change, restate what the PR says of itself, or list candidate
+  findings. When the owner has already named the PR's reviewer, Flash posts nothing on that PR; the named reviewer
+  states in its own review which mandatory categories apply.
+- **Finding search only when the owner asks**: Flash looks for suspected bugs in a PR only at the owner's request,
+  for example in a benchmark. Its findings are **candidates**, not confirmed defects or merge clearance. Label
+  unverified candidates explicitly; do not present them as required fixes or a safety verdict.
 - **Deep-review validation duty**: A qualified deep reviewer independently checks each candidate's mechanism against
   the base and inspected head, recomputes numerical examples and bounds, checks failure and cancellation paths,
   assesses actual user impact and severity, and verifies that the proposed fix is sufficient. Do not assume a helper
@@ -114,8 +127,8 @@ that high-reasoning token budgets are spent where bugs cost user data:
   `high` effort. Its triage alone never satisfies the mandatory review requirement in `AGENTS.md`. Classification
   remains one-way escalation, and does not impose a review on small changes outside the mandatory list.
 
-Evaluation history and optional follow-up proposals are recorded separately in
-[`flash-review-evaluation.md`](flash-review-evaluation.md).
+Evaluation history (PR #36's benchmark, and the triage of PRs #52 and #53 that led to the dispatch note) and
+optional follow-up proposals are recorded separately in [`flash-review-evaluation.md`](flash-review-evaluation.md).
 
 ### 3.2 Gemini 4 Argon — Systems, Numerical, Concurrency & Seam Deep Reviewer
 
@@ -207,6 +220,8 @@ Evaluation history and optional follow-up proposals are recorded separately in
      the proposed change cannot relax the qualifications for its own review.
 4. **Escalate unconditionally**: If any path or topic matches the list above—or if there is any doubt ("when unsure,
    escalate")—assign the PR to the appropriate deep reviewer under §3.2–§3.4 without judging whether the diff is safe.
+5. Post the dispatch note of §3.1, or nothing when the owner has already named the PR's reviewer. Flash's part ends
+   there; the deep review is Step 2's.
 
 ### Step 2: Deep Inspection (Gemini 4 Argon / Claude Opus 5.5 / Peer Agent / Qualified Fallback)
 
