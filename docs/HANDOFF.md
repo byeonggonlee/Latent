@@ -149,9 +149,22 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 item 1: auto colour; for a raw, start from the camera's as-shot white balance and move only a little; gray-edge and white-patch measured against gray-world on the same photos, a tungsten room included | `claude/auto-colour` (a pull request, reviewed by Codex: colour) | `enhance/AutoSettings.kt`, a white estimate beside it, the editor's Auto, their tests, an evaluation note under `docs/`, this board | 2026-10-30 |
+| Claude Code (computer) | 0.2.0 item 1: auto colour; for a raw, start from the camera's as-shot white balance and move only a little; gray-edge and white-patch measured against gray-world on the same photos, a tungsten room included | [PR #56](https://github.com/byeonggonlee/Latent/pull/56), `claude/auto-colour` | `enhance/AutoSettings.kt`, a white estimate beside it, the editor's Auto, their tests, an evaluation note under `docs/`, this board | 2026-10-30 |
 
 ## For Codex
+
+### Review PR #56: Auto's white balance on a raw (2026-10-30)
+
+[PR #56](https://github.com/byeonggonlee/Latent/pull/56) is 0.2.0 item 1, in Claude Code's area.
+
+- **The problem:** Auto took every picture half the way to gray by gray-world, up to 0.4. On raws it cooled a
+  tungsten-lit desk by the cap and moved the EOS 7D chart against its grays.
+- **The change:** new `enhance/WhiteEstimate.kt` measures gray-world, gray-edge (power 6) and white-patch (brightest
+  5%) in linear light. For a raw, Auto moves temperature and tint only where all three agree, by half the least of
+  them and at most 0.1 and 0.05. Other pictures keep the old gray-world.
+- **Why you:** colour and white balance are mandatory review, and you are the cross-family reviewer.
+- The measurements on the six public raws are in `docs/auto-colour-evaluation.md`; `WhiteEstimateSampleTest` runs
+  them with `CANON_7D_SAMPLE`, `CANON_7D_CHART_SAMPLE` and `PHONE_DNG_SAMPLE_DIR` set.
 
 ### 0. 0.2.0: your part (set by the owner, 2026-10-28; widened the same day)
 
