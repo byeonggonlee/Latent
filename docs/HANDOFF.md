@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 item 8: find photos by a range of dates picked on a calendar | `claude/date-range` (straight to `main`, no review) | `ui/library/` (find sheet, query), the date-range dialog shared with `ui/sync/SyncScreen.kt`, strings, their tests, this board | 2026-10-30 |
 
 ## For Codex
 
@@ -548,6 +547,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-30 | Claude Code (computer) | 0.2.0 item 8: the find sheet's "When" row has a "Pick dates" chip that opens a calendar; the photos of the days picked, both ends included, in the phone's time zone, are found, from one day to any range. It shows the days chosen (without the year when it is this one) and opens the calendar again; "Any time", a period or a year clears it. The calendar dialog is shared with the import screen's shooting dates. Shutter speed and aperture still wait for a reviewed Exif index migration. Checked on the emulator (API 36): picking a range and a single day, and clearing them | this commit |
 | 2026-10-30 | Claude Code (computer) | 0.2.0 item 16: each saved edit, kept version and backup records the render version it was begun with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as before. Codex's P2 (an unknown field dropped from the restore warning's comparison) fixed; Codex LGTM at `61ec0a6` with one nonblocking P3 (Gson numeric equality), CI green. Merged on the owner's instruction | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), merged `d6055cd` |
 | 2026-10-30 | Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request is a dispatch note of about three lines (none when the owner names the reviewer), and it searches for findings only when the owner asks; the triage of PRs #52 and #53 recorded in the evaluation. Codex LGTM at `5ab45e2`. Merged on the owner's instruction | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), merged `f37bb99` |
 | 2026-10-30 | Codex | EOS 7D full-resolution 14-bit CR2 import/development/export complete, including Adobe two-illuminant profile and PR #55's bounded-luminance tone correction. Original decoder/profile: Gemini 4 Argon LGTM; tone: Codex LGTM, P2 resolved. Integrated head `54dd6a7` has the reviewed tree and green build/licence CI; 865 JVM cases (zero failures, four unrelated skips) and seven emulator cases pass. Owner judged both sample photos beside their JPEGs on S24 acceptable (record `374305d`). Other bodies, sRAW/mRAW and CR3 development remain unsupported; wider ISO/illuminant/performance coverage remains open | [PR #51](https://github.com/byeonggonlee/Latent/pull/51), merged `f24232e`; [investigation](canon-cr2-investigation.md) |

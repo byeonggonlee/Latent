@@ -23,7 +23,7 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 5 | Choices (UI guide task 4, §8.3): segmented buttons for theme and tab position; one selected style for filter chips (the library's kind chips are black today) | Claude Code | S | – |
 | 6 | One icon family (§7): the eight filled Material icons (close, more, delete, place, play, arrows, add) replaced by outline ones | Claude Code | S | – |
 | 7 | Empty states, the map's off card and button hierarchy (§8.2, §8.11, §8.14) checked screen by screen | Claude Code | S | – |
-| 8 | Find by a range of dates. Shutter speed and aperture need new columns in the Exif index (a Room migration, so a review) and wait | Claude Code | S | – |
+| 8 | Done: find by a range of dates picked on a calendar. Shutter speed and aperture need new columns in the Exif index (a Room migration, so a review) and wait | Claude Code | S | – |
 | 9 | Share at a long side typed in, beside the fixed sizes | Codex | S | Claude Code |
 | 10 | The trash after a reinstall: files left in `DCIM/Latent/.trash` shown again, so they can be restored or emptied | Codex | S–M | Claude Code |
 | 11 | After an import, "N photos without a place" with a way to the Location screen (UX guide §10) | Claude Code | S | – |
@@ -33,7 +33,7 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 15 | Phone-made DNGs: Open Camera's and MotionCam's open as the phone took them (orientation, white balance, crop, opcode lists); Latent takes no photos itself, so these apps are how a phone without a raw mode of its own shoots one | Codex | S | Claude Code |
 | 16 | Done (PR #53): render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
-Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8, 11 and 1. Item 12
+Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8 (done), 11 and 1. Item 12
 ([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) is merged at `f24232e`, including the reviewed
 Adobe two-illuminant profile and PR #55's tone correction (blue-to-black P2 resolved). Build and licence CI pass
 on integrated head `54dd6a7`; its tree matches the reviewed `4c1a183`. The owner judged both samples beside their
@@ -75,8 +75,8 @@ Each is small or medium, works offline, and needs no new permission.
    could come later. Small.
 3. ~~**Find photos.**~~ *Done 2026-10-15:* by file name, camera, lens, ISO range, focal length (35 mm terms), when (7 and 30
    days, a year), with or without a place, edited or not; flags, stars, kinds and albums are filters of their own.
-   The Exif is read once per file in the background into the database (`ExifIndex`). Not done: place names (a
-   network service), a range of dates picked on a calendar, shutter speed and aperture.
+   The Exif is read once per file in the background into the database (`ExifIndex`). A range of dates picked on a
+   calendar came with 0.2.0. Not done: place names (a network service), shutter speed and aperture.
 4. ~~**Colour range mask.**~~ *Done 2026-10-15, to be judged on a phone:* "+ Colour" is a mask of the whole picture held to a
    hue (eight swatches, the mixer's) with a range slider; any mask can be held to one colour the same way, like the
    tone range. *Updated 2026-10-27:* pick from the photo with a crosshair/magnifier and explicit Apply/Cancel;

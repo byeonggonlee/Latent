@@ -7,6 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 class LibraryQueryTest {
@@ -82,6 +83,22 @@ class LibraryQueryTest {
     }
 
     @Test
+    fun findsByDaysPickedOnTheCalendarBothEndsIncluded() {
+        val days = LibraryQuery(dates = LocalDate.of(2026, 10, 9)..LocalDate.of(2026, 10, 10))
+        // Midnight to midnight in Seoul, nine hours ahead of UTC.
+        assertTrue(days.finds(shot(at = "2026-10-08T15:00:00Z")))
+        assertTrue(days.finds(shot(at = "2026-10-10T14:59:59Z")))
+        assertFalse(days.finds(shot(at = "2026-10-08T14:59:59Z")))
+        assertFalse(days.finds(shot(at = "2026-10-10T15:00:00Z")))
+        // A single day tapped.
+        val day = LibraryQuery(dates = LocalDate.of(2026, 10, 14)..LocalDate.of(2026, 10, 14))
+        assertTrue(day.finds(shot(at = "2026-10-14T03:00:00Z")))
+        assertFalse(day.finds(shot(at = "2026-10-15T03:00:00Z")))
+        // Days long past are found, unlike by "the last 30 days".
+        assertTrue(LibraryQuery(dates = LocalDate.of(2019, 5, 1)..LocalDate.of(2019, 5, 31)).finds(shot(at = "2019-05-20T03:00:00Z")))
+    }
+
+    @Test
     fun findsByPlaceAndEditsAndOnlyAsksAboutEditsWhenItMatters() {
         assertTrue(LibraryQuery(located = Ask.YES).finds(shot()))
         assertFalse(LibraryQuery(located = Ask.YES).finds(shot(located = false)))
@@ -102,5 +119,6 @@ class LibraryQueryTest {
         assertTrue(query.finds(shot()))
         assertFalse(query.finds(shot(iso = 3200)))
         assertEquals(1, LibraryQuery(year = 2026).count)
+        assertEquals(1, LibraryQuery(dates = LocalDate.of(2026, 10, 1)..LocalDate.of(2026, 10, 9)).count)
     }
 }

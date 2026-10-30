@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.byeonggon.latent.R
 import com.byeonggon.latent.data.db.MediaItemEntity
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 /** Light to dark: the ISO ranges photos are looked for by. */
@@ -57,6 +58,8 @@ data class LibraryQuery(
     val period: Period = Period.ANY,
     /** A year of the calendar; not together with a [period]. */
     val year: Int? = null,
+    /** Days of the calendar, both ends included; not together with a [period] or a [year]. */
+    val dates: ClosedRange<LocalDate>? = null,
     /** Whether the photo has a place. */
     val located: Ask = Ask.ANY,
     /** Whether the photo has been edited. */
@@ -66,7 +69,7 @@ data class LibraryQuery(
     val count: Int
         get() = listOf(
             text.isNotBlank(), cameras.isNotEmpty(), lenses.isNotEmpty(), iso.isNotEmpty(), focal.isNotEmpty(),
-            period != Period.ANY || year != null, located != Ask.ANY, edited != Ask.ANY,
+            period != Period.ANY || year != null || dates != null, located != Ask.ANY, edited != Ask.ANY,
         ).count { it }
 
     val isActive: Boolean get() = count > 0
@@ -92,6 +95,7 @@ data class LibraryQuery(
         }
         period.days?.let { days -> if (item.capturedAt < now.minusSeconds(days * 86_400).toEpochMilli() || item.capturedAt > now.toEpochMilli()) return false }
         year?.let { if (Instant.ofEpochMilli(item.capturedAt).atZone(zone).year != it) return false }
+        dates?.let { if (Instant.ofEpochMilli(item.capturedAt).atZone(zone).toLocalDate() !in it) return false }
         if (located != Ask.ANY && (item.latitude != null && item.longitude != null) != (located == Ask.YES)) return false
         if (edited != Ask.ANY && isEdited(item) != (edited == Ask.YES)) return false
         return true

@@ -28,15 +28,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.R
 import com.byeonggon.latent.data.db.NameCount
+import com.byeonggon.latent.ui.common.DatesDialog
+import com.byeonggon.latent.ui.common.label
 import java.text.NumberFormat
 
-/** Searching the library: by name, camera, lens, ISO, focal length, when, with a place, edited. Every change takes effect at once. */
+/** Searching the library: by name, camera, lens, ISO, focal length, when (up to days picked on a calendar), with a place, edited. Every change takes effect at once. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun FindSheet(state: LibraryUiState, viewModel: LibraryViewModel, onDismiss: () -> Unit) {
     val query = state.query
     val options = state.findOptions
     var text by remember { mutableStateOf(query.text) }
+    var pickingDates by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -93,18 +96,24 @@ internal fun FindSheet(state: LibraryUiState, viewModel: LibraryViewModel, onDis
             Group(R.string.find_when) {
                 Period.entries.forEach { period ->
                     FilterChip(
-                        selected = query.year == null && query.period == period,
-                        onClick = { viewModel.updateQuery { it.copy(period = period, year = null) } },
+                        selected = query.year == null && query.dates == null && query.period == period,
+                        onClick = { viewModel.updateQuery { it.copy(period = period, year = null, dates = null) } },
                         label = { Text(stringResource(period.label)) },
                     )
                 }
                 options.years.forEach { year ->
                     FilterChip(
                         selected = query.year == year,
-                        onClick = { viewModel.updateQuery { it.copy(year = if (it.year == year) null else year, period = Period.ANY) } },
+                        onClick = { viewModel.updateQuery { it.copy(year = if (it.year == year) null else year, period = Period.ANY, dates = null) } },
                         label = { Text(year.toString()) },
                     )
                 }
+                // Chosen, it shows the days and opens the calendar again to change them; "Any time" clears them.
+                FilterChip(
+                    selected = query.dates != null,
+                    onClick = { pickingDates = true },
+                    label = { Text(query.dates?.label() ?: stringResource(R.string.pick_dates)) },
+                )
             }
             Group(R.string.find_place) {
                 AskChips(query.located, R.string.find_place_yes, R.string.find_place_no) { viewModel.updateQuery { query -> query.copy(located = it) } }
@@ -113,6 +122,17 @@ internal fun FindSheet(state: LibraryUiState, viewModel: LibraryViewModel, onDis
                 AskChips(query.edited, R.string.find_edited_yes, R.string.find_edited_no) { viewModel.updateQuery { query -> query.copy(edited = it) } }
             }
         }
+    }
+    if (pickingDates) {
+        DatesDialog(
+            title = stringResource(R.string.shooting_dates),
+            initial = query.dates,
+            onConfirm = { dates ->
+                viewModel.updateQuery { it.copy(dates = dates, period = Period.ANY, year = null) }
+                pickingDates = false
+            },
+            onDismiss = { pickingDates = false },
+        )
     }
 }
 

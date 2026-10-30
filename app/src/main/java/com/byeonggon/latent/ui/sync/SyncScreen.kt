@@ -19,9 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DateRangePicker
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalTextStyle
@@ -30,7 +27,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,18 +44,16 @@ import com.byeonggon.latent.camera.CameraConnection
 import com.byeonggon.latent.camera.SyncDates
 import com.byeonggon.latent.camera.SyncState
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.ui.common.DatesDialog
 import com.byeonggon.latent.ui.common.SectionCard
 import com.byeonggon.latent.ui.common.StorageAccessCard
+import com.byeonggon.latent.ui.common.label
 import com.byeonggon.latent.ui.common.rememberStorageAccess
 import com.byeonggon.latent.ui.common.tabular
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.byeonggon.latent.R
 import com.byeonggon.latent.ui.location.LocationCard
-import com.byeonggon.latent.ui.common.localFormat
 
 @Composable
 fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = viewModel()) {
@@ -147,7 +141,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.shooting_dates))
-                    Hint(dates?.label() ?: stringResource(R.string.all_dates))
+                    Hint(dates?.let { (it.start..it.end).label() } ?: stringResource(R.string.all_dates))
                 }
                 if (dates != null) {
                     TextButton(onClick = { viewModel.setDates(null) }, enabled = !syncState.isRunning) {
@@ -198,45 +192,14 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
     }
 
     if (pickingDates) {
-        SyncDatesDialog(
-            initial = dates,
+        DatesDialog(
+            title = stringResource(R.string.shooting_dates),
+            initial = dates?.let { it.start..it.end },
             onConfirm = {
-                viewModel.setDates(it)
+                viewModel.setDates(SyncDates(it.start, it.endInclusive))
                 pickingDates = false
             },
             onDismiss = { pickingDates = false },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SyncDatesDialog(initial: SyncDates?, onConfirm: (SyncDates) -> Unit, onDismiss: () -> Unit) {
-    val state = rememberDateRangePickerState(
-        initialSelectedStartDateMillis = initial?.start?.toPickerMillis(),
-        initialSelectedEndDateMillis = initial?.end?.toPickerMillis(),
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                enabled = state.selectedStartDateMillis != null,
-                onClick = {
-                    val start = state.selectedStartDateMillis?.toPickerDate() ?: return@TextButton
-                    // Tapping a single day leaves the end of the range open.
-                    onConfirm(SyncDates(start, state.selectedEndDateMillis?.toPickerDate() ?: start))
-                },
-            ) {
-                Text(stringResource(R.string.apply))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    ) {
-        DateRangePicker(
-            state = state,
-            title = { Text(stringResource(R.string.shooting_dates), modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
-            showModeToggle = false,
-            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -335,13 +298,3 @@ private fun cardStart(context: Context): Uri? = context.getSystemService(Storage
 
 @Composable
 private fun UsbDevice.displayName(): String = productName ?: stringResource(R.string.usb_camera)
-
-private fun SyncDates.label(): String {
-    val format = localFormat("yMMMd")
-    return if (start == end) start.format(format) else start.format(format) + " – " + end.format(format)
-}
-
-// The date picker works in UTC midnights, whatever the device's time zone.
-private fun LocalDate.toPickerMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-
-private fun Long.toPickerDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()

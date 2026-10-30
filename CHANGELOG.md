@@ -14,6 +14,8 @@ Smaller improvements after the first release: editing, consistency of the interf
   experimental and limited to the EOS 7D's full-resolution 14-bit RAW files, which open about as bright as the
   camera's own JPEGs. Other Canon bodies and reduced-size
   sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
+- **Find by dates:** besides the last 7 or 30 days and a year, the library can be searched for the days picked on a
+  calendar, from one day to any range.
 
 ### Changed
 
