@@ -8,7 +8,8 @@ import kotlin.math.min
 /**
  * Auto that sets the sliders rather than making a correction of its own, so that what it
  * did can be seen and taken further. It judges the picture by [overview], a small copy of it, as the
- * camera renders it, and only moves what needs moving.
+ * camera renders it, and only moves what needs moving. A raw's colours are the camera's white balance,
+ * which is kept but for a nudge ([WhiteEstimate.nudge]); another picture's are taken half the way to gray.
  */
 object AutoSettings {
     private const val TARGET_MIDDLE = 0.46f
@@ -16,7 +17,7 @@ object AutoSettings {
     private const val BRIGHT = 0.92f
     private const val DARK = 0.05f
 
-    fun of(overview: LinearImage): Adjustments {
+    fun of(overview: LinearImage, raw: Boolean = false): Adjustments {
         val count = overview.width * overview.height
         val display = CameraCurve.displayOfLevel
         val luma = FloatArray(count)
@@ -54,6 +55,11 @@ object AutoSettings {
         val balanced = midtones > count / 20
         val warmth = if (balanced) ln(sumBlue / sumRed).toFloat() * 0.5f else 0f
         val greenness = if (balanced) ln(sumGreen * 2 / (sumRed + sumBlue)).toFloat() * 0.5f else 0f
+        val (temperature, tint) = if (raw) {
+            WhiteEstimate.nudge(overview)
+        } else {
+            (warmth / 0.35f).coerceIn(-0.4f, 0.4f) to (greenness / 0.25f).coerceIn(-0.3f, 0.3f)
+        }
 
         return Adjustments(
             exposure = rounded(exposure, 20),
@@ -63,8 +69,8 @@ object AutoSettings {
             shadows = rounded((darkShare * 4f).coerceIn(0f, 0.5f), 100),
             whites = rounded(((BRIGHT - percentile(0.995f)) * 3f).coerceIn(-0.3f, 0.5f), 100),
             blacks = rounded(((DARK - percentile(0.005f)) * 4f).coerceIn(-0.5f, 0.2f), 100),
-            temperature = rounded((warmth / 0.35f).coerceIn(-0.4f, 0.4f), 100),
-            tint = rounded((greenness / 0.25f).coerceIn(-0.3f, 0.3f), 100),
+            temperature = rounded(temperature, 100),
+            tint = rounded(tint, 100),
             vibrance = rounded(((0.35f - (vividness / count).toFloat()) * 0.8f).coerceIn(0f, 0.3f), 100),
         )
     }
