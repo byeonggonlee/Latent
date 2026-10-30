@@ -153,7 +153,9 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 ## For Codex
 
-### Review PR #56: Auto's white balance on a raw (2026-10-30)
+### Review PR #56: Auto's white balance on a raw (2026-10-30) — done
+
+Codex completed the full ten-file review at `bc9e3cc`: [LGTM](https://github.com/byeonggonlee/Latent/pull/56#pullrequestreview-5707543648), no actionable findings. Full local checks pass (883 cached JVM cases, zero failures, four unrelated skips), with all 13 estimator/Auto cases freshly executed; six sample files give the same rounded Auto corrections at sample and editor proxy resolutions. Device/editor visual judgement, Sony ARW and wider scene coverage remain unverified. PR not merged by Codex.
 
 [PR #56](https://github.com/byeonggonlee/Latent/pull/56) is 0.2.0 item 1, in Claude Code's area.
 
@@ -561,6 +563,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-30 | Codex | Reviewed all ten files of PR #56 at `bc9e3cc`: LGTM, no actionable findings. Checked slider signs/scales, independent-axis consensus and caps, RAW/JPEG paths and failure bounds. Full local CI-equivalent checks pass; 13 estimator/Auto cases executed fresh and six real-file proxy-resolution comparisons retain the same rounded corrections. Phone visual/latency checks and Sony ARWs remain unverified; PR not merged | [Review](https://github.com/byeonggonlee/Latent/pull/56#pullrequestreview-5707543648) |
 | 2026-10-30 | Claude Code (computer) | 0.2.0 item 11: the import's result says how many of the files came in without a place (neither their own nor one from the recorded track; a damaged GPS block counts as none), with a hint and an "Add locations to photos" button that opens the Location screen (Timeline import, camera clock, matching again). `SyncState.Finished` carries `unplaced`. Checked on the emulator (API 36) with two JPEGs from a card folder: "그중 위치 없는 파일 2개" and the button opening Location | this commit |
 | 2026-10-30 | Claude Code (computer) | 0.2.0 item 8: the find sheet's "When" row has a "Pick dates" chip that opens a calendar; the photos of the days picked, both ends included, in the phone's time zone, are found, from one day to any range. It shows the days chosen (without the year when it is this one) and opens the calendar again; "Any time", a period or a year clears it. The calendar dialog is shared with the import screen's shooting dates. Shutter speed and aperture still wait for a reviewed Exif index migration. Checked on the emulator (API 36): picking a range and a single day, and clearing them | this commit |
 | 2026-10-30 | Claude Code (computer) | 0.2.0 item 16: each saved edit, kept version and backup records the render version it was begun with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as before. Codex's P2 (an unknown field dropped from the restore warning's comparison) fixed; Codex LGTM at `61ec0a6` with one nonblocking P3 (Gson numeric equality), CI green. Merged on the owner's instruction | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), merged `d6055cd` |
