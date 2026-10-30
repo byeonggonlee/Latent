@@ -149,17 +149,8 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
-| Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request shrinks to a dispatch note of about three lines, or nothing when the owner has named the reviewer | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), `claude/flash-triage` | `architecture/antigravity-review-orchestration.md`, `architecture/flash-review-evaluation.md`, `architecture/decisions.md`, this board | 2026-10-29 |
 
 ## For Codex
-
-### Completed reviews (2026-10-29)
-
-- [PR #54](https://github.com/byeonggonlee/Latent/pull/54#pullrequestreview-5699700702): LGTM at `5ab45e2`, full governance diff under main's existing rules; evidence checked against posted reviews and sample metadata.
-- [PR #53](https://github.com/byeonggonlee/Latent/pull/53#pullrequestreview-5694069737): LGTM at `61ec0a6`; unknown-field restore-warning P2 resolved.
-
-Both are review conclusions; neither PR was merged by Codex.
 
 ### 0. 0.2.0: your part (set by the owner, 2026-10-28; widened the same day)
 
@@ -556,6 +547,8 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-30 | Claude Code (computer) | 0.2.0 item 16: each saved edit, kept version and backup records the render version it was begun with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as before. Codex's P2 (an unknown field dropped from the restore warning's comparison) fixed; Codex LGTM at `61ec0a6` with one nonblocking P3 (Gson numeric equality), CI green. Merged on the owner's instruction | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), merged `d6055cd` |
+| 2026-10-30 | Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request is a dispatch note of about three lines (none when the owner names the reviewer), and it searches for findings only when the owner asks; the triage of PRs #52 and #53 recorded in the evaluation. Codex LGTM at `5ab45e2`. Merged on the owner's instruction | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), merged `f37bb99` |
 | 2026-10-30 | Codex | EOS 7D full-resolution 14-bit CR2 import/development/export complete, including Adobe two-illuminant profile and PR #55's bounded-luminance tone correction. Original decoder/profile: Gemini 4 Argon LGTM; tone: Codex LGTM, P2 resolved. Integrated head `54dd6a7` has the reviewed tree and green build/licence CI; 865 JVM cases (zero failures, four unrelated skips) and seven emulator cases pass. Owner judged both sample photos beside their JPEGs on S24 acceptable (record `374305d`). Other bodies, sRAW/mRAW and CR3 development remain unsupported; wider ISO/illuminant/performance coverage remains open | [PR #51](https://github.com/byeonggonlee/Latent/pull/51), merged `f24232e`; [investigation](canon-cr2-investigation.md) |
 | 2026-10-30 | Claude Code (computer) | PR #51's EOS 7D opened about 0.7 stop brighter and flatter than its camera JPEGs (`CameraCurve` is the ZV-E10's). `ArwImage.toneExponent` raises each developed pixel's luminance, measured on the colour bounded between black and white, keeping black, white and channel ratios; 1.24 for the 7D, fitted to both CC0 samples, 1 and bit-identical for every other format. Emulator exports now differ from the camera JPEGs by 2.75 and 2.85 L* (were 13.7 and 9.4). Codex found that a vivid blue turned black (P2), fixed in `4c1a183`; Codex LGTM. Merged through #51 into main at `f24232e` on the owner's instruction. On the S24 the owner looked at both samples beside their camera JPEGs and judged them fine (2026-10-30) | [PR #55](https://github.com/byeonggonlee/Latent/pull/55), merged `54dd6a7` into `codex/canon-cr2` |
 | 2026-10-30 | Codex | Re-reviewed all eight files of Claude's stacked PR #55 at `4c1a183`: LGTM, negative-luminance blue-to-black P2 resolved in full and preview development. Local full checks pass (865 JVM cases, zero failures, four unrelated skips); seven emulator cases and GitHub build/licences pass. Subsequently integrated at `54dd6a7` and merged into main at `f24232e`; owner S24 sample judgement recorded in `374305d` | [Review](https://github.com/byeonggonlee/Latent/pull/55#pullrequestreview-5700568607) |
