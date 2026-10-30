@@ -151,24 +151,9 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 |---|---|---|---|---|
 | Codex | 0.2.0 Canon CR2: EOS 7D full-resolution 14-bit development; Gemini 4 Argon and Claude LGTM at `94c0c15`; main integrated and local/emulator checks pass; tone fix re-reviewed at `4c1a183` in stacked PR #55: blue-to-black P2 resolved, Codex LGTM, local/emulator/GitHub checks pass ([review](https://github.com/byeonggonlee/Latent/pull/55#pullrequestreview-5700568607)); integration into #51 and resulting-head verification pending. S24 visual colour acceptance remains unverified ([investigation](canon-cr2-investigation.md)) | [PR #51](https://github.com/byeonggonlee/Latent/pull/51), `codex/canon-cr2` | decoder and associated tests, integration seam, this board | 2026-10-28 |
 | Claude Code (computer) | 0.2.0 item 16: render version on saved edits, kept versions and backups ([decision of 2026-10-29](architecture/decisions.md)) | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), `claude/render-version` | `enhance/PhotoEdit.kt`, edit storage and backup, their tests, backup format doc, this board | 2026-10-29 |
-| Claude Code (computer) | PR #51's EOS 7D opens about 0.7 stop brighter and flatter than the camera's JPEG (the tone curve is the ZV-E10's); at the owner's word, fixed before #51 merges: a per-camera tone exponent on developed brightness, fitted to the two CC0 samples | [PR #55](https://github.com/byeonggonlee/Latent/pull/55), `claude/canon-tone`, stacked on `codex/canon-cr2` | `ArwImage` (`raw/SonyArw.kt`), `raw/RawDeveloper.kt`, one line of `raw/CanonCr2.kt`, their tests, this board | 2026-10-29 |
 | Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request shrinks to a dispatch note of about three lines, or nothing when the owner has named the reviewer | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), `claude/flash-triage` | `architecture/antigravity-review-orchestration.md`, `architecture/flash-review-evaluation.md`, `architecture/decisions.md`, this board | 2026-10-29 |
 
 ## For Codex
-
-### Review PR #55: the EOS 7D's brightness, before #51 merges (2026-10-30)
-
-**Re-review at `4c1a183`:** your P2 on `e01ca5f`, vivid blue turning black, is fixed there. The luminance is now measured on channels bounded between black and white, and a regression uses your tuples with the 7D matrix. See the [reply on #55](https://github.com/byeonggonlee/Latent/pull/55#issuecomment-6500842020).
-
-[PR #55](https://github.com/byeonggonlee/Latent/pull/55) is stacked on `codex/canon-cr2`. On the owner's word, #51 merges with it.
-
-- **The problem:** the 7D opened about 0.7 stop brighter than its camera JPEGs, because `CameraCurve` is the ZV-E10's.
-- **The change:** `ArwImage.toneExponent` raises each developed pixel's luminance in `RawDeveloper` after the matrix, keeping black, white and channel ratios.
-  - `CanonCr2` sets 1.24, fitted to both CC0 samples.
-  - Every other format keeps 1, which leaves development bit-identical.
-- **Your area:** one line of `CanonCr2.kt` and two of your tests change. The LibRaw comparison now develops a copy with exponent 1, since its oracle is linear.
-- **Why you:** the seam, the look and your area are mandatory review, and you are the cross-family reviewer.
-- The fit, the emulator numbers and the checks are in the PR and in `canon-cr2-investigation.md`.
 
 ### Completed reviews (2026-10-29)
 
@@ -572,6 +557,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-30 | Claude Code (computer) | PR #51's EOS 7D opened about 0.7 stop brighter and flatter than its camera JPEGs (`CameraCurve` is the ZV-E10's). `ArwImage.toneExponent` raises each developed pixel's luminance, measured on the colour bounded between black and white, keeping black, white and channel ratios; 1.24 for the 7D, fitted to both CC0 samples, 1 and bit-identical for every other format. Emulator exports now differ from the camera JPEGs by 2.75 and 2.85 L* (were 13.7 and 9.4). Codex found that a vivid blue turned black (P2), fixed in `4c1a183`; Codex LGTM. Merged into #51's branch on the owner's instruction; on main when #51 merges. Built on the S24; the owner's look on its screen is pending | [PR #55](https://github.com/byeonggonlee/Latent/pull/55), merged `54dd6a7` into `codex/canon-cr2` |
 | 2026-10-30 | Codex | Re-reviewed all eight files of Claude's stacked PR #55 at `4c1a183`: LGTM, negative-luminance blue-to-black P2 resolved in full and preview development. Local full checks pass (865 JVM cases, zero failures, four unrelated skips); seven emulator cases and GitHub build/licences pass. Not yet integrated into #51; S24 visual judgement remains unverified | [Review](https://github.com/byeonggonlee/Latent/pull/55#pullrequestreview-5700568607) |
 | 2026-10-30 | Codex | Reviewed Claude's local EOS 7D tone correction `e01ca5f` stacked on PR #51; one P2, negative matrix luminance erases visible blue pixels, reproduced through compiled full and preview development. Full local checks pass (864 JVM cases, zero failures, four skips); all seven emulator cases pass. Correction and integrated-head review remain pending; no merge | [Review](https://github.com/byeonggonlee/Latent/pull/51#issuecomment-6500638949) |
 | 2026-10-29 | Codex | Open Camera / MotionCam DNG compatibility and standard OpcodeList3 tag fix; Claude Opus 5.5 re-review LGTM at `12a8f58`, CI green; 832 JVM cases, zero failures, four unrelated skips, four emulator cases pass. Real nonempty warp and S24 visual checks remain unverified | [PR #52](https://github.com/byeonggonlee/Latent/pull/52), merged `597247c` |
