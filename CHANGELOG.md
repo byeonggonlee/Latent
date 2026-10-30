@@ -8,10 +8,12 @@ as the release notes, so a section is written before the tag is.
 
 Smaller improvements after the first release: editing, consistency of the interface, and small additions.
 
-### Fixed
+### Added
 
-- DNG lens correction now reads the standard OpcodeList3 tag. Previously the reader and its synthetic fixtures
-  used the same wrong tag, so real files carrying supported distortion metadata did not offer lens correction.
+- **Canon CR2 imports** from cameras and cards, with embedded previews where available. Raw development is
+  experimental and limited to the EOS 7D's full-resolution 14-bit RAW files, which open about as bright as the
+  camera's own JPEGs. Other Canon bodies and reduced-size
+  sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
 
 ### Changed
 
@@ -31,6 +33,11 @@ Smaller improvements after the first release: editing, consistency of the interf
 - **Empty screens** show an icon, a sentence and one way on: a library narrowed to nothing offers *Show everything*,
   which takes off the kind, flag, stars and album at once. The map's card says that online maps are off. Secondary
   buttons are tonal rather than outlined, beside one filled button for the main action.
+
+### Fixed
+
+- DNG lens correction now reads the standard OpcodeList3 tag. Previously the reader and its synthetic fixtures
+  used the same wrong tag, so real files carrying supported distortion metadata did not offer lens correction.
 
 ## [0.1.0] - 2026-10-27
 

@@ -5,11 +5,13 @@ import com.byeonggon.latent.enhance.forRowBands
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * Turns decoded sensor data into a picture in linear light, in the camera's colours. Its tones are
- * left for [com.byeonggon.latent.enhance.ToneRenderer] to render.
+ * Turns decoded sensor data into a picture in linear light, in the camera's colours and, for a camera whose own
+ * pictures are darker, its brightness ([ArwImage.toneExponent]). Its tones are left for
+ * [com.byeonggon.latent.enhance.ToneRenderer] to render.
  */
 object RawDeveloper {
     /**
@@ -56,9 +58,12 @@ object RawDeveloper {
                     var top = (image.cropTop + 2 * (y * cells + row)) * image.width + image.cropLeft + 2 * x * cells
                     var bottom = top + image.width
                     repeat(cells) {
-                        red += color.red[sensor[top].toInt()]
-                        green += color.green[sensor[top + 1].toInt()] + color.green[sensor[bottom].toInt()]
-                        blue += color.blue[sensor[bottom + 1].toInt()]
+                        val pattern = image.cfaPattern
+                        val redRow = if (pattern.redY == 0) top else bottom
+                        val blueRow = if (pattern.redY == 0) bottom else top
+                        red += color.red[sensor[redRow + pattern.redX].toInt()]
+                        green += color.green[sensor[redRow + 1 - pattern.redX].toInt()] + color.green[sensor[blueRow + pattern.redX].toInt()]
+                        blue += color.blue[sensor[blueRow + 1 - pattern.redX].toInt()]
                         top += 2
                         bottom += 2
                     }
@@ -106,7 +111,7 @@ object RawDeveloper {
                 for (x in 0 until width) {
                     val value = sensor[at++].toInt()
                     val index = y * width + x
-                    when (siteOf(x, y)) {
+                    when (siteOf(x, y, image.cfaPattern)) {
                         RED -> red[index] = color.red[value].toShort()
                         BLUE -> blue[index] = color.blue[value].toShort()
                         else -> green[index] = color.green[value].toShort()
@@ -118,7 +123,7 @@ object RawDeveloper {
 
         // Green where red or blue was recorded: the estimate along the smoother direction, kept between its two green neighbours.
         forInterior(width, height) { x, y, i ->
-            val site = siteOf(x, y)
+            val site = siteOf(x, y, image.cfaPattern)
             if (site == GREEN) return@forInterior
             val own = if (site == RED) red else blue
             val center = own[i].toInt()
@@ -135,13 +140,14 @@ object RawDeveloper {
                 between(acrossGuess shr 2, green[i - 1].toInt(), green[i + 1].toInt())
             }.toShort()
         }
-        fillEdges(width, height, setOf(GREEN), red, green, blue)
+        fillEdges(width, height, setOf(GREEN), red, green, blue, image.cfaPattern)
 
         // Red and blue where green was recorded: one colour sits left and right of it, the other above and below.
         forInterior(width, height) { x, y, i ->
-            if (siteOf(x, y) != GREEN) return@forInterior
-            val beside = if (y and 1 == 0) red else blue
-            val above = if (y and 1 == 0) blue else red
+            if (siteOf(x, y, image.cfaPattern) != GREEN) return@forInterior
+            val redBeside = siteOf(x - 1, y, image.cfaPattern) == RED
+            val beside = if (redBeside) red else blue
+            val above = if (redBeside) blue else red
             val center = 2 * green[i]
             beside[i] = ((beside[i - 1] + beside[i + 1] + center - green[i - 1] - green[i + 1]) shr 1).coerceIn(0, most).toShort()
             above[i] = ((above[i - width] + above[i + width] + center - green[i - width] - green[i + width]) shr 1).coerceIn(0, most).toShort()
@@ -149,7 +155,7 @@ object RawDeveloper {
 
         // Blue where red was recorded and red where blue was, along the diagonal that changes least.
         forInterior(width, height) { x, y, i ->
-            val site = siteOf(x, y)
+            val site = siteOf(x, y, image.cfaPattern)
             if (site == GREEN) return@forInterior
             val other = if (site == RED) blue else red
             val center = 2 * green[i]
@@ -166,7 +172,7 @@ object RawDeveloper {
             }
             other[i] = value.coerceIn(0, most).toShort()
         }
-        fillEdges(width, height, setOf(RED, BLUE), red, green, blue)
+        fillEdges(width, height, setOf(RED, BLUE), red, green, blue, image.cfaPattern)
 
         forRowBands(height) { from, until ->
             for (index in from * width until until * width) {
@@ -177,10 +183,11 @@ object RawDeveloper {
         return result
     }
 
-    /** Which colour the photosite at [x], [y] of the cropped picture recorded: red, green and blue in rows of red-green and green-blue. */
-    private fun siteOf(x: Int, y: Int): Int = when {
-        y and 1 == 0 -> if (x and 1 == 0) RED else GREEN
-        else -> if (x and 1 == 0) GREEN else BLUE
+    /** Which colour a photosite records, measured from the cropped picture's origin. */
+    private fun siteOf(x: Int, y: Int, pattern: CfaPattern): Int = when {
+        (x and 1) == pattern.redX && (y and 1) == pattern.redY -> RED
+        (x and 1) != pattern.redX && (y and 1) != pattern.redY -> BLUE
+        else -> GREEN
     }
 
     /** Visits every pixel at least [EDGE] away from the picture's edges, with its index. */
@@ -196,7 +203,7 @@ object RawDeveloper {
      * Fills in [colors] for the pixels within [EDGE] of the picture's edges, which did not record
      * them, with the average of the photosites around that did; the picture is mirrored beyond its edges.
      */
-    private fun fillEdges(width: Int, height: Int, colors: Set<Int>, red: ShortArray, green: ShortArray, blue: ShortArray) {
+    private fun fillEdges(width: Int, height: Int, colors: Set<Int>, red: ShortArray, green: ShortArray, blue: ShortArray, pattern: CfaPattern) {
         fun mirrored(value: Int, size: Int) = when {
             value < 0 -> -value
             value >= size -> 2 * size - 2 - value
@@ -206,7 +213,7 @@ object RawDeveloper {
             val edgeRow = y < EDGE || y >= height - EDGE
             for (x in 0 until width) {
                 if (!edgeRow && x >= EDGE && x < width - EDGE) continue
-                val own = siteOf(x, y)
+                val own = siteOf(x, y, pattern)
                 for (wanted in colors) {
                     if (wanted == own) continue
                     val plane = when (wanted) {
@@ -219,7 +226,7 @@ object RawDeveloper {
                     for (dy in -1..1) for (dx in -1..1) {
                         val nx = mirrored(x + dx, width)
                         val ny = mirrored(y + dy, height)
-                        if (siteOf(nx, ny) == wanted) {
+                        if (siteOf(nx, ny, pattern) == wanted) {
                             sum += plane[ny * width + nx]
                             count++
                         }
@@ -266,10 +273,29 @@ object RawDeveloper {
             }
         }
 
+        // For a camera that shows its photos darker, what each level of a pixel's brightness is multiplied by.
+        private val toneFactor = image.toneExponent.takeIf { it > 1f }?.let { exponent ->
+            FloatArray(LinearImage.LEVELS) { level -> (level / LinearImage.MAX_LEVEL.toFloat()).pow(exponent - 1f) }
+        }
+
         private fun convert(index: Int, r: Int, g: Int, b: Int) {
-            into.red[index] = level(matrix[0] * r + matrix[1] * g + matrix[2] * b)
-            into.green[index] = level(matrix[3] * r + matrix[4] * g + matrix[5] * b)
-            into.blue[index] = level(matrix[6] * r + matrix[7] * g + matrix[8] * b)
+            var red = matrix[0] * r + matrix[1] * g + matrix[2] * b
+            var green = matrix[3] * r + matrix[4] * g + matrix[5] * b
+            var blue = matrix[6] * r + matrix[7] * g + matrix[8] * b
+            toneFactor?.let { factors ->
+                // Measured on the colour as it would be stored: a channel below black, which a vivid blue gives
+                // red and green, would otherwise cancel the light of the others and turn the pixel black.
+                red = red.coerceIn(0f, range.toFloat())
+                green = green.coerceIn(0f, range.toFloat())
+                blue = blue.coerceIn(0f, range.toFloat())
+                val factor = factors[level(LUMA_RED * red + LUMA_GREEN * green + LUMA_BLUE * blue).toInt()]
+                red *= factor
+                green *= factor
+                blue *= factor
+            }
+            into.red[index] = level(red)
+            into.green[index] = level(green)
+            into.blue[index] = level(blue)
         }
 
         private fun level(value: Float) = (value * toLevel + 0.5f).toInt().coerceIn(0, LinearImage.MAX_LEVEL).toShort()

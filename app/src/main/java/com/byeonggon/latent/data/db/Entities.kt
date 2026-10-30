@@ -16,7 +16,7 @@ enum class MediaKind {
         fun fromFileName(fileName: String): MediaKind? =
             when (fileName.substringAfterLast('.', "").lowercase()) {
                 "jpg", "jpeg", "heic", "heif", "hif" -> PHOTO
-                "arw", "dng" -> RAW
+                "arw", "dng", "cr2" -> RAW
                 "mp4", "mov", "mts", "m2ts" -> VIDEO
                 else -> null
             }

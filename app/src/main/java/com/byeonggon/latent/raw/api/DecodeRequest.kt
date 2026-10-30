@@ -25,7 +25,7 @@ internal class DecodeRequest(
 }
 
 internal class DecoderCapabilities {
-    val formats: Set<RawFormat> = setOf(RawFormat.SONY_ARW, RawFormat.DNG)
+    val formats: Set<RawFormat> = setOf(RawFormat.SONY_ARW, RawFormat.DNG, RawFormat.CANON_CR2)
     val supportsDownsampling: Boolean = false
     val canInterruptJpegXl: Boolean = false
 }

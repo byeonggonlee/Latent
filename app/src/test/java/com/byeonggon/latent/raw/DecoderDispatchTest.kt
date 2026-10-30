@@ -118,7 +118,7 @@ class DecoderDispatchTest {
     @Test
     fun advertisesFullDecodeAndTheJpegXlCancellationLimit() {
         val capabilities = DecoderDispatch.capabilities
-        assertEquals(setOf(RawFormat.SONY_ARW, RawFormat.DNG), capabilities.formats)
+        assertEquals(setOf(RawFormat.SONY_ARW, RawFormat.DNG, RawFormat.CANON_CR2), capabilities.formats)
         assertFalse(capabilities.supportsDownsampling)
         assertFalse(capabilities.canInterruptJpegXl)
     }

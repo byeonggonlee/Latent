@@ -8,6 +8,7 @@ import java.nio.ByteOrder
 internal class TiffDirectory private constructor(
     private val data: ByteBuffer,
     private val entries: Map<Int, Entry>,
+    private val minimumPosition: Int,
 ) {
     private class Entry(val type: Int, val count: Int, val position: Long)
 
@@ -54,6 +55,15 @@ internal class TiffDirectory private constructor(
         return ByteArray(entry.count) { data.get(position + it) }
     }
 
+    /** A TIFF directory inside an opaque byte field whose pointers are relative to the whole file. */
+    fun embeddedDirectory(tag: Int): TiffDirectory? {
+        val entry = entries[tag]?.takeIf { it.type == UNDEFINED && it.count >= 2 } ?: return null
+        val position = checkedPosition(entry)
+        val bounded = data.duplicate().order(data.order())
+        bounded.limit(position + entry.count)
+        return read(bounded, position, minimumPosition = position)
+    }
+
     private fun fraction(numerator: Long, denominator: Long): Float =
         if (denominator == 0L) Float.NaN else (numerator.toDouble() / denominator).toFloat()
 
@@ -67,7 +77,7 @@ internal class TiffDirectory private constructor(
     // Keep unused private pointers opaque; check a payload before allocating or reading its values.
     private fun checkedPosition(entry: Entry): Int {
         val size = (TYPE_SIZES.getOrNull(entry.type) ?: 1).toLong() * entry.count
-        if (size < 0 || entry.position < 0 || entry.position + size > data.limit()) throw IOException("Damaged TIFF value range")
+        if (size < 0 || entry.position < minimumPosition || entry.position + size > data.limit()) throw IOException("Damaged TIFF value range")
         return entry.position.toInt()
     }
 
@@ -104,7 +114,7 @@ internal class TiffDirectory private constructor(
          * Reads the directory at [offset]. Value offsets inside it are relative to the start of the
          * original file; [base] is where [data] starts within that file.
          */
-        fun read(data: ByteBuffer, offset: Int, base: Int = 0): TiffDirectory {
+        fun read(data: ByteBuffer, offset: Int, base: Int = 0, minimumPosition: Int = 0): TiffDirectory {
             if (offset < 0 || offset.toLong() + 2 > data.limit()) throw IOException("Damaged TIFF directory")
             val count = data.getShort(offset).toInt() and 0xFFFF
             if (offset.toLong() + 2 + 12L * count > data.limit()) throw IOException("Damaged TIFF directory")
@@ -118,7 +128,7 @@ internal class TiffDirectory private constructor(
                 val position = if (size in 0..4) (at + 8).toLong() else (data.getInt(at + 8).toLong() and 0xFFFFFFFFL) - base
                 entries[tag] = Entry(type, valueCount, position)
             }
-            return TiffDirectory(data, entries)
+            return TiffDirectory(data, entries, minimumPosition)
         }
     }
 }

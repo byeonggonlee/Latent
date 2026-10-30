@@ -21,7 +21,7 @@ object RawRenderer {
     private const val TAG = "RawDevelop"
 
     /**
-     * Reads a raw file of either kind the app develops: a DNG, as phones write them, or a Sony ARW. [checkCancelled]
+     * Reads a supported DNG, Sony ARW or Canon CR2 raw file. [checkCancelled]
      * is called between rows and tiles and stops the decode by throwing; null leaves it to the decoders' own check.
      */
     @Throws(IOException::class)

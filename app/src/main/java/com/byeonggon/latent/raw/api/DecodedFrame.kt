@@ -1,9 +1,10 @@
 package com.byeonggon.latent.raw.api
 
 import com.byeonggon.latent.raw.ArwImage
+import com.byeonggon.latent.raw.CfaPattern
 
-internal enum class RawFormat { SONY_ARW, DNG }
-internal enum class PixelLayout { RGGB_AT_CROP, CAMERA_RGB_INTERLEAVED }
+internal enum class RawFormat { SONY_ARW, DNG, CANON_CR2 }
+internal enum class PixelLayout { RGGB_AT_CROP, GRBG_AT_CROP, GBRG_AT_CROP, BGGR_AT_CROP, CAMERA_RGB_INTERLEAVED }
 internal enum class RawCorrection { SONY_TONE_EXPANSION, DNG_LEVELS, LINEARIZATION, POSITIVE_BASELINE_EXPOSURE, GAIN_MAP }
 
 /** Borrowed U16 storage. The owner and all consumers must stop writing before sharing it. No array escapes this API. */
@@ -15,7 +16,7 @@ internal class U16Samples(private val values: ShortArray) {
 /**
  * Repository-internal v0 contract, backed by the existing heap image without copying its samples.
  * These are camera samples, not rendered sRGB or guaranteed scene radiance. RGB is interleaved;
- * a mosaic repeats RGGB from the crop origin. There is no alpha, row padding, or applied orientation.
+ * a mosaic repeats the declared CFA pattern from the crop origin. There is no alpha, row padding, or applied orientation.
  * DNG levels/linearization/exposure/shading already applied by the reader must not be applied again.
  * Pending DNG warp metadata is carried by the legacy adapter; it is not an applied sample correction.
  * White balance, calibration, demosaic, geometry, the camera look and output encoding remain Core's responsibility.
@@ -45,7 +46,12 @@ internal class DecodedFrame(
     val orientation: Int get() = legacyImage.orientation
     val whiteLevel: Int get() = legacyImage.whiteLevel
     val rowStrideSamples: Int get() = width * legacyImage.channels
-    val layout = if (legacyImage.channels == 1) PixelLayout.RGGB_AT_CROP else PixelLayout.CAMERA_RGB_INTERLEAVED
+    val layout = if (legacyImage.channels != 1) PixelLayout.CAMERA_RGB_INTERLEAVED else when (legacyImage.cfaPattern) {
+        CfaPattern.RGGB -> PixelLayout.RGGB_AT_CROP
+        CfaPattern.GRBG -> PixelLayout.GRBG_AT_CROP
+        CfaPattern.GBRG -> PixelLayout.GBRG_AT_CROP
+        CfaPattern.BGGR -> PixelLayout.BGGR_AT_CROP
+    }
 
     init {
         require(width > 0 && height > 0 && (legacyImage.channels == 1 || legacyImage.channels == 3)) { "Invalid RAW shape" }
