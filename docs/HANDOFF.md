@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | 0.2.0 item 8: find photos by a range of dates picked on a calendar | `claude/date-range` (straight to `main`, no review) | `ui/library/` (find sheet, query), the date-range dialog shared with `ui/sync/SyncScreen.kt`, strings, their tests, this board | 2026-10-30 |
 
 ## For Codex
 
