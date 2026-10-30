@@ -49,6 +49,8 @@ sealed interface SyncState {
     data class Finished(
         val imported: Int,
         val geotagged: Int,
+        /** Of those imported, how many came in without a place: none of their own, and none from the recorded track. */
+        val unplaced: Int,
         val failed: List<String>,
         val cancelled: Boolean,
         /** Stopped because the phone was nearly full; the files not yet imported are still on the camera. */
@@ -99,7 +101,7 @@ class SyncEngine(
         try {
             source.use { sync(it, dates, compareLookAlikes) }
         } catch (e: SyncCancelledException) {
-            _state.value = SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = true)
+            _state.value = SyncState.Finished(imported = 0, geotagged = 0, unplaced = 0, failed = emptyList(), cancelled = true)
         } catch (e: CancellationException) {
             _state.value = SyncState.Idle
             throw e
@@ -153,6 +155,7 @@ class SyncEngine(
         var doneBytes = 0L
         var imported = 0
         var geotagged = 0
+        var unplaced = 0
         var outOfSpace = false
         val failed = ArrayList<String>()
 
@@ -193,7 +196,11 @@ class SyncEngine(
                 continue
             }
             val stored = downloaded && try {
-                if (store(part, file, cameraId, maxGapMs, options)) geotagged++
+                when (store(part, file, cameraId, maxGapMs, options)) {
+                    GeoSource.TRACK -> geotagged++
+                    GeoSource.NONE -> unplaced++
+                    else -> Unit
+                }
                 true
             } catch (e: IOException) {
                 Log.w(SYNC_LOG_TAG, "Cannot store ${file.name} in the library", e)
@@ -211,11 +218,11 @@ class SyncEngine(
         rememberImportedFolders(cameraId, acceptedKinds, listing, alreadyImported, seenElsewhere)
         Log.i(
             SYNC_LOG_TAG,
-            "Finished: imported=$imported, geotagged=$geotagged, failed=$failed, cancelled=$cancelRequested, " +
+            "Finished: imported=$imported, geotagged=$geotagged, unplaced=$unplaced, failed=$failed, cancelled=$cancelRequested, " +
                 "outOfSpace=$outOfSpace, in the library from elsewhere already=${seenElsewhere.size}, " +
                 "in the library already=$inLibraryAlready, left to compare=${toCompare?.files ?: 0}",
         )
-        _state.value = SyncState.Finished(imported, geotagged, failed, cancelled = cancelRequested, outOfSpace = outOfSpace, toCompare = toCompare)
+        _state.value = SyncState.Finished(imported, geotagged, unplaced, failed, cancelled = cancelRequested, outOfSpace = outOfSpace, toCompare = toCompare)
     }
 
     /** Folders that can be skipped while unchanged: fully imported for at least the kinds wanted now. */
@@ -289,7 +296,7 @@ class SyncEngine(
     }
 
     /** Moves a downloaded file into the library. Returns true when a location from the track was applied. */
-    private suspend fun store(part: File, file: RemoteFile, cameraId: String, maxGapMs: Long, options: AppSettings): Boolean {
+    private suspend fun store(part: File, file: RemoteFile, cameraId: String, maxGapMs: Long, options: AppSettings): GeoSource {
         val metadata = MediaMetadataReader.read(part, file.kind, options.cameraZone())
         val capturedAt = metadata.capturedAt ?: file.modifiedAt
         // Matched by when it really was, though it is filed under the time the camera gave it.
@@ -335,7 +342,7 @@ class SyncEngine(
             )
             database.syncRecordDao().insert(SyncRecordEntity(sourceKey, now))
         }
-        return matched != null
+        return geoSource
     }
 
     /**

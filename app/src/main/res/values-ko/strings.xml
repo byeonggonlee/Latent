@@ -193,6 +193,10 @@
     <plurals name="geotagged_files">
         <item quantity="other">위치 삽입 %d개</item>
     </plurals>
+    <plurals name="imported_unplaced">
+        <item quantity="other">그중 위치 없는 파일 %d개</item>
+    </plurals>
+    <string name="imported_unplaced_hint">촬영 시각에 가까운 위치 기록이 없었습니다. 구글 타임라인을 가져오거나 카메라 시계를 맞추면 위치를 넣을 수 있습니다.</string>
     <plurals name="look_alike_files">
         <item quantity="other">파일 %d개</item>
     </plurals>

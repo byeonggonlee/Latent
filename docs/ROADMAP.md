@@ -26,14 +26,14 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 8 | Done: find by a range of dates picked on a calendar. Shutter speed and aperture need new columns in the Exif index (a Room migration, so a review) and wait | Claude Code | S | – |
 | 9 | Share at a long side typed in, beside the fixed sizes | Codex | S | Claude Code |
 | 10 | The trash after a reinstall: files left in `DCIM/Latent/.trash` shown again, so they can be restored or emptied | Codex | S–M | Claude Code |
-| 11 | After an import, "N photos without a place" with a way to the Location screen (UX guide §10) | Claude Code | S | – |
+| 11 | Done: after an import, "N photos without a place" with a way to the Location screen (UX guide §10) | Claude Code | S | – |
 | 12 | Done: EOS 7D full-resolution 14-bit Canon CR2 (PR #51); other bodies and sRAW/mRAW development unsupported, CR3 waits for 0.3.0 | Codex | M | Claude Code |
 | 13 | Store: English screenshots, the new short descriptions, the closed test | Claude Code, owner | S | – |
 | 14 | Phone checks left from SC-57G: the camera unplugged and the storage full during a sync, then carrying on | Shared, owner | S | – |
 | 15 | Phone-made DNGs: Open Camera's and MotionCam's open as the phone took them (orientation, white balance, crop, opcode lists); Latent takes no photos itself, so these apps are how a phone without a raw mode of its own shoots one | Codex | S | Claude Code |
 | 16 | Done (PR #53): render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
-Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8 (done), 11 and 1. Item 12
+Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8 (done), 11 (done) and 1. Item 12
 ([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) is merged at `f24232e`, including the reviewed
 Adobe two-illuminant profile and PR #55's tone correction (blue-to-black P2 resolved). Build and licence CI pass
 on integrated head `54dd6a7`; its tree matches the reviewed `4c1a183`. The owner judged both samples beside their

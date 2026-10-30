@@ -80,7 +80,7 @@ class SyncEngineTest {
         val firstSource = FakeCameraSource(files)
         engine.run(firstSource)
 
-        assertEquals(SyncState.Finished(imported = 3, geotagged = 3, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 3, geotagged = 3, unplaced = 0, failed = emptyList(), cancelled = false), engine.state.value)
         assertTrue(firstSource.closed)
 
         val items = database.mediaDao().all().associateBy { it.fileName }
@@ -105,7 +105,7 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(files))
 
-        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, unplaced = 0, failed = emptyList(), cancelled = false), engine.state.value)
         assertEquals(3, database.mediaDao().all().size)
     }
 
@@ -122,10 +122,10 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(sameOnCard to photo, onCard to RAW_BYTES), card))
 
-        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
         engine.run(FakeCameraSource(mapOf(overMtp to photo, onCard.copy(handle = nextHandle++) to RAW_BYTES)))
 
-        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, unplaced = 0, failed = emptyList(), cancelled = false), engine.state.value)
         assertEquals(setOf("DSC00001.JPG", "DSC00002.ARW"), database.mediaDao().all().map { it.fileName }.toSet())
     }
 
@@ -140,7 +140,7 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(overMtp.copy(handle = nextHandle++) to photo), CameraInfo("", "Card", "folder:1234-ABCD:")))
 
-        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 0, geotagged = 0, unplaced = 0, failed = emptyList(), cancelled = false), engine.state.value)
     }
 
     @Test
@@ -154,7 +154,7 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(onSecondCard to second), CameraInfo("", "Card", "folder:2222-BBBB:")))
 
-        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
         assertEquals(
             setOf(first.toList(), second.toList()),
             database.mediaDao().all().map { File(it.path).readBytes().toList() }.toSet(),
@@ -173,7 +173,7 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(onSecondCard to second), CameraInfo("", "Card", "folder:2222-BBBB:")))
 
-        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
         assertEquals(2, database.mediaDao().all().size)
     }
 
@@ -185,7 +185,7 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(overMtp.copy(handle = nextHandle++) to other), CameraInfo("", "Card", "folder:1234-ABCD:")))
 
-        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
         assertEquals(2, database.mediaDao().all().size)
     }
 
@@ -293,9 +293,36 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(remote("DSC00002.JPG", MediaKind.PHOTO, photo) to photo)))
 
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
         val item = database.mediaDao().all().single()
         assertEquals(GeoSource.NONE, item.geoSource)
         assertEquals(null, ExifInterface(File(item.path)).latLong)
+    }
+
+    @Test
+    fun countsTheFilesThatCameInWithoutAPlace() = runBlocking {
+        recordTrackAroundCapture()
+        val placedByTrack = jpegTakenAt("2026:10:01 12:00:00", "+09:00")
+        val placedByCamera = jpegTakenAt("2026:10:01 12:00:00", "+09:00", gpsLatitude = "35/1,0/1,0/1")
+        // Four days later, when nothing was recorded.
+        val unplaced = jpegTakenAt("2026:10:05 12:00:00", "+09:00")
+
+        engine.run(
+            FakeCameraSource(
+                mapOf(
+                    remote("DSC00010.JPG", MediaKind.PHOTO, placedByTrack) to placedByTrack,
+                    remote("DSC00011.JPG", MediaKind.PHOTO, placedByCamera) to placedByCamera,
+                    remote("DSC00012.JPG", MediaKind.PHOTO, unplaced, modifiedAt = capturedAt + 4 * 24 * 60 * minute) to unplaced,
+                ),
+            ),
+        )
+
+        // The photo that carried its own place is neither geotagged nor without one.
+        assertEquals(SyncState.Finished(imported = 3, geotagged = 1, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(
+            mapOf("DSC00010.JPG" to GeoSource.TRACK, "DSC00011.JPG" to GeoSource.CAMERA, "DSC00012.JPG" to GeoSource.NONE),
+            database.mediaDao().all().associate { it.fileName to it.geoSource },
+        )
     }
 
     @Test
@@ -308,7 +335,7 @@ class SyncEngineTest {
 
         engine.run(FakeCameraSource(mapOf(remote("DSC00040.JPG", MediaKind.PHOTO, photo) to photo)))
 
-        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, failed = emptyList(), cancelled = false), engine.state.value)
+        assertEquals(SyncState.Finished(imported = 1, geotagged = 0, unplaced = 1, failed = emptyList(), cancelled = false), engine.state.value)
         val item = database.mediaDao().all().single()
         assertEquals(GeoSource.NONE, item.geoSource)
         assertEquals(null, item.latitude)

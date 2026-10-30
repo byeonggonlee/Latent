@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Claude Code (computer) | 0.2.0 item 11: after an import, how many files came in without a place, with a way to the Location screen | `claude/unplaced` (straight to `main`, no review) | `camera/SyncEngine.kt` (the import's result), `ui/sync/SyncScreen.kt`, strings, their tests, this board | 2026-10-30 |
 
 ## For Codex
 
@@ -548,6 +547,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-10-30 | Claude Code (computer) | 0.2.0 item 11: the import's result says how many of the files came in without a place (neither their own nor one from the recorded track; a damaged GPS block counts as none), with a hint and an "Add locations to photos" button that opens the Location screen (Timeline import, camera clock, matching again). `SyncState.Finished` carries `unplaced`. Checked on the emulator (API 36) with two JPEGs from a card folder: "그중 위치 없는 파일 2개" and the button opening Location | this commit |
 | 2026-10-30 | Claude Code (computer) | 0.2.0 item 8: the find sheet's "When" row has a "Pick dates" chip that opens a calendar; the photos of the days picked, both ends included, in the phone's time zone, are found, from one day to any range. It shows the days chosen (without the year when it is this one) and opens the calendar again; "Any time", a period or a year clears it. The calendar dialog is shared with the import screen's shooting dates. Shutter speed and aperture still wait for a reviewed Exif index migration. Checked on the emulator (API 36): picking a range and a single day, and clearing them | this commit |
 | 2026-10-30 | Claude Code (computer) | 0.2.0 item 16: each saved edit, kept version and backup records the render version it was begun with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as before. Codex's P2 (an unknown field dropped from the restore warning's comparison) fixed; Codex LGTM at `61ec0a6` with one nonblocking P3 (Gson numeric equality), CI green. Merged on the owner's instruction | [PR #53](https://github.com/byeonggonlee/Latent/pull/53), merged `d6055cd` |
 | 2026-10-30 | Claude Code (computer) | Review governance, at the owner's word: Gemini 3.8 Flash's part on a pull request is a dispatch note of about three lines (none when the owner names the reviewer), and it searches for findings only when the owner asks; the triage of PRs #52 and #53 recorded in the evaluation. Codex LGTM at `5ab45e2`. Merged on the owner's instruction | [PR #54](https://github.com/byeonggonlee/Latent/pull/54), merged `f37bb99` |

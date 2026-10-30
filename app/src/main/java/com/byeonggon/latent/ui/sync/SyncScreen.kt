@@ -131,7 +131,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
         }
 
         // Right under where an import is started, not below the settings: its progress, Cancel and result in view.
-        SyncStatus(syncState, onCancel = viewModel::cancel, onCompare = viewModel::compareLookAlikes)
+        SyncStatus(syncState, onCancel = viewModel::cancel, onCompare = viewModel::compareLookAlikes, onOpenLocation = onOpenLocation)
 
         SectionCard(stringResource(R.string.what_to_import)) {
             KindSwitch(stringResource(R.string.kind_photos_jpeg), settings.syncPhotos) { viewModel.setKindEnabled(MediaKind.PHOTO, it) }
@@ -205,7 +205,7 @@ fun SyncScreen(onOpenLocation: (() -> Unit)? = null, viewModel: SyncViewModel = 
 }
 
 @Composable
-private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> Unit) {
+private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> Unit, onOpenLocation: (() -> Unit)?) {
     when (state) {
         SyncState.Idle -> Unit
         is SyncState.Scanning -> SectionCard(stringResource(R.string.progress)) {
@@ -244,6 +244,14 @@ private fun SyncStatus(state: SyncState, onCancel: () -> Unit, onCompare: () -> 
                         pluralStringResource(R.plurals.geotagged_files, state.geotagged, state.geotagged),
                     ),
                 )
+            }
+            // What the track did not place, the Location screen can: from a Timeline, or with the camera's clock set right.
+            if (state.unplaced > 0) {
+                Text(pluralStringResource(R.plurals.imported_unplaced, state.unplaced, state.unplaced))
+                onOpenLocation?.let { open ->
+                    Hint(stringResource(R.string.imported_unplaced_hint))
+                    FilledTonalButton(onClick = open) { Text(stringResource(R.string.tag_photos)) }
+                }
             }
             state.toCompare?.let { toCompare ->
                 val context = LocalContext.current

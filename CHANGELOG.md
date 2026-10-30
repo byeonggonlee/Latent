@@ -16,6 +16,9 @@ Smaller improvements after the first release: editing, consistency of the interf
   sRAW/mRAW files can be imported but cannot yet be developed. CR3 is not supported.
 - **Find by dates:** besides the last 7 or 30 days and a year, the library can be searched for the days picked on a
   calendar, from one day to any range.
+- **Photos without a place after an import:** the import's result says how many files came in without a location,
+  with a way to the Location screen, where a Google Timeline export or the camera clock set right can still place
+  them.
 
 ### Changed
 

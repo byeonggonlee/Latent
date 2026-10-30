@@ -193,6 +193,10 @@
     <plurals name="geotagged_files">
         <item quantity="other">%d 件に位置情報を追加</item>
     </plurals>
+    <plurals name="imported_unplaced">
+        <item quantity="other">うち位置情報のないファイル %d 件</item>
+    </plurals>
+    <string name="imported_unplaced_hint">撮影時刻に近い位置情報の記録がありませんでした。Googleタイムラインを取り込むか、カメラの時計を合わせると位置情報を追加できます。</string>
     <plurals name="look_alike_files">
         <item quantity="other">ファイル %d 件</item>
     </plurals>

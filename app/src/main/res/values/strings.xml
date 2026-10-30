@@ -216,6 +216,11 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
         <item quantity="one">%d geotagged</item>
         <item quantity="other">%d geotagged</item>
     </plurals>
+    <plurals name="imported_unplaced">
+        <item quantity="one">%d of them came without a location</item>
+        <item quantity="other">%d of them came without a location</item>
+    </plurals>
+    <string name="imported_unplaced_hint">No recorded location was close enough to their time. A Google Timeline export, or the camera clock set right, can still place them.</string>
     <plurals name="look_alike_files">
         <item quantity="one">%d file</item>
         <item quantity="other">%d files</item>
