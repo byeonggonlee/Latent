@@ -5,11 +5,13 @@ import com.byeonggon.latent.enhance.forRowBands
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * Turns decoded sensor data into a picture in linear light, in the camera's colours. Its tones are
- * left for [com.byeonggon.latent.enhance.ToneRenderer] to render.
+ * Turns decoded sensor data into a picture in linear light, in the camera's colours and, for a camera whose own
+ * pictures are darker, its brightness ([ArwImage.toneExponent]). Its tones are left for
+ * [com.byeonggon.latent.enhance.ToneRenderer] to render.
  */
 object RawDeveloper {
     /**
@@ -271,10 +273,29 @@ object RawDeveloper {
             }
         }
 
+        // For a camera that shows its photos darker, what each level of a pixel's brightness is multiplied by.
+        private val toneFactor = image.toneExponent.takeIf { it > 1f }?.let { exponent ->
+            FloatArray(LinearImage.LEVELS) { level -> (level / LinearImage.MAX_LEVEL.toFloat()).pow(exponent - 1f) }
+        }
+
         private fun convert(index: Int, r: Int, g: Int, b: Int) {
-            into.red[index] = level(matrix[0] * r + matrix[1] * g + matrix[2] * b)
-            into.green[index] = level(matrix[3] * r + matrix[4] * g + matrix[5] * b)
-            into.blue[index] = level(matrix[6] * r + matrix[7] * g + matrix[8] * b)
+            var red = matrix[0] * r + matrix[1] * g + matrix[2] * b
+            var green = matrix[3] * r + matrix[4] * g + matrix[5] * b
+            var blue = matrix[6] * r + matrix[7] * g + matrix[8] * b
+            toneFactor?.let { factors ->
+                // Measured on the colour as it would be stored: a channel below black, which a vivid blue gives
+                // red and green, would otherwise cancel the light of the others and turn the pixel black.
+                red = red.coerceIn(0f, range.toFloat())
+                green = green.coerceIn(0f, range.toFloat())
+                blue = blue.coerceIn(0f, range.toFloat())
+                val factor = factors[level(LUMA_RED * red + LUMA_GREEN * green + LUMA_BLUE * blue).toInt()]
+                red *= factor
+                green *= factor
+                blue *= factor
+            }
+            into.red[index] = level(red)
+            into.green[index] = level(green)
+            into.blue[index] = level(blue)
         }
 
         private fun level(value: Float) = (value * toLevel + 0.5f).toInt().coerceIn(0, LinearImage.MAX_LEVEL).toShort()

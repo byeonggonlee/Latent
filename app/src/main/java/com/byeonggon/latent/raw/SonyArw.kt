@@ -59,6 +59,11 @@ class ArwImage(
     /** Pending DNG geometry, applied after development under the lens-correction toggle. */
     val dngWarp: DngWarp? = null,
     val cfaPattern: CfaPattern = CfaPattern.RGGB,
+    /**
+     * Above 1 for a camera whose own pictures are darker than [com.byeonggon.latent.enhance.CameraCurve], fitted to a
+     * ZV-E10's, shows the same light: each pixel's brightness is raised to this power, keeping black, white and its colour.
+     */
+    val toneExponent: Float = 1f,
 ) {
     /**
      * The same file with only a part of its picture: [width] by [height] pixels, [left] across and
@@ -67,6 +72,7 @@ class ArwImage(
     fun part(left: Int, top: Int, width: Int, height: Int) = ArwImage(
         this.width, this.height, cropLeft + left, cropTop + top, width, height,
         blackLevel, whiteLevel, whiteBalance, colorMatrix, saturation, lens, orientation, sensor, channels, dngWarp, cfaPattern,
+        toneExponent,
     )
 }
 

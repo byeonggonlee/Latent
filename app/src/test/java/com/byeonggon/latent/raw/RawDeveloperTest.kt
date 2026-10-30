@@ -5,6 +5,8 @@ import com.byeonggon.latent.enhance.LinearImage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 class RawDeveloperTest {
     private val curve = SonyArw.toneCurve(intArrayOf(8000, 10400, 12900, 14100))
@@ -16,6 +18,19 @@ class RawDeveloperTest {
     private fun neutral(level: Int) = SonyArw.read(
         SyntheticArw.file(red = stored(512 + level / 2), green = stored(512 + level), blue = stored(512 + level * 2 / 3)),
     )
+
+    /** A 16 by 16 mosaic lit evenly in each colour, read with no black level or white balance, and [matrix] or no colour change. */
+    private fun evenlyLit(red: Int, green: Int, blue: Int, toneExponent: Float = 1f, matrix: FloatArray = floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f)) = ArwImage(
+        16, 16, 0, 0, 16, 16, 0, LinearImage.MAX_LEVEL, floatArrayOf(1f, 1f, 1f), matrix, 1f,
+        null, 1,
+        ShortArray(16 * 16) { at ->
+            val (x, y) = at % 16 to at / 16
+            (if (x % 2 == 0 && y % 2 == 0) red else if (x % 2 == 1 && y % 2 == 1) blue else green).toShort()
+        },
+        toneExponent = toneExponent,
+    )
+
+    private fun developments(image: ArwImage) = listOf(RawDeveloper.developPreview(image), RawDeveloper.develop(image))
 
     /** How bright a level is shown, from 0 to 255. */
     private fun shown(level: Short) = CameraCurve.displayOfLevel[level.toInt()] * 255.0
@@ -63,5 +78,52 @@ class RawDeveloperTest {
 
         val white = LinearImage.MAX_LEVEL.toShort()
         assertEquals(listOf(white, white, white), listOf(developed.red.first(), developed.green.first(), developed.blue.first()))
+    }
+
+    @Test
+    fun aCameraWhosePicturesAreDarkerHasItsBrightnessLoweredAndItsColoursKept() {
+        for (developed in developments(evenlyLit(4096, 4096, 4096, toneExponent = 1.24f))) {
+            val expected = (LinearImage.MAX_LEVEL * (4096.0 / LinearImage.MAX_LEVEL).pow(1.24)).roundToInt()
+            for (channel in listOf(developed.red, developed.green, developed.blue)) {
+                assertTrue(channel.all { kotlin.math.abs(it - expected) <= 1 })
+            }
+        }
+        for (developed in developments(evenlyLit(6000, 3000, 1500, toneExponent = 1.24f))) {
+            val (red, green, blue) = listOf(developed.red, developed.green, developed.blue).map { it.first().toDouble() }
+            assertTrue("darker, not $green", green < 2200)
+            assertEquals(2.0, red / green, 0.002)
+            assertEquals(0.5, blue / green, 0.002)
+        }
+        for (level in listOf(0, LinearImage.MAX_LEVEL)) {
+            for (developed in developments(evenlyLit(level, level, level, toneExponent = 1.24f))) {
+                assertTrue(developed.green.all { it.toInt() == level })
+            }
+        }
+    }
+
+    @Test
+    fun anyOtherCameraKeepsItsBrightnessAsTheSensorRecordedIt() {
+        for (developed in developments(evenlyLit(6000, 3000, 1500))) {
+            assertEquals(listOf(6000, 3000, 1500), listOf(developed.red, developed.green, developed.blue).map { it.first().toInt() })
+        }
+    }
+
+    @Test
+    fun aVividBlueKeepsItsLightUnderTheTone() {
+        // The EOS 7D's matrix for the CC0 scene: a strong blue gives red and green below black.
+        val eos7d = floatArrayOf(1.7970818f, -0.7317299f, -0.06535186f, -0.24216631f, 1.7495457f, -0.50737953f, -0.009082833f, -0.47137046f, 1.4804533f)
+        for ((red, green, blue) in listOf(Triple(1000, 2000, 12000), Triple(59, 30, 449), Triple(4096, 4096, 4096))) {
+            val plain = developments(evenlyLit(red, green, blue, matrix = eos7d))
+            val toned = developments(evenlyLit(red, green, blue, toneExponent = 1.24f, matrix = eos7d))
+            for ((before, after) in plain.zip(toned)) {
+                val stored = listOf(before.red, before.green, before.blue).map { it.first().toDouble() }
+                val brightness = 0.2126 * stored[0] + 0.7152 * stored[1] + 0.0722 * stored[2]
+                val factor = (brightness.roundToInt() / LinearImage.MAX_LEVEL.toDouble()).pow(0.24)
+                val expected = stored.map { (it * factor).roundToInt() }
+                assertTrue("($red, $green, $blue) keeps light", expected.any { it > 0 })
+                val actual = listOf(after.red, after.green, after.blue).map { channel -> channel.first().toInt() }
+                for ((want, got) in expected.zip(actual)) assertTrue("($red, $green, $blue): $actual, not $expected", kotlin.math.abs(want - got) <= 1)
+            }
+        }
     }
 }

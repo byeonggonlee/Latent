@@ -64,7 +64,11 @@ class CanonCr2ReferenceTest {
         assertEquals(image.whiteLevel, reference.int)
         assertArrayEquals(image.whiteBalance, FloatArray(3) { reference.float }, 0.000001f)
         assertArrayEquals(image.colorMatrix, FloatArray(9) { reference.float }, 0.000001f)
-        val developed = RawDeveloper.developPreview(image)
+        // The oracle is linear light: develop without the 7D's darker brightness, which RawDeveloperTest checks.
+        val linear = ArwImage(image.width, image.height, image.cropLeft, image.cropTop, image.cropWidth, image.cropHeight,
+            image.blackLevel, image.whiteLevel, image.whiteBalance, image.colorMatrix, image.saturation, image.lens,
+            image.orientation, image.sensor, cfaPattern = image.cfaPattern)
+        val developed = RawDeveloper.developPreview(linear)
         assertEquals(developed.width, width)
         assertEquals(developed.height, height)
         assertEquals(width * height * 6, reference.remaining())

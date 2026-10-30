@@ -22,6 +22,11 @@ internal object CanonCr2 {
         -0.0593f, 0.1772f, 0.6198f,
     )
 
+    // The EOS 7D's own JPEGs hold midtones about 0.7 stop darker than CameraCurve (fitted to a ZV-E10)
+    // shows them. Fitted against the camera JPEGs of both CC0 files above: the mean lightness error falls
+    // from 13.6 to 2.8 L* (the ISO 1250 scene) and from 9.4 to 3.0 (the ISO 100 chart).
+    private const val EOS_7D_TONE = 1.24f
+
     private fun colorMatrix(whiteBalance: FloatArray) = Dng.Colors(
         floats = { tag ->
             when (tag) {
@@ -56,7 +61,8 @@ internal object CanonCr2 {
         val matrix = colorMatrix(metadata.whiteBalance)
         val sensor = CanonCr2Sensor.decode(file, metadata, request.checkCancelled)
         val image = ArwImage(metadata.width, metadata.height, metadata.crop[0], metadata.crop[1], metadata.crop[2], metadata.crop[3],
-            2048, metadata.whiteLevel, metadata.whiteBalance, matrix, 1f, null, metadata.orientation, sensor, cfaPattern=CfaPattern.GBRG)
+            2048, metadata.whiteLevel, metadata.whiteBalance, matrix, 1f, null, metadata.orientation, sensor, cfaPattern=CfaPattern.GBRG,
+            toneExponent=EOS_7D_TONE)
         return DecodedFrame(image, RawFormat.CANON_CR2, 14, emptySet())
     }
 }
