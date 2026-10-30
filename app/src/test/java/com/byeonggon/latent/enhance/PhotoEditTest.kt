@@ -75,7 +75,49 @@ class PhotoEditTest {
     @Test
     fun writesNothingForWhatWasLeftAlone() {
         assertEquals("{}", PhotoEdit().toJson())
-        assertEquals("""{"exposure":0.5}""", PhotoEdit(Adjustments(exposure = 0.5f)).toJson())
+        assertEquals("""{"exposure":0.5,"renderVersion":1}""", PhotoEdit(Adjustments(exposure = 0.5f)).toJson())
+    }
+
+    @Test
+    fun saysWhichRenderingItWasBegunWith() {
+        assertEquals(1, PhotoEdit.RENDER_VERSION)
+        // Saved by 0.1.0, before there was a number: drawn as this app draws.
+        assertEquals(PhotoEdit.RENDER_VERSION, PhotoEdit.fromJson("""{"exposure":0.5}""")!!.renderVersion)
+        // A later app's number is kept, and written back as it was.
+        val later = PhotoEdit.fromJson("""{"exposure":0.5,"renderVersion":7}""")!!
+        assertEquals(7, later.renderVersion)
+        assertEquals(later, PhotoEdit.fromJson(later.toJson()))
+        for (wrong in listOf("0", "-2")) {
+            assertEquals(PhotoEdit.RENDER_VERSION, PhotoEdit.fromJson("""{"exposure":0.5,"renderVersion":$wrong}""")!!.renderVersion)
+        }
+        assertNull(PhotoEdit.fromJson("""{"exposure":0.5,"renderVersion":"new"}"""))
+    }
+
+    @Test
+    fun comparesStoredEditsByAllTheySay() {
+        assertTrue(PhotoEdit.sameStored(null, null))
+        assertFalse(PhotoEdit.sameStored(null, "{}"))
+        assertTrue(PhotoEdit.sameStored("""{"exposure":0.5}""", """{"renderVersion":1,"exposure":0.50}"""))
+        assertFalse(PhotoEdit.sameStored("""{"exposure":0.5}""", """{"exposure":0.5,"renderVersion":2}"""))
+        assertFalse(PhotoEdit.sameStored("""{"exposure":0.5,"later":1}""", """{"exposure":0.5}"""))
+        // An untouched edit has no number to add.
+        assertFalse(PhotoEdit.sameStored("{}", """{"renderVersion":1}"""))
+        // What cannot be read is the same only as the same text.
+        assertTrue(PhotoEdit.sameStored("not an edit", "not an edit"))
+        assertFalse(PhotoEdit.sameStored("not an edit", "{}"))
+    }
+
+    @Test
+    fun theRenderingStaysWithThePhoto() {
+        val begun = PhotoEdit(Adjustments(exposure = 1f), renderVersion = 7)
+
+        assertEquals(7, begun.withLookOf(elaborate).renderVersion)
+        assertEquals(7, begun.lookAt(0.5f).renderVersion)
+        assertEquals(PhotoEdit.RENDER_VERSION, PhotoEdit().withLookOf(begun).renderVersion)
+        // A number alone changes nothing in the picture, and is not written for an untouched one.
+        assertFalse(PhotoEdit(renderVersion = 7).changesColors)
+        assertFalse(PhotoEdit(renderVersion = 7).changesPicture)
+        assertEquals("{}", PhotoEdit(renderVersion = 7).toJson())
     }
 
     @Test
@@ -127,8 +169,8 @@ class PhotoEditTest {
         val edit = elaborate.copy(lut = LutLook(lutId, 0.6f))
 
         assertEquals(edit, PhotoEdit.fromJson(edit.toJson()))
-        assertEquals("""{"lut":"$lutId"}""", PhotoEdit(lut = LutLook(lutId)).toJson())
-        assertEquals("""{"lut":"$lutId","lutIntensity":0.25}""", PhotoEdit(lut = LutLook(lutId, 0.25f)).toJson())
+        assertEquals("""{"lut":"$lutId","renderVersion":1}""", PhotoEdit(lut = LutLook(lutId)).toJson())
+        assertEquals("""{"lut":"$lutId","lutIntensity":0.25,"renderVersion":1}""", PhotoEdit(lut = LutLook(lutId, 0.25f)).toJson())
         // At no strength a LUT is as good as none.
         assertEquals("{}", PhotoEdit(lut = LutLook(lutId, 0f)).toJson())
         assertFalse(PhotoEdit(lut = LutLook(lutId, 0f)).changesColors)

@@ -118,7 +118,7 @@ internal fun restoredOnto(target: MediaItemEntity, record: MediaRecord, hasOrigi
 internal fun replacesOwn(target: MediaItemEntity, restored: MediaItemEntity): Boolean =
     (target.rating != 0 && restored.rating != target.rating) ||
         (target.flag != 0 && restored.flag != target.flag) ||
-        (target.edit != null && target.edit != UNKNOWN_EDIT && restored.edit != target.edit) ||
+        (target.edit != null && target.edit != UNKNOWN_EDIT && !PhotoEdit.sameStored(restored.edit, target.edit)) ||
         (target.geoSource != GeoSource.NONE && (apart(restored.latitude, target.latitude) || apart(restored.longitude, target.longitude)))
 
 // A place written into a file's Exif and read back is rounded; a metre or so is the same place.

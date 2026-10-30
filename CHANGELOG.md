@@ -33,6 +33,9 @@ Smaller improvements after the first release: editing, consistency of the interf
 - **Empty screens** show an icon, a sentence and one way on: a library narrowed to nothing offers *Show everything*,
   which takes off the kind, flag, stars and album at once. The map's card says that online maps are off. Secondary
   buttons are tonal rather than outlined, beside one filled button for the main action.
+- **Edits keep their look:** an edit saved from now on records which version of the app's rendering it was begun
+  with, so a later change to how photos are developed leaves it as it was. Edits saved with 0.1.0 have no such
+  record and take 0.2.0's rendering.
 
 ### Fixed
 
