@@ -55,6 +55,20 @@ class AutoSettingsTest {
     }
 
     @Test
+    fun keepsTheCameraBalanceOfARawButForANudge() {
+        val tinted = bands(40, 200, Triple(-15, 0, 15))
+
+        val raw = AutoSettings.of(tinted, raw = true)
+
+        assertTrue("${raw.temperature}", raw.temperature > 0f && raw.temperature <= 0.1f)
+        assertTrue("${raw.tint}", kotlin.math.abs(raw.tint) <= 0.05f)
+        assertTrue(raw.temperature < AutoSettings.of(tinted).temperature)
+        // The rest is judged as for any other picture.
+        assertEquals(AutoSettings.of(tinted).exposure, raw.exposure, 0f)
+        assertEquals(0f to 0f, AutoSettings.of(bands(10, 245), raw = true).let { it.temperature to it.tint })
+    }
+
+    @Test
     fun addsContrastToAFlatPicture() {
         assertTrue(AutoSettings.of(bands(100, 150)).contrast > 0.1f)
     }

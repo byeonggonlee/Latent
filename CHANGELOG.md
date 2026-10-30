@@ -22,6 +22,9 @@ Smaller improvements after the first release: editing, consistency of the interf
 
 ### Changed
 
+- **Auto on a raw** keeps the camera's white balance and only nudges it, at most 0.1 in temperature and 0.05 in tint,
+  where gray-world, gray-edge and white-patch all agree; a lamp-lit room or a dusk sky keeps its colour. Other
+  pictures are balanced as before.
 - **Editor sliders** read their state at a glance: a changed one has its name in full contrast with a dot after
   it, the thumb is white with a dark edge, and the track is filled from where the setting starts, so *Feather*,
   a LUT's or a filter's amount, the brush and spot sizes and a colour's spread fill from the left rather than from

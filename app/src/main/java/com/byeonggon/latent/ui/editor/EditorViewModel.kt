@@ -483,9 +483,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
      * such as texture or vignette, stay as they are.
      */
     fun autoAdjust() {
-        val image = source.value?.image ?: return
+        val current = source.value ?: return
         viewModelScope.launch {
-            val auto = withContext(Dispatchers.Default) { AutoSettings.of(image.downscaled(ToneRenderer.OVERVIEW_EDGE)) }
+            val auto = withContext(Dispatchers.Default) { AutoSettings.of(current.image.downscaled(ToneRenderer.OVERVIEW_EDGE), current.raw) }
             changeOnce { edit ->
                 val judged = listOf(
                     Adjustment.EXPOSURE, Adjustment.CONTRAST, Adjustment.HIGHLIGHTS, Adjustment.SHADOWS, Adjustment.WHITES,
@@ -782,6 +782,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         scale = 1f / (2 * PROXY_CELLS),
                         region = { x, y -> RawRenderer.region(raw, x, y, DETAIL_SIZE) },
                         hasLensProfile = raw.lens != null || raw.dngWarp != null,
+                        raw = true,
                     )
                 } else {
                     val original = edits.originalOf(item)
@@ -827,6 +828,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         val hasLensProfile: Boolean = true,
         /** Whether the photo is an Ultra HDR one, whose gain map no edit keeps. */
         val hasGainMap: Boolean = false,
+        /** Whether it is a raw, developed with the camera's white balance. */
+        val raw: Boolean = false,
     ) {
         private var spots = emptyList<Spot>()
         private var healed = image
