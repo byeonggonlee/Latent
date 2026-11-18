@@ -270,9 +270,13 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
             storedEdit != null -> storedEdit
             raw.kind == MediaKind.RAW && isDngTiffName(raw.fileName) -> {
                 val canPlatformDecode = withContext(Dispatchers.IO) {
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeFile(raw.path, bounds)
-                    bounds.outWidth > 0 && bounds.outHeight > 0
+                    try {
+                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        BitmapFactory.decodeFile(raw.path, bounds)
+                        bounds.outWidth > 0 && bounds.outHeight > 0
+                    } catch (_: RuntimeException) {
+                        false
+                    }
                 }
                 if (canPlatformDecode) {
                     status.update { it.copy(rendered = null) }

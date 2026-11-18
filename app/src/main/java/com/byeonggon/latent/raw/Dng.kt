@@ -117,6 +117,33 @@ object Dng {
         TAG_CFA_PATTERN,
     )
 
+    private val VALIDATION_TAGS = intArrayOf(
+        TAG_NEW_SUBFILE_TYPE,
+        TAG_WIDTH,
+        TAG_HEIGHT,
+        TAG_BITS_PER_SAMPLE,
+        TAG_COMPRESSION,
+        TAG_PHOTOMETRIC,
+        TAG_STRIP_OFFSETS,
+        TAG_SAMPLES_PER_PIXEL,
+        TAG_ROWS_PER_STRIP,
+        TAG_STRIP_BYTE_COUNTS,
+        TAG_PLANAR_CONFIGURATION,
+        TAG_TILE_WIDTH,
+        TAG_TILE_LENGTH,
+        TAG_TILE_OFFSETS,
+        TAG_TILE_BYTE_COUNTS,
+        TAG_SUB_IFDS,
+        TAG_DNG_VERSION,
+        *REQUIRED_RANGE_TAGS,
+    ).toSet()
+
+    private const val MAX_VALIDATION_DIRECTORIES = 64
+    private const val MAX_VALIDATION_ENTRIES = 8_192
+    private const val MAX_VALIDATION_READ_CALLS = 512
+    private const val MAX_VALIDATION_BYTES = 3L * 1024 * 1024
+    private const val MAX_SUB_IFD_POINTERS = 65_536
+
     /** Whether [file] holds a structurally valid DNG (header, version 1.x, full-size raw directory, and strip/tile bounds). */
     fun isDng(file: ByteArray): Boolean = validateDng(ArraySource(file))
 
@@ -133,9 +160,10 @@ object Dng {
         false
     }
 
-    private fun validateDng(source: BytesSource): Boolean = try {
-        if (source.length < 8L) return false
-        val header = source.readAt(0L, 8)
+    private fun validateDng(rawSource: BytesSource): Boolean = try {
+        if (rawSource.length < 8L) return false
+        val budget = ValidationBudget(rawSource)
+        val header = budget.readAt(0L, 8)
         val order = when {
             header[0] == 'I'.code.toByte() && header[1] == 'I'.code.toByte() -> ByteOrder.LITTLE_ENDIAN
             header[0] == 'M'.code.toByte() && header[1] == 'M'.code.toByte() -> ByteOrder.BIG_ENDIAN
@@ -144,17 +172,15 @@ object Dng {
         val headBuf = ByteBuffer.wrap(header).order(order)
         if ((headBuf.getShort(2).toInt() and 0xFFFF) != 42) return false
         val firstOffset = headBuf.getInt(4).toLong() and 0xFFFFFFFFL
-        val main = SparseIfd.read(source, order, firstOffset) ?: return false
+        val main = SparseIfd.read(budget, order, firstOffset) ?: return false
         val version = main.ints(TAG_DNG_VERSION) ?: return false
         if (version.size < 4 || version[0] != 1) return false
 
-        val subOffsets = main.longs(TAG_SUB_IFDS) ?: longArrayOf()
-        val directories = buildList {
-            add(main)
-            for (offset in subOffsets) {
-                SparseIfd.read(source, order, offset)?.let(::add)
-            }
+        val directories = ArrayList<SparseIfd>(8).apply { add(main) }
+        val subOk = main.forEachOffset(TAG_SUB_IFDS) { offset ->
+            SparseIfd.read(budget, order, offset)?.let(directories::add)
         }
+        if (!subOk) return false
         val fullSize = directories.filter { (it.int(TAG_NEW_SUBFILE_TYPE) ?: 0) == 0 }
         val raw = fullSize.firstOrNull { it.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_CFA }
             ?: fullSize.firstOrNull { it.int(TAG_PHOTOMETRIC) == PHOTOMETRIC_LINEAR_RAW }
@@ -171,10 +197,8 @@ object Dng {
         if (linear && (raw.int(TAG_PLANAR_CONFIGURATION) ?: 1) != 1) return false
 
         val tiled = TAG_TILE_OFFSETS in raw
-        val offsets = raw.longs(if (tiled) TAG_TILE_OFFSETS else TAG_STRIP_OFFSETS) ?: return false
-        val lengths = raw.longs(if (tiled) TAG_TILE_BYTE_COUNTS else TAG_STRIP_BYTE_COUNTS)
-            ?.takeIf { it.size == offsets.size }
-            ?: return false
+        val offsetsTag = if (tiled) TAG_TILE_OFFSETS else TAG_STRIP_OFFSETS
+        val lengthsTag = if (tiled) TAG_TILE_BYTE_COUNTS else TAG_STRIP_BYTE_COUNTS
         val tileWidth = if (tiled) raw.int(TAG_TILE_WIDTH) ?: 0 else width
         val rowsPerStrip = raw.int(TAG_ROWS_PER_STRIP)?.let { it.toLong() and 0xFFFFFFFFL } ?: height.toLong()
         val tileLength = if (tiled) raw.int(TAG_TILE_LENGTH) ?: 0 else rowsPerStrip.coerceAtMost(height.toLong()).toInt()
@@ -182,26 +206,40 @@ object Dng {
         val across = (width.toLong() + tileWidth - 1) / tileWidth
         val down = (height.toLong() + tileLength - 1) / tileLength
         if (across * tileWidth > 2 * MAX_PHOTOSITES || down * tileLength > 2 * MAX_PHOTOSITES) return false
-        if (across * down > offsets.size.toLong()) return false
         if (across.toInt().toLong() != across || down.toInt().toLong() != down) return false
         val totalTiles = across * down
         if (totalTiles > Int.MAX_VALUE) return false
         val tileCount = totalTiles.toInt()
         if (across * tileWidth * down * tileLength > 2 * MAX_PHOTOSITES) return false
 
+        val offsetCount = raw.valueCount(offsetsTag) ?: return false
+        val lengthCount = raw.valueCount(lengthsTag) ?: return false
+        if (offsetCount != lengthCount || offsetCount < tileCount) return false
+
         val compression = raw.int(TAG_COMPRESSION) ?: COMPRESSION_NONE
         if (compression !in intArrayOf(COMPRESSION_NONE, COMPRESSION_LOSSLESS_JPEG, COMPRESSION_JPEG_XL)) return false
 
+        val offsets = raw.longs(offsetsTag) ?: return false
+        val lengths = raw.longs(lengthsTag)?.takeIf { it.size == offsets.size } ?: return false
+
+        // Match readSamples: uncompressed checks needed row bytes, JPEG XL checks declared range, lossless JPEG clips to EOF.
         for (index in 0 until tileCount) {
             val offset = offsets[index]
             val length = lengths[index]
-            if (offset < 0L || offset >= source.length) return false
-            if (compression != COMPRESSION_NONE && (length <= 0L || length > source.length - offset)) return false
-            if (compression == COMPRESSION_NONE) {
-                val top = (index / across.toInt()) * tileLength
-                val needed = (tileWidth.toLong() * channels * bits + 7) / 8 * minOf(tileLength, height - top)
-                if (needed > source.length - offset) return false
+            if (offset < 0L || offset >= budget.length) return false
+            when (compression) {
+                COMPRESSION_JPEG_XL -> if (length <= 0L || length > budget.length - offset) return false
+                COMPRESSION_LOSSLESS_JPEG -> if (length <= 0L || minOf(length, budget.length - offset) < 4L) return false
+                COMPRESSION_NONE -> {
+                    val top = (index / across.toInt()) * tileLength
+                    val needed = (tileWidth.toLong() * channels * bits + 7) / 8 * minOf(tileLength, height - top)
+                    if (needed > budget.length - offset) return false
+                }
             }
+        }
+        if (compression == COMPRESSION_LOSSLESS_JPEG && tileCount > 0) {
+            if (!validateLosslessJpegHeader(budget, offsets[0], lengths[0])) return false
+            if (tileCount > 1 && !validateLosslessJpegHeader(budget, offsets[tileCount - 1], lengths[tileCount - 1])) return false
         }
         for (tag in REQUIRED_RANGE_TAGS) {
             if (!main.hasValidRange(tag) || !raw.hasValidRange(tag)) return false
@@ -217,16 +255,108 @@ object Dng {
         false
     }
 
+    private fun validateLosslessJpegHeader(source: BytesSource, offset: Long, length: Long): Boolean {
+        val available = minOf(length, source.length - offset)
+        if (available < 4L) return false
+        val end = offset + available
+        var windowStart = offset
+        var window = source.readAt(windowStart, minOf(available, 2048L).toInt())
+        fun u8(pos: Long): Int {
+            if (pos < windowStart || pos >= windowStart + window.size) {
+                if (pos >= end) throw EOFException()
+                windowStart = pos
+                val chunk = minOf(end - pos, 2048L).toInt()
+                window = source.readAt(windowStart, chunk)
+            }
+            return window[(pos - windowStart).toInt()].toInt() and 0xFF
+        }
+        fun u16(pos: Long): Int = (u8(pos) shl 8) or u8(pos + 1)
+
+        if (u8(offset) != 0xFF || u8(offset + 1) != 0xD8) return false
+        var at = offset + 2L
+        var sawFrame = false
+        for (step in 0 until 64) {
+            if (at + 4L > end || u8(at) != 0xFF) return false
+            val marker = u8(at + 1)
+            if (marker == 0xFF) {
+                at++
+                continue
+            }
+            if (marker == 0xD9) return false
+            val segment = u16(at + 2)
+            val body = at + 4L
+            val next = at + 2L + segment
+            if (segment < 2 || next > end) return false
+            when (marker) {
+                0xC3 -> {
+                    if (segment < 8) return false
+                    val precision = u8(body)
+                    val lines = u16(body + 1)
+                    val samplesPerLine = u16(body + 3)
+                    val count = u8(body + 5)
+                    if (precision !in 2..16 || lines <= 0 || samplesPerLine <= 0 || count !in 1..4) return false
+                    if (segment < 8 + 3 * count) return false
+                    sawFrame = true
+                }
+                0xDA -> {
+                    if (!sawFrame) return false
+                    val count = u8(body)
+                    if (count !in 1..4 || segment < 6 + 2 * count) return false
+                    return next < end
+                }
+            }
+            at = next
+        }
+        return false
+    }
+
     private interface BytesSource {
         val length: Long
         fun readAt(offset: Long, count: Int): ByteArray
+    }
+
+    private class BudgetExceededException : IOException("DNG metadata budget exceeded")
+
+    private class ValidationBudget(
+        private val delegate: BytesSource,
+        private val maxDirectories: Int = MAX_VALIDATION_DIRECTORIES,
+        private val maxEntries: Int = MAX_VALIDATION_ENTRIES,
+        private val maxReadCalls: Int = MAX_VALIDATION_READ_CALLS,
+        private val maxBytesRead: Long = MAX_VALIDATION_BYTES,
+    ) : BytesSource {
+        override val length: Long get() = delegate.length
+        private val visitedOffsets = HashSet<Long>()
+        private var directories = 0
+        private var totalEntries = 0
+        private var readCalls = 0
+        private var bytesRead = 0L
+
+        fun markOffset(offset: Long): Boolean {
+            if (!visitedOffsets.add(offset)) return false
+            if (directories >= maxDirectories) throw BudgetExceededException()
+            directories++
+            return true
+        }
+
+        fun reserveEntries(count: Int) {
+            if (count > maxEntries - totalEntries) throw BudgetExceededException()
+            totalEntries += count
+        }
+
+        override fun readAt(offset: Long, count: Int): ByteArray {
+            if (offset < 0L || count < 0 || count.toLong() > length - offset) throw EOFException()
+            if (readCalls >= maxReadCalls || count.toLong() > maxBytesRead - bytesRead) throw BudgetExceededException()
+            readCalls++
+            bytesRead += count
+            return delegate.readAt(offset, count)
+        }
     }
 
     private class ArraySource(private val data: ByteArray) : BytesSource {
         override val length: Long get() = data.size.toLong()
 
         override fun readAt(offset: Long, count: Int): ByteArray {
-            if (offset < 0L || count < 0 || offset + count > length) throw EOFException()
+            if (offset < 0L || count < 0 || count.toLong() > length - offset) throw EOFException()
             return data.copyOfRange(offset.toInt(), (offset + count).toInt())
         }
     }
@@ -235,7 +365,7 @@ object Dng {
         override val length: Long = file.length()
 
         override fun readAt(offset: Long, count: Int): ByteArray {
-            if (offset < 0L || count < 0 || offset + count > length) throw EOFException()
+            if (offset < 0L || count < 0 || count.toLong() > length - offset) throw EOFException()
             val out = ByteArray(count)
             file.seek(offset)
             file.readFully(out)
@@ -246,18 +376,19 @@ object Dng {
     private class SparseIfd(
         private val source: BytesSource,
         private val order: ByteOrder,
-        private val ifdBytes: ByteBuffer,
         private val entries: Map<Int, RawEntry>,
     ) {
-        private class RawEntry(val type: Int, val count: Int, val inlineAt: Int, val externalOffset: Long, val totalBytes: Long)
+        private class RawEntry(val type: Int, val count: Int, val rawInlineWord: Int, val externalOffset: Long, val totalBytes: Long)
 
         operator fun contains(tag: Int) = tag in entries
+
+        fun valueCount(tag: Int): Int? = entries[tag]?.count
 
         fun int(tag: Int): Int? = ints(tag)?.firstOrNull()
 
         fun ints(tag: Int): IntArray? {
-            val buf = readValues(tag) ?: return null
             val entry = entries[tag] ?: return null
+            val buf = readValues(entry) ?: return null
             return when (entry.type) {
                 1, 7 -> IntArray(entry.count) { buf.get(it).toInt() and 0xFF }
                 3 -> IntArray(entry.count) { buf.getShort(2 * it).toInt() and 0xFFFF }
@@ -268,14 +399,31 @@ object Dng {
         }
 
         fun longs(tag: Int): LongArray? {
-            val buf = readValues(tag) ?: return null
             val entry = entries[tag] ?: return null
+            val buf = readValues(entry) ?: return null
             return when (entry.type) {
                 1, 7 -> LongArray(entry.count) { (buf.get(it).toInt() and 0xFF).toLong() }
                 3 -> LongArray(entry.count) { (buf.getShort(2 * it).toInt() and 0xFFFF).toLong() }
                 4, 13 -> LongArray(entry.count) { buf.getInt(4 * it).toLong() and 0xFFFFFFFFL }
                 else -> null
             }
+        }
+
+        fun forEachOffset(tag: Int, action: (Long) -> Unit): Boolean {
+            val entry = entries[tag] ?: return true
+            if (entry.type !in intArrayOf(1, 3, 4, 7, 13)) return false
+            if (entry.count == 0) return true
+            val buf = readValues(entry, maxValues = MAX_SUB_IFD_POINTERS) ?: return false
+            for (index in 0 until entry.count) {
+                val offset = when (entry.type) {
+                    1, 7 -> (buf.get(index).toInt() and 0xFF).toLong()
+                    3 -> (buf.getShort(2 * index).toInt() and 0xFFFF).toLong()
+                    4, 13 -> buf.getInt(4 * index).toLong() and 0xFFFFFFFFL
+                    else -> return false
+                }
+                action(offset)
+            }
+            return true
         }
 
         fun hasValidRange(tag: Int): Boolean {
@@ -285,43 +433,51 @@ object Dng {
             return entry.externalOffset in 0L..source.length && entry.totalBytes <= source.length - entry.externalOffset
         }
 
-        private fun readValues(tag: Int): ByteBuffer? {
-            val entry = entries[tag] ?: return null
-            if (entry.type !in 1 until TYPE_SIZES.size || entry.count !in 0..MAX_IFD_VALUES || entry.totalBytes <= 0L) return null
+        private fun readValues(entry: RawEntry, maxValues: Int = MAX_IFD_VALUES): ByteBuffer? {
+            if (entry.type !in 1 until TYPE_SIZES.size || entry.count !in 0..maxValues || entry.totalBytes <= 0L) return null
             if (entry.totalBytes <= 4L) {
-                val inline = ByteArray(4) { idx -> ifdBytes.get(entry.inlineAt + idx) }
+                val inline = ByteArray(4) { idx -> ((entry.rawInlineWord ushr ((3 - idx) * 8)) and 0xFF).toByte() }
                 return ByteBuffer.wrap(inline).order(order)
             }
             if (entry.totalBytes > Int.MAX_VALUE) return null
+            if (entry.externalOffset < 0L || entry.totalBytes > source.length - entry.externalOffset) return null
             val bytes = source.readAt(entry.externalOffset, entry.totalBytes.toInt())
             return ByteBuffer.wrap(bytes).order(order)
         }
 
         companion object {
             private const val MAX_ENTRIES = 4096
-            private const val MAX_IFD_VALUES = 1 shl 20
+            private const val MAX_IFD_VALUES = 1 shl 18
             private val TYPE_SIZES = intArrayOf(1, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8, 4)
 
-            fun read(source: BytesSource, order: ByteOrder, offset: Long): SparseIfd? {
-                if (offset < 0L || offset + 2L > source.length) return null
+            fun read(source: ValidationBudget, order: ByteOrder, offset: Long): SparseIfd? {
+                if (offset < 0L || offset > source.length - 2L) return null
+                if (!source.markOffset(offset)) return null
                 val countBuf = ByteBuffer.wrap(source.readAt(offset, 2)).order(order)
                 val count = countBuf.getShort(0).toInt() and 0xFFFF
                 if (count == 0 || count > MAX_ENTRIES) return null
                 val tableSize = 2 + 12 * count
-                if (offset + tableSize > source.length) return null
+                if (tableSize.toLong() > source.length - offset) return null
+                source.reserveEntries(count)
                 val table = ByteBuffer.wrap(source.readAt(offset, tableSize)).order(order)
-                val entries = HashMap<Int, RawEntry>(count * 2)
+                val entries = HashMap<Int, RawEntry>(minOf(count, VALIDATION_TAGS.size) * 2 + 2)
                 for (index in 0 until count) {
                     val at = 2 + 12 * index
                     val tag = table.getShort(at).toInt() and 0xFFFF
+                    if (tag !in VALIDATION_TAGS) continue
                     val type = table.getShort(at + 2).toInt() and 0xFFFF
                     val valueCount = table.getInt(at + 4)
                     if (valueCount < 0) return null
                     val totalBytes = (TYPE_SIZES.getOrNull(type) ?: 1).toLong() * valueCount
                     val external = table.getInt(at + 8).toLong() and 0xFFFFFFFFL
-                    entries[tag] = RawEntry(type, valueCount, at + 8, external, totalBytes)
+                    val rawInlineWord =
+                        ((table.get(at + 8).toInt() and 0xFF) shl 24) or
+                            ((table.get(at + 9).toInt() and 0xFF) shl 16) or
+                            ((table.get(at + 10).toInt() and 0xFF) shl 8) or
+                            (table.get(at + 11).toInt() and 0xFF)
+                    entries[tag] = RawEntry(type, valueCount, rawInlineWord, external, totalBytes)
                 }
-                return SparseIfd(source, order, table, entries)
+                return SparseIfd(source, order, entries)
             }
         }
     }

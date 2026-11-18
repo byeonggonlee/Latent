@@ -129,8 +129,13 @@ class Thumbnails(
     private fun decode(photo: File, raw: Boolean, checkCancelled: () -> Unit): Bitmap? {
         val preview = MpfPreview.of(photo)
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, bounds) else BitmapFactory.decodeFile(photo.path, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+        val boundsOk = try {
+            if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, bounds) else BitmapFactory.decodeFile(photo.path, bounds)
+            bounds.outWidth > 0 && bounds.outHeight > 0
+        } catch (_: RuntimeException) {
+            false
+        }
+        if (!boundsOk) {
             return if (raw || MediaKind.fromFile(photo) == MediaKind.RAW) {
                 renderRaw(photo, PhotoEdit(), checkCancelled)
             } else {
@@ -140,8 +145,11 @@ class Thumbnails(
         var sample = 1
         while (min(bounds.outWidth, bounds.outHeight) / (sample * 2) >= SHORT_SIDE) sample *= 2
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        val decoded = (if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, options) else BitmapFactory.decodeFile(photo.path, options))
-            ?: return if (raw || MediaKind.fromFile(photo) == MediaKind.RAW) renderRaw(photo, PhotoEdit(), checkCancelled) else null
+        val decoded = try {
+            if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, options) else BitmapFactory.decodeFile(photo.path, options)
+        } catch (_: RuntimeException) {
+            null
+        } ?: return if (raw || MediaKind.fromFile(photo) == MediaKind.RAW) renderRaw(photo, PhotoEdit(), checkCancelled) else null
         return upright(shrunk(decoded), photo)
     }
 

@@ -398,6 +398,241 @@ class DngTiffReproductionTest {
         assertFalse(File(context.cacheDir, "share/SAME.dng.jpg").exists())
     }
 
+    @Test
+    fun deduplicatesRepeatedSubIfdOffsetsAndRejectsDistinctDirectoryFloodsWithinBudget() = runBlocking {
+        // Exact ~65 KB adversarial shape: valid DNGVersion + 4,096 pointers to one 4,096-entry non-raw child.
+        val repeatedInvalid = createSubIfdProbeBytes(
+            subIfdOffsetsCount = 4096,
+            distinctChildren = 1,
+            entriesPerChild = 4096,
+            validRawFirstChild = false,
+        )
+        assertTrue(repeatedInvalid.size in 65_000..66_000)
+        assertFalse(Dng.isDng(repeatedInvalid))
+        val repeatedInvalidFile = File(context.cacheDir, "REPEATED_INVALID.dng.tiff").apply { writeBytes(repeatedInvalid) }
+        assertFalse(Dng.isDng(repeatedInvalidFile))
+        assertNull(MediaKind.fromFile(repeatedInvalidFile))
+
+        // Valid raw child referenced 4,096 times is deduplicated once without exhausting heap or failing.
+        val repeatedValid = createSubIfdProbeBytes(
+            subIfdOffsetsCount = 4096,
+            distinctChildren = 1,
+            entriesPerChild = 4096,
+            validRawFirstChild = true,
+        )
+        assertTrue(Dng.isDng(repeatedValid))
+        val repeatedValidFile = File(context.cacheDir, "REPEATED_VALID.dng.tiff").apply { writeBytes(repeatedValid) }
+        assertTrue(Dng.isDng(repeatedValidFile))
+        assertEquals(MediaKind.RAW, MediaKind.fromFile(repeatedValidFile))
+
+        // Many distinct small directories (> 64) are rejected before exceeding the directory cap.
+        val manyDistinctDirs = createSubIfdProbeBytes(
+            subIfdOffsetsCount = 80,
+            distinctChildren = 80,
+            entriesPerChild = 12,
+            validRawFirstChild = true,
+        )
+        assertFalse(Dng.isDng(manyDistinctDirs))
+        val manyDistinctDirsFile = File(context.cacheDir, "MANY_DIRS.dng.tiff").apply { writeBytes(manyDistinctDirs) }
+        assertFalse(Dng.isDng(manyDistinctDirsFile))
+
+        // Several distinct large directories exceeding the aggregate entry budget are rejected even if child #0 is valid raw.
+        val manyDistinctEntries = createSubIfdProbeBytes(
+            subIfdOffsetsCount = 3,
+            distinctChildren = 3,
+            entriesPerChild = 4096,
+            validRawFirstChild = true,
+        )
+        assertFalse(Dng.isDng(manyDistinctEntries))
+        val manyDistinctEntriesFile = File(context.cacheDir, "MANY_ENTRIES.dng.tiff").apply { writeBytes(manyDistinctEntries) }
+        assertFalse(Dng.isDng(manyDistinctEntriesFile))
+
+        // Ensure ingestion rejects the pathological repeated-offset and distinct-directory files as .dng.tiff.
+        val dir = File(container.storage.root, "2026/2026-10-04").apply { mkdirs() }
+        File(dir, "FLOOD_DIRS.dng.tiff").writeBytes(manyDistinctDirs)
+        File(dir, "FLOOD_REPEAT.dng.tiff").writeBytes(repeatedInvalid)
+        assertEquals(0, container.libraryIndex.adoptUnknownFiles())
+    }
+
+    @Test
+    fun acceptsLosslessJpegOverstatedStripLengthAcrossExtensionsWhileRejectingTruncatedStreams() = runBlocking {
+        val losslessValid = SyntheticDng.file(200, 400, 300, storage = SyntheticDng.Storage.LOSSLESS_JPEG)
+        val expectedSensor = Dng.read(losslessValid).sensor
+
+        // Overstated lossless JPEG StripByteCounts (Int.MAX_VALUE) clips to EOF identically for .dng and .dng.tiff.
+        val losslessOverstated = losslessValid.copyOf().also { setFirstTagInt(it, 0x0117, Int.MAX_VALUE) }
+        assertTrue(Dng.isDng(losslessOverstated))
+
+        val dir = File(container.storage.root, "2026/2026-10-05").apply { mkdirs() }
+        val dngFile = File(dir, "OVERSTATED.dng").apply { writeBytes(losslessOverstated) }
+        val dngTiffFile = File(dir, "OVERSTATED.dng.tiff").apply { writeBytes(losslessOverstated) }
+        assertTrue(Dng.isDng(dngFile))
+        assertTrue(Dng.isDng(dngTiffFile))
+        assertEquals(MediaKind.RAW, MediaKind.fromFile(dngFile))
+        assertEquals(MediaKind.RAW, MediaKind.fromFile(dngTiffFile))
+        assertArrayEquals(expectedSensor, RawRenderer.read(dngFile).sensor)
+        assertArrayEquals(expectedSensor, RawRenderer.read(dngTiffFile).sensor)
+
+        // JPEG XL keeps strict declared-range enforcement (overstated Int.MAX_VALUE and truncated both rejected).
+        val jxlValid = SyntheticDng.linear(192, 380, 264, jpegXl = true)
+        assertTrue(Dng.isDng(jxlValid))
+        val jxlOverstated = jxlValid.copyOf().also { setFirstTagInt(it, 0x0117, Int.MAX_VALUE) }
+        val jxlTruncated = jxlValid.copyOf(jxlValid.size - 32)
+        assertFalse(Dng.isDng(jxlOverstated))
+        assertFalse(Dng.isDng(jxlTruncated))
+
+        // Uncompressed WORDS & PACKED_12 with one missing row byte must still be rejected even with Int.MAX_VALUE.
+        for (storage in listOf(SyntheticDng.Storage.WORDS, SyntheticDng.Storage.PACKED_12)) {
+            val raw = SyntheticDng.file(200, 400, 300, storage = storage)
+            val stripOffset = firstTagInt(raw, 0x0111)
+            val stripLength = firstTagInt(raw, 0x0117)
+            val cutShort = (raw + raw.copyOfRange(stripOffset, stripOffset + stripLength - 1)).also {
+                setFirstTagInt(it, 0x0111, raw.size)
+                setFirstTagInt(it, 0x0117, Int.MAX_VALUE)
+            }
+            assertFalse(Dng.isDng(cutShort))
+        }
+
+        // Lossless JPEG streams truncated before offset, < 4 bytes, or mid-JPEG marker header are rejected.
+        val jpegOffset = firstTagInt(losslessValid, 0x0111)
+        val jpegTruncBeforeData = losslessValid.copyOf(jpegOffset)
+        val jpegTruncTiny = losslessValid.copyOf(jpegOffset + 2)
+        val jpegTruncMidHeader = losslessValid.copyOf(jpegOffset + 12)
+        assertFalse(Dng.isDng(jpegTruncBeforeData))
+        assertFalse(Dng.isDng(jpegTruncTiny))
+        assertFalse(Dng.isDng(jpegTruncMidHeader))
+
+        // Verify PhoneLibrary & SyncEngine & LibraryIndex accept overstated lossless JPEG .dng.tiff and reject truncated ones.
+        val cameraDir = File(Environment.getExternalStorageDirectory(), "DCIM/Camera").apply { mkdirs() }
+        val phoneOverstated = File(cameraDir, "PHONE_OVER.dng.tiff").apply { writeBytes(losslessOverstated) }
+        val phoneTruncJxl = File(cameraDir, "PHONE_TRUNC_JXL.dng.tiff").apply { writeBytes(jxlTruncated) }
+        val phoneTruncJpeg = File(cameraDir, "PHONE_TRUNC_LJ.dng.tiff").apply { writeBytes(jpegTruncMidHeader) }
+        rows += arrayOf(phoneOverstated.path, "DCIM/Camera/", phoneOverstated.name, phoneOverstated.length(), CAPTURED_AT, MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE)
+        rows += arrayOf(phoneTruncJxl.path, "DCIM/Camera/", phoneTruncJxl.name, phoneTruncJxl.length(), CAPTURED_AT, MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE)
+        rows += arrayOf(phoneTruncJpeg.path, "DCIM/Camera/", phoneTruncJpeg.name, phoneTruncJpeg.length(), CAPTURED_AT, MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE)
+
+        assertEquals(1, container.phoneLibrary.refresh(setOf("DCIM/Camera/")))
+        val importedNames = container.database.mediaDao().all().map { it.fileName }.toSet()
+        assertEquals(setOf("PHONE_OVER.dng.tiff"), importedNames)
+
+        val remoteOver = RemoteFile(20, "CAM_OVER.dng.tiff", losslessOverstated.size.toLong(), CAPTURED_AT, MediaKind.RAW, "DCIM")
+        val remoteTruncJpeg = RemoteFile(21, "CAM_TRUNC_LJ.dng.tiff", jpegTruncMidHeader.size.toLong(), CAPTURED_AT, MediaKind.RAW, "DCIM")
+        val syncSource = object : CameraSource {
+            private val payloads = mapOf(20 to losslessOverstated, 21 to jpegTruncMidHeader)
+            override fun open() = CameraInfo("Sony", "TestCam", "SN2")
+            override fun listFiles(request: ListingRequest, onFound: (Int) -> Unit) =
+                Listing(listOf(remoteOver, remoteTruncJpeg), emptyMap())
+
+            override fun download(file: RemoteFile, destination: File): Boolean {
+                destination.writeBytes(payloads.getValue(file.handle))
+                return true
+            }
+
+            override fun close() {}
+        }
+        container.syncEngine.run(syncSource)
+        val syncFinished = container.syncEngine.state.value as SyncState.Finished
+        assertEquals(1, syncFinished.imported)
+        assertEquals(listOf("CAM_TRUNC_LJ.dng.tiff"), syncFinished.failed)
+
+        File(dir, "TRUNC_JXL.dng.tiff").writeBytes(jxlTruncated)
+        File(dir, "TRUNC_LJ.dng.tiff").writeBytes(jpegTruncMidHeader)
+        assertEquals(2, container.libraryIndex.adoptUnknownFiles())
+        val finalNames = container.database.mediaDao().all().map { it.fileName }.toSet()
+        assertTrue("OVERSTATED.dng" in finalNames)
+        assertTrue("OVERSTATED.dng.tiff" in finalNames)
+        assertFalse("TRUNC_JXL.dng.tiff" in finalNames)
+        assertFalse("TRUNC_LJ.dng.tiff" in finalNames)
+    }
+
+    private fun firstTagInt(file: ByteArray, tag: Int): Int {
+        val data = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN)
+        val count = data.getShort(8).toInt() and 0xFFFF
+        val at = (0 until count).map { 10 + 12 * it }.first { (data.getShort(it).toInt() and 0xFFFF) == tag }
+        return data.getInt(at + 8)
+    }
+
+    private fun setFirstTagInt(file: ByteArray, tag: Int, value: Int) {
+        val data = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN)
+        val count = data.getShort(8).toInt() and 0xFFFF
+        val at = (0 until count).map { 10 + 12 * it }.first { (data.getShort(it).toInt() and 0xFFFF) == tag }
+        data.putInt(at + 8, value)
+    }
+
+    private fun createSubIfdProbeBytes(
+        subIfdOffsetsCount: Int,
+        distinctChildren: Int,
+        entriesPerChild: Int,
+        validRawFirstChild: Boolean,
+    ): ByteArray {
+        val mainEntryCount = 2 // TAG_SUB_IFDS (0x014A) + TAG_DNG_VERSION (0xC612)
+        val pointersAt = 8 + 2 + 12 * mainEntryCount
+        val pointerBytes = subIfdOffsetsCount * 4
+        val rawPixelData = if (validRawFirstChild) ByteArray(16 * 16 * 2) { 0x40 } else ByteArray(0)
+        val firstChildAt = pointersAt + pointerBytes
+        val childSize = 2 + 12 * entriesPerChild
+        val rawPixelsAt = firstChildAt + distinctChildren * childSize
+        val totalSize = rawPixelsAt + rawPixelData.size
+
+        val bytes = ByteArray(totalSize)
+        val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+        bytes[0] = 'I'.code.toByte()
+        bytes[1] = 'I'.code.toByte()
+        buf.putShort(2, 42)
+        buf.putInt(4, 8)
+
+        fun putEntry(pos: Int, tag: Int, type: Int, count: Int, value: Int) {
+            buf.putShort(pos, tag.toShort())
+            buf.putShort(pos + 2, type.toShort())
+            buf.putInt(pos + 4, count)
+            buf.putInt(pos + 8, value)
+        }
+
+        buf.putShort(8, mainEntryCount.toShort())
+        putEntry(10, 0x014A, 4, subIfdOffsetsCount, pointersAt)
+        // TAG_DNG_VERSION [1, 4, 0, 0] inline in little-endian bytes: 0x00_00_04_01
+        putEntry(22, 0xC612, 1, 4, 0x00000401)
+
+        for (i in 0 until subIfdOffsetsCount) {
+            val childIndex = i % distinctChildren
+            buf.putInt(pointersAt + 4 * i, firstChildAt + childIndex * childSize)
+        }
+
+        for (childIndex in 0 until distinctChildren) {
+            val childOffset = firstChildAt + childIndex * childSize
+            buf.putShort(childOffset, entriesPerChild.toShort())
+            val isValidRaw = validRawFirstChild && childIndex == 0
+            val layoutTags = if (isValidRaw) {
+                listOf(
+                    intArrayOf(0x00FE, 4, 1, 0),
+                    intArrayOf(0x0100, 3, 1, 16),
+                    intArrayOf(0x0101, 3, 1, 16),
+                    intArrayOf(0x0102, 3, 1, 16),
+                    intArrayOf(0x0103, 3, 1, 1),
+                    intArrayOf(0x0106, 3, 1, 32803),
+                    intArrayOf(0x0111, 4, 1, rawPixelsAt),
+                    intArrayOf(0x0115, 3, 1, 1),
+                    intArrayOf(0x0116, 3, 1, 16),
+                    intArrayOf(0x0117, 4, 1, rawPixelData.size),
+                )
+            } else emptyList()
+            for (e in 0 until entriesPerChild) {
+                val entryPos = childOffset + 2 + 12 * e
+                if (e < layoutTags.size) {
+                    val t = layoutTags[e]
+                    putEntry(entryPos, t[0], t[1], t[2], t[3])
+                } else {
+                    val padTag = 0xE000 + (e and 0x0FFF)
+                    putEntry(entryPos, padTag, 4, 1, 0)
+                }
+            }
+        }
+        if (rawPixelData.isNotEmpty()) {
+            System.arraycopy(rawPixelData, 0, bytes, rawPixelsAt, rawPixelData.size)
+        }
+        return bytes
+    }
+
     private fun createPlainTiffBytes(): ByteArray {
         val pixels = ByteArray(32 * 24) { (it and 0xFF).toByte() }
         val tiff = SyntheticArw.Tiff()
