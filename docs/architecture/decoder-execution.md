@@ -32,11 +32,11 @@
 - **최종 로컬 gate:** `./gradlew testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest assembleRelease -PdebugSignedRelease --offline` 성공(1m14s), JVM 526개 중 522 통과/4 skip. `git diff --check`와 Room schema diff 통과. 코드/metadata 이동 외 sample 변환은 기존 결과를 유지한다. 실제 폰 heap/RSS/OOM·색·실사진 회귀는 미검증이며 CI 결과와 구분한다.
 - **다음 승인 지점:** 이 PR의 shared `RawRenderer` adapter와 v0 계약을 유지보수자가 검토한 뒤 통합한다. M3-A(UI Job→요청 취소 전달), 폰 예산 확정, 색/왜곡 기능과 모듈 추출은 이 PR에서 완료했다고 표시하지 않는다.
 
-- **제출:** [PR #7](https://github.com/byeonggonlee/Latent/pull/7), `codex/decoder-stability`. 단계 커밋: `b8be490`(선점/계획), `0f7809e`(M2-A), `3350d8c`(M1-A), `a4a23e3`(M2-B 및 검토 보완). 통합 승인과 원격 CI는 로컬 성공과 구분한다.
+- **제출:** [PR #7](https://github.com/noctilane/Latent/pull/7), `codex/decoder-stability`. 단계 커밋: `b8be490`(선점/계획), `0f7809e`(M2-A), `3350d8c`(M1-A), `a4a23e3`(M2-B 및 검토 보완). 통합 승인과 원격 CI는 로컬 성공과 구분한다.
 
 ## PR #7 리뷰 후속 — 2026-10-21
 
-[Claude Code 리뷰](https://github.com/byeonggonlee/Latent/pull/7#issuecomment-6310871184)를 현재 코드와 대조했다. 새 테스트 5개가 `c1dc651`의 `Unsupported RAW metadata`, `Invalid RAW calibration`, `Damaged TIFF value range`, strip 길이 검사에서 실패했고, `2a4f81d` 수정 후 RAW 회귀가 통과했다.
+[Claude Code 리뷰](https://github.com/noctilane/Latent/pull/7#issuecomment-6310871184)를 현재 코드와 대조했다. 새 테스트 5개가 `c1dc651`의 `Unsupported RAW metadata`, `Invalid RAW calibration`, `Damaged TIFF value range`, strip 길이 검사에서 실패했고, `2a4f81d` 수정 후 RAW 회귀가 통과했다.
 
 - ARW/DNG의 방향값 0·9·65535는 upright(1)로 정규화한다. 기존에 허용하던 유한한 ARW WB gain(0·음수 포함)은 유지한다. crop/shape, finite calibration과 sample range 검사는 유지한다.
 - 범위가 잘못된 선택 TIFF ICC payload만 생략한다. 정상 ICC 방어 복사와 픽셀 오류 처리는 유지한다.
@@ -51,14 +51,14 @@
 ## 소유자 지정 후속 순서 — 2026-10-21
 
 1. 보드 정리 `4be60fc`: PR #7(`938b5e0`)을 Done으로 옮기고 JPEG XL tile 크기 항목 완료 표시. 필수 main gate 통과 후 fast-forward push.
-2. [PR #8 리뷰](https://github.com/byeonggonlee/Latent/pull/8#issuecomment-6313647973), head `3e1db45`: 차단 사항 없음. 실제 DNG ForkJoin worker-only Job 취소와 결정적 queued-reader 취소 probe 각각 통과. 관련 테스트 실행 및 원래 전체 결과 535개(531 통과·4 skip, 전체 실행은 cache 재사용), 원격 CI 성공 확인. PR 소스는 수정하지 않았다.
+2. [PR #8 리뷰](https://github.com/noctilane/Latent/pull/8#issuecomment-6313647973), head `3e1db45`: 차단 사항 없음. 실제 DNG ForkJoin worker-only Job 취소와 결정적 queued-reader 취소 probe 각각 통과. 관련 테스트 실행 및 원래 전체 결과 535개(531 통과·4 skip, 전체 실행은 cache 재사용), 원격 CI 성공 확인. PR 소스는 수정하지 않았다.
 3. 비압축 DNG 길이 호환성: WORDS/PACKED_12의 count 1과 Int.MAX_VALUE 두 테스트 RED 후, 실제 행 바이트를 EOF와 비교하도록 수정. metadata를 보존한 채 마지막 row byte만 제거하면 여전히 실패하고 JXL 선언 범위 검사는 유지한다. 필수 main gate 성공(59s), 전체 534개(530 통과·4 skip). 원격 CI 확인 후 보드를 완료 처리한다.
 4. 이후 색 행렬 보간은 별도 리뷰 PR, WarpRectilinear는 PR #8 병합 뒤 seam 선점 후 진행한다. 모듈 추출·backend 비교·폰 우선 항목은 시작하지 않는다.
 
 
 ## 두 광원 색 보간 설계와 검증 계획
 
-소유자가 지정한 기존 `Dng.Colors`의 범위 안에서 구현한다. 새 모듈·CMS·ForwardMatrix·색 룩·샘플 정규화·BaselineExposure/게인맵 순서는 바꾸지 않는다. 선행 비압축 DNG 수정 `113ca0b`의 [CI](https://github.com/byeonggonlee/Latent/actions/runs/39584546602)는 전체 성공했다.
+소유자가 지정한 기존 `Dng.Colors`의 범위 안에서 구현한다. 새 모듈·CMS·ForwardMatrix·색 룩·샘플 정규화·BaselineExposure/게인맵 순서는 바꾸지 않는다. 선행 비압축 DNG 수정 `113ca0b`의 [CI](https://github.com/noctilane/Latent/actions/runs/39584546602)는 전체 성공했다.
 
 - 표준 EXIF 광원을 Kelvin으로 대응하고 Robertson CIE 1960 uv 등온선으로 source white의 역색온도를 얻는다. `AsShotNeutral`은 D50 xy에서 시작해 현재 XYZ→camera 역행렬로 white를 찾는 과정을 최대 30회 반복한다. 유효한 `AsShotWhiteXY`가 있으면 직접 weight를 구한다.
 - 두 광원 경로에 SDK의 D50 기준 ColorMatrix scale 정규화와 소수 4자리 반올림을 적용한다. SDK 실제 순서에 맞춰 각 광원의 `AnalogBalance × CameraCalibration × ColorMatrix`를 먼저 합성하고, 두 합성 행렬을 clamped inverse-temperature weight로 보간한다. 각 행렬을 별도로 보간한 후 곱하는 방식은 사용하지 않는다. 기존 sRGB primaries 곱·행 정규화·역행렬과 Core WB/룩은 유지한다.

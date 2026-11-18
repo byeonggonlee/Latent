@@ -94,7 +94,7 @@ At default font scale, light app theme, verified through screenshots and UIAutom
 ## PR #50 review
 
 Inspected `28493073ee02ece042861376934a00def13bef1e` (all seven changed files), published a COMMENT review:
-[LGTM after one P2 fix](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5664082226).
+[LGTM after one P2 fix](https://github.com/noctilane/Latent/pull/50#pullrequestreview-5664082226).
 At 320×640 dp and 200% font, English, choosing a valid blue and then an achromatic sample makes the expanded
 outside-scroll status crowd Cancel out of view. Keep actions reserved and make status fit/scroll without
 truncating the invalid reason or retained hue. Default-font portrait and large-font landscape probes retained
@@ -119,7 +119,7 @@ was made by this validation.
 Owner asked for re-review and any remaining required work that does not need their intervention.
 
 - Re-reviewed full PR #50 at `5abec53d08ee91fe0426151c85092162bf384b43`, including the change from `2849307`.
-  **The P2 above is resolved; no actionable findings.** [Published LGTM comment](https://github.com/byeonggonlee/Latent/pull/50#pullrequestreview-5665900143).
+  **The P2 above is resolved; no actionable findings.** [Published LGTM comment](https://github.com/noctilane/Latent/pull/50#pullrequestreview-5665900143).
   The status now shares the bounded scrolling region with the hint, and both actions stay outside it. The
   320×640 dp / 200% / English / valid-then-gray regression passes, including clicking Cancel. Screenshot checked.
   The original 320 dp failing probe, default-font stationary-picture probe and large-font landscape probe all pass.

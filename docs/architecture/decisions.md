@@ -37,7 +37,7 @@ the kind [`flash-review-evaluation.md`](flash-review-evaluation.md) suggests.
 **Decided.** Edits saved with 0.2.0 or later keep the look they were saved with when development changes later.
 Edits saved with 0.1.0 do not: until 0.2.0 is released, development may change freely, and a photo edited under 0.1.0
 then shows as 0.2.0 renders it. This answers question 3 of the owner's decisions in
-[PR #51's discussion summary](https://github.com/byeonggonlee/Latent/pull/51#issuecomment-6489430172).
+[PR #51's discussion summary](https://github.com/noctilane/Latent/pull/51#issuecomment-6489430172).
 
 **Why.** 0.1.0 has been out for two days. Holding back 0.2.0's colour work for its few edits (the CR2 profile, auto
 colour, the colour-pipeline stages discussed on PR #51) is not worth the code it would take. From 0.2.0 on, the

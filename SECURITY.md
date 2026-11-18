@@ -11,7 +11,7 @@ In scope: the app and its build files in this repository, including the JPEG XL 
 ## Reporting a problem
 
 Please do not open a public issue for a vulnerability. Use GitHub's private reporting instead: the
-[Security tab](https://github.com/byeonggonlee/Latent/security/advisories/new) of this repository, "Report a
+[Security tab](https://github.com/noctilane/Latent/security/advisories/new) of this repository, "Report a
 vulnerability". Say what you did, what happened, and the version from Library menu → About Latent.
 
 This is a project of one person: expect an answer within a couple of weeks, not days. A fix comes out as the

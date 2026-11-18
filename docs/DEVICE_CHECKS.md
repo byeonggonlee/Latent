@@ -354,7 +354,7 @@ claim that both lack OpcodeList3 is unverified here. Recheck the standard tag 51
 available again; they are not in this validation environment. These runs do not verify lens geometry against a
 camera JPEG. Private samples stay outside Git.
 
-Public-sample check (2026-10-29, [PR #52](https://github.com/byeonggonlee/Latent/pull/52)): Open Camera Pixel 2 XL
+Public-sample check (2026-10-29, [PR #52](https://github.com/noctilane/Latent/pull/52)): Open Camera Pixel 2 XL
 and Honor 6A DNGs, plus MotionCam Tools Pixel 10 Pro 10-bit / 12-bit DCG exports, pass host metadata/sensor probes
 and four API 36 ARM64 emulator tests (thumbnail, preview and full JPEG export). The existing red-aligned crop policy
 remains, including two omitted MotionCam rows. Real samples all have orientation 1; Open Camera writes an empty

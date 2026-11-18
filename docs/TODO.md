@@ -10,16 +10,16 @@ Last updated 2026-10-23.
 
 - [x] **Tag `v0.1.0`** (2026-10-27): the owner accepted the [S24 release report](device-results/2026-10-27-s24-release.md)
       and judged the colour fine on the phone. The changelog was dated (`61aede2`), `v0.1.0` tagged on it, and the
-      release workflow published [Latent 0.1.0](https://github.com/byeonggonlee/Latent/releases/tag/v0.1.0)
+      release workflow published [Latent 0.1.0](https://github.com/noctilane/Latent/releases/tag/v0.1.0)
       (versionCode 432, APK and AAB signed with the release key). Next: the owner names the next version, then
       `latent.versionBase` is raised and the next changelog section opened (RELEASES.md, step 5).
 
-- [x] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/byeonggonlee/Latent/pull/49)):
+- [x] **Sony SR2 white balance cross-family review** (2026-10-27, [PR #49](https://github.com/noctilane/Latent/pull/49)):
       Claude Opus 5.5 (via Claude Code) reviewed `ca35692`, LGTM; the public 7M2 ARW develops on the emulator with
       neutral colour. Merged `7d58294` on the owner's instruction. The ZV-E10 regression now passes on S24 ([report](device-results/2026-10-27-s24-release.md)); the owner judged
       its colour on the S24's screen fine (2026-10-27).
 
-- [x] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/byeonggonlee/Latent/pull/47)):
+- [x] **Photo colour picker cross-family review** (2026-10-27, [PR #47](https://github.com/noctilane/Latent/pull/47)):
       Claude Opus 5.5 (via Claude Code) reviewed the full diff at `ac8a415`, LGTM; CI green. Merged `142f7f7` with
       the owner's authorization. S24/GPU/TalkBack checks remain in DEVICE_CHECKS.md.
 - [x] **Photo colour picker UX follow-ups** (PR #47 review, non-blocking P3; done on `claude/picker-polish`): clarify the retained previous hue when
@@ -44,7 +44,7 @@ Last updated 2026-10-23.
       `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`, see RELEASES.md), so the nightly now
       signs what it builds and publishes it.
 - [ ] **The first signed nightly on the phones**: the first one with the new app taking over the old one's
-      originals ([PR #12](https://github.com/byeonggonlee/Latent/pull/12), on `main` since 2026-10-22) is the next
+      originals ([PR #12](https://github.com/noctilane/Latent/pull/12), on `main` since 2026-10-22) is the next
       scheduled one, or one manual *Run workflow* of **Nightly** with *force*. Each phone then moves to it once
       (RELEASES.md, "Reinstalling a phone"), with the check in DEVICE_CHECKS, "Backup and restore", and
       `SMOKE_TEST.md`. `nightly-20261022-213`, the first signed one, is from before that fix: not for the phones.
@@ -99,10 +99,10 @@ Last updated 2026-10-23.
 - [x] A ten-minute check for the phone after each nightly: [`SMOKE_TEST.md`](SMOKE_TEST.md).
 - [x] **Smaller APK**: every build carries arm64 only, 20 MB instead of 39 MB (`-PlatentAbis` for an emulator).
 
-- [x] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md), 2026-10-22, [PR #29](https://github.com/byeonggonlee/Latent/pull/29)):
+- [x] **Sky mask** (stage 2 of [`AI_MASKS.md`](AI_MASKS.md), 2026-10-22, [PR #29](https://github.com/noctilane/Latent/pull/29)):
       "+ Sky" in the editor; the phone checks are in DEVICE_CHECKS, "Sky masks". Tap to select (stage 3) is next.
 - [x] **Import from a card reader** or a camera in Mass Storage mode, as a sync over MTP does (2026-10-22,
-      [PR #13](https://github.com/byeonggonlee/Latent/pull/13)): the Camera tab's "Card or drive". The phone checks are in
+      [PR #13](https://github.com/noctilane/Latent/pull/13)): the Camera tab's "Card or drive". The phone checks are in
       DEVICE_CHECKS, "From the card".
 
 ## On hold

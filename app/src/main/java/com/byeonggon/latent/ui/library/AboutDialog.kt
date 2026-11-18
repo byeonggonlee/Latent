@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.byeonggon.latent.ui.common.openInBrowser
 import com.byeonggon.latent.R
 
-private const val REPOSITORY = "https://github.com/byeonggonlee/Latent"
+private const val REPOSITORY = "https://github.com/noctilane/Latent"
 
 /** The app's name and version, where its source and privacy policy are, and what it is built from. */
 @Composable

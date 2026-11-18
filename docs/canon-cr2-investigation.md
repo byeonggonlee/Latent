@@ -2,8 +2,8 @@
 
 ## Current status — merged 2026-10-30
 
-[PR #51](https://github.com/byeonggonlee/Latent/pull/51) is merged into main at `f24232e`, including the
-Adobe Standard A/D65 profile and [PR #55](https://github.com/byeonggonlee/Latent/pull/55)'s bounded-luminance tone
+[PR #51](https://github.com/noctilane/Latent/pull/51) is merged into main at `f24232e`, including the
+Adobe Standard A/D65 profile and [PR #55](https://github.com/noctilane/Latent/pull/55)'s bounded-luminance tone
 correction. Gemini 4 Argon reviewed the decoder/profile at `94c0c15`; Codex re-reviewed the complete tone delta
 at `4c1a183` with LGTM after the blue-to-black P2 fix. Integrated head `54dd6a7` has an identical tree to that
 reviewed head, and its build/licence checks pass.
@@ -75,7 +75,7 @@ not a real-phone colour or memory/performance result.
 
 No production colour coefficients or WB gains were changed by the investigation at `b65b9ed`. It showed that
 the decoder reproduced independent decoding and linear development under the same controls. Claude Opus 5.5
-[accepted that decoder-arithmetic evidence](https://github.com/byeonggonlee/Latent/pull/51#pullrequestreview-5685224976).
+[accepted that decoder-arithmetic evidence](https://github.com/noctilane/Latent/pull/51#pullrequestreview-5685224976).
 It did not establish the JPEG-fitted matrix's physical colour accuracy, or authorize a merge. The matrix
 recommendation from that review is implemented in the 2026-10-29 follow-up below.
 

@@ -80,8 +80,8 @@ a stable release, 14 for a nightly). The first nightly after the split (2026-10-
   ```bash
   keytool -genkeypair -v -keystore latent-release.jks -alias latent -keyalg RSA -keysize 4096 -validity 36500
   keytool -J-Duser.language=en -list -v -keystore latent-release.jks   # note the SHA-256 fingerprint somewhere safe
-  base64 -i latent-release.jks | gh secret set SIGNING_KEYSTORE_BASE64 --repo byeonggonlee/Latent
-  gh secret set SIGNING_STORE_PASSWORD --repo byeonggonlee/Latent   # pasted at the prompt, out of the shell's history
+  base64 -i latent-release.jks | gh secret set SIGNING_KEYSTORE_BASE64 --repo noctilane/Latent
+  gh secret set SIGNING_STORE_PASSWORD --repo noctilane/Latent   # pasted at the prompt, out of the shell's history
   ```
 
   The key store is PKCS12, so the key's password is the store's: `keytool` does not ask for it, and

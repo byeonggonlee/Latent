@@ -78,4 +78,4 @@ them, and so does a backup file you made, wherever you saved it.
 
 ## Contact
 
-Questions and requests: [github.com/byeonggonlee/Latent/issues](https://github.com/byeonggonlee/Latent/issues).
+Questions and requests: [github.com/noctilane/Latent/issues](https://github.com/noctilane/Latent/issues).

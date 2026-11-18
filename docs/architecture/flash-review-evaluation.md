@@ -6,7 +6,7 @@ This file records evidence and suggestions, not reviewer eligibility or operatin
 ## PR #36 (2026-10-23)
 
 Historical assessment recorded on 2026-10-23 at the owner's request.
-The owner supplied a comparison of Flash's review of [PR #36](https://github.com/byeonggonlee/Latent/pull/36)
+The owner supplied a comparison of Flash's review of [PR #36](https://github.com/noctilane/Latent/pull/36)
 at `af7d12c3f193e44846a5bf0f9e615443c29b905d` with an answer key kept outside the repository: four of five seeded
 defects were detected, and one decoy was reported as a defect. This is an owner-supplied summary of the private
 Claude Sonnet 5.5 / Codex chat evaluation, not an independently reproduced benchmark score. The evaluation also
@@ -19,8 +19,8 @@ The private answer key and per-seed scoring details are not stored here.
 ## The triage of PRs #52 and #53 (2026-10-29)
 
 Flash, at `high` thinking by the owner's setting, posted a mechanical triage on
-[PR #52](https://github.com/byeonggonlee/Latent/pull/52#pullrequestreview-5693968467) (Codex's phone DNG tests, at
-`c99588e`) and [PR #53](https://github.com/byeonggonlee/Latent/pull/53#pullrequestreview-5693971292) (Claude Code's
+[PR #52](https://github.com/noctilane/Latent/pull/52#pullrequestreview-5693968467) (Codex's phone DNG tests, at
+`c99588e`) and [PR #53](https://github.com/noctilane/Latent/pull/53#pullrequestreview-5693971292) (Claude Code's
 render version, at `b0daafe`). Each ran to about thirty lines: a summary of the change, contract checks, candidate
 findings and an outcome. Against the deep reviews of the same commits:
 

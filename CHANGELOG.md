@@ -109,7 +109,7 @@ with the phone's location, and develops them, without a cloud or an account.
   32-bit phones and x86 Chromebooks cannot install it. The APK is about 40 MB, half of it the sky's model.
 - The app is `com.latentimage.latent`. Nightlies until 22 October 2026 were `com.byeonggon.latent`, which Android
   takes for another app: move across once with a backup and its restore (see
-  [`docs/RELEASES.md`](https://github.com/byeonggonlee/Latent/blob/main/docs/RELEASES.md), "Reinstalling a phone").
+  [`docs/RELEASES.md`](https://github.com/noctilane/Latent/blob/main/docs/RELEASES.md), "Reinstalling a phone").
   The new app takes over the originals the old one kept of the JPEGs it edited.
 - Tried with a Sony ZV-E10 and Galaxy phones on Android 17, and with public sample files of other cameras on an
   Android 16 emulator. Other cameras that offer MTP may work. Raw
@@ -118,14 +118,14 @@ with the phone's location, and develops them, without a cloud or an account.
   Galaxy files tried so far carry no distortion correction, so theirs is not corrected.
 - Everything stays on the phone: no account, no analytics, and the internet only for the optional map, which
   is off until you turn it on and is told the app's name and version. See
-  [`PRIVACY.md`](https://github.com/byeonggonlee/Latent/blob/main/PRIVACY.md).
+  [`PRIVACY.md`](https://github.com/noctilane/Latent/blob/main/PRIVACY.md).
 - Export is JPEG only, from an 8-bit pipeline: an edit is SDR, even of a photo the viewer shows as HDR.
 - Moving a photo to the trash, saving an edit, exporting and writing a place in are done one at a time, and a new
   file takes its name only once it is whole, so a photo is not left half-written when the app is stopped.
 - The sky mask, the HDR viewer, the card import, the comparison of look-alike files, DNG distortion correction,
   subject and background masks, LUTs, colour range masks and the other newest tools have been tested on the JVM and
   are still being judged on phones; see
-  [`docs/DEVICE_CHECKS.md`](https://github.com/byeonggonlee/Latent/blob/main/docs/DEVICE_CHECKS.md).
+  [`docs/DEVICE_CHECKS.md`](https://github.com/noctilane/Latent/blob/main/docs/DEVICE_CHECKS.md).
 - Uninstalling the app takes its database (edits, albums, ratings) along; photos are ordinary files in
   `DCIM/Latent` and stay. Back up first (Settings, Backup and restore) to bring the rest back.
 - The APK on the release page is signed with the project's own key; the app on Google Play is signed by Google.

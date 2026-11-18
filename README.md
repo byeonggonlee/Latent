@@ -65,7 +65,7 @@ Unit and UI tests run on the JVM with Robolectric:
 
 ### On GitHub
 
-[![Build](https://github.com/byeonggonlee/Latent/actions/workflows/build.yml/badge.svg)](https://github.com/byeonggonlee/Latent/actions/workflows/build.yml)
+[![Build](https://github.com/noctilane/Latent/actions/workflows/build.yml/badge.svg)](https://github.com/noctilane/Latent/actions/workflows/build.yml)
 
 The workflow in `.github/workflows/build.yml` runs on every push to `main`, on every pull request, and on request
 ("Run workflow" on the Actions tab, also from the GitHub app). It runs the tests and lint, compiles the tests that run

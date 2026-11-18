@@ -34,12 +34,12 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 16 | Done (PR #53): render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
 Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8 (done), 11 (done) and 1 (in review; [evaluation](auto-colour-evaluation.md)). Item 12
-([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) is merged at `f24232e`, including the reviewed
+([PR #51](https://github.com/noctilane/Latent/pull/51)) is merged at `f24232e`, including the reviewed
 Adobe two-illuminant profile and PR #55's tone correction (blue-to-black P2 resolved). Build and licence CI pass
 on integrated head `54dd6a7`; its tree matches the reviewed `4c1a183`. The owner judged both samples beside their
 camera JPEGs on the S24 acceptable on 2026-10-30 (record `374305d`). Development is limited to EOS 7D
 full-resolution 14-bit RAW; other bodies, sRAW/mRAW and CR3 are not supported for development. Wider ISO,
-illuminant, picture-style and physical-device performance coverage remains open. Item 15 is merged in [PR #52](https://github.com/byeonggonlee/Latent/pull/52):
+illuminant, picture-style and physical-device performance coverage remains open. Item 15 is merged in [PR #52](https://github.com/noctilane/Latent/pull/52):
 four public phone samples and emulator exports pass; a real nonempty distortion opcode and S24 colour/performance
 checks remain outstanding.
 
@@ -90,11 +90,11 @@ Each is small or medium, works offline, and needs no new permission.
    looks as `.xmp` files (the reverse mapping; Lightroom's reading of it cannot be tried here), `.lrtemplate`.
 
 - ~~**Import from a card reader**~~ or a camera in Mass Storage mode, for those who cannot or do not use MTP. *Done
-  2026-10-22 ([PR #13](https://github.com/byeonggonlee/Latent/pull/13)), to be tried with a card reader:* a folder
+  2026-10-22 ([PR #13](https://github.com/noctilane/Latent/pull/13)), to be tried with a card reader:* a folder
   picked once in the system's dialog ("Card or drive" on the Import tab, then called the Camera tab), imported as a sync from the camera is (what
   was imported is skipped, either way, dates, places). A file that only looks imported is copied over and compared
   first; more than 20 of them, or 2 GB, wait for "Copy over and compare"
-  ([PR #26](https://github.com/byeonggonlee/Latent/pull/26)). No new permission.
+  ([PR #26](https://github.com/noctilane/Latent/pull/26)). No new permission.
 - **Phone raw files (DNG)**, *stage 1 built 2026-10-19, to be judged on a phone:* Bayer DNGs (a Galaxy's Pro mode,
   Android's own writer, Adobe's converter), uncompressed or in lossless JPEG, with black and white levels,
   linearization, the daylight colour matrix with the camera's calibration, the as-shot white balance, the default
@@ -103,7 +103,7 @@ Each is small or medium, works offline, and needs no new permission.
   Since done (2026-10-21): the colour matrix interpolated between the two illuminants (pull request #9), the editor's
   lens correction chip hidden for files without a lens profile, and a Pixel's `.RAW-02.ORIGINAL.dng` shown as one
   with its `.RAW-01.COVER.jpg`. Since done (2026-10-22): the lens's distortion from OpcodeList3 (WarpRectilinear,
-  [PR #17](https://github.com/byeonggonlee/Latent/pull/17)), with the lens correction chip for the files that carry
+  [PR #17](https://github.com/noctilane/Latent/pull/17)), with the lens correction chip for the files that carry
   it. PR #52 corrects the OpcodeList3 tag to `0xC74E`; the earlier claim that the tried Galaxy files have none needs
   rechecking at that standard tag. Next: what is left of a `BaselineExposure` that highlights stopped short in
   the tone stage's exposure (with care not to add to the automatic correction twice), only if a phone's file comes
@@ -124,7 +124,7 @@ Each is small or medium, works offline, and needs no new permission.
    edges and kept in a file of its own, rendered through the brush mask's path in both renderers, and can be
    painted on with the brush. About +14.5 MB installed on a 64-bit phone. The bake-off on
    the owner's photos (stage 0) was skipped. Details and provenance in `AI_MASKS.md`.
-   *Stage 2 (sky) built 2026-10-22 ([PR #29](https://github.com/byeonggonlee/Latent/pull/29)), to be judged on a
+   *Stage 2 (sky) built 2026-10-22 ([PR #29](https://github.com/noctilane/Latent/pull/29)), to be judged on a
    phone:* "+ Sky" runs EfficientViT-Seg B1 (ADE20K, 19.5 MB
    in the APK) beside the subject's model, the sky's probability refined along the picture's edges as the subject's
    outline is. Next: tap to select (stage 3).
@@ -151,7 +151,7 @@ Each is small or medium, works offline, and needs no new permission.
    someone misses it. Medium.
 10. ~~**HDR in the viewer.**~~ Show Ultra HDR JPEGs and 10-bit HEIF as HDR (window colour mode and headroom, 16-bit
     float decoding): viewing only, no change to editing. No native code is needed (minimum Android is 15).
-    Small to medium. *Done 2026-10-22 ([PR #28](https://github.com/byeonggonlee/Latent/pull/28)), to be judged on a
+    Small to medium. *Done 2026-10-22 ([PR #28](https://github.com/noctilane/Latent/pull/28)), to be judged on a
     phone:* the photo in front, unedited and told HDR by its
     header (an Ultra HDR gain map, or a HEIF's HLG or PQ colour space), is decoded with the system's ImageDecoder,
     which keeps its gain map or ten bits, and the window turns to HDR colour mode while it is shown. Headroom is the
@@ -159,7 +159,7 @@ Each is small or medium, works offline, and needs no new permission.
 11. **Keep the gain map, or say it is lost.** Editing and saving a copy of an Ultra HDR photo from the phone drops
     its gain map today and leaves an SDR picture. Either carry the gain map through (it can be edited along, or
     kept for an untouched picture) or tell the person. Medium. *Telling done 2026-10-22
-    ([PR #27](https://github.com/byeonggonlee/Latent/pull/27)), to be seen on a phone:* the
+    ([PR #27](https://github.com/noctilane/Latent/pull/27)), to be seen on a phone:* the
     editor says so once as such a photo opens (Ultra HDR's gain map XMP, or ISO 21496-1's mark, read from the JPEG's
     header), and the edit is saved without one: a tone edit no longer carries the original's gain map along, made for
     tones it changed. The original keeps its gain map. Carrying it through, edited along, is left for later.
@@ -167,7 +167,7 @@ Each is small or medium, works offline, and needs no new permission.
     together with the video stage of item 7 (the parser, `LutStore` and the lookup can be taken over as they are). Large; the one place where 10-bit has real demand, since the ZV-E10
     shoots stills in 8-bit JPEG and raw only.
 13. **Colour pipeline in stages** (owner, 2026-10-29, after the discussion on
-    [PR #51](https://github.com/byeonggonlee/Latent/pull/51#issuecomment-6489430172)). The target stays the camera's
+    [PR #51](https://github.com/noctilane/Latent/pull/51#issuecomment-6489430172)). The target stays the camera's
     look ([decision of 2026-10-21](architecture/decisions.md)); nothing here changes it by itself.
     - *Stage 1, in 0.3.0 (Codex, reviewed by Claude Code):* a typed colour profile that does not depend on the file
       format (two illuminants and their matrices, the shot's neutral, ForwardMatrix and per-unit calibration where a

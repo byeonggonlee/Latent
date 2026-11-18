@@ -1,6 +1,6 @@
 Latent
 Licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
-Source: https://github.com/byeonggonlee/Latent
+Source: https://github.com/noctilane/Latent
 
 Besides the libraries named in the app's About dialog, Latent contains the following works of others.
 

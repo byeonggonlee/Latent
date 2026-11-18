@@ -58,7 +58,7 @@ following photo-specific choices are Latent proposals, not Samsung or Android re
 The following are observations, not an accessibility or usability certification:
 
 - [AppRoot.kt](../app/src/main/java/com/byeonggon/latent/ui/AppRoot.kt) exposes **Library, Camera, Map, Location**.
-  This describes the inspected main revision, not the navigation target: [PR #41](https://github.com/byeonggonlee/Latent/pull/41)
+  This describes the inspected main revision, not the navigation target: [PR #41](https://github.com/noctilane/Latent/pull/41)
   at `86f9acd` implements **Library · Import · Map**, with Location reached from Import and Settings; it is not yet
   merged at this revision. Settings, Viewer, Compare and Editor are separate task screens. Library scroll state is
   retained while the viewer is open. A USB entry can start on Camera.
@@ -90,8 +90,8 @@ Android recommends familiar navigation for peer destinations and adapting its pl
 
 **Proposed:**
 
-- Target **Library · Import · Map**, as implemented for review in [PR #41](https://github.com/byeonggonlee/Latent/pull/41).
-  The [owner decision recorded on this PR](https://github.com/byeonggonlee/Latent/pull/40#issuecomment-6410875975)
+- Target **Library · Import · Map**, as implemented for review in [PR #41](https://github.com/noctilane/Latent/pull/41).
+  The [owner decision recorded on this PR](https://github.com/noctilane/Latent/pull/40#issuecomment-6410875975)
   supports restructuring: Camera suggests taking a picture, and Map versus Location needs explanation. PR #41's
   exact arrangement remains under review; this guide does not claim it has shipped.
 - Treat Import as a workspace for bringing photos in from USB cameras or cards/drives and checking pre-shoot
