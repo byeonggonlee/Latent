@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Owner-requested PR #58 follow-up: companion-aware restore names and rollback on partial failure; regression tests, Opus correction review, CI, then authorized merge | `codex/trash-rediscovery`, PR #58 | `data/Trash.kt`, `data/LibraryStorage.kt`, trash tests, this board | 2026-11-18 |
 | Claude Code (computer) | 0.2.0 item 1: auto colour; for a raw, start from the camera's as-shot white balance and move only a little; gray-edge and white-patch measured against gray-world on the same photos, a tungsten room included | [PR #56](https://github.com/byeonggonlee/Latent/pull/56), `claude/auto-colour` | `enhance/AutoSettings.kt`, a white estimate beside it, the editor's Auto, their tests, an evaluation note under `docs/`, this board | 2026-10-30 |
 
 ## For Codex
