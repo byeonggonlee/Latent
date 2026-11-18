@@ -10,12 +10,13 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ActivityScenario
 import coil3.SingletonImageLoader
 import com.byeonggon.latent.camera.CameraInfo
 import com.byeonggon.latent.camera.CameraSource
@@ -27,6 +28,7 @@ import com.byeonggon.latent.camera.RemoteTree
 import com.byeonggon.latent.camera.SyncEngine
 import com.byeonggon.latent.camera.SyncState
 import com.byeonggon.latent.camera.listStorage
+import com.byeonggon.latent.data.AppSettings
 import com.byeonggon.latent.data.LibraryIndex
 import com.byeonggon.latent.data.PhoneLibrary
 import com.byeonggon.latent.data.db.MediaItemEntity
@@ -42,7 +44,6 @@ import com.byeonggon.latent.raw.SyntheticDng
 import com.byeonggon.latent.ui.viewer.PhotoDetails
 import com.byeonggon.latent.ui.viewer.shareMimeType
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -134,19 +135,32 @@ class DngTiffReproductionTest {
             ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
             forgetTheApplicationOfEarlierTests()
             grantLibraryAccess()
+            runBlocking { container.settings.update { AppSettings() } }
+            cleanTestDirectories()
             Robolectric.buildContentProvider(FakeMediaStore::class.java).create("media")
         }
 
         override fun finished(description: Description) {
             rows.clear()
+            runBlocking { runCatching { container.settings.update { AppSettings() } } }
+            container.rawCache.clear()
+            cleanTestDirectories()
+        }
+
+        private fun cleanTestDirectories() {
+            container.storage.root.deleteRecursively()
+            File(Environment.getExternalStorageDirectory(), "DCIM").deleteRecursively()
+            File(context.cacheDir, "thumbnails").deleteRecursively()
+            File(context.cacheDir, "share").deleteRecursively()
+            File(context.cacheDir, "compare").deleteRecursively()
         }
     }
 
     @get:Rule(order = 1)
-    val compose = createAndroidComposeRule<MainActivity>()
+    val compose = createEmptyComposeRule()
 
-    private val context: Context get() = compose.activity
-    private val container get() = compose.activity.application.appContainer
+    private val context: Context get() = RuntimeEnvironment.getApplication()
+    private val container get() = RuntimeEnvironment.getApplication().appContainer
 
     private lateinit var validDngBytes: ByteArray
     private lateinit var plainTiffBytes: ByteArray
@@ -159,11 +173,6 @@ class DngTiffReproductionTest {
         plainTiffBytes = createPlainTiffBytes()
         stripTruncatedDngBytes = validDngBytes.copyOf(4096 + 100)
         tailTruncatedDngBytes = validDngBytes.copyOf(validDngBytes.size - 32)
-    }
-
-    @After
-    fun cleanUp() {
-        container.storage.root.deleteRecursively()
     }
 
     @Test
@@ -350,52 +359,63 @@ class DngTiffReproductionTest {
         }
 
         // Open Viewer -> Editor -> Auto -> Done via real UI, verifying decode, rendering, save, and Viewer re-entry.
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithContentDescription("SAME.dng.tiff").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithContentDescription("SAME.dng.tiff").performClick()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.onAllNodesWithContentDescription("SAME.dng.tiff").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithContentDescription("SAME.dng.tiff").performClick()
 
-        val editLabel = context.getString(R.string.edit)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText(editLabel).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText(editLabel).performClick()
+            val editLabel = context.getString(R.string.edit)
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.onAllNodesWithText(editLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(editLabel).assertIsEnabled() }.isSuccess
+            }
+            compose.onNodeWithText(editLabel).performClick()
 
-        val autoLabel = context.getString(R.string.auto)
-        val doneLabel = context.getString(R.string.done)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText(autoLabel).fetchSemanticsNodes().isNotEmpty() &&
+            val autoLabel = context.getString(R.string.auto)
+            val doneLabel = context.getString(R.string.done)
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.onAllNodesWithText(autoLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(doneLabel).assertIsEnabled() }.isSuccess
+            }
+            compose.onNodeWithText(autoLabel).performClick()
+            compose.waitUntil(timeoutMillis = 10_000) {
                 runCatching { compose.onNodeWithText(doneLabel).assertIsEnabled() }.isSuccess
-        }
-        compose.onNodeWithText(autoLabel).performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
-            runCatching { compose.onNodeWithText(doneLabel).assertIsEnabled() }.isSuccess
-        }
-        compose.onNodeWithText(doneLabel).performClick()
+            }
+            compose.onNodeWithText(doneLabel).performClick()
 
-        compose.waitUntil(timeoutMillis = 10_000) {
-            container.editSaver.saving.value.isEmpty() && runBlocking { container.database.mediaDao().byId(id)?.edit != null }
-        }
+            val shareLabel = context.getString(R.string.share)
+            val restoreLabel = context.getString(R.string.restore_original)
+            compose.waitUntil(timeoutMillis = 10_000) {
+                // Drive the main looper/recomposer so ViewerViewModel observes the saved edit before Share is tapped.
+                compose.waitForIdle()
+                container.editSaver.saving.value.isEmpty() &&
+                    runBlocking { container.database.mediaDao().byId(id)?.edit != null } &&
+                    compose.onAllNodesWithText(restoreLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(restoreLabel).assertIsEnabled() }.isSuccess &&
+                    compose.onAllNodesWithText(shareLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(shareLabel).assertIsEnabled() }.isSuccess
+            }
+            compose.onNodeWithText(shareLabel).performClick()
+            val shareJpegLabel = context.getString(R.string.share_jpeg_1080)
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.onAllNodesWithText(shareJpegLabel).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(shareJpegLabel).performClick()
 
-        val shareLabel = context.getString(R.string.share)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText(shareLabel).fetchSemanticsNodes().isNotEmpty()
+            lateinit var startedActivity: MainActivity
+            scenario.onActivity { startedActivity = it }
+            compose.waitUntil(timeoutMillis = 10_000) {
+                // The share chooser starts from LaunchedEffect(state.shareFile), which only runs once the recomposer idles.
+                compose.waitForIdle()
+                Shadows.shadowOf(startedActivity).peekNextStartedActivity() != null
+            }
+            val chooser = Shadows.shadowOf(startedActivity).nextStartedActivity
+            val inner = chooser?.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+            assertEquals("image/jpeg", inner?.type)
+            assertTrue(File(context.cacheDir, "share/SAME.jpg").exists())
+            assertFalse(File(context.cacheDir, "share/SAME.dng.jpg").exists())
         }
-        compose.onNodeWithText(shareLabel).performClick()
-        val shareJpegLabel = context.getString(R.string.share_jpeg_1080)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText(shareJpegLabel).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText(shareJpegLabel).performClick()
-
-        compose.waitUntil(timeoutMillis = 10_000) {
-            Shadows.shadowOf(compose.activity).peekNextStartedActivity() != null
-        }
-        val chooser = Shadows.shadowOf(compose.activity).nextStartedActivity
-        val inner = chooser?.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-        assertEquals("image/jpeg", inner?.type)
-        assertTrue(File(context.cacheDir, "share/SAME.jpg").exists())
-        assertFalse(File(context.cacheDir, "share/SAME.dng.jpg").exists())
     }
 
     @Test
