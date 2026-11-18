@@ -115,6 +115,13 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     /** [file] if it is free, or else a free name next to it, such as DSC0001_1.JPG. */
     fun freeFileLike(file: File): File = uniqueFile(file.parentFile ?: root, file.name)
 
+    /** A restore name with no photo, location sidecar or kept original, including provider-only files. */
+    fun freeRestoreFileLike(file: File): File = uniqueFile(file.parentFile ?: root, file.name) { candidate ->
+        exists(candidate) ||
+            exists(File(candidate.parentFile, "${splitMediaExtension(candidate.name).first}.xmp")) ||
+            exists(originalOf(candidate))
+    }
+
     override fun exists(file: File): Boolean = file.exists() || folder.exists(file)
 
     @Throws(IOException::class)
@@ -285,15 +292,15 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
         MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
     }
 
-    private fun uniqueFile(folder: File, fileName: String): File {
+    private fun uniqueFile(folder: File, fileName: String, occupied: (File) -> Boolean = { it.exists() }): File {
         val first = File(folder, fileName)
-        if (!first.exists()) return first
+        if (!occupied(first)) return first
         val (base, extension) = splitMediaExtension(fileName)
         var index = 1
         while (true) {
             val name = if (extension.isEmpty()) "${base}_$index" else "${base}_$index.$extension"
             val candidate = File(folder, name)
-            if (!candidate.exists()) return candidate
+            if (!occupied(candidate)) return candidate
             index++
         }
     }

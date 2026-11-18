@@ -8,6 +8,7 @@ import com.byeonggon.latent.data.db.splitMediaExtension
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.location.MediaMetadataReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.withLock
@@ -126,15 +127,36 @@ class Trash(
         val from = item.trashedFrom ?: return
         val kept = File(item.path)
         val folder = kept.parentFile ?: return
-        val target = storage.freeFileLike(File(from).also { it.parentFile?.mkdirs() })
-        storage.move(kept, target)
-        sidecarOf(kept).takeIf(storage::exists)?.let { storage.move(it, sidecarOf(target)) }
-        File(folder, ORIGINAL + kept.name).takeIf(storage::exists)?.let { original ->
-            storage.originalOf(target).also { it.parentFile?.mkdirs() }.let { storage.move(original, it) }
+        val target = storage.freeRestoreFileLike(File(from).also { it.parentFile?.mkdirs() })
+        // Once files start moving, finish the DB update or rollback before observing cancellation.
+        withContext(NonCancellable) {
+            val moved = mutableListOf<Pair<File, File>>()
+            fun move(source: File, destination: File) {
+                storage.move(source, destination)
+                moved += source to destination
+            }
+            try {
+                move(kept, target)
+                sidecarOf(kept).takeIf(storage::exists)?.let { move(it, sidecarOf(target)) }
+                File(folder, ORIGINAL + kept.name).takeIf(storage::exists)?.let { original ->
+                    storage.originalOf(target).also { it.parentFile?.mkdirs() }.let { move(original, it) }
+                }
+                mediaDao.setPlace(item.id, target.path, null, null)
+            } catch (failure: Exception) {
+                for ((source, destination) in moved.asReversed()) {
+                    try {
+                        // A concurrent outside writer must not lose its file to rollback either.
+                        if (storage.exists(source)) throw IOException("Cannot roll back ${source.name}: its place is occupied")
+                        storage.move(destination, source)
+                    } catch (rollbackFailure: Exception) {
+                        failure.addSuppressed(rollbackFailure)
+                    }
+                }
+                throw failure
+            }
         }
         // A file added after discovery is not part of this restore. Only remove an empty directory.
         folder.delete()
-        mediaDao.setPlace(item.id, target.path, null, null)
         storage.publish(target)
     }
 

@@ -124,6 +124,75 @@ class TrashRediscoveryTest {
     }
 
     @Test
+    fun restoreSkipsNamesWhoseLocationSidecarsAreAlreadyTaken() = runBlocking {
+        val raw = File(storage.root, ".trash/71/RAW.ARW").apply { parentFile!!.mkdirs(); writeText("raw") }
+        File(raw.parentFile, "RAW.xmp").writeText("recovered place")
+        assertEquals(1, trash.rediscover())
+        val item = trashItems().single()
+        val destination = File(item.trashedFrom!!).parentFile!!.apply { mkdirs() }
+        File(destination, "RAW.xmp").writeText("other place")
+        File(destination, "RAW_1.xmp").writeText("another place")
+
+        trash.restore(listOf(item))
+
+        val restored = dao.byId(item.id)!!
+        assertEquals("RAW_2.ARW", File(restored.path).name)
+        assertEquals("raw", File(restored.path).readText())
+        assertEquals("recovered place", File(destination, "RAW_2.xmp").readText())
+        assertEquals("other place", File(destination, "RAW.xmp").readText())
+        assertEquals("another place", File(destination, "RAW_1.xmp").readText())
+    }
+
+    @Test
+    fun restoreSkipsNamesWhoseKeptOriginalsAreAlreadyTaken() = runBlocking {
+        val photo = File(storage.root, ".trash/72/PHOTO.JPG").apply { parentFile!!.mkdirs(); writeText("edited") }
+        File(photo.parentFile, "original-PHOTO.JPG").writeText("recovered original")
+        assertEquals(1, trash.rediscover())
+        val item = trashItems().single()
+        val destination = File(item.trashedFrom!!)
+        val occupied = storage.originalOf(destination).apply { parentFile!!.mkdirs(); writeText("other original") }
+        val occupiedSuffix = File(occupied.parentFile, "PHOTO_1.JPG").apply { writeText("another original") }
+
+        trash.restore(listOf(item))
+
+        val restored = File(dao.byId(item.id)!!.path)
+        assertEquals("PHOTO_2.JPG", restored.name)
+        assertEquals("edited", restored.readText())
+        assertEquals("recovered original", storage.originalOf(restored).readText())
+        assertEquals("other original", occupied.readText())
+        assertEquals("another original", occupiedSuffix.readText())
+    }
+
+    @Test
+    fun failedOriginalRestoreRollsBackThePhotoAndItsAlreadyMovedSidecar() = runBlocking {
+        val photo = File(storage.root, ".trash/74/PHOTO.JPG").apply { parentFile!!.mkdirs(); writeText("edited") }
+        val sidecar = File(photo.parentFile, "PHOTO.xmp").apply { writeText("place") }
+        val original = File(photo.parentFile, "original-PHOTO.JPG").apply { writeText("original") }
+        assertEquals(1, trash.rediscover())
+        val item = trashItems().single()
+        // A real I/O failure after the photo and sidecar move: the original's parent cannot be made.
+        val blocked = File(storage.root, ".originals").apply { writeText("not a directory") }
+        val target = File(item.trashedFrom!!)
+
+        assertThrows(java.io.IOException::class.java) { runBlocking { trash.restore(listOf(item)) } }
+
+        assertEquals(item, dao.byId(item.id))
+        assertEquals("edited", photo.readText())
+        assertEquals("place", sidecar.readText())
+        assertEquals("original", original.readText())
+        assertFalse(target.exists())
+        assertFalse(File(target.parentFile, "PHOTO.xmp").exists())
+        assertEquals(0, trash.rediscover())
+        // Retry remains possible after the storage failure is fixed.
+        blocked.delete()
+        trash.restore(listOf(item))
+        assertNull(dao.byId(item.id)!!.trashedAt)
+        assertEquals("edited", target.readText())
+        assertEquals("place", File(target.parentFile, "PHOTO.xmp").readText())
+        assertEquals("original", storage.originalOf(target).readText())
+    }
+
+    @Test
     fun explicitEmptyDeletesOnlyTheChosenRecoveredBundle() = runBlocking {
         val a = File(storage.root, ".trash/7/A.ARW").apply { parentFile!!.mkdirs(); writeText("a") }
         val b = File(storage.root, ".trash/8/B.ARW").apply { parentFile!!.mkdirs(); writeText("b") }

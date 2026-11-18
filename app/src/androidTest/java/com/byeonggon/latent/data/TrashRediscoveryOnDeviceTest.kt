@@ -59,15 +59,30 @@ class TrashRediscoveryOnDeviceTest {
             val destination = File(recover.trashedFrom!!)
             if (!destination.parentFile!!.exists()) createdDirectories += destination.parentFile!!
             if (!destination.parentFile!!.parentFile!!.exists()) createdDirectories += destination.parentFile!!.parentFile!!
-            cleanup += destination
-            cleanup += File(File(recover.trashedFrom!!).parentFile, "$token.xmp")
-            cleanup += storage.originalOf(File(recover.trashedFrom!!))
+            destination.parentFile!!.mkdirs()
+            // XMP is visible through the provider even when scoped storage hides it from File.exists().
+            val occupiedSidecar = File(destination.parentFile, "$token.xmp")
+            cleanup += occupiedSidecar
+            storage.writeNew(occupiedSidecar, "other location bytes")
+            val occupiedOriginal = storage.originalOf(File(destination.parentFile, "${token}_1.ARW"))
+            if (!occupiedOriginal.parentFile!!.exists()) createdDirectories.add(0, occupiedOriginal.parentFile!!)
+            if (!occupiedOriginal.parentFile!!.parentFile!!.exists()) createdDirectories.add(1, occupiedOriginal.parentFile!!.parentFile!!)
+            occupiedOriginal.parentFile!!.mkdirs()
+            cleanup += occupiedOriginal
+            occupiedOriginal.writeText("other original bytes")
+            val expected = File(destination.parentFile, "${token}_2.ARW")
+            cleanup += expected
+            cleanup += File(destination.parentFile, "${token}_2.xmp")
+            cleanup += storage.originalOf(expected)
             trash.restore(listOf(recover))
             val restored = dao.byId(recover.id)!!
             assertNull(restored.trashedAt)
+            assertEquals(expected.path, restored.path)
             assertEquals("raw bytes", File(restored.path).readText())
-            assertEquals("location bytes", storage.folder.openInput(File(File(restored.path).parentFile, "$token.xmp")).bufferedReader().use { it.readText() })
+            assertEquals("location bytes", storage.folder.openInput(File(destination.parentFile, "${token}_2.xmp")).bufferedReader().use { it.readText() })
             assertEquals("original bytes", storage.originalOf(File(restored.path)).readText())
+            assertEquals("other location bytes", storage.folder.openInput(occupiedSidecar).bufferedReader().use { it.readText() })
+            assertEquals("other original bytes", occupiedOriginal.readText())
             val remove = items.single { it.fileName == other.name }
             trash.deleteForever(listOf(remove))
             assertFalse(other.exists())
