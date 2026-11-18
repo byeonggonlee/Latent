@@ -1,9 +1,21 @@
 # Antigravity Review and Model Orchestration Guidelines
 
 Established on 2026-10-22 by the owner's decision in [`decisions.md`](decisions.md), and changed by the owner on
-2026-10-29 (Gemini 3.8 Flash's part on a pull request, §3.1). This document defines the
+2026-10-29 (Gemini 3.8 Flash's part on a pull request, §3.1) and on 2026-11-18 (below). This document defines the
 operating rules, responsibility boundaries, model-tier assignments, and review/handoff protocols for **Antigravity**
-and the models running inside it (**Gemini 3.8 Flash**, **Gemini 4 Argon**, and **Claude Opus 5.5**).
+and the models running inside it (**Gemini 4 Hydrogen**, **Gemini 4 Argon**, and **Claude Opus 5.5**).
+
+> **2026-11-18, the owner's change; where this page disagrees, [`AGENTS.md`](../../AGENTS.md) wins.**
+> - Gemini models below Gemini 4 are not used: **Gemini 3.8 Flash** is retired. **Gemini 4 Hydrogen** writes the
+>   dispatch note of §3.1 in its place, with the same template under its own name.
+> - **Gemini 4 Hydrogen** may author code, tests and their docs on items the owner assigns, following
+>   [`../agents/hydrogen.md`](../agents/hydrogen.md) and [`../DEVELOPMENT_GUIDE.md`](../DEVELOPMENT_GUIDE.md); §1's
+>   non-authoring boundary holds for everything else Antigravity does. Its pull requests are reviewed by Codex,
+>   or by Claude Opus 5.5 when Codex cannot.
+> - Hydrogen may be the one deep reviewer of a small mandatory-review PR within the level `AGENTS.md` sets.
+> - **Gemini 4 Argon** is used only for a third family's view (the usual reviewer is the change's subject, reviewers
+>   disagree, or the usual reviewer is out and the change is beyond Hydrogen's level). **Gemini 4 Carbon** takes its
+>   place once it is available to the owner's plan. Routine routing is in the table in `AGENTS.md`.
 
 ---
 
@@ -12,7 +24,8 @@ and the models running inside it (**Gemini 3.8 Flash**, **Gemini 4 Argon**, and 
 Antigravity is dedicated exclusively to **code review, multi-model orchestration, and governance/assessment
 documentation**.
 
-- **Zero code authoring**: Antigravity never writes, edits, or commits production code (`app/src/main/`), unit or
+- **Zero code authoring** (except Gemini 4 Hydrogen on owner-assigned items, see the 2026-11-18 note above):
+  Antigravity never writes, edits, or commits production code (`app/src/main/`), unit or
   instrumentation tests (`app/src/test/`, `app/src/androidTest/`), vendored code (`third_party/`), Room schemas
   (`app/schemas/`), Gradle build scripts, or CI workflows (`.github/workflows/`).
 - **Allowed write scope**: Antigravity writes only to its own assessment and governance files under `docs/`, to the
@@ -31,14 +44,14 @@ documentation**.
  Work is separated along two orthogonal axes: **Code Authoring** (strictly partitioned by subsystem) and **Code
 Review & Orchestration** (shared across agents and orchestrated across models).
 
-### 2.1 Code Authoring (Claude Code & Codex Only)
+### 2.1 Code Authoring (Claude Code & Codex; Gemini 4 Hydrogen on Assigned Items)
 
 | Domain | Authoring Agent | Scope |
 |---|---|---|
 | **Image decoders & raw containers** | **Codex** | `app/src/main/java/com/byeonggon/latent/raw/` (`Tiff.kt`, `SonyArw.kt` reader, `Dng.kt`, `LosslessJpeg.kt`, `JpegXl.kt`), `third_party/jxlatte/` (with `latent.patch` and README), `data/MpfPreview.kt`, decoder unit tests (`app/src/test/.../raw/` except `RawRendererTest.kt`), raw test fixtures, and `RawOnDeviceTest.kt`. |
 | **Shared decoder-to-app seam** | **Claude Code** or **Codex** (must claim first in `HANDOFF.md`) | `ArwImage` and `LensProfile` (in `raw/SonyArw.kt`), `RawDeveloper.kt`, `LensCorrection.kt`, `RawRenderer.kt`, `RawCache.kt`, and `RawRendererTest.kt`. Any change here requires a reviewed pull request and updates all callers in the same commit. |
 | **Application, editor, storage, sync, UI & CI** | **Claude Code** | Editor, GPU/CPU renderers and shaders (`enhance/`), library, backup and restore (`backup/`), MTP and card sync (`camera/`), location/Timeline/map (`location/`), Compose UI and ViewModels (`ui/`), Room database and migrations (`data/`), CI/release workflows, and general documentation. |
-| **Source code & tests** | **Antigravity** | **None.** Antigravity never authors code or tests in any domain. |
+| **Source code & tests** | **Antigravity** | **Only Gemini 4 Hydrogen**, on items the owner assigns, in the area the item names, on an `agy/` branch; reviewed by Codex (Claude Opus 5.5 when Codex cannot). Nothing else in Antigravity authors code or tests. |
 
 - **Claude Sonnet 5.5 authoring & reasoning-effort rules (in Claude Code)**:
   - **Claude Sonnet 5.5** may author code and tests within Claude Code's area only when running with a **minimum
@@ -54,8 +67,8 @@ Review & Orchestration** (shared across agents and orchestrated across models).
 Reviews are conducted by **Claude Code**, **Codex**, and **Antigravity**:
 
 - **Antigravity** serves as the cross-cutting review and model-orchestration hub. Because it has no authoring stake in
-  either codebase partition, it dispatches reviews mechanically through **Gemini 3.8 Flash** and conducts deep reviews
-  across **Gemini 4 Argon** and **Claude Opus 5.5**. Antigravity keeps mechanical results, unverified candidate
+  either codebase partition, it dispatches reviews and reviews within its level through **Gemini 4 Hydrogen**, gives a third
+  family's view through **Gemini 4 Argon**, and reviews through **Claude Opus 5.5**, as `AGENTS.md` routes them. Antigravity keeps mechanical results, unverified candidate
   findings and deep-review conclusions distinct, and routes only confirmed actionable findings as required fixes.
 - **Codex** and **Claude Code** continue to review each other's pull requests—especially on the decoder seam,
   domain-specific invariants, and cross-agent handoffs—either independently or alongside Antigravity's reviews.
@@ -87,7 +100,7 @@ that high-reasoning token budgets are spent where bugs cost user data:
   update, not another model review. This does not start or resume any monitor; monitoring still needs owner
   authorization.
 
-### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher & First-Pass Candidate Finder
+### 3.1 Gemini 3.8 Flash — Mechanical Dispatcher & First-Pass Candidate Finder (retired 2026-11-18; Gemini 4 Hydrogen writes the dispatch note)
 
 - **Primary focus (Orchestration & Dispatch)**:
   - **Intake and status tracking**: Scanning open PRs (`gh pr list`, `gh pr view`, `gh pr diff --name-only`), checking
@@ -201,7 +214,7 @@ optional follow-up proposals are recorded separately in [`flash-review-evaluatio
 
 ## 4. Orchestration & Review Protocol
 
-### Step 1: Mechanical Intake and Reviewer Dispatch (Gemini 3.8 Flash)
+### Step 1: Mechanical Intake and Reviewer Dispatch (Gemini 4 Hydrogen since 2026-11-18)
 
 1. Read [`docs/HANDOFF.md`](../HANDOFF.md) (*In progress*, agent queues) and inspect open PRs via `gh pr list`.
 2. Record the exact head commit SHA of the PR being inspected (`gh pr view <id> --json headRefOid`).

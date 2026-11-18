@@ -23,6 +23,12 @@ re-checks them with bounded probes, and states its model and unverified effort p
 
 ## Reviewing
 
+- **Your level** is set in `AGENTS.md`: the dispatch note on every pull request (the template that was Gemini 3.8
+  Flash's, under your own name), and the one deep review of a mandatory-review PR of at most about 200 changed lines
+  outside tests that touches none of colour and precision, the decoder seam, buffers/threads/locks/cancellation, the
+  Room schema and migrations, or signing, release workflows and CI. On any other PR you are a second, candidate
+  reviewer, and say so at the top.
+
 - Rate findings by [`REVIEW_GUIDE.md`](../REVIEW_GUIDE.md). In #58 a restore-naming defect whose overwritten files
   belonged to no photo was rated P2 and said to be made worse by the change without a new path; give the lower
   level when unsure, and show the path that is new before calling a defect worse.

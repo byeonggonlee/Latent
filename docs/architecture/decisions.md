@@ -18,7 +18,19 @@ request. Findings are rated by [`REVIEW_GUIDE.md`](../REVIEW_GUIDE.md) (set the 
 agents' work (Claude's #53 and #55 and Codex's #51 each had a P1 or P2 found in review); the mistakes were not
 particular to it, but each agent's habits are, so the shared rules and the per-agent notes live apart.
 
-**Opens again** when the owner assigns Hydrogen an area of its own, or the per-agent pages disagree with the guide.
+**Then, the same day: who reviews.** Gemini models below Gemini 4 are not used; Gemini 3.8 Flash is retired and
+Gemini 4 Hydrogen writes the dispatch note. Claude Code's pull requests are reviewed by Codex, Codex's by Claude Opus
+5.5, Hydrogen's by Codex (Claude Opus 5.5 when Codex cannot). Hydrogen may be the one deep reviewer of a small
+mandatory-review PR outside colour, the decoder seam, concurrency, the Room schema and signing/CI. Gemini 4 Argon is
+kept for a third family's view only (the usual reviewer is the change's subject, reviewers disagree, or the usual
+reviewer is out and the change is beyond Hydrogen), and Gemini 4 Carbon takes that place once the owner's plan has
+it. Why: Argon spent 8% of its weekly quota on a one-line User-Agent review (#59), and a Gemini deep model's only
+use that Opus or GPT does not cover is being a third family. This replaces the reviewer lists and Flash's role in
+the [entry of 2026-10-22](#2026-10-22--antigravity-reviews-and-orchestrates-models-claude-code-and-codex-write-the-code)
+and the [entry of 2026-10-29](#2026-10-29--gemini-38-flashs-part-on-a-pull-request-is-the-dispatch).
+
+**Opens again** when the owner assigns Hydrogen an area of its own, Carbon becomes available, or the per-agent pages
+disagree with the guide.
 
 ## 2026-10-29 · Gemini 3.8 Flash's part on a pull request is the dispatch
 
