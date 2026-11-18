@@ -30,7 +30,8 @@ you start it, and log it there when it is done.
   `docs/TODO.md`) and to agent governance files when asked by the owner. What it finds that needs code goes into the
   PR review or the queue of the authoring agent whose area it is.
 - **How code is written**, by every agent: [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md), with a page
-  for each agent's own work under [`docs/agents/`](docs/agents/) (Codex, Gemini 4 Hydrogen; Claude Code's to come).
+  for each agent's own work under [`docs/agents/`](docs/agents/) ([`claude-code.md`](docs/agents/claude-code.md),
+  [`codex.md`](docs/agents/codex.md), [`hydrogen.md`](docs/agents/hydrogen.md)).
 - **The owner** decides the package name, keys and secrets, what ships, what waits for a phone, and between
   agents who disagree. No agent decides that for them: the question goes under "Waiting for the owner" in
   `docs/TODO.md`.

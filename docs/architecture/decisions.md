@@ -9,7 +9,8 @@ assessments in this folder (for example [`codex-assessment.md`](codex-assessment
 
 **Decided.** Every agent writes code by [`DEVELOPMENT_GUIDE.md`](../DEVELOPMENT_GUIDE.md) (scope, reuse, evidence,
 untrusted input, the owner's data, writing things down), and each has a page for what its own work tends to need
-under [`agents/`](../agents/): Codex and Gemini 4 Hydrogen now, Claude Code's to be written by GPT. Gemini 4 Hydrogen,
+under [`agents/`](../agents/) ([`claude-code.md`](../agents/claude-code.md), [`codex.md`](../agents/codex.md),
+[`hydrogen.md`](../agents/hydrogen.md)). Gemini 4 Hydrogen,
 through Antigravity, may author code on items the owner assigns, with a cross-family deep review of every pull
 request. Findings are rated by [`REVIEW_GUIDE.md`](../REVIEW_GUIDE.md) (set the same day).
 
