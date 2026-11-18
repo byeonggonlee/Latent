@@ -5,6 +5,20 @@ what was decided, why, what it means for a change, and what would open it again.
 owner decides again; then the old text stays, marked as replaced. Proposals that wait for a decision live in the
 assessments in this folder (for example [`codex-assessment.md`](codex-assessment.md)) and in `docs/TODO.md`.
 
+## 2026-11-18 · One development guide for all, a page for each agent; Gemini 4 Hydrogen may author
+
+**Decided.** Every agent writes code by [`DEVELOPMENT_GUIDE.md`](../DEVELOPMENT_GUIDE.md) (scope, reuse, evidence,
+untrusted input, the owner's data, writing things down), and each has a page for what its own work tends to need
+under [`agents/`](../agents/): Codex and Gemini 4 Hydrogen now, Claude Code's to be written by GPT. Gemini 4 Hydrogen,
+through Antigravity, may author code on items the owner assigns, with a cross-family deep review of every pull
+request. Findings are rated by [`REVIEW_GUIDE.md`](../REVIEW_GUIDE.md) (set the same day).
+
+**Why.** Hydrogen's deliberately large trial, #57, went through the same draft, review and fix cycle as the other
+agents' work (Claude's #53 and #55 and Codex's #51 each had a P1 or P2 found in review); the mistakes were not
+particular to it, but each agent's habits are, so the shared rules and the per-agent notes live apart.
+
+**Opens again** when the owner assigns Hydrogen an area of its own, or the per-agent pages disagree with the guide.
+
 ## 2026-10-29 · Gemini 3.8 Flash's part on a pull request is the dispatch
 
 **Decided.** On a pull request, Gemini 3.8 Flash posts a dispatch note of about three lines: the commit it read,

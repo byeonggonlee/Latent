@@ -1,5 +1,7 @@
 @AGENTS.md
 @docs/architecture/antigravity-review-orchestration.md
+@docs/DEVELOPMENT_GUIDE.md
+@docs/agents/hydrogen.md
 
 ## Personal Review Evidence Discipline (Antigravity)
 

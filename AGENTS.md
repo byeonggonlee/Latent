@@ -18,13 +18,19 @@ you start it, and log it there when it is done.
 - **Codex** (code authoring & review): authors the image decoders (TIFF, Sony ARW, DNG, lossless JPEG, JPEG XL with
   `third_party/jxlatte`, the MPF preview), their tests and fixtures, and reviews changes in Claude Code's area and
   the shared seam.
-- **Antigravity** (code review, mechanical dispatch & documentation; never authors code): dispatches reviews
-  mechanically through **Gemini 3.8 Flash**, treats its first-pass findings as candidates, and conducts deep reviews
-  across **Gemini 4 Argon** and **Claude Opus 5.5** alongside Claude Code and Codex, following
+- **Antigravity** (code review, mechanical dispatch & documentation; authors code only through Gemini 4 Hydrogen, on
+  what the owner assigns): dispatches reviews mechanically through **Gemini 3.8 Flash**, treats its first-pass
+  findings as candidates, and conducts deep reviews across **Gemini 4 Argon** and **Claude Opus 5.5** alongside
+  Claude Code and Codex, following
   [`docs/architecture/antigravity-review-orchestration.md`](docs/architecture/antigravity-review-orchestration.md).
-  It never changes source, tests, build files, schemas or CI. It writes only under `docs/` (its own files,
-  `docs/HANDOFF.md`, and owner-decision queues in `docs/TODO.md`) and to agent governance files when asked by the
-  owner. What it finds that needs code goes into the PR review or the queue of the authoring agent whose area it is.
+  **Gemini 4 Hydrogen** may author code, tests and their docs for items the owner assigns to it, on an `agy/`
+  branch, following [`docs/agents/hydrogen.md`](docs/agents/hydrogen.md); every such pull request gets a
+  cross-family deep review, whatever its size. Otherwise Antigravity never changes source, tests, build files,
+  schemas or CI: it writes only under `docs/` (its own files, `docs/HANDOFF.md`, and owner-decision queues in
+  `docs/TODO.md`) and to agent governance files when asked by the owner. What it finds that needs code goes into the
+  PR review or the queue of the authoring agent whose area it is.
+- **How code is written**, by every agent: [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md), with a page
+  for each agent's own work under [`docs/agents/`](docs/agents/) (Codex, Gemini 4 Hydrogen; Claude Code's to come).
 - **The owner** decides the package name, keys and secrets, what ships, what waits for a phone, and between
   agents who disagree. No agent decides that for them: the question goes under "Waiting for the owner" in
   `docs/TODO.md`.
