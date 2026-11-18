@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Owner-requested full document review of PR #60 at `e2371f9`; check all eight files, governance consistency and cited evidence; publish the review on #60. | `codex/pr60-doc-review` | `docs/HANDOFF.md` (review record only) | 2026-11-18 |
 
 ## For Codex
 
