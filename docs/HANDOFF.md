@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Antigravity (Gemini 4 Hydrogen) | Fix intermittent failures in `DngTiffReproductionTest` on CI | `agy/dng-tiff-test-isolation` | `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`, `docs/HANDOFF.md` | 2026-11-18 |
 
 ## For Codex
 
