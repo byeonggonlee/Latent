@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Owner-requested delta re-review of PR #60, `e2371f9..f03ac2f`: verify authoring exception and changed reviewer routing. | [PR #61](https://github.com/noctilane/Latent/pull/61), `codex/pr60-doc-review` | `docs/HANDOFF.md` (review record only) | 2026-11-18 |
 
 ## For Codex
 
@@ -568,6 +567,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-11-18 | Codex | Re-reviewed all five files in PR #60 delta `e2371f9..f03ac2f`: LGTM with the earlier P3 partly remaining in HANDOFF path scope and live dispatch/routing text. Relative links and whitespace pass; Licences green, Build red in unchanged DNG reproduction test (915 cases, 1 failure, 18 skips), cause unverified. No merge. | [Re-review](https://github.com/noctilane/Latent/pull/60#pullrequestreview-5957521188) |
 | 2026-11-18 | Codex | Full eight-file document review of PR #60 at `e2371f9`: LGTM with one non-blocking P3 on Hydrogen governance synchronization, independently confirmed and already noted by Argon. All 31 local links and diff whitespace checks pass; exact-head Build/Licences CI succeed. No local Android/device tests run; no merge. | [Review](https://github.com/noctilane/Latent/pull/60#pullrequestreview-5957218378) |
 | 2026-11-18 | Codex | Owner-requested PR #58 restore corrections: companion-aware names and rollback, including the reproduced SAF rename collision; host red-to-green tests, API 36 real-SAF coverage and Opus correction LGTM. Owner authorized merge after final CI. | [PR #58](https://github.com/noctilane/Latent/pull/58) |
 | 2026-11-18 | Codex | Rediscover intact old trash bundles without automatic expiry; preserve companions, prevent restarted-ID overwrites, handle expiry failures and camera time zones. Opus 5.5 cross-family LGTM; host checks and API 36 scratch-database/SAF test pass. CI/merge pending. | [PR #58](https://github.com/noctilane/Latent/pull/58), code `0b71b44` |
