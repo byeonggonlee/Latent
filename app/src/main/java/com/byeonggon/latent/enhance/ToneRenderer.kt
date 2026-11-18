@@ -469,8 +469,13 @@ class ToneRenderer(internal val edit: PhotoEdit, overview: LinearImage) {
         private const val CONTRAST_AT_FULL = 1.6f
         private const val WHITES_REACH = 0.2f
         private const val BLACKS_REACH = 0.12f
-        private const val TEMPERATURE_STOPS = 0.5f
-        private const val TINT_STOPS = 0.35f
+
+        /** The stops by which red rises and blue falls at a temperature of 1; the other way at -1. */
+        internal const val TEMPERATURE_STOPS = 0.5f
+
+        /** The stops by which green falls at a tint of 1, towards magenta. */
+        internal const val TINT_STOPS = 0.35f
+
         private const val CLARITY_AT_FULL = 1.5f
         private const val SOFTENING_AT_FULL = 0.8f
 

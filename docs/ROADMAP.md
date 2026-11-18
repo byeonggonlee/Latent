@@ -16,7 +16,7 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 
 | # | What | Who | Size | Review |
 |---|---|---|---|---|
-| 1 | Auto colour: for a raw, start from the camera's as-shot white balance and move only a little from it; try gray-edge and white-patch against gray-world on the same photos, scenes with a meant colour (a sunset, a tungsten room) included; no learned model or automatic grading | Claude Code | M | Codex (colour) |
+| 1 | In review: auto colour for a raw, start from the camera's as-shot white balance and move only a little from it; try gray-edge and white-patch against gray-world on the same photos, scenes with a meant colour (a sunset, a tungsten room) included; no learned model or automatic grading | Claude Code | M | Codex (colour) |
 | 2 | Sky mask on the GPU: convert the model again without `BROADCAST_TO` and `GATHER_ND`, which LiteRT's GPU delegate refuses (S24 report); CPU fallback and the numerical tests stay | Codex | S–M | Claude Code |
 | 3 | Sliders (UI guide task 3, §8.6): the fill runs from the reference (*Feather* at 0 fills from the middle today), "As Shot" at the centre of temperature and tint, a dot on a changed slider | Claude Code | S | – |
 | 4 | Filter panel: the Log LUT note only by the LUT row, not under every look | Claude Code | S | – |
@@ -33,7 +33,7 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 15 | Phone-made DNGs: Open Camera's and MotionCam's open as the phone took them (orientation, white balance, crop, opcode lists); Latent takes no photos itself, so these apps are how a phone without a raw mode of its own shoots one | Codex | S | Claude Code |
 | 16 | Done (PR #53): render version, before the release ([decision of 2026-10-29](architecture/decisions.md)): each saved edit, kept version and backup records the render version it was made with, 1 for 0.2.0; an edit without one is 0.1.0's and renders as today | Claude Code | S | Codex (edits and backups) |
 
-Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8 (done), 11 (done) and 1. Item 12
+Order of Claude Code's items left (owner, 2026-10-29): 16 first, as the release needs it (done, PR #53), then 8 (done), 11 (done) and 1 (in review; [evaluation](auto-colour-evaluation.md)). Item 12
 ([PR #51](https://github.com/byeonggonlee/Latent/pull/51)) is merged at `f24232e`, including the reviewed
 Adobe two-illuminant profile and PR #55's tone correction (blue-to-black P2 resolved). Build and licence CI pass
 on integrated head `54dd6a7`; its tree matches the reviewed `4c1a183`. The owner judged both samples beside their
