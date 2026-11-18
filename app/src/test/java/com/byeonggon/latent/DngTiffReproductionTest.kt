@@ -388,6 +388,7 @@ class DngTiffReproductionTest {
             val shareLabel = context.getString(R.string.share)
             val restoreLabel = context.getString(R.string.restore_original)
             compose.waitUntil(timeoutMillis = 10_000) {
+                compose.waitForIdle()
                 container.editSaver.saving.value.isEmpty() &&
                     runBlocking { container.database.mediaDao().byId(id)?.edit != null } &&
                     compose.onAllNodesWithText(restoreLabel).fetchSemanticsNodes().isNotEmpty() &&
@@ -405,6 +406,7 @@ class DngTiffReproductionTest {
             lateinit var startedActivity: MainActivity
             scenario.onActivity { startedActivity = it }
             compose.waitUntil(timeoutMillis = 10_000) {
+                compose.waitForIdle()
                 Shadows.shadowOf(startedActivity).peekNextStartedActivity() != null
             }
             val chooser = Shadows.shadowOf(startedActivity).nextStartedActivity
