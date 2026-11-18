@@ -19,7 +19,7 @@ Keep photo bytes and companions; no schema/backup change, no automatic deletion 
 - [x] Allocate unoccupied trash bundle folders; preserve unexpected companions on restore; only drop database rows after successful delete.
 - [x] Call rediscovery before expiry in `LibraryViewModel.refresh()` and document restored-location and metadata limitations in existing user documentation.
 - [x] Verify red-to-green, run `testDebugUnitTest lintDebug lintRelease assembleDebugAndroidTest`, check schemas/whitespace, and test on an available emulator (no uninstall/data clear).
-- [ ] Commit with Agent: Codex, push one focused PR and hand it to Claude Code/Opus. Do not merge.
+- [x] Commit with Agent: Codex, push one focused PR and hand it to Claude Code/Opus. Do not merge.
 
 ## Ledger
 
@@ -29,7 +29,10 @@ Keep photo bytes and companions; no schema/backup change, no automatic deletion 
 - RED: initial tests reproduced orphan invisibility and overwrite of an old bundle by a restarted DB ID; additional root-symlink test failed before the boundary guard.
 - GREEN: 26 focused JVM checks pass (13 new recovery tests, existing trash/move checks). Full JVM suite: 912 cases, 0 failures, 19 pre-existing opt-in/external skips. Both Lints: 0 errors/9 existing warnings; schemas unchanged. Initial concurrent KSP/Lint run failed on missing generated release files; the same tasks pass with --max-workers=1.
 - Emulator: one API 36 instrumentation case passes with real SAF and a scratch database; original/XMP restore and explicit empty verified. First fixture used a forbidden direct XMP write; corrected to the production SAF API before passing. No actual app uninstall/clear or physical-phone test.
-- Claude Code Opus independent review dispatched via a fresh read-only CLI session (--model opus, --effort high); result pending.
+- Claude Code Opus independent review dispatched via a fresh read-only CLI session (--model opus, --effort high); initial findings addressed below.
 
 - Initial Opus 5.5 review (model confirmed by CLI modelUsage) found hidden takeover remnants, background-expiry exception handling, camera-zone consistency and discovery-only directory creation. All were reproduced with failing tests, then fixed; the Japanese spacing nit was corrected. Matching takeover companions are allowed beside an intact main file, but temporary-only bundles remain untouched.
-- Correction-only Opus re-review is in progress; unchanged full-review coverage is reused. Final full suite after corrections: 912 cases / 0 failures / 19 fixture/opt-in skips; both Lints remain 0 errors/9 warnings, instrumentation/debug APKs compile and schemas are unchanged.
+- Correction-only Opus 5.5 re-review completed LGTM; unchanged full-review coverage is reused. Final full suite after corrections: 912 cases / 0 failures / 19 fixture/opt-in skips; both Lints remain 0 errors/9 warnings, instrumentation/debug APKs compile and schemas are unchanged.
+
+- Published review: https://github.com/byeonggonlee/Latent/pull/58#pullrequestreview-5953678677 (code commit 0b71b44). Final API 36 instrumentation rerun: OK (1 test), 0.188 s; real SAF and in-memory DB, without actual reinstall or phone use. PR remains unmerged.
+- Non-blocking review notes retained as limits: temporary-only bundles are deliberately untouched; harmless copy remnants may remain after restore; no actual old-installation ownership test was performed.

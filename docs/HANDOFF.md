@@ -149,10 +149,14 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 item 10: rediscover orphaned trash after reinstall; preserve files and companions, exclude recovered items from expiry, restore/empty safely | [PR #58](https://github.com/byeonggonlee/Latent/pull/58), `codex/trash-rediscovery` | `data/Trash.kt`, `LibraryStorage.kt`, `GrantedFolder.kt`, `LatentApp.kt`, `ui/library/LibraryViewModel.kt`, resources, related JVM/device tests and docs | 2026-11-18 |
 | Claude Code (computer) | 0.2.0 item 1: auto colour; for a raw, start from the camera's as-shot white balance and move only a little; gray-edge and white-patch measured against gray-world on the same photos, a tungsten room included | [PR #56](https://github.com/byeonggonlee/Latent/pull/56), `claude/auto-colour` | `enhance/AutoSettings.kt`, a white estimate beside it, the editor's Auto, their tests, an evaluation note under `docs/`, this board | 2026-10-30 |
 
 ## For Codex
+
+### Trash rediscovery implementation — PR #58 (2026-11-18)
+
+Implemented on `codex/trash-rediscovery` at `0b71b44`; [PR #58](https://github.com/byeonggonlee/Latent/pull/58) is ready for review/CI, not merged. Independent Claude Opus 5.5 review and correction re-review completed ([LGTM](https://github.com/byeonggonlee/Latent/pull/58#pullrequestreview-5953678677)); CLI modelUsage confirms `claude-opus-5-5`, requested high effort, actual harness effort unverified. Full JVM suite 912 cases, 0 failures, 19 existing fixture/opt-in skips; Lints 0 errors/9 warnings, schemas unchanged. API 36 emulator real-SAF restore/empty test passed; actual reinstall ownership and physical-phone checks remain unverified. Temporary-only/ambiguous bundles stay untouched. Custom share sizing and sky GPU work have not started.
+
 
 ### Review PR #56: Auto's white balance on a raw (2026-10-30) — done
 
@@ -564,6 +568,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-11-18 | Codex | Rediscover intact old trash bundles without automatic expiry; preserve companions, prevent restarted-ID overwrites, handle expiry failures and camera time zones. Opus 5.5 cross-family LGTM; host checks and API 36 scratch-database/SAF test pass. CI/merge pending. | [PR #58](https://github.com/byeonggonlee/Latent/pull/58), code `0b71b44` |
 | 2026-11-18 | Antigravity (Gemini 4 Hydrogen) | One-off owner-authorized fixes (harness reasoning effort `unverified`; general governance unchanged; both verified pre-existing before PR #56): (1) recognize valid `.dng.tiff`/`.DNG.TIFF` without renaming across discovery/sync/viewer/sharing/sidecars via bounded `Dng.isDng` (`ValidationBudget`, compression-specific EOF/range checks matching `readSamples`) while rejecting plain or damaged TIFFs; (2) refresh library thumbnails across RAW, JPEG, continuous edits, reset (`edit` -> `null`), and stacked RAW+JPEG pairs with save-existence/lock guards and without poisoning or wiping caches. Local `testDebugUnitTest` (880 passed, 19 sample/opt-in skips, 0 failed), both Lints (0 errors, 9 pre-existing warnings), `assembleDebugAndroidTest`, `app/schemas`, `-Xmx32m` heap probe, and remote Build/Licences green at `8959047`. Merged on owner's instruction; phone USB MTP, real `MediaStore`, device GPU/`ImageDecoder`, raw `FileProvider` share chooser, and sample suites remain unverified | [PR #57](https://github.com/byeonggonlee/Latent/pull/57), merged `0a61ea7` |
 | 2026-11-18 | Codex | Reviewed PR #57 at `a2435ab` (two P2 findings: SubIFD aggregate resource budget/dedup and lossless-JPEG EOF clipping compatibility) and re-reviewed all changes at `8959047`: LGTM, both P2 findings resolved, no further findings; freshly executed all 49 relevant tests (`16` PR regression + `33` `DngTest`), isolated 32 MiB JVM probe, cached full Gradle suite (`899` total, `19` skips, `0` failures), both Lints, schema check, and green remote Build/Licences | [Review](https://github.com/byeonggonlee/Latent/pull/57#pullrequestreview-5950980501), [re-review](https://github.com/byeonggonlee/Latent/pull/57#pullrequestreview-5951194562) |
 | 2026-10-30 | Codex | Reviewed all ten files of PR #56 at `bc9e3cc`: LGTM, no actionable findings. Checked slider signs/scales, independent-axis consensus and caps, RAW/JPEG paths and failure bounds. Full local CI-equivalent checks pass; 13 estimator/Auto cases executed fresh and six real-file proxy-resolution comparisons retain the same rounded corrections. Phone visual/latency checks and Sony ARWs remain unverified; PR not merged | [Review](https://github.com/byeonggonlee/Latent/pull/56#pullrequestreview-5707543648) |
