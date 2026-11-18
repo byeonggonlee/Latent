@@ -133,10 +133,10 @@ class DngTiffReproductionTest {
             }
             ShadowEnvironment.addExternalDir("shared")
             ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
-            cleanTestDirectories()
             forgetTheApplicationOfEarlierTests()
             grantLibraryAccess()
             runBlocking { container.settings.update { AppSettings() } }
+            cleanTestDirectories()
             Robolectric.buildContentProvider(FakeMediaStore::class.java).create("media")
         }
 
@@ -144,7 +144,6 @@ class DngTiffReproductionTest {
             rows.clear()
             runBlocking { runCatching { container.settings.update { AppSettings() } } }
             container.rawCache.clear()
-            runCatching { container.database.close() }
             cleanTestDirectories()
         }
 
@@ -388,6 +387,7 @@ class DngTiffReproductionTest {
             val shareLabel = context.getString(R.string.share)
             val restoreLabel = context.getString(R.string.restore_original)
             compose.waitUntil(timeoutMillis = 10_000) {
+                // Drive the main looper/recomposer so ViewerViewModel observes the saved edit before Share is tapped.
                 compose.waitForIdle()
                 container.editSaver.saving.value.isEmpty() &&
                     runBlocking { container.database.mediaDao().byId(id)?.edit != null } &&
@@ -406,6 +406,7 @@ class DngTiffReproductionTest {
             lateinit var startedActivity: MainActivity
             scenario.onActivity { startedActivity = it }
             compose.waitUntil(timeoutMillis = 10_000) {
+                // The share chooser starts from LaunchedEffect(state.shareFile), which only runs once the recomposer idles.
                 compose.waitForIdle()
                 Shadows.shadowOf(startedActivity).peekNextStartedActivity() != null
             }
