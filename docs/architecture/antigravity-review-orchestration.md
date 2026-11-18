@@ -155,9 +155,9 @@ optional follow-up proposals are recorded separately in [`flash-review-evaluatio
   - **Concurrency and buffer ownership**: Lock ordering (`moving`, `takingOver`, `RawCache`), main-thread safety,
     shared buffer mutation, and coroutine cancellation boundaries across decode, render, sync, and export paths.
   - **Governance rules & review synthesis**: Editing rule documents when asked by the owner and resolving conflicting
-    reviews alongside Claude Opus 5.5 and the owner (routine intake/dispatch stays with Gemini 3.8 Flash).
-- **When to use**: PRs touching decoders, the shared seam, image processing (`enhance/`), external-input parsers,
-  or concurrency/cancellation paths.
+    reviews alongside Claude Opus 5.5 and the owner (routine intake/dispatch is Gemini 4 Hydrogen's).
+- **When to use** (since 2026-11-18): only for a third family's view, as §3.4 says. The checks above are what
+  any deep reviewer of such a PR covers, whoever it is.
 - **Token budget & fallback**: Gemini 4 Argon has a tight token budget. When it is out of tokens, the review it was
   assigned follows the fallback order in §3.4.
 
@@ -178,37 +178,37 @@ optional follow-up proposals are recorded separately in [`flash-review-evaluatio
 
 ### 3.4 Model-Family Independence, Claude Sonnet 5.5 Eligibility, and Quota Fallbacks
 
-1. **Cross-family review by default**:
-   - A mandatory review must normally be performed by a **different model family** than the PR's author:
-     - **PR authored by Claude Code**: primary mandatory reviewers are **Gemini 4 Argon** (via Antigravity) or
-       **Codex** (GPT). Because `Claude Opus 5.5 (via Antigravity)` shares the Claude model family with the author, it
-       provides supplemental architectural review in normal operation and does not count as the primary cross-agent
-       reviewer when Argon or Codex is available.
-     - **PR authored by Codex**: primary mandatory reviewers are **Gemini 4 Argon** (via Antigravity),
-       **Claude Opus 5.5** (via Antigravity), or **Claude Code**; a GPT-family review does not count as a cross-agent
-       review of a Codex PR.
-2. **Quota and token fallback order**:
-   - **Gemini 4 Argon**, **Claude**, and **Codex** all have finite token/review quotas.
-   - If **Gemini 4 Argon** is out of tokens, the review it was assigned falls back first to the non-author model family:
-     - **Codex** for a **Claude Code** PR;
-     - **Claude Opus 5.5** (via Antigravity) or **Claude Code** (**Opus 5.5**) for a **Codex** PR.
-   - If all cross-family deep reviewers are out of quota on a **Claude Code** PR (both Argon and Codex exhausted), the
-     same-family fallback order is:
+1. **Cross-family review by default** (routing set 2026-11-18; the table in [`AGENTS.md`](../../AGENTS.md) is the
+   authority):
+   - **PR authored by Claude Code**: **Codex** reviews; when it cannot, **Gemini 4 Hydrogen** within its level, else
+     **Gemini 4 Argon**. Claude Opus 5.5 (via Antigravity) shares the author's family and does not count as the
+     cross-family reviewer.
+   - **PR authored by Codex**: **Claude Opus 5.5** (via Claude Code or Antigravity) reviews; when it cannot,
+     **Gemini 4 Hydrogen** within its level, else **Gemini 4 Argon**. A GPT-family review does not count.
+   - **PR authored by Gemini 4 Hydrogen**: **Codex** reviews; when it cannot, **Claude Opus 5.5**. A Gemini-family
+     review does not count.
+   - **Gemini 4 Hydrogen's level**: the dispatch note on every PR, and the one deep review of a mandatory-review PR of
+     at most about 200 changed lines outside tests that touches none of colour and precision, the decoder seam,
+     buffers/threads/locks/cancellation, the Room schema and migrations, or signing, release workflows and CI;
+     otherwise a second, candidate reviewer only.
+   - **Gemini 4 Argon** (and **Gemini 4 Carbon** once available) only for a third family's view: the usual reviewer is
+     the change's subject, reviewers disagree, or the usual reviewer is out and the change is beyond Hydrogen's level.
+2. **Quota and same-family fallbacks**:
+   - If no cross-family reviewer is available on a **Claude Code** PR, the same-family fallback order is:
      1. **Claude Opus 5.5 (via Antigravity)** first, because it runs in its own harness and session (independent of the
         authoring session's context, though sharing the Claude model family).
-     2. **Claude Sonnet 5.5** second (when Opus 5.5 is also unavailable), **strictly requiring a fresh session** (no
-        shared context with the session that authored the PR) and a **minimum reasoning effort of `high` (extended
-        thinking enabled)**.
-   - On a **Codex** PR when Argon, Opus 5.5, and Claude Code (Opus 5.5) are all out of quota, **Claude Sonnet 5.5** in
-     a fresh session at **minimum `high` (extended thinking)** reasoning effort may likewise serve as a fallback deep
-     reviewer.
+     2. **Claude Sonnet 5.5** second, **strictly requiring a fresh session** (no shared context with the session that
+        authored the PR) and a **minimum reasoning effort of `high` (extended thinking enabled)**.
+   - On a **Codex** PR when Claude Opus 5.5, Hydrogen (within its level) and Argon are all unavailable, **Claude
+     Sonnet 5.5** in a fresh session at **minimum `high` (extended thinking)** reasoning effort may serve as the
+     deep reviewer.
    - Every fallback review **must name the fallback and its reasoning effort at the top**, state whether it shares the
      author's model family (`not independent of the author's model family; independent session`), and state explicitly
-     which of the primary reviewer's checks (such as Argon's numerical bounds, colour invariants, locks and
-     cancellation) it did and did not cover.
-   - **Gemini 3.8 Flash** and any **Claude Sonnet 5.5 run below `high` reasoning effort** never satisfy a mandatory
-     review. If no qualified deep reviewer is available, the PR waits and the item goes under `"Waiting for the owner"`
-     in [`docs/TODO.md`](../TODO.md).
+     which of the usual reviewer's checks (numerical bounds, colour invariants, locks and cancellation) it did and did
+     not cover.
+   - Gemini models below Gemini 4, Hydrogen beyond its level, and any **Claude Sonnet 5.5 run below `high` reasoning
+     effort** never satisfy a mandatory review. If no qualified deep reviewer is available, the PR waits and the item
+     goes under `"Waiting for the owner"` in [`docs/TODO.md`](../TODO.md).
 
 ---
 
@@ -232,16 +232,17 @@ optional follow-up proposals are recorded separately in [`flash-review-evaluatio
      including changes only to docs or agent instructions. Judge the PR under the target branch's existing rules;
      the proposed change cannot relax the qualifications for its own review.
 4. **Escalate unconditionally**: If any path or topic matches the list above—or if there is any doubt ("when unsure,
-   escalate")—assign the PR to the appropriate deep reviewer under §3.2–§3.4 without judging whether the diff is safe.
-5. Post the dispatch note of §3.1, or nothing when the owner has already named the PR's reviewer. Flash's part ends
-   there; the deep review is Step 2's.
+   escalate")—assign the PR to its reviewer by the author table in `AGENTS.md` (§3.4) without judging whether the
+   diff is safe.
+5. Post the dispatch note of §3.1 under Gemini 4 Hydrogen's name, or nothing when the owner has already named the
+   PR's reviewer. The dispatch ends there; the deep review is Step 2's.
 
-### Step 2: Deep Inspection (Gemini 4 Argon / Claude Opus 5.5 / Peer Agent / Qualified Fallback)
+### Step 2: Deep Inspection (the Reviewer the Author Table Names, or a Qualified Fallback)
 
 1. Inspect the full diff (`gh pr diff <id>`) and surrounding source context in read-only mode.
 2. Check CI status on the exact head commit (`gh pr checks <id>`) and note what was verified by CI versus what
    remains a phone-only check in [`docs/DEVICE_CHECKS.md`](../DEVICE_CHECKS.md).
-3. Independently validate any Flash candidates under §3.1 without limiting the review to those candidates. Inspect
+3. Independently validate any candidate findings from a second or dispatch reviewer without limiting the review to those candidates. Inspect
    the relevant callers and helper contracts, including error returns and cancellation propagation, and compare the
    base behavior. Record accepted findings, rejected candidates and material unresolved questions in the synthesis;
    report only distinct confirmed defects as actionable findings. An unresolved mandatory risk keeps review pending.
@@ -257,10 +258,10 @@ When publishing a review via `gh pr review`, always comply with these formatting
    Reviewed by **<Model Name>** (via <Agent>) — inspected commit `<short-sha>`.
    ```
    Synthetic examples:
-   - `Reviewed by **Gemini 3.8 Flash** (via Antigravity, mechanical triage & contract check) — inspected commit 1111111.`
-   - `Reviewed by **Gemini 4 Argon** (via Antigravity) — inspected commit 2222222.`
-   - `Reviewed by **Claude Opus 5.5** (via Antigravity, fallback for Gemini 4 Argon; same model family as author, independent session) — inspected commit 3333333.`
-   - `Reviewed by **Claude Sonnet 5.5 (high thinking)** (via Claude Code, fresh session, fallback for Gemini 4 Argon; same model family as author) — inspected commit 4444444.`
+   - `Reviewed by **Gemini 4 Hydrogen** (via Antigravity, within its level) — inspected commit 1111111.`
+   - `Reviewed by **Gemini 4 Argon** (via Antigravity, third-family view) — inspected commit 2222222.`
+   - `Reviewed by **Claude Opus 5.5** (via Antigravity, fallback for Codex; same model family as author, independent session) — inspected commit 3333333.`
+   - `Reviewed by **Claude Sonnet 5.5 (high thinking)** (via Claude Code, fresh session, fallback for Codex; same model family as author) — inspected commit 4444444.`
    Report settings only when exposed by the harness or explicitly supplied by the owner, and identify that source.
    When the exact model or reasoning effort cannot be verified, label it `unverified` rather than guessing. A review
    with unverified effort does not satisfy a minimum-effort requirement (§3.4); choose a qualified reviewer or keep
