@@ -455,8 +455,8 @@ Connect a camera on the Import tab to bring photos in, or list the photos on thi
     <string name="crop_area">Crop area</string>
     <string name="histogram">Histogram</string>
     <plurals name="trash_explained">
-        <item quantity="one">Photos are deleted for good after %d day. Tap photos to pick them, then put them back or delete them.</item>
-        <item quantity="other">Photos are deleted for good after %d days. Tap photos to pick them, then put them back or delete them.</item>
+        <item quantity="one">Photos are deleted for good after %d day. Tap photos to pick them, then put them back or delete them. Photos found after reinstall stay until you delete them.</item>
+        <item quantity="other">Photos are deleted for good after %d days. Tap photos to pick them, then put them back or delete them. Photos found after reinstall stay until you delete them.</item>
     </plurals>
     <plurals name="timeline_added">
         <item quantity="one">Added %1$d new of %2$d locations (%3$s).</item>

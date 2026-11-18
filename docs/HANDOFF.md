@@ -149,7 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | 0.2.0 item 10: rediscover orphaned trash after reinstall; preserve files and companions, exclude recovered items from expiry, restore/empty safely | `codex/trash-rediscovery` (draft PR to follow) | `data/Trash.kt`, `LibraryStorage.kt`, `GrantedFolder.kt`, `ui/library/LibraryViewModel.kt`, related JVM/device tests and docs | 2026-11-18 |
+| Codex | 0.2.0 item 10: rediscover orphaned trash after reinstall; preserve files and companions, exclude recovered items from expiry, restore/empty safely | [PR #58](https://github.com/byeonggonlee/Latent/pull/58), `codex/trash-rediscovery` | `data/Trash.kt`, `LibraryStorage.kt`, `GrantedFolder.kt`, `LatentApp.kt`, `ui/library/LibraryViewModel.kt`, resources, related JVM/device tests and docs | 2026-11-18 |
 | Claude Code (computer) | 0.2.0 item 1: auto colour; for a raw, start from the camera's as-shot white balance and move only a little; gray-edge and white-patch measured against gray-world on the same photos, a tungsten room included | [PR #56](https://github.com/byeonggonlee/Latent/pull/56), `claude/auto-colour` | `enhance/AutoSettings.kt`, a white estimate beside it, the editor's Auto, their tests, an evaluation note under `docs/`, this board | 2026-10-30 |
 
 ## For Codex

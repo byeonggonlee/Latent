@@ -1,0 +1,82 @@
+package com.byeonggon.latent.data
+
+import androidx.room.Room
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.byeonggon.latent.data.db.AppDatabase
+import com.byeonggon.latent.data.db.MediaItemEntity
+import com.byeonggon.latent.data.db.MediaKind
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.File
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+
+/** Uses a scratch database and uniquely named files only; no uninstall or app database reset. */
+@RunWith(AndroidJUnit4::class)
+class TrashRediscoveryOnDeviceTest {
+    @Test
+    fun rediscoversRestoresAndEmptiesBundlesThroughRealStorage() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val storage = LibraryStorage(context)
+        assertTrue("Grant media and library-folder access to Latent Debug first", storage.isAvailable())
+        val dao = database.mediaDao()
+        val trash = Trash(storage, dao)
+        val token = "TRASH_TEST_${UUID.randomUUID()}"
+        val oldFolder = File(storage.trashRoot, System.currentTimeMillis().toString())
+        val otherFolder = File(storage.trashRoot, (System.currentTimeMillis() + 1).toString())
+        val cleanup = mutableListOf<File>()
+        val createdDirectories = mutableListOf<File>()
+        try {
+            // Never rediscover or operate on pre-existing Debug files in this scratch database.
+            for (entry in storage.children(storage.trashRoot).orEmpty().filter { it.isDirectory }) {
+                dao.insert(MediaItemEntity(path = File(entry.file, ".known-to-test").path, fileName = ".known-to-test", kind = MediaKind.PHOTO, sizeBytes = 0, capturedAt = 1, importedAt = 1))
+            }
+            assertTrue(oldFolder.mkdirs())
+            assertTrue(otherFolder.mkdirs())
+            cleanup += oldFolder
+            cleanup += otherFolder
+            val raw = File(oldFolder, "$token.ARW").apply { writeText("raw bytes"); setLastModified(1) }
+            storage.writeNew(File(oldFolder, "$token.xmp"), "location bytes")
+            File(oldFolder, "original-$token.ARW").writeText("original bytes")
+            val other = File(otherFolder, "${token}_EMPTY.ARW").apply { writeText("delete these test bytes") }
+            // Exercise the real DocumentsProvider rather than only java.io.File listing.
+            assertEquals(setOf(raw.name, "$token.xmp", "original-$token.ARW"), storage.folder.children(oldFolder)!!.map { it.file.name }.toSet())
+            assertEquals(2, trash.rediscover())
+            assertEquals(0, trash.rediscover())
+            val items = trash.items.first()
+            assertEquals(2, items.size)
+            trash.emptyExpired(now = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(3650), keptDays = 1)
+            assertEquals(2, trash.items.first().size)
+            val recover = items.single { it.fileName == raw.name }
+            val destination = File(recover.trashedFrom!!)
+            if (!destination.parentFile!!.exists()) createdDirectories += destination.parentFile!!
+            if (!destination.parentFile!!.parentFile!!.exists()) createdDirectories += destination.parentFile!!.parentFile!!
+            cleanup += destination
+            cleanup += File(File(recover.trashedFrom!!).parentFile, "$token.xmp")
+            cleanup += storage.originalOf(File(recover.trashedFrom!!))
+            trash.restore(listOf(recover))
+            val restored = dao.byId(recover.id)!!
+            assertNull(restored.trashedAt)
+            assertEquals("raw bytes", File(restored.path).readText())
+            assertEquals("location bytes", storage.folder.openInput(File(File(restored.path).parentFile, "$token.xmp")).bufferedReader().use { it.readText() })
+            assertEquals("original bytes", storage.originalOf(File(restored.path)).readText())
+            val remove = items.single { it.fileName == other.name }
+            trash.deleteForever(listOf(remove))
+            assertFalse(other.exists())
+            assertNull(dao.byId(remove.id))
+            assertTrue(trash.items.first().isEmpty())
+        } finally {
+            cleanup.forEach { storage.delete(it) }
+            createdDirectories.forEach { it.delete() }
+            database.close()
+        }
+    }
+}

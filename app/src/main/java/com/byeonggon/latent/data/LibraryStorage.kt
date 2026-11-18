@@ -22,6 +22,7 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     // Folders whose names start with a dot are kept out of gallery apps.
     private val incoming = File(root, ".incoming")
     private val originals = File(root, ".originals")
+    val trashRoot = File(root, ".trash")
 
     /** Reaches what shared storage does not let the app reach by path. */
     val folder = GrantedFolder(context, root)
@@ -58,10 +59,15 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     // It keeps its own name: shared storage only takes photos and videos in DCIM, known by their extensions.
     fun incomingFile(fileName: String) = File(incoming, fileName)
 
-    fun targetFor(fileName: String, capturedAt: Long): File {
+    /** A path in the normal date folder, without creating anything or reserving the name. */
+    fun datedFile(fileName: String, capturedAt: Long): File {
         val date = Instant.ofEpochMilli(capturedAt).atZone(ZoneId.systemDefault()).toLocalDate()
-        val folder = File(root, "${date.year}/$date")
-        folder.mkdirs()
+        return File(root, "${date.year}/$date/$fileName")
+    }
+
+    fun targetFor(fileName: String, capturedAt: Long): File {
+        val target = datedFile(fileName, capturedAt)
+        val folder = target.parentFile!!.apply { mkdirs() }
         return uniqueFile(folder, fileName)
     }
 
@@ -93,7 +99,18 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     fun sharedFile(fileName: String): File = File(context.cacheDir, "share").apply { mkdirs() }.let { uniqueFile(it, fileName) }
 
     /** The folder that keeps a file in the trash, with what belongs to it: one for each library entry. */
-    fun trashFolder(id: Long): File = File(root, ".trash/$id").apply { mkdirs() }
+    fun trashFolder(id: Long): File {
+        // Database IDs restart after reinstall; an occupied folder may still hold somebody's photo.
+        var folder = File(trashRoot, "$id")
+        var suffix = 0
+        while (exists(folder)) folder = File(trashRoot, "$id-${++suffix}")
+        return folder.apply { if (!mkdirs()) throw IOException("Cannot make a trash folder") }
+    }
+
+    /** Provider-first enumeration includes old hidden files that scoped storage hides from direct paths. */
+    fun children(directory: File): List<GrantedFolder.Entry>? =
+        folder.children(directory) ?: directory.listFiles()?.map { GrantedFolder.Entry(it, it.isDirectory) }
+
 
     /** [file] if it is free, or else a free name next to it, such as DSC0001_1.JPG. */
     fun freeFileLike(file: File): File = uniqueFile(file.parentFile ?: root, file.name)

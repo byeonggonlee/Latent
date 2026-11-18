@@ -539,3 +539,10 @@ not with Gradle's `connectedAndroidTest`, whose cleanup uninstalls Latent Debug 
 
 - Versions as separate photos in the grid (Lightroom's virtual copies). Versions are kept as named looks of one
   photo for now; albums are done.
+
+### Trash rediscovery after a lost database (PR #58)
+
+- [ ] On a disposable test profile/library only, start with intact `.trash/<old-id>` bundles and no matching database records. Regrant folder access; verify that they appear only in the trash, are not automatically expired, and can be restored or explicitly emptied. Check a RAW/XMP and an edited JPEG/kept-original bundle, existing target names, and a new deletion whose database ID reuses an old folder number. Do not uninstall or clear the owner's app to perform this check.
+- [ ] Confirm the trash hint in English/Korean/Japanese: photos recovered after reinstall stay until explicitly deleted. Original restore paths and database-only edits/ratings cannot be recovered from files; restored photos use the normal capture-date folders.
+
+Emulator API 36, 2026-11-18: `TrashRediscoveryOnDeviceTest` passed using an in-memory database, unique fixture files and the real granted-folder provider. Verified deduplication, never-expire behavior, RAW/XMP/kept-original restore, and explicit empty. The 13 JVM rediscovery cases additionally cover old-ID collisions, temporary copies, provider enumeration, path boundaries, configured camera time zone and failed automatic expiry. No uninstall/data clear, actual reinstall ownership transition, or physical-phone test was performed.

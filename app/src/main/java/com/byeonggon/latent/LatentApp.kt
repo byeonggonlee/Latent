@@ -74,7 +74,7 @@ class AppContainer(private val context: Context) {
     val storage = LibraryStorage(context)
     val libraryIndex = LibraryIndex(storage, database, cameraZone = { settings.settings.first().cameraZone() })
     val exifIndex = ExifIndex(storage, database)
-    val trash = Trash(storage, database.mediaDao())
+    val trash = Trash(storage, database.mediaDao(), cameraZone = { settings.settings.first().cameraZone() })
     val phoneLibrary = PhoneLibrary(context, database)
     val usb = UsbCameraConnector(context)
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)

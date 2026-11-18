@@ -47,6 +47,8 @@ Smaller improvements after the first release: editing, consistency of the interf
 
 ### Fixed
 
+- Photos left in Latent's trash after reinstall or database loss are listed again for restore or explicit deletion. Recovered photos do not expire automatically. When their old destination is unknown, they restore into the usual capture-date folder; kept originals and location sidecars stay with them. Newly trashed photos cannot overwrite old bundles when database IDs restart.
+
 - DNG lens correction now reads the standard OpcodeList3 tag. Previously the reader and its synthetic fixtures
   used the same wrong tag, so real files carrying supported distortion metadata did not offer lens correction.
 
