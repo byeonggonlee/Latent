@@ -7,11 +7,11 @@ import org.junit.Test
 class OnlineAccessTest {
     @Test
     fun namesTheInstalledVersion() {
-        assertEquals("Latent/0.1.0-nightly.20261022 (+https://github.com/byeonggonlee/Latent)", OnlineAccess.userAgent("0.1.0-nightly.20261022"))
+        assertEquals("Latent/0.1.0-nightly.20261022 (+https://github.com/noctilane/Latent)", OnlineAccess.userAgent("0.1.0-nightly.20261022"))
     }
 
     @Test
     fun saysWhenTheVersionIsNotKnown() {
-        assertEquals("Latent/unknown (+https://github.com/byeonggonlee/Latent)", OnlineAccess.userAgent(""))
+        assertEquals("Latent/unknown (+https://github.com/noctilane/Latent)", OnlineAccess.userAgent(""))
     }
 }

@@ -23,7 +23,7 @@ class OnlineAccess(
 
     internal companion object {
         /** Map servers ask apps to say who they are, and which version, so that they can get in touch if one misbehaves. */
-        fun userAgent(version: String) = "Latent/${version.ifBlank { "unknown" }} (+https://github.com/byeonggonlee/Latent)"
+        fun userAgent(version: String) = "Latent/${version.ifBlank { "unknown" }} (+https://github.com/noctilane/Latent)"
 
         private const val TIMEOUT_MS = 10_000
         private const val LARGEST = 2 * 1024 * 1024
