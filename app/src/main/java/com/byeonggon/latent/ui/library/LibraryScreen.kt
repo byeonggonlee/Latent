@@ -307,6 +307,7 @@ private fun LibraryContent(
                             // Holding a photo starts picking photos out; from then on a tap picks, too.
                             MediaCell(
                                 item = item,
+                                thumbnailItem = state.partnerThumbnails[item.id] ?: item,
                                 withRaw = withRaw,
                                 selected = item.id in state.selected,
                                 selecting = selecting || state.showingTrash,
@@ -753,6 +754,7 @@ internal fun openedFor(id: Long, partner: Long?, failed: Set<Long>): Long =
 @Composable
 private fun MediaCell(
     item: MediaItemEntity,
+    thumbnailItem: MediaItemEntity = item,
     withRaw: Boolean,
     selected: Boolean,
     selecting: Boolean,
@@ -808,7 +810,7 @@ private fun MediaCell(
             Modifier.fillMaxSize()
         }
         AsyncImage(
-            model = rememberThumbnailModel(item),
+            model = rememberThumbnailModel(thumbnailItem),
             contentDescription = item.fileName,
             contentScale = ContentScale.Crop,
             // A rejected photo is dimmed, so that what is left stands out.

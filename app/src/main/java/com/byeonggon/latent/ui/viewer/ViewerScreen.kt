@@ -102,6 +102,7 @@ import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
+import com.byeonggon.latent.data.db.isDngName
 import com.byeonggon.latent.ui.common.SIDE_PANEL_WIDTH
 import com.byeonggon.latent.ui.common.SafeInsets
 import com.byeonggon.latent.ui.common.ZoomableBox
@@ -738,20 +739,22 @@ private fun Context.editInAnotherApp(file: File) {
 /** Hands the file to whichever app the user picks: a messenger, a cloud drive, another editor. */
 private fun Context.share(file: File, kind: MediaKind) {
     val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
-    val type = when (kind) {
-        MediaKind.PHOTO -> "image/jpeg"
-        MediaKind.RAW -> when (file.extension.lowercase()) {
-            "dng" -> "image/x-adobe-dng"
-            "cr2" -> "image/x-canon-cr2"
-            else -> "image/x-sony-arw"
-        }
-        MediaKind.VIDEO -> "video/*"
-    }
+    val type = shareMimeType(file, kind)
     val send = Intent(Intent.ACTION_SEND)
         .setType(type)
         .putExtra(Intent.EXTRA_STREAM, uri)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     launch(Intent.createChooser(send, file.name))
+}
+
+internal fun shareMimeType(file: File, kind: MediaKind): String = when (kind) {
+    MediaKind.PHOTO -> "image/jpeg"
+    MediaKind.RAW -> when {
+        isDngName(file.name) -> "image/x-adobe-dng"
+        file.extension.lowercase() == "cr2" -> "image/x-canon-cr2"
+        else -> "image/x-sony-arw"
+    }
+    MediaKind.VIDEO -> "video/*"
 }
 
 private fun Context.playVideo(item: MediaItemEntity) {

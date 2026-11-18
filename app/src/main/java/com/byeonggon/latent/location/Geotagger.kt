@@ -8,6 +8,7 @@ import com.byeonggon.latent.data.db.LocationPointEntity
 import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
+import com.byeonggon.latent.data.db.splitMediaExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.withLock
@@ -73,7 +74,7 @@ class Geotagger(
 
     /** Writes an XMP sidecar next to a RAW file. An existing sidecar is left untouched. */
     fun writeSidecar(rawFile: File, point: GeoPoint): Boolean {
-        val sidecar = File(rawFile.parentFile, "${rawFile.nameWithoutExtension}.xmp")
+        val sidecar = File(rawFile.parentFile, "${splitMediaExtension(rawFile.name).first}.xmp")
         if (storage.exists(sidecar)) return false
         return try {
             storage.writeNew(sidecar, XmpSidecar.build(point))

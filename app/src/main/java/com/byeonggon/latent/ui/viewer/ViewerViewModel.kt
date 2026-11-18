@@ -3,6 +3,7 @@ package com.byeonggon.latent.ui.viewer
 import android.app.Application
 import android.content.IntentSender
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import com.byeonggon.latent.data.SaveFailure
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
+import com.byeonggon.latent.data.db.isDngTiffName
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.HdrPictures
 import com.byeonggon.latent.enhance.PhotoEnhancer
@@ -259,17 +261,40 @@ class ViewerViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Renders [raw], a photo whose corrections are stored as settings, with them; without any, the file itself is what there is to show. */
     private suspend fun showCorrected(raw: MediaItemEntity?) {
-        val edit = PhotoEdit.fromJson(raw?.edit)
-        if (raw == null || edit == null) {
+        if (raw == null) {
             status.update { it.copy(rendered = null) }
             return
+        }
+        val storedEdit = PhotoEdit.fromJson(raw.edit)
+        val effectiveEdit = when {
+            storedEdit != null -> storedEdit
+            raw.kind == MediaKind.RAW && isDngTiffName(raw.fileName) -> {
+                val canPlatformDecode = withContext(Dispatchers.IO) {
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(raw.path, bounds)
+                    bounds.outWidth > 0 && bounds.outHeight > 0
+                }
+                if (canPlatformDecode) {
+                    status.update { it.copy(rendered = null) }
+                    return
+                }
+                PhotoEdit()
+            }
+            else -> {
+                status.update { it.copy(rendered = null) }
+                return
+            }
         }
         status.update { it.copy(busy = true) }
         val bitmap = try {
             withContext(Dispatchers.Default) {
                 renderLock.withLock {
                     // Moving on to another photo stops this one's decode, instead of waiting seconds for it to end.
-                    if (raw.kind == MediaKind.RAW) RawRenderer.preview(container.rawCache.read(File(raw.path)) { ensureActive() }, edit) else PhotoEnhancer.preview(File(raw.path), edit, PREVIEW_EDGE)
+                    if (raw.kind == MediaKind.RAW) {
+                        RawRenderer.preview(container.rawCache.read(File(raw.path)) { ensureActive() }, effectiveEdit)
+                    } else {
+                        PhotoEnhancer.preview(File(raw.path), effectiveEdit, PREVIEW_EDGE)
+                    }
                 }
             }
         } catch (e: IOException) {

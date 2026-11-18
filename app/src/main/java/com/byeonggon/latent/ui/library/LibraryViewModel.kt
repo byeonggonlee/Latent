@@ -110,6 +110,8 @@ data class LibraryUiState(
     val partners: Map<Long, Long> = emptyMap(),
     /** The listed JPEGs whose raw file, not listed beside them, has an edit: the pair's thumbnail says it is edited. */
     val partnerEdited: Set<Long> = emptySet(),
+    /** Stacked JPEGs that are themselves unedited while their hidden RAW partner is edited, mapped to that RAW partner for thumbnail rendering. */
+    val partnerThumbnails: Map<Long, MediaItemEntity> = emptyMap(),
     val days: List<LibraryDay> = emptyList(),
     val libraryIsEmpty: Boolean = false,
     /** The photos picked out to have the same thing done to all of them. */
@@ -203,9 +205,15 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             .groupBy { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
             .map { (date, dayItems) -> LibraryDay(date, dayItems) }
         val years = items.mapTo(sortedSetOf<Int>(reverseOrder())) { Instant.ofEpochMilli(it.capturedAt).atZone(zone).year }.toList()
-        val partnerEdited = items.filter { it.id in hidden && it.edit != null }.mapNotNullTo(HashSet()) { partners[it.id] }
+        val byId = items.associateBy { it.id }
+        val editedHiddenRaws = items.filter { it.id in hidden && it.edit != null }
+        val partnerEdited = editedHiddenRaws.mapNotNullTo(HashSet()) { partners[it.id] }
+        val partnerThumbnails = editedHiddenRaws.mapNotNull { raw ->
+            val jpeg = partners[raw.id]?.let(byId::get) ?: return@mapNotNull null
+            if (jpeg.edit == null) jpeg.id to raw else null
+        }.toMap()
         LibraryUiState(
-            loading = false, filter, leastRating, stacked, partners, partnerEdited, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags,
+            loading = false, filter, leastRating, stacked, partners, partnerEdited, partnerThumbnails, days, libraryIsEmpty = items.isEmpty(), source = source, flagFilter = flags,
             query = search, findOptions = FindOptions(years = years),
         )
     }.flowOn(Dispatchers.Default)
@@ -268,10 +276,16 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         // Photos of other apps are many and come in their own time, as the grid asks for them; only the newest are made ahead.
         val (library, phone) = mediaDao.all().filter { it.kind != MediaKind.VIDEO }.partition { it.origin == MediaOrigin.LIBRARY }
         val photos = (library + phone.sortedByDescending { it.capturedAt }.take(PHONE_THUMBNAILS_AHEAD)).sortedByDescending { it.capturedAt }
-        thumbnails.keepOnly((library + phone).map { thumbnails.fileFor(it.path, it.sizeBytes, it.edit.takeIf { _ -> it.photoKeptAsIs }) })
+        thumbnails.keepOnly((library + phone).map { thumbnails.fileFor(it.path, it.sizeBytes, it.edit) })
         for (photo in photos) {
             ensureActive()
-            thumbnails.of(File(photo.path), photo.sizeBytes, photo.edit.takeIf { photo.photoKeptAsIs })
+            thumbnails.of(
+                File(photo.path),
+                photo.sizeBytes,
+                photo.edit,
+                applyEdit = photo.editsAsSettings,
+                raw = photo.kind == MediaKind.RAW,
+            )
         }
     }
 

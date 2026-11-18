@@ -7,6 +7,7 @@ import android.media.MediaScannerConnection
 import android.os.Environment
 import com.byeonggon.latent.BuildConfig
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.splitMediaExtension
 import com.byeonggon.latent.enhance.PhotoFiles
 import java.io.File
 import java.io.FileOutputStream
@@ -66,7 +67,7 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
 
     /** A free file name next to [source], e.g. DSC0001_developed.jpg. */
     fun siblingFor(source: File, suffix: String, extension: String): File =
-        uniqueFile(source.parentFile ?: root, "${source.nameWithoutExtension}$suffix.$extension")
+        uniqueFile(source.parentFile ?: root, "${splitMediaExtension(source.name).first}$suffix.$extension")
 
     /**
      * Where the untouched original of an edited library file is kept: the same path under a hidden
@@ -270,8 +271,7 @@ class LibraryStorage(private val context: Context) : PhotoFiles {
     private fun uniqueFile(folder: File, fileName: String): File {
         val first = File(folder, fileName)
         if (!first.exists()) return first
-        val base = fileName.substringBeforeLast('.')
-        val extension = fileName.substringAfterLast('.', "")
+        val (base, extension) = splitMediaExtension(fileName)
         var index = 1
         while (true) {
             val name = if (extension.isEmpty()) "${base}_$index" else "${base}_$index.$extension"

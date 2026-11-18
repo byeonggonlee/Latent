@@ -89,7 +89,7 @@ class LibraryIndex(
             // Staging, kept originals and the trash live in folders whose names start with a dot.
             .onEnter { it == storage.root || !it.name.startsWith(".") }
             .filter { it.isFile && !it.name.startsWith(".") && it.absolutePath !in known }
-            .mapNotNull { file -> MediaKind.fromFileName(file.name)?.let { file to it } }
+            .mapNotNull { file -> MediaKind.fromFile(file)?.let { file to it } }
             // JPEGs first, so that their raw files can take their place from them.
             .sortedBy { (_, kind) -> kind != MediaKind.PHOTO }
             .toList()

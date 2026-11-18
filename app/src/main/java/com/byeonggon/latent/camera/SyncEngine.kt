@@ -9,12 +9,14 @@ import com.byeonggon.latent.data.db.AppDatabase
 import com.byeonggon.latent.data.db.GeoSource
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.data.db.isDngTiffName
 import com.byeonggon.latent.data.db.isHeifName
 import com.byeonggon.latent.data.db.MediaOrigin
 import com.byeonggon.latent.data.db.SyncRecordEntity
 import com.byeonggon.latent.data.db.SyncedFolderEntity
 import com.byeonggon.latent.location.Geotagger
 import com.byeonggon.latent.location.MediaMetadataReader
+import com.byeonggon.latent.raw.Dng
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -177,9 +179,11 @@ class SyncEngine(
                     cancelling = cancelRequested,
                 )
             }
+            // Plain TIFFs and damaged `.dng.tiff` files cannot be vetted over MTP before downloading; verify content once fetched.
+            val validDownload = downloaded && (!isDngTiffName(file.name) || Dng.isDng(part))
             // Copied over to be compared: a file the library holds already, without knowing where it came from, is
             // recorded as come from here, and not stored twice.
-            val inLibrary = if (downloaded) lookAlikes[file]?.firstOrNull { sameAsImported(part, it.file) } else null
+            val inLibrary = if (validDownload) lookAlikes[file]?.firstOrNull { sameAsImported(part, it.file) } else null
             if (inLibrary != null) {
                 part.delete()
                 claim(inLibrary.item, file, cameraId)
@@ -189,13 +193,13 @@ class SyncEngine(
                 continue
             }
             // Come in from elsewhere, it is not stored twice either.
-            if (downloaded && elsewhere[file].orEmpty().any { sameAsImported(part, it) }) {
+            if (validDownload && elsewhere[file].orEmpty().any { sameAsImported(part, it) }) {
                 part.delete()
                 seenElsewhere += file
                 doneBytes += file.sizeBytes
                 continue
             }
-            val stored = downloaded && try {
+            val stored = validDownload && try {
                 when (store(part, file, cameraId, maxGapMs, options)) {
                     GeoSource.TRACK -> geotagged++
                     GeoSource.NONE -> unplaced++

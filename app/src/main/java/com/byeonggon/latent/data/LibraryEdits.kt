@@ -9,6 +9,7 @@ import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaItemEntity
 import com.byeonggon.latent.data.db.MediaKind
 import com.byeonggon.latent.data.db.MediaOrigin
+import com.byeonggon.latent.data.db.splitMediaExtension
 import com.byeonggon.latent.enhance.CubeLut
 import com.byeonggon.latent.enhance.Filter
 import com.byeonggon.latent.enhance.Filters
@@ -185,28 +186,32 @@ class LibraryEdits(
     /** Puts [edit] into effect on [item], in place of any earlier edit. */
     @Throws(IOException::class)
     suspend fun apply(item: MediaItemEntity, edit: PhotoEdit) {
-        if (item.origin == MediaOrigin.PHONE || item.isHeif) {
-            // The photo is another app's, or one that cannot be written, and stays as it is; an edit that changes nothing is no edit.
-            mediaDao.setEdit(item.id, edit.takeIf { it.changesPicture }?.toJson())
-            return
-        }
-        if (item.kind == MediaKind.RAW) {
-            mediaDao.setEdit(item.id, edit.toJson())
-            return
-        }
         // One edit of a photo at a time, from the editor, a batch or the viewer: the second would keep the first's
-        // picture as the original.
+        // picture as the original, and checking existence under the moving lock avoids racing trash/folder moves.
         storage.moving.withLock {
             // The photo where it is now, read under the same lock as the trash moves files: an edit saved later (tried
             // again after a failure) may have been made before the photo went to the trash and came back under another
             // name, and the file at its old path may since be another photo's.
             val current = mediaDao.byId(item.id)?.takeIf { it.trashedAt == null }
                 ?: throw IOException("${item.fileName} is no longer in the library")
+            val photo = File(current.path)
+            if (!storage.exists(photo)) throw IOException("Cannot read ${photo.name}")
+            if (current.origin == MediaOrigin.PHONE || current.isHeif) {
+                // The photo is another app's, or one that cannot be written, and stays as it is; an edit that changes nothing is no edit.
+                mediaDao.setEdit(current.id, edit.takeIf { it.changesPicture }?.toJson())
+                return
+            }
+            if (current.kind == MediaKind.RAW) {
+                // Resetting an already-saved RAW back to PhotoEdit() clears its edited state; saving an untouched RAW
+                // the very first time records "{}" so it is rendered with the app's RAW look from then on.
+                val stored = if (current.edit != null && !edit.changesPicture && edit.lensCorrection) null else edit.toJson()
+                mediaDao.setEdit(current.id, stored)
+                return
+            }
             if (!edit.changesPicture) {
                 removeEdit(current)
                 return
             }
-            val photo = File(current.path)
             // The edit is made from the kept original, read by its path: one another installation kept becomes the app's.
             val original = storage.originalOf(photo)
             if (!storage.makeOwn(original) && storage.keepsOriginal(photo)) throw IOException("Cannot read the original of ${photo.name}")
@@ -215,8 +220,7 @@ class LibraryEdits(
             withContext(NonCancellable) {
                 PhotoEnhancer.saveEdited(photo, original, edit, storage)
                 storage.publish(photo)
-                mediaDao.setSize(current.id, photo.length())
-                mediaDao.setEdit(current.id, edit.toJson())
+                mediaDao.setSizeAndEdit(current.id, photo.length(), edit.toJson())
             }
         }
     }
@@ -230,7 +234,7 @@ class LibraryEdits(
         val source = File(item.path)
         // Next to the raw file if it is the library's; a raw file of another app is not written beside.
         val target = if (item.origin == MediaOrigin.PHONE) {
-            storage.targetFor(source.nameWithoutExtension + "_developed.jpg", item.capturedAt)
+            storage.targetFor("${splitMediaExtension(source.name).first}_developed.jpg", item.capturedAt)
         } else {
             storage.siblingFor(source, suffix = "_developed", extension = "jpg")
         }
@@ -312,7 +316,7 @@ class LibraryEdits(
                 if (leaveOutPlace) GpsTags.remove(it)
             }
         }
-        val name = source.nameWithoutExtension + ".jpg"
+        val name = "${splitMediaExtension(source.name).first}.jpg"
         // One share at a time: copies made for an earlier one are cleared away, unless this is one of several.
         val target = if (alongsideOthers) storage.sharedFile(name) else storage.shareFile(name)
         if (item.kind == MediaKind.RAW) {
@@ -365,7 +369,8 @@ class LibraryEdits(
             storage.keptOriginal(photo)?.let { original ->
                 PhotoEnhancer.restoreOriginal(photo, original, storage)
                 storage.publish(photo)
-                mediaDao.setSize(item.id, photo.length())
+                mediaDao.setSizeAndEdit(item.id, photo.length(), null)
+                return@withContext
             }
         }
         mediaDao.setEdit(item.id, null)
