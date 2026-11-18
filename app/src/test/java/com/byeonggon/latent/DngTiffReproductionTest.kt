@@ -368,7 +368,8 @@ class DngTiffReproductionTest {
 
             val editLabel = context.getString(R.string.edit)
             compose.waitUntil(timeoutMillis = 10_000) {
-                compose.onAllNodesWithText(editLabel).fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodesWithText(editLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(editLabel).assertIsEnabled() }.isSuccess
             }
             compose.onNodeWithText(editLabel).performClick()
 
@@ -384,13 +385,15 @@ class DngTiffReproductionTest {
             }
             compose.onNodeWithText(doneLabel).performClick()
 
-            compose.waitUntil(timeoutMillis = 10_000) {
-                container.editSaver.saving.value.isEmpty() && runBlocking { container.database.mediaDao().byId(id)?.edit != null }
-            }
-
             val shareLabel = context.getString(R.string.share)
+            val restoreLabel = context.getString(R.string.restore_original)
             compose.waitUntil(timeoutMillis = 10_000) {
-                compose.onAllNodesWithText(shareLabel).fetchSemanticsNodes().isNotEmpty()
+                container.editSaver.saving.value.isEmpty() &&
+                    runBlocking { container.database.mediaDao().byId(id)?.edit != null } &&
+                    compose.onAllNodesWithText(restoreLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(restoreLabel).assertIsEnabled() }.isSuccess &&
+                    compose.onAllNodesWithText(shareLabel).fetchSemanticsNodes().isNotEmpty() &&
+                    runCatching { compose.onNodeWithText(shareLabel).assertIsEnabled() }.isSuccess
             }
             compose.onNodeWithText(shareLabel).performClick()
             val shareJpegLabel = context.getString(R.string.share_jpeg_1080)
