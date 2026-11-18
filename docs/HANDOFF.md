@@ -150,6 +150,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
 | Claude Code (computer) | 0.2.0 item 1: auto colour; for a raw, start from the camera's as-shot white balance and move only a little; gray-edge and white-patch measured against gray-world on the same photos, a tungsten room included | [PR #56](https://github.com/byeonggonlee/Latent/pull/56), `claude/auto-colour` | `enhance/AutoSettings.kt`, a white estimate beside it, the editor's Auto, their tests, an evaluation note under `docs/`, this board | 2026-10-30 |
+| Antigravity (Gemini 4 Hydrogen) | One-off owner-authorized bug fixes (without changing general governance): (1) recognize valid `.dng.tiff`/`.DNG.TIFF` files without renaming while rejecting plain/damaged TIFFs; (2) refresh library thumbnails after edit/reset/continuous edits across RAW, JPEG, and stacked RAW+JPEG pairs without breaking failure state or clearing all caches | `agy/dng-tiff-and-thumbnail-refresh` | `raw/Dng.kt`, `data/db/Entities.kt`, `data/db/AppDatabase.kt`, `data/PhoneLibrary.kt`, `data/LibraryIndex.kt`, `data/LibraryStorage.kt`, `data/LibraryEdits.kt`, `data/Shot.kt`, `data/Thumbnails.kt`, `camera/SyncEngine.kt`, `LatentApp.kt`, `ui/common/Common.kt`, `ui/common/ThumbnailFetcher.kt`, `ui/library/LibraryViewModel.kt`, `ui/library/LibraryScreen.kt`, `ui/viewer/ViewerScreen.kt`, `ui/compare/CompareScreen.kt`, `docs/HANDOFF.md`, tests | 2026-11-18 |
 
 ## For Codex
 
