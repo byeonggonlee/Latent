@@ -41,6 +41,27 @@ class GrantedFolder(private val context: Context, private val root: File) {
         false
     }
 
+    /** An immediate child of a granted directory; its type comes from the provider, not file-path access. */
+    data class Entry(val file: File, val isDirectory: Boolean)
+
+    /** Lists a directory left by another installation, or null if the provider cannot reach it. */
+    fun children(directory: File): List<Entry>? = try {
+        val tree = grantedTree() ?: return null
+        val id = documentIdOf(directory) ?: return null
+        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(tree, id)
+        resolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE), null, null)?.use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(0) ?: continue
+                    if (name.isEmpty() || name == "." || name == ".." || '/' in name || '\\' in name) continue
+                    add(Entry(File(directory, name), cursor.getString(1) == DocumentsContract.Document.MIME_TYPE_DIR))
+                }
+            }
+        }
+    } catch (_: Exception) {
+        null
+    }
+
     /** When [file] was last changed, in milliseconds since 1970, or 0 when that cannot be told. */
     fun lastModified(file: File): Long = try {
         val uri = uriOf(file) ?: return 0

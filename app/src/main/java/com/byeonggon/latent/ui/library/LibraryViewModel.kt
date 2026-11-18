@@ -261,6 +261,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             if (added > 0) activity.update { it.copy(message = plural(R.plurals.library_adopted, added)) }
             container.refreshPhoneLibrary()
             container.exifIndex.run(canReadPhoneFiles = LibraryStorage.canReadMedia(getApplication()))
+            trash.rediscover()
             trash.emptyExpired(keptDays = container.settings.settings.first().trashKeptDays)
             makeThumbnails()
         }

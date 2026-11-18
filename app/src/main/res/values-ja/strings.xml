@@ -427,7 +427,7 @@
     <string name="crop_area">切り抜き範囲</string>
     <string name="histogram">ヒストグラム</string>
     <plurals name="trash_explained">
-        <item quantity="other">写真は %d 日後に完全に削除されます。写真をタップして選び、元に戻すか削除してください。</item>
+        <item quantity="other">写真は %d 日後に完全に削除されます。写真をタップして選び、元に戻すか削除してください。再インストール後に見つかった写真は、自分で削除するまで保存されます。</item>
     </plurals>
     <plurals name="timeline_added">
         <item quantity="other">%2$d 件の位置情報のうち新しい %1$d 件を追加しました(%3$s)。</item>

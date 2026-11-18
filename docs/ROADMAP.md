@@ -25,7 +25,7 @@ Claude Code (items 2, 9 and 10 are in Claude Code's area), and Claude Code's aut
 | 7 | Empty states, the map's off card and button hierarchy (§8.2, §8.11, §8.14) checked screen by screen | Claude Code | S | – |
 | 8 | Done: find by a range of dates picked on a calendar. Shutter speed and aperture need new columns in the Exif index (a Room migration, so a review) and wait | Claude Code | S | – |
 | 9 | Share at a long side typed in, beside the fixed sizes | Codex | S | Claude Code |
-| 10 | The trash after a reinstall: files left in `DCIM/Latent/.trash` shown again, so they can be restored or emptied | Codex | S–M | Claude Code |
+| 10 | Implemented in PR #58, Opus LGTM; CI/merge pending: rediscover intact trash bundles after reinstall; recovered entries do not expire, restore into capture-date folders, and retain originals/XMP | Codex | S–M | Claude Code |
 | 11 | Done: after an import, "N photos without a place" with a way to the Location screen (UX guide §10) | Claude Code | S | – |
 | 12 | Done: EOS 7D full-resolution 14-bit Canon CR2 (PR #51); other bodies and sRAW/mRAW development unsupported, CR3 waits for 0.3.0 | Codex | M | Claude Code |
 | 13 | Store: English screenshots, the new short descriptions, the closed test | Claude Code, owner | S | – |
@@ -203,8 +203,7 @@ Each is small or medium, works offline, and needs no new permission.
 
 - ~~**Backup and restore**~~ of what lives only in the database, into one file the person keeps. *Done 2026-10-20, to be
   tried on the phones:* the way across a reinstall, a new phone, the release key and the package name
-  ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)). Not done: the trash (its files stay in `DCIM/Latent/.trash`, unseen after
-  a reinstall), a backup made by itself now and then into a folder the person chose, a file with a password.
+  ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)). Trash rediscovery is implemented in PR #58 (Opus LGTM; CI/merge pending); it cannot reconstruct lost database-only edits or the original restore path. Not done: a backup made by itself now and then into a folder the person chose, a file with a password.
 
 ## How the work is split
 
