@@ -89,6 +89,7 @@ you start it, and log it there when it is done.
 
 ### Publishing PR reviews
 
+- Rate findings by [`docs/REVIEW_GUIDE.md`](docs/REVIEW_GUIDE.md) (P0 to P3 and nits), the same for every reviewer.
 - When the owner asks for a PR review, publish the completed findings and conclusion on that PR as part of the
   request, then link the posted review in the chat. No separate publication confirmation is needed unless the
   owner explicitly asks for a private or chat-only review.
