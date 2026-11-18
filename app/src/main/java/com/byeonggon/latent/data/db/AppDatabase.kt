@@ -82,6 +82,9 @@ interface MediaDao {
     @Query("UPDATE media_items SET edit = :edit WHERE id = :id")
     suspend fun setEdit(id: Long, edit: String?)
 
+    @Query("UPDATE media_items SET sizeBytes = :sizeBytes, edit = :edit WHERE id = :id")
+    suspend fun setSizeAndEdit(id: Long, sizeBytes: Long, edit: String?)
+
     @Query("UPDATE media_items SET rating = :rating WHERE id = :id")
     suspend fun setRating(id: Long, rating: Int)
 

@@ -2,6 +2,7 @@ package com.byeonggon.latent.data
 
 import com.byeonggon.latent.data.db.MediaDao
 import com.byeonggon.latent.data.db.MediaItemEntity
+import com.byeonggon.latent.data.db.splitMediaExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.withLock
@@ -81,7 +82,7 @@ class Trash(private val storage: LibraryStorage, private val mediaDao: MediaDao)
         deleteForever(mediaDao.trashedBefore(now - TimeUnit.DAYS.toMillis(keptDays.toLong())))
     }
 
-    private fun sidecarOf(file: File) = File(file.parentFile, "${file.nameWithoutExtension}.xmp")
+    private fun sidecarOf(file: File) = File(file.parentFile, "${splitMediaExtension(file.name).first}.xmp")
 
     companion object {
         /** How long, in days, photos stay unless the settings say otherwise. */

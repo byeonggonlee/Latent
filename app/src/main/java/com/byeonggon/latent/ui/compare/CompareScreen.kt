@@ -112,8 +112,12 @@ fun CompareScreen(ids: List<Long>, partners: Map<Long, Long>, onClose: () -> Uni
                         Box(Modifier.weight(1f).fillMaxHeight()) {
                             ZoomableBox(resetKey = ids, state = zoom) {
                                 AsyncImage(
-                                    // A raw file cannot be drawn as it is: its thumbnail stands in.
-                                    model = if (item.kind == MediaKind.PHOTO) rememberMediaModel(item) else rememberThumbnailModel(item),
+                                    // Raw files and non-destructively edited photos are rendered through their thumbnail pipeline.
+                                    model = if (item.kind == MediaKind.PHOTO && !(item.editsAsSettings && item.edit != null)) {
+                                        rememberMediaModel(item)
+                                    } else {
+                                        rememberThumbnailModel(item)
+                                    },
                                     contentDescription = item.fileName,
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize(),

@@ -102,10 +102,10 @@ val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")
 @Composable
 fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
     val context = LocalContext.current
-    return remember(item.path, item.sizeBytes) {
+    return remember(item.path, item.sizeBytes, item.edit) {
         ImageRequest.Builder(context)
             .data(File(item.path))
-            .memoryCacheKey("${item.path}#${item.sizeBytes}")
+            .memoryCacheKey("${item.path}#${item.sizeBytes}${item.edit?.let { "#$it" } ?: ""}")
             .build()
     }
 }
@@ -117,11 +117,17 @@ fun rememberMediaModel(item: MediaItemEntity): ImageRequest {
 @Composable
 fun rememberThumbnailModel(item: MediaItemEntity): ImageRequest {
     val context = LocalContext.current
-    // A photo that stays as it is (another app\'s, a HEIF one); what was done to it shows in its thumbnail all the same.
-    val edit = item.edit.takeIf { item.photoKeptAsIs }
-    return remember(item.path, item.sizeBytes, item.kind, edit) {
+    val edit = item.edit
+    val applyEdit = item.editsAsSettings
+    val raw = item.kind == MediaKind.RAW
+    return remember(item.path, item.sizeBytes, item.kind, edit, applyEdit) {
+        val data = if (item.kind == MediaKind.VIDEO) {
+            File(item.path)
+        } else {
+            Thumbnail(item.path, item.sizeBytes, edit, applyEdit = applyEdit, raw = raw)
+        }
         ImageRequest.Builder(context)
-            .data(if (item.kind == MediaKind.VIDEO) File(item.path) else Thumbnail(item.path, item.sizeBytes, edit))
+            .data(data)
             .memoryCacheKey("thumbnail:${item.path}#${item.sizeBytes}${edit?.let { "#$it" } ?: ""}")
             .build()
     }

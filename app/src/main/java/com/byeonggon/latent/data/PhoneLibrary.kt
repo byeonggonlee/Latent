@@ -101,12 +101,13 @@ class PhoneLibrary(private val context: Context, private val database: AppDataba
             MediaStore.Files.FileColumns.MEDIA_TYPE,
         )
         val types = "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO}"
-        resolver.query(collection, projection, "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN ($types)", null, null)?.use { cursor ->
+        val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN ($types) OR LOWER(${MediaStore.MediaColumns.DISPLAY_NAME}) LIKE '%.dng.tiff'"
+        resolver.query(collection, projection, selection, null, null)?.use { cursor ->
             while (cursor.moveToNext()) {
                 val path = cursor.getString(0) ?: continue
                 val folder = groupOf(cursor.getString(1) ?: continue)
                 val name = cursor.getString(2) ?: continue
-                val kind = MediaKind.fromFileName(name) ?: continue
+                val kind = MediaKind.fromFile(File(path)) ?: continue
                 if (LIBRARY_FOLDERS.any(folder::startsWith)) continue
                 result += Row(path, folder, name, kind, cursor.getLong(3), cursor.getLong(4))
             }

@@ -79,7 +79,7 @@ class AppContainer(private val context: Context) {
     val usb = UsbCameraConnector(context)
     val geotagger = Geotagger(database.locationDao(), database.mediaDao(), storage)
     val rawCache = RawCache()
-    val thumbnails = Thumbnails(context)
+    val thumbnails = Thumbnails(context, rawCache)
     val libraryEdits = LibraryEdits(
         storage, database.mediaDao(), database.filterDao(), geotagger, rawCache, database.lutDao(), database.editVersionDao(),
         exportOptions = { settings.settings.first().exportOptions() },

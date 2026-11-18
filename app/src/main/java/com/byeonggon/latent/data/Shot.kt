@@ -1,5 +1,6 @@
 package com.byeonggon.latent.data
 
+import com.byeonggon.latent.data.db.splitMediaExtension
 import java.io.File
 
 /**
@@ -11,7 +12,7 @@ import java.io.File
 internal fun shotOf(file: File): String {
     val name = file.name.lowercase()
     val stem = PIXEL_RAW_PART.find(name)?.takeIf { it.range.first > 0 }?.let { name.substring(0, it.range.first) }
-        ?: name.substringBeforeLast('.')
+        ?: splitMediaExtension(name).first
     return File(file.parentFile, stem).path
 }
 

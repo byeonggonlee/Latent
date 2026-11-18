@@ -5,6 +5,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.byeonggon.latent.raw.Dng
+import java.io.File
 
 enum class MediaKind {
     PHOTO,
@@ -12,15 +14,47 @@ enum class MediaKind {
     VIDEO;
 
     companion object {
-        /** Returns null for files the library does not manage (camera sidecars, thumbnails, ...). */
-        fun fromFileName(fileName: String): MediaKind? =
-            when (fileName.substringAfterLast('.', "").lowercase()) {
+        /** Returns null for files the library does not manage (camera sidecars, thumbnails, plain TIFFs, ...). */
+        fun fromFileName(fileName: String): MediaKind? {
+            if (isDngTiffName(fileName)) return RAW
+            return when (fileName.substringAfterLast('.', "").lowercase()) {
                 "jpg", "jpeg", "heic", "heif", "hif" -> PHOTO
                 "arw", "dng", "cr2" -> RAW
                 "mp4", "mov", "mts", "m2ts" -> VIDEO
                 else -> null
             }
+        }
+
+        /**
+         * Classifies an existing [file] on disk. Compound `.dng.tiff` files are checked structurally
+         * with [Dng.isDng] so plain or damaged TIFFs are never mistaken for valid DNGs.
+         */
+        fun fromFile(file: File): MediaKind? {
+            val kind = fromFileName(file.name) ?: return null
+            if (isDngTiffName(file.name) && !Dng.isDng(file)) return null
+            return kind
+        }
     }
+}
+
+private const val DNG_TIFF_SUFFIX = ".dng.tiff"
+
+/** Whether [fileName] ends in the compound `.dng.tiff` extension (case-insensitive) with a non-empty stem. */
+fun isDngTiffName(fileName: String): Boolean =
+    fileName.length > DNG_TIFF_SUFFIX.length && fileName.lowercase().endsWith(DNG_TIFF_SUFFIX)
+
+/** Whether [fileName] names a DNG raw file (`.dng` or `.dng.tiff`). */
+fun isDngName(fileName: String): Boolean =
+    fileName.substringAfterLast('.', "").lowercase() == "dng" || isDngTiffName(fileName)
+
+/** Splits [fileName] into `(stem, extensionWithoutDot)`, keeping `.dng.tiff` as one extension. */
+fun splitMediaExtension(fileName: String): Pair<String, String> {
+    if (isDngTiffName(fileName)) {
+        val cut = fileName.length - DNG_TIFF_SUFFIX.length
+        return fileName.substring(0, cut) to fileName.substring(cut + 1)
+    }
+    val dot = fileName.lastIndexOf('.')
+    return if (dot < 0) fileName to "" else fileName.substring(0, dot) to fileName.substring(dot + 1)
 }
 
 /** The extensions of HEIF pictures. */

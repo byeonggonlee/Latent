@@ -6,9 +6,19 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
+import com.byeonggon.latent.data.db.MediaKind
+import com.byeonggon.latent.enhance.Developed
+import com.byeonggon.latent.enhance.Healing
 import com.byeonggon.latent.enhance.PhotoEdit
 import com.byeonggon.latent.enhance.PhotoEnhancer
+import com.byeonggon.latent.enhance.framedAs
+import com.byeonggon.latent.enhance.renderedBitmap
+import com.byeonggon.latent.raw.RawCache
+import com.byeonggon.latent.raw.RawRenderer
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -23,7 +33,10 @@ import kotlin.math.min
  * wait; a stored thumbnail takes a few milliseconds. A camera JPEG's own preview makes the thumbnail
  * almost as quickly; any other photo is decoded at a fraction of its size, once.
  */
-class Thumbnails(context: Context) {
+class Thumbnails(
+    context: Context,
+    private val rawCache: RawCache = RawCache(),
+) {
     private val folder = File(context.cacheDir, "thumbnails")
 
     // Thumbnails are made on one thread of low priority, so that making them never takes more than a
@@ -38,25 +51,44 @@ class Thumbnails(context: Context) {
 
     /**
      * Where the thumbnail of the photo at [path] goes; a photo replaced by an edit changes size, and so
-     * name. A photo that stays as it is, with its [edit] kept as settings, has the settings in its name.
+     * name. Including [edit] in the cache key also prevents stale thumbnails when an edit produces an
+     * identical file size or is stored solely as settings.
      */
     fun fileFor(path: String, sizeBytes: Long, edit: String? = null): File =
         File(folder, UUID.nameUUIDFromBytes("$path#$sizeBytes${edit?.let { "#$it" } ?: ""}".toByteArray()).toString() + ".jpg")
 
     /**
      * The thumbnail of [photo], made first if there is none yet; null if the photo cannot be decoded.
-     * With an [edit] it shows the photo as that makes it look.
+     * When [applyEdit] is true and [edit] is non-null, renders with the edit settings applied and
+     * never falls back to caching an unedited thumbnail under the edited key.
      */
-    suspend fun of(photo: File, sizeBytes: Long, edit: String? = null): File? {
+    suspend fun of(
+        photo: File,
+        sizeBytes: Long,
+        edit: String? = null,
+        applyEdit: Boolean = edit != null,
+        raw: Boolean = false,
+    ): File? {
         val thumbnail = fileFor(photo.path, sizeBytes, edit)
         if (thumbnail.exists()) return thumbnail
-        return withContext(maker) { make(photo, thumbnail, PhotoEdit.fromJson(edit)) }
+        val parsed = if (applyEdit) PhotoEdit.fromJson(edit) else null
+        if (applyEdit && edit != null && parsed == null) return null
+        val job = currentCoroutineContext()[Job]
+        val checkCancelled: () -> Unit = { job?.ensureActive() }
+        return withContext(maker) { make(photo, thumbnail, parsed, raw, checkCancelled) }
     }
 
-    private fun make(photo: File, thumbnail: File, edit: PhotoEdit?): File? {
+    private fun make(
+        photo: File,
+        thumbnail: File,
+        edit: PhotoEdit?,
+        raw: Boolean,
+        checkCancelled: () -> Unit,
+    ): File? {
         // Another request for the same photo may have made it while this one waited its turn.
         if (thumbnail.exists()) return thumbnail
-        val bitmap = (if (edit != null) edited(photo, edit) else null) ?: decode(photo) ?: return null
+        val bitmap = if (edit != null) edited(photo, edit, raw, checkCancelled) else decode(photo, raw, checkCancelled)
+        if (bitmap == null) return null
         try {
             folder.mkdirs()
             // Made under a name of its own: the grid may ask for the same photo twice at once.
@@ -76,8 +108,12 @@ class Thumbnails(context: Context) {
     }
 
     /** The photo edited as [edit] says, small; null if that cannot be drawn. */
-    private fun edited(photo: File, edit: PhotoEdit): Bitmap? = try {
-        PhotoEnhancer.preview(photo, edit, SHORT_SIDE * 2)
+    private fun edited(photo: File, edit: PhotoEdit, raw: Boolean, checkCancelled: () -> Unit): Bitmap? = try {
+        if (raw) {
+            renderRaw(photo, edit, checkCancelled)
+        } else {
+            PhotoEnhancer.preview(photo, edit, SHORT_SIDE * 2)
+        }
     } catch (e: IOException) {
         null
     } catch (e: OutOfMemoryError) {
@@ -90,17 +126,50 @@ class Thumbnails(context: Context) {
         folder.listFiles()?.forEach { if (it.name !in names) it.delete() }
     }
 
-    private fun decode(photo: File): Bitmap? {
+    private fun decode(photo: File, raw: Boolean, checkCancelled: () -> Unit): Bitmap? {
         val preview = MpfPreview.of(photo)
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, bounds) else BitmapFactory.decodeFile(photo.path, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val boundsOk = try {
+            if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, bounds) else BitmapFactory.decodeFile(photo.path, bounds)
+            bounds.outWidth > 0 && bounds.outHeight > 0
+        } catch (_: RuntimeException) {
+            false
+        }
+        if (!boundsOk) {
+            return if (raw || MediaKind.fromFile(photo) == MediaKind.RAW) {
+                renderRaw(photo, PhotoEdit(), checkCancelled)
+            } else {
+                null
+            }
+        }
         var sample = 1
         while (min(bounds.outWidth, bounds.outHeight) / (sample * 2) >= SHORT_SIDE) sample *= 2
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        val decoded = (if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, options) else BitmapFactory.decodeFile(photo.path, options))
-            ?: return null
+        val decoded = try {
+            if (preview != null) BitmapFactory.decodeByteArray(preview, 0, preview.size, options) else BitmapFactory.decodeFile(photo.path, options)
+        } catch (_: RuntimeException) {
+            null
+        } ?: return if (raw || MediaKind.fromFile(photo) == MediaKind.RAW) renderRaw(photo, PhotoEdit(), checkCancelled) else null
         return upright(shrunk(decoded), photo)
+    }
+
+    private fun renderRaw(photo: File, edit: PhotoEdit, checkCancelled: () -> Unit): Bitmap? = try {
+        val image = rawCache.read(photo, checkCancelled)
+        val cells = if (
+            min(image.cropWidth, image.cropHeight) >= SHORT_SIDE * 4 &&
+            min(edit.framing.width, edit.framing.height) > 0.5f
+        ) 2 else 1
+        val rendered = renderedBitmap(edit, scale = 1f / (2 * cells)) {
+            RawRenderer.proxy(image, cells = cells, edit.lensCorrection)
+                .also { Healing.heal(it, edit.spots) }
+                .framedAs(edit.framing)
+                .let(::Developed)
+        }
+        shrunk(rendered)
+    } catch (e: IOException) {
+        null
+    } catch (e: OutOfMemoryError) {
+        null
     }
 
     /** No larger than needed for its short side to fill a cell. */
