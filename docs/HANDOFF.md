@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Owner-requested delta re-review of PR #60, `e2371f9..f03ac2f`: verify authoring exception and changed reviewer routing. | [PR #61](https://github.com/noctilane/Latent/pull/61), `codex/pr60-doc-review` | `docs/HANDOFF.md` (review record only) | 2026-11-18 |
 
 ## For Codex
 
