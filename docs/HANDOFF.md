@@ -149,13 +149,13 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Antigravity (Gemini 4 Hydrogen) | Fix intermittent failures in `DngTiffReproductionTest` on CI (pending Codex review) | `agy/dng-tiff-test-isolation` | `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`, `docs/HANDOFF.md` | 2026-11-18 |
+| Antigravity (Gemini 4 Hydrogen) | Fix intermittent failures in `DngTiffReproductionTest` on CI (pending Codex review) | [PR #62](https://github.com/noctilane/Latent/pull/62), `agy/dng-tiff-test-isolation` | `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`, `docs/HANDOFF.md` | 2026-11-18 |
 
 ## For Codex
 
-### Review PR: Isolate `DngTiffReproductionTest` from background `MainActivity` refresh (2026-11-18)
+### Review PR #62: Isolate `DngTiffReproductionTest` from background `MainActivity` refresh (2026-11-18)
 
-Branch: `agy/dng-tiff-test-isolation` (from `origin/main` `c412324`), authored by **Gemini 4 Hydrogen** (Antigravity; reasoning effort `unverified`).
+PR: [PR #62](https://github.com/noctilane/Latent/pull/62), branch `agy/dng-tiff-test-isolation` (from `origin/main` `c412324`), authored by **Gemini 4 Hydrogen** (Antigravity; reasoning effort `unverified`).
 - **Cause**: `DngTiffReproductionTest` used class-level `createAndroidComposeRule<MainActivity>()`, launching `MainActivity` and `LibraryViewModel.init { refresh() }` (`Dispatchers.IO` -> `adoptUnknownFiles()`, `refreshPhoneLibrary()`, `exifIndex.run()`) before every test method, even the 7 non-UI tests. On CI (`c412324` run `44307741492`, `cea8628` run `44307938248`, `f03ac2f` run `44312372240`), background `LibraryViewModel.refresh()` raced with tests writing `ADOPT_OK.dng.tiff` or `OVERSTATED.dng` / `OVERSTATED.dng.tiff` into `container.storage.root` before `libraryIndex.adoptUnknownFiles()` (`expected:<1> but was:<0>`) or `mediaDao().all()` (`expected:<[PHONE_OVER.dng.tiff]> but was:<[OVERSTATED.dng.tiff, OVERSTATED.dng, PHONE_OVER.dng.tiff]>`). It also did not reset the process-wide `preferencesDataStore("settings")` singleton or clean `DCIM/Camera` / `database` / `rawCache` / `cacheDir` subdirs uniformly.
 - **Fix**: Test-only change in `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`: replaced `createAndroidComposeRule<MainActivity>()` with `createEmptyComposeRule()`, launched `ActivityScenario.launch(MainActivity::class.java)` only inside `decodesReadsMetadataViewsEditsAndSharesDngTiffIdenticallyToDng` after DB/EXIF/export setup finishes, and reset `AppSettings()`, `rawCache`, `database`, `DCIM`, `storage.root`, and cache subdirs in `environment`. Requesting cross-family review from **Codex** (Claude Opus 5.5 if Codex cannot).
 
