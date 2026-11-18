@@ -147,7 +147,16 @@ class Trash(
                     try {
                         // A concurrent outside writer must not lose its file to rollback either.
                         if (storage.exists(source)) throw IOException("Cannot roll back ${source.name}: its place is occupied")
-                        storage.move(destination, source)
+                        if (source.name == destination.name) {
+                            storage.move(destination, source)
+                        } else {
+                            // SAF renames before moving. Rename only after returning to the bundle,
+                            // where the old name is free, rather than beside a colliding library file.
+                            val returned = File(source.parentFile, destination.name)
+                            if (storage.exists(returned)) throw IOException("Cannot roll back ${source.name}: its temporary place is occupied")
+                            storage.move(destination, returned)
+                            storage.move(returned, source)
+                        }
                     } catch (rollbackFailure: Exception) {
                         failure.addSuppressed(rollbackFailure)
                     }

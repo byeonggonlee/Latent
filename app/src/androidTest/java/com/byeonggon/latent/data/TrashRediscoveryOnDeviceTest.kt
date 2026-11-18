@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +22,59 @@ import java.util.concurrent.TimeUnit
 /** Uses a scratch database and uniquely named files only; no uninstall or app database reset. */
 @RunWith(AndroidJUnit4::class)
 class TrashRediscoveryOnDeviceTest {
+    @Test
+    fun failedRestoreReturnsARenamedProviderSidecarToItsBundle() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val storage = LibraryStorage(context)
+        assertTrue("Grant media and library-folder access to Latent Debug first", storage.isAvailable())
+        val dao = database.mediaDao()
+        val trash = Trash(storage, dao)
+        val token = "TRASH_TEST_${UUID.randomUUID()}"
+        val bundle = File(storage.trashRoot, System.currentTimeMillis().toString())
+        val destinationFolder = File(storage.root, token)
+        val originalFolder = File(storage.root, ".originals/$token")
+        var madeBundle = false
+        try {
+            for (entry in storage.children(storage.trashRoot).orEmpty().filter { it.isDirectory }) {
+                dao.insert(MediaItemEntity(path = File(entry.file, ".known-to-test").path, fileName = ".known-to-test", kind = MediaKind.PHOTO, sizeBytes = 0, capturedAt = 1, importedAt = 1))
+            }
+            assertTrue(bundle.mkdirs())
+            madeBundle = true
+            val photo = File(bundle, "$token.ARW").apply { writeText("raw bytes") }
+            val sidecar = File(bundle, "$token.xmp")
+            storage.writeNew(sidecar, "recovered location")
+            val original = File(bundle, "original-$token.ARW").apply { writeText("original bytes") }
+            assertEquals(1, trash.rediscover())
+            val recovered = trash.items.first().single()
+            val target = File(destinationFolder, "$token.ARW")
+            dao.setPlace(recovered.id, recovered.path, recovered.trashedAt, target.path)
+            val item = dao.byId(recovered.id)!!
+            assertTrue(destinationFolder.mkdirs())
+            val occupied = File(destinationFolder, "$token.xmp")
+            storage.writeNew(occupied, "other location")
+            // A unique regular file blocks just this test's kept-original directory.
+            originalFolder.parentFile!!.mkdirs()
+            storage.writeNew(originalFolder, "blocked directory")
+
+            assertThrows(java.io.IOException::class.java) { runBlocking { trash.restore(listOf(item)) } }
+
+            assertEquals(item, dao.byId(item.id))
+            assertEquals("raw bytes", photo.readText())
+            assertEquals("original bytes", original.readText())
+            assertTrue("The provider-only sidecar must return with its photo", storage.exists(sidecar))
+            assertEquals("recovered location", storage.folder.openInput(sidecar).bufferedReader().use { it.readText() })
+            assertEquals("other location", storage.folder.openInput(occupied).bufferedReader().use { it.readText() })
+            assertFalse(storage.exists(File(destinationFolder, "${token}_1.ARW")))
+            assertFalse(storage.exists(File(destinationFolder, "${token}_1.xmp")))
+        } finally {
+            if (madeBundle) storage.delete(bundle)
+            storage.delete(destinationFolder)
+            storage.delete(originalFolder)
+            database.close()
+        }
+    }
+
     @Test
     fun rediscoversRestoresAndEmptiesBundlesThroughRealStorage() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
