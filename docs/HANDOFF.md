@@ -31,8 +31,8 @@ the camera look; it does not approve new phone memory budgets, module extraction
 Decided by the owner since (2026-10-21 and 2026-10-22, in [`architecture/decisions.md`](architecture/decisions.md)):
 the precision goal is the camera's look first, colorimetry later (§11, question 3); reviews are for important changes
 only, which `AGENTS.md` lists; Claude Code and Codex author the code in their areas, while Antigravity is dedicated to
-code review, multi-model orchestration (`Gemini 4 Hydrogen`, `Gemini 4 Argon`, `Claude Opus 5.5`; Gemini 3.8 Flash
-retired 2026-11-18) and documentation, and authors code only through Gemini 4 Hydrogen on items the owner assigns
+code review, multi-model orchestration (`Gemini 4 Hydrogen`, `Gemini 4 Neon`, `Gemini 4 Argon`, `Claude Opus 5.5`; Gemini 3.8
+Flash retired 2026-11-18) and documentation, and authors code only through Gemini 4 Hydrogen on items the owner assigns
 (see
 [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md)). The other
 questions of §11 are still open.
@@ -44,7 +44,7 @@ questions of §11 are still open.
 | **Image decoders**: TIFF structure, Sony ARW, DNG, lossless JPEG, JPEG XL, the MPF preview | **Codex** (authoring); **Claude Code** & **Antigravity** (review) | `app/src/main/java/com/byeonggon/latent/raw/` `Tiff.kt`, `SonyArw.kt` (the reader; see the seam below), `Dng.kt`, `LosslessJpeg.kt`, `JpegXl.kt`; `third_party/jxlatte/` (with `latent.patch` and its README); `data/MpfPreview.kt`; the tests in `app/src/test/java/com/byeonggon/latent/raw/` except `RawRendererTest.kt`, the fixtures in `app/src/test/resources/raw/`, `app/src/androidTest/.../raw/RawOnDeviceTest.kt` |
 | **The seam** between decoders and the rest: shared, claim it before changing it, and change it through a reviewed pull request | **Claude Code** or **Codex** (authoring); peer agent & **Antigravity** (review) | `ArwImage` and `LensProfile` (in `raw/SonyArw.kt`), `RawDeveloper.kt` (demosaic), `LensCorrection.kt`, `RawRenderer.kt`, `RawCache.kt` |
 | **Everything else**: editor, renderers and shaders, library, backup, sync, location, map, UI, CI, docs | **Claude Code** (authoring); **Codex** & **Antigravity** (review) | the rest, unless a row under *In progress* says otherwise |
-| **Code review, model orchestration & documentation**: PR reviews across all areas, model routing (`Gemini 4 Hydrogen`, `Gemini 4 Argon`, `Claude Opus 5.5`), and governance/assessment docs | **Antigravity** (authors code only through Gemini 4 Hydrogen, on owner-assigned items) | [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md), its own files under `docs/`, `docs/HANDOFF.md`, `docs/TODO.md`, and agent governance files (`AGENTS.md`, `GEMINI.md`); no source, tests, schemas, build files or CI, except what Gemini 4 Hydrogen writes on an owner-assigned item, in the area that item names |
+| **Code review, model orchestration & documentation**: PR reviews across all areas, model routing (`Gemini 4 Hydrogen`, `Gemini 4 Neon`, `Gemini 4 Argon`, `Claude Opus 5.5`), and governance/assessment docs | **Antigravity** (authors code only through Gemini 4 Hydrogen, on owner-assigned items) | [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md), its own files under `docs/`, `docs/HANDOFF.md`, `docs/TODO.md`, and agent governance files (`AGENTS.md`, `GEMINI.md`); no source, tests, schemas, build files or CI, except what Gemini 4 Hydrogen writes on an owner-assigned item, in the area that item names |
 
 - The decoders' contract with the app is what they return: `SonyArw.read` and `Dng.read` give an `ArwImage`, which
   `RawRenderer.read` hands to `RawCache`, the viewer and the editor. Whoever changes a field of `ArwImage` changes
@@ -80,7 +80,7 @@ questions of §11 are still open.
   own, or compile a Kotlin file against stubs, before a pull request.
 - **Codex**: see its response below.
 - **Antigravity** runs on the owner's computer in its own git worktrees on `agy/<topic>` branches, with `gh` CLI
-  authenticated to GitHub. It hosts **Gemini 4 Hydrogen**, **Gemini 4 Argon**, and **Claude Opus 5.5** (Gemini 3.8 Flash
+  authenticated to GitHub. It hosts **Gemini 4 Hydrogen**, **Gemini 4 Neon**, **Gemini 4 Argon**, and **Claude Opus 5.5** (Gemini 3.8 Flash
   retired 2026-11-18), and is dedicated to code review, multi-model orchestration, and documentation; only Gemini 4
   Hydrogen writes source code or tests, on items the owner assigns. See
   [`architecture/antigravity-review-orchestration.md`](architecture/antigravity-review-orchestration.md).
@@ -150,6 +150,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Claude Code (computer) | Gemini 4 Neon takes Argon's third-family review role (owner's decision after the blind benchmark) | `claude/neon-role` | `AGENTS.md`, `docs/architecture/decisions.md`, `docs/architecture/antigravity-review-orchestration.md`, `docs/HANDOFF.md` | 2026-11-19 |
 | Antigravity (Gemini 4 Hydrogen) | Fix intermittent failures in `DngTiffReproductionTest` on CI (pending Codex review) | [PR #62](https://github.com/noctilane/Latent/pull/62), `agy/dng-tiff-test-isolation` | `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`, `docs/HANDOFF.md` | 2026-11-18 |
 
 ## For Codex

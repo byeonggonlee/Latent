@@ -20,7 +20,7 @@ you start it, and log it there when it is done.
   the shared seam.
 - **Antigravity** (code review, dispatch & documentation; authors code only through Gemini 4 Hydrogen, on what the
   owner assigns): dispatches reviews and reviews within its level through **Gemini 4 Hydrogen**, and gives a third
-  family's view through **Gemini 4 Argon** (later **Gemini 4 Carbon**) or reviews through **Claude Opus 5.5** as the
+  family's view through **Gemini 4 Neon** (**Gemini 4 Argon** when Neon cannot) or reviews through **Claude Opus 5.5** as the
   routing below says, following
   [`docs/architecture/antigravity-review-orchestration.md`](docs/architecture/antigravity-review-orchestration.md).
   **Gemini 4 Hydrogen** may author code, tests and their docs for items the owner assigns to it, on an `agy/`
@@ -62,18 +62,20 @@ you start it, and log it there when it is done.
 
   | Author | Reviewer | When that reviewer cannot |
   |---|---|---|
-  | Claude Code | **Codex** | **Gemini 4 Hydrogen** within its level (below), else **Gemini 4 Argon** |
-  | Codex | **Claude Opus 5.5** (via Claude Code or Antigravity) | **Gemini 4 Hydrogen** within its level, else **Gemini 4 Argon** |
+  | Claude Code | **Codex** | **Gemini 4 Hydrogen** within its level (below), else **Gemini 4 Neon** |
+  | Codex | **Claude Opus 5.5** (via Claude Code or Antigravity) | **Gemini 4 Hydrogen** within its level, else **Gemini 4 Neon** |
   | Gemini 4 Hydrogen | **Codex** | **Claude Opus 5.5** |
 
   **Gemini 4 Hydrogen's level:** it writes the dispatch note on a pull request, and it may be the one deep reviewer
   of a mandatory-review PR of at most about 200 changed lines outside tests that touches none of colour and
   precision, the decoder seam, buffers/threads/locks/cancellation, the Room schema and migrations, or signing, release
-  workflows and CI; on any other PR it reviews only as a second, candidate reviewer. **Gemini 4 Argon** is used only
+  workflows and CI; on any other PR it reviews only as a second, candidate reviewer. **Gemini 4 Neon** is used only
   for a third family's view: when the usual reviewer is itself the subject of the change, when two reviewers
-  disagree, or when the usual reviewer is out of quota and the change is beyond Hydrogen's level. **Gemini 4 Carbon**
-  takes Argon's place once it is available to the owner's plan. When no cross-family reviewer is available on a
-  Claude Code PR, the same-family fallback is **Claude Opus 5.5** (via Antigravity, in its own session) first, and
+  disagree, or when the usual reviewer is out of quota and the change is beyond Hydrogen's level. It is not the one
+  deep reviewer of a change to a decoder or to code that reads files from outside: such a PR waits for its usual
+  reviewer or the same-family fallback below. **Gemini 4 Argon** steps in only when Neon cannot, and **Gemini 4
+  Carbon** is weighed against Neon once it is available to the owner's plan. When no cross-family reviewer is
+  available on a Claude Code PR, the same-family fallback is **Claude Opus 5.5** (via Antigravity, in its own session) first, and
   **Claude Sonnet 5.5** at minimum `high` (extended thinking) reasoning effort from a **fresh session** (no shared
   context with the author's session) second. A fallback review names itself (and its reasoning effort and
   same-family status, when applicable) at its top and states which checks of the usual reviewer (numerical bounds,
@@ -111,7 +113,7 @@ you start it, and log it there when it is done.
 - Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
   found), checks verified, and any unverified builds or device checks. Identify the reviewing agent and active
   model explicitly at the top of the review (for example, `Reviewed by Gemini 4 Hydrogen (via Antigravity, within its
-  level)`, `Reviewed by Gemini 4 Argon (via Antigravity, third-family view)`, `Reviewed by Claude Opus 5.5 (via
+  level)`, `Reviewed by Gemini 4 Neon (via Antigravity, third-family view)`, `Reviewed by Claude Opus 5.5 (via
   Antigravity, fallback for Codex; same model family as author, independent session)`, or `Reviewed by Claude Sonnet
   5.5 (high thinking) (via Claude Code, fresh session, fallback for Codex; same model family as author)`), along with which primary checks a fallback reviewer did and did not cover.
 - Report only model and reasoning-effort settings supported by the harness or an explicit owner-provided setting,
