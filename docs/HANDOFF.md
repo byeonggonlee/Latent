@@ -149,7 +149,6 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
-| Codex | Owner-requested re-review of PR #60 at `99621b3`, covering the prior P3 and latest CI. | `codex/pr60-final-doc-review` | `docs/HANDOFF.md` (review record) | 2026-11-19 |
 | Antigravity (Gemini 4 Hydrogen) | Fix intermittent failures in `DngTiffReproductionTest` on CI (pending Codex review) | [PR #62](https://github.com/noctilane/Latent/pull/62), `agy/dng-tiff-test-isolation` | `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`, `docs/HANDOFF.md` | 2026-11-18 |
 
 ## For Codex
@@ -575,6 +574,7 @@ without those temporary files. None use private photos.
 
 | Date | Who | What | Commit or pull request |
 |---|---|---|---|
+| 2026-11-19 | Codex | Re-reviewed PR #60 at `99621b3`. LGTM, previous Hydrogen governance P3 resolved. Build and Licences passed, and the local merge simulation against `6d98e1b` had no conflicts. | [Re-review](https://github.com/noctilane/Latent/pull/60#pullrequestreview-5968456470) |
 | 2026-11-18 | Codex | Re-reviewed all five files in PR #60 delta `e2371f9..f03ac2f`: LGTM with the earlier P3 partly remaining in HANDOFF path scope and live dispatch/routing text. Relative links and whitespace pass; Licences green, Build red in unchanged DNG reproduction test (915 cases, 1 failure, 18 skips), cause unverified. No merge. | [Re-review](https://github.com/noctilane/Latent/pull/60#pullrequestreview-5957521188) |
 | 2026-11-18 | Codex | Full eight-file document review of PR #60 at `e2371f9`: LGTM with one non-blocking P3 on Hydrogen governance synchronization, independently confirmed and already noted by Argon. All 31 local links and diff whitespace checks pass; exact-head Build/Licences CI succeed. No local Android/device tests run; no merge. | [Review](https://github.com/noctilane/Latent/pull/60#pullrequestreview-5957218378) |
 | 2026-11-18 | Codex | Owner-requested PR #58 restore corrections: companion-aware names and rollback, including the reproduced SAF rename collision; host red-to-green tests, API 36 real-SAF coverage and Opus correction LGTM. Owner authorized merge after final CI. | [PR #58](https://github.com/noctilane/Latent/pull/58) |
