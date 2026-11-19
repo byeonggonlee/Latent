@@ -5,6 +5,33 @@ what was decided, why, what it means for a change, and what would open it again.
 owner decides again; then the old text stays, marked as replaced. Proposals that wait for a decision live in the
 assessments in this folder (for example [`codex-assessment.md`](codex-assessment.md)) and in `docs/TODO.md`.
 
+## 2026-11-19 · Gemini 4 Neon gives the third family's view in Argon's place
+
+**Decided.** Gemini 4 Neon takes the role the 2026-11-18 entry below gave Gemini 4 Argon: a third family's view
+when the usual reviewer is the change's subject, reviewers disagree, or the usual reviewer is out and the change is
+beyond Hydrogen's level. Argon steps in only when Neon cannot. Neon is never the one deep reviewer of a change to a
+decoder or to code that reads files from outside; such a pull request waits for its usual reviewer (Codex or Claude
+Opus 5.5) or the same-family fallback.
+
+**Why.** A blind benchmark (Antigravity, branch `agy/neon-review-eval`, `e26269c`) gave Neon, Hydrogen and Argon
+three past pull requests whose findings were known, each model in a fresh session, rated by
+[`REVIEW_GUIDE.md`](../REVIEW_GUIDE.md):
+
+| Case | Known finding | Neon | Hydrogen | Argon |
+|---|---|---|---|---|
+| #55 `e01ca5f`, raw tone | negative luminance turns vivid blues black (P2) | found, rated P1 | found, P2 | found, P2 |
+| #58 `a0f61bf`, trash rediscovery | restore picks a name by the main file only; no rollback (P3) | missed | missed | missed |
+| #57 `a2435ab`, `.dng.tiff` | repeated SubIFDs exhaust memory; `isDng` rejects what the decoder reads (two P2) | missed | missed | missed |
+
+Neon made no false claim; Argon misstated one calculation, several line numbers and a file count; Hydrogen's one
+finding on the change it had written was wrong. Neon and Argon both found a real pre-existing defect beyond the key
+(a phone raw's lens-correction-only edit is not saved). Neon used 36% of the 5-hour Gemini pool for the three
+cases, Argon about 30% of its weekly pool. No Gemini model found the hostile-input defects of #57, which is why
+decoders and parsers keep their GPT or Claude reviewer.
+
+**Opens again** when Carbon becomes available, or when Neon misses a P1 or P2 that its review was the only one to
+look at.
+
 ## 2026-11-18 · One development guide for all, a page for each agent; Gemini 4 Hydrogen may author
 
 **Decided.** Every agent writes code by [`DEVELOPMENT_GUIDE.md`](../DEVELOPMENT_GUIDE.md) (scope, reuse, evidence,

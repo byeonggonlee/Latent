@@ -3,7 +3,7 @@
 Established on 2026-10-22 by the owner's decision in [`decisions.md`](decisions.md), and changed by the owner on
 2026-10-29 (Gemini 3.8 Flash's part on a pull request, §3.1) and on 2026-11-18 (below). This document defines the
 operating rules, responsibility boundaries, model-tier assignments, and review/handoff protocols for **Antigravity**
-and the models running inside it (**Gemini 4 Hydrogen**, **Gemini 4 Argon**, and **Claude Opus 5.5**).
+and the models running inside it (**Gemini 4 Hydrogen**, **Gemini 4 Neon**, **Gemini 4 Argon**, and **Claude Opus 5.5**).
 
 > **2026-11-18, the owner's change; where this page disagrees, [`AGENTS.md`](../../AGENTS.md) wins.**
 > - Gemini models below Gemini 4 are not used: **Gemini 3.8 Flash** is retired. **Gemini 4 Hydrogen** writes the
@@ -16,6 +16,11 @@ and the models running inside it (**Gemini 4 Hydrogen**, **Gemini 4 Argon**, and
 > - **Gemini 4 Argon** is used only for a third family's view (the usual reviewer is the change's subject, reviewers
 >   disagree, or the usual reviewer is out and the change is beyond Hydrogen's level). **Gemini 4 Carbon** takes its
 >   place once it is available to the owner's plan. Routine routing is in the table in `AGENTS.md`.
+>
+> **2026-11-19:** **Gemini 4 Neon** takes Argon's third-family role, and Argon steps in only when Neon cannot. Neon
+> is not the one deep reviewer of a change to a decoder or to code that reads files from outside. Why: the blind
+> benchmark on three past PRs (`agy/neon-review-eval`, `e26269c`) found Neon as good as Argon at a smaller cost.
+> Where §3.2 and §3.4 name Argon for that role, read Neon.
 
 ---
 
@@ -68,7 +73,7 @@ Reviews are conducted by **Claude Code**, **Codex**, and **Antigravity**:
 
 - **Antigravity** serves as the cross-cutting review and model-orchestration hub. Because it has no authoring stake in
   either codebase partition, it dispatches reviews and reviews within its level through **Gemini 4 Hydrogen**, gives a third
-  family's view through **Gemini 4 Argon**, and reviews through **Claude Opus 5.5**, as `AGENTS.md` routes them. Antigravity keeps mechanical results, unverified candidate
+  family's view through **Gemini 4 Neon** (Argon when Neon cannot), and reviews through **Claude Opus 5.5**, as `AGENTS.md` routes them. Antigravity keeps mechanical results, unverified candidate
   findings and deep-review conclusions distinct, and routes only confirmed actionable findings as required fixes.
 - **Codex** and **Claude Code** continue to review each other's pull requests—especially on the decoder seam,
   domain-specific invariants, and cross-agent handoffs—either independently or alongside Antigravity's reviews.
@@ -181,25 +186,27 @@ optional follow-up proposals are recorded separately in [`flash-review-evaluatio
 1. **Cross-family review by default** (routing set 2026-11-18; the table in [`AGENTS.md`](../../AGENTS.md) is the
    authority):
    - **PR authored by Claude Code**: **Codex** reviews; when it cannot, **Gemini 4 Hydrogen** within its level, else
-     **Gemini 4 Argon**. Claude Opus 5.5 (via Antigravity) shares the author's family and does not count as the
+     **Gemini 4 Neon**. Claude Opus 5.5 (via Antigravity) shares the author's family and does not count as the
      cross-family reviewer.
    - **PR authored by Codex**: **Claude Opus 5.5** (via Claude Code or Antigravity) reviews; when it cannot,
-     **Gemini 4 Hydrogen** within its level, else **Gemini 4 Argon**. A GPT-family review does not count.
+     **Gemini 4 Hydrogen** within its level, else **Gemini 4 Neon**. A GPT-family review does not count.
    - **PR authored by Gemini 4 Hydrogen**: **Codex** reviews; when it cannot, **Claude Opus 5.5**. A Gemini-family
      review does not count.
    - **Gemini 4 Hydrogen's level**: the dispatch note on every PR, and the one deep review of a mandatory-review PR of
      at most about 200 changed lines outside tests that touches none of colour and precision, the decoder seam,
      buffers/threads/locks/cancellation, the Room schema and migrations, or signing, release workflows and CI;
      otherwise a second, candidate reviewer only.
-   - **Gemini 4 Argon** (and **Gemini 4 Carbon** once available) only for a third family's view: the usual reviewer is
-     the change's subject, reviewers disagree, or the usual reviewer is out and the change is beyond Hydrogen's level.
+   - **Gemini 4 Neon** only for a third family's view: the usual reviewer is the change's subject, reviewers disagree,
+     or the usual reviewer is out and the change is beyond Hydrogen's level; never the one deep reviewer of a change
+     to a decoder or to code that reads files from outside. **Gemini 4 Argon** when Neon cannot; **Gemini 4 Carbon**
+     is weighed against Neon once available.
 2. **Quota and same-family fallbacks**:
    - If no cross-family reviewer is available on a **Claude Code** PR, the same-family fallback order is:
      1. **Claude Opus 5.5 (via Antigravity)** first, because it runs in its own harness and session (independent of the
         authoring session's context, though sharing the Claude model family).
      2. **Claude Sonnet 5.5** second, **strictly requiring a fresh session** (no shared context with the session that
         authored the PR) and a **minimum reasoning effort of `high` (extended thinking enabled)**.
-   - On a **Codex** PR when Claude Opus 5.5, Hydrogen (within its level) and Argon are all unavailable, **Claude
+   - On a **Codex** PR when Claude Opus 5.5, Hydrogen (within its level) and Neon (or Argon) are all unavailable, **Claude
      Sonnet 5.5** in a fresh session at **minimum `high` (extended thinking)** reasoning effort may serve as the
      deep reviewer.
    - Every fallback review **must name the fallback and its reasoning effort at the top**, state whether it shares the
@@ -259,7 +266,7 @@ When publishing a review via `gh pr review`, always comply with these formatting
    ```
    Synthetic examples:
    - `Reviewed by **Gemini 4 Hydrogen** (via Antigravity, within its level) — inspected commit 1111111.`
-   - `Reviewed by **Gemini 4 Argon** (via Antigravity, third-family view) — inspected commit 2222222.`
+   - `Reviewed by **Gemini 4 Neon** (via Antigravity, third-family view) — inspected commit 2222222.`
    - `Reviewed by **Claude Opus 5.5** (via Antigravity, fallback for Codex; same model family as author, independent session) — inspected commit 3333333.`
    - `Reviewed by **Claude Sonnet 5.5 (high thinking)** (via Claude Code, fresh session, fallback for Codex; same model family as author) — inspected commit 4444444.`
    Report settings only when exposed by the harness or explicitly supplied by the owner, and identify that source.
