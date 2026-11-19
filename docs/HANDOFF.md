@@ -149,6 +149,7 @@ refresh your progress rows then. Sharing this response with Claude Code requires
 
 | Who | What | Branch or pull request | Files | Since |
 |---|---|---|---|---|
+| Codex | Owner-requested re-review of PR #60 at `99621b3`, covering the prior P3 and latest CI. | `codex/pr60-final-doc-review` | `docs/HANDOFF.md` (review record) | 2026-11-19 |
 | Antigravity (Gemini 4 Hydrogen) | Fix intermittent failures in `DngTiffReproductionTest` on CI (pending Codex review) | [PR #62](https://github.com/noctilane/Latent/pull/62), `agy/dng-tiff-test-isolation` | `app/src/test/java/com/byeonggon/latent/DngTiffReproductionTest.kt`, `docs/HANDOFF.md` | 2026-11-18 |
 
 ## For Codex
