@@ -18,13 +18,20 @@ you start it, and log it there when it is done.
 - **Codex** (code authoring & review): authors the image decoders (TIFF, Sony ARW, DNG, lossless JPEG, JPEG XL with
   `third_party/jxlatte`, the MPF preview), their tests and fixtures, and reviews changes in Claude Code's area and
   the shared seam.
-- **Antigravity** (code review, mechanical dispatch & documentation; never authors code): dispatches reviews
-  mechanically through **Gemini 3.8 Flash**, treats its first-pass findings as candidates, and conducts deep reviews
-  across **Gemini 4 Argon** and **Claude Opus 5.5** alongside Claude Code and Codex, following
+- **Antigravity** (code review, dispatch & documentation; authors code only through Gemini 4 Hydrogen, on what the
+  owner assigns): dispatches reviews and reviews within its level through **Gemini 4 Hydrogen**, and gives a third
+  family's view through **Gemini 4 Argon** (later **Gemini 4 Carbon**) or reviews through **Claude Opus 5.5** as the
+  routing below says, following
   [`docs/architecture/antigravity-review-orchestration.md`](docs/architecture/antigravity-review-orchestration.md).
-  It never changes source, tests, build files, schemas or CI. It writes only under `docs/` (its own files,
-  `docs/HANDOFF.md`, and owner-decision queues in `docs/TODO.md`) and to agent governance files when asked by the
-  owner. What it finds that needs code goes into the PR review or the queue of the authoring agent whose area it is.
+  **Gemini 4 Hydrogen** may author code, tests and their docs for items the owner assigns to it, on an `agy/`
+  branch, following [`docs/agents/hydrogen.md`](docs/agents/hydrogen.md); every such pull request gets a
+  cross-family deep review, whatever its size. Otherwise Antigravity never changes source, tests, build files,
+  schemas or CI: it writes only under `docs/` (its own files, `docs/HANDOFF.md`, and owner-decision queues in
+  `docs/TODO.md`) and to agent governance files when asked by the owner. What it finds that needs code goes into the
+  PR review or the queue of the authoring agent whose area it is.
+- **How code is written**, by every agent: [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md), with a page
+  for each agent's own work under [`docs/agents/`](docs/agents/) ([`claude-code.md`](docs/agents/claude-code.md),
+  [`codex.md`](docs/agents/codex.md), [`hydrogen.md`](docs/agents/hydrogen.md)).
 - **The owner** decides the package name, keys and secrets, what ships, what waits for a phone, and between
   agents who disagree. No agent decides that for them: the question goes under "Waiting for the owner" in
   `docs/TODO.md`.
@@ -49,20 +56,29 @@ you start it, and log it there when it is done.
   Before pushing, bring `origin/main` in, run what CI runs as far as your setup can (`testDebugUnitTest lintDebug
   lintRelease assembleDebugAndroidTest`, then `git diff --exit-code -- app/schemas`), and push a fast-forward. An
   agent without the Android SDK (a cloud session) cannot prove a change itself, so it always opens a pull request.
-- **Changes that need review go through a pull request**, reviewed by a deep reviewer from another model family by
-  default—**Gemini 4 Argon** (via Antigravity) or **Codex** for a Claude Code PR; **Gemini 4 Argon** (via
-  Antigravity), **Claude Opus 5.5** (via Antigravity), or **Claude Code** (**Opus 5.5**) for a Codex PR—and are merged
-  once CI is green and the review is done; the owner decides when reviewers disagree. **Gemini 3.8 Flash** dispatches
-  reviews mechanically ("when unsure, escalate") and checks surface contracts, but does not judge safety and never by
-  itself satisfies this review requirement. **Gemini 4 Argon** has a tight token budget: if it is out of tokens, the
-  review it was assigned falls back first to the non-author model family (**Codex** for a Claude Code PR;
-  **Claude Opus 5.5** via Antigravity or **Claude Code** for a Codex PR). When cross-family deep reviewers are also
-  out of quota on a Claude Code PR, the same-family fallback is **Claude Opus 5.5** (via Antigravity, in its own
-  session) first, and **Claude Sonnet 5.5** at minimum `high` (extended thinking) reasoning effort from a **fresh
-  session** (no shared context with the author's session) second. The review names the fallback (and its reasoning
-  effort and same-family status, when applicable) at its top and states which Argon checks (numerical bounds, colour
-  invariants, locks and cancellation) it did and did not cover; if no qualified deep reviewer is available, the PR
-  waits and goes under "Waiting for the owner" in `docs/TODO.md`. A review is required for any change to:
+- **Changes that need review go through a pull request**, reviewed by one deep reviewer from another model family,
+  and are merged once CI is green and the review is done; the owner decides when reviewers disagree. Gemini models
+  below Gemini 4 are not used for any part of review or authoring. Who reviews (set 2026-11-18):
+
+  | Author | Reviewer | When that reviewer cannot |
+  |---|---|---|
+  | Claude Code | **Codex** | **Gemini 4 Hydrogen** within its level (below), else **Gemini 4 Argon** |
+  | Codex | **Claude Opus 5.5** (via Claude Code or Antigravity) | **Gemini 4 Hydrogen** within its level, else **Gemini 4 Argon** |
+  | Gemini 4 Hydrogen | **Codex** | **Claude Opus 5.5** |
+
+  **Gemini 4 Hydrogen's level:** it writes the dispatch note on a pull request, and it may be the one deep reviewer
+  of a mandatory-review PR of at most about 200 changed lines outside tests that touches none of colour and
+  precision, the decoder seam, buffers/threads/locks/cancellation, the Room schema and migrations, or signing, release
+  workflows and CI; on any other PR it reviews only as a second, candidate reviewer. **Gemini 4 Argon** is used only
+  for a third family's view: when the usual reviewer is itself the subject of the change, when two reviewers
+  disagree, or when the usual reviewer is out of quota and the change is beyond Hydrogen's level. **Gemini 4 Carbon**
+  takes Argon's place once it is available to the owner's plan. When no cross-family reviewer is available on a
+  Claude Code PR, the same-family fallback is **Claude Opus 5.5** (via Antigravity, in its own session) first, and
+  **Claude Sonnet 5.5** at minimum `high` (extended thinking) reasoning effort from a **fresh session** (no shared
+  context with the author's session) second. A fallback review names itself (and its reasoning effort and
+  same-family status, when applicable) at its top and states which checks of the usual reviewer (numerical bounds,
+  colour invariants, locks and cancellation) it did and did not cover; if no qualified deep reviewer is available,
+  the PR waits and goes under "Waiting for the owner" in `docs/TODO.md`. A review is required for any change to:
   - the seam between decoders and the rest (`ArwImage`, `LensProfile`, `RawDeveloper`, `LensCorrection`,
     `RawRenderer`, `RawCache`), or what `LinearImage` means;
   - colour, precision, white balance, demosaicing, the look, crop or orientation;
@@ -77,8 +93,7 @@ you start it, and log it there when it is done.
     when assessing the PR; a proposed relaxation cannot qualify its own review.
 - One qualified deep reviewer is the default for a mandatory-review PR and must cover the full diff and all
   applicable risk categories. Add a reviewer only for an explicit coverage gap or conflicting findings; record
-  the reason. Mechanical triage does not replace deep review. Flash is never the sole code reviewer or a fallback
-  deep reviewer. A qualified deep reviewer must re-check its candidate findings against the base and head, including
+  the reason. A dispatch note does not replace deep review. A qualified deep reviewer must re-check its candidate findings against the base and head, including
   numerical claims, failure/cancellation handling, user impact, severity and whether the proposed fix is sufficient.
 - Small changes outside the mandatory-review list are not reviewed: a reviewer is for the changes above, not for
   every patch.
@@ -95,11 +110,10 @@ you start it, and log it there when it is done.
   owner explicitly asks for a private or chat-only review.
 - Anchor the review to the commit actually inspected. State the scope, actionable findings (or that none were
   found), checks verified, and any unverified builds or device checks. Identify the reviewing agent and active
-  model explicitly at the top of the review (for example, `Reviewed by Gemini 3.8 Flash (via Antigravity, mechanical
-  triage & contract check)`, `Reviewed by Gemini 4 Argon (via Antigravity)`, `Reviewed by Claude Opus 5.5 (via
-  Antigravity, fallback for Gemini 4 Argon; same model family as author, independent session)`, or `Reviewed by
-  Claude Sonnet 5.5 (high thinking) (via Claude Code, fresh session, fallback for Gemini 4 Argon; same model family
-  as author)`), along with which primary checks a fallback reviewer did and did not cover.
+  model explicitly at the top of the review (for example, `Reviewed by Gemini 4 Hydrogen (via Antigravity, within its
+  level)`, `Reviewed by Gemini 4 Argon (via Antigravity, third-family view)`, `Reviewed by Claude Opus 5.5 (via
+  Antigravity, fallback for Codex; same model family as author, independent session)`, or `Reviewed by Claude Sonnet
+  5.5 (high thinking) (via Claude Code, fresh session, fallback for Codex; same model family as author)`), along with which primary checks a fallback reviewer did and did not cover.
 - Report only model and reasoning-effort settings supported by the harness or an explicit owner-provided setting,
   and state that source. If unavailable, write `unverified`; never infer `high`/`max` from a model name or answer.
   An unverified setting does not satisfy a minimum-effort requirement: use a qualified reviewer or leave the
